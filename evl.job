@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=64GB
+#SBATCH --gpus=1
+##SBATCH --constraint=xeon-4116 
+#SBATCH --partition=taurus
+#SBATCH --time=1-2:34:56 
+##SBATCH --dependency=afterok:job_id
+##SBATCH --array=1-3 
+#SBATCH --account=xixu
+##SBATCH --mail-type=BEGIN,END,FAIL,ALL
+##SBATCH --mail-user=xixu@cs.cmu.edu 
+#SBATCH --output=stdout_evl_2.txt
+#SBATCH --error=stderr_evl_2.txt
+
+
+# test must-c mt result
+cd eval
+lang=es
+model_path=/mnt/data/xixu/runs/sllama/en-es/13b/stage2/run2/checkpoint-1800
+data_path=/mnt/data/xixu/datasets/must-c-v1.0/en-${lang}
+result=${model_path}/result_beam4
+# python ../train/zero_to_fp32.py ${model_path} \
+#     ${model_path}/pytorch_model.bin
+# python ../train/extract_adapter.py \
+#   --model_name_or_path ${model_path} \
+#   --extracted_name 'mm_length_adapter' \
+#   --output ${model_path}/length_adapter.bin 
+# python ../train/extract_adapter.py \
+#   --model_name_or_path ${model_pasth} \
+#   --extracted_name 'mm_mlp_adapter' \
+#   --output ${model_path}/mlp_adapter.bin 
+
+python ./test_dataset_large.py --model-name ${model_path} --data-path ${data_path} --data-split 'tst-COMMON' --result ${result} --beam 4 \
+        --mlp-adapter-path ${model_path}/mlp_adapter.bin --length-adapter-path ${model_path}/length_adapter.bin
+# python .evl.py --model-name ${model_path} --data-path ${data_path} --data-split 'tst-COMMON' --result ${result} 
+# python ./evl_batch.py --model-name ${model_path} --data-path ${data_path} --data-split 'tst-COMMON' --result ${result} --beam 4 \
+#         --mlp-adapter-path ${model_path}/mlp_adapter.bin --length-adapter-path ${model_path}/length_adapter.bin
+python ./compute_bleu.py ${result}/tst-COMMON
