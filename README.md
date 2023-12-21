@@ -1,6 +1,6 @@
 ## Requirements
 ```bash
-conda activate sllama
+conda env create -f environment.yml
 ```
 
 ## Training
