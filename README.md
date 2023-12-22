@@ -1,6 +1,16 @@
 ## Requirements
 ```bash
-conda env create -f environment.yml
+# conda env create -f environment.yml
+
+conda create -y -n sllama python=3.8
+conda activate sllama
+conda install -y pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+
+conda install -y -c conda-forge deepspeed fairseq pysoundfile sentencepiece
+conda install -y -c huggingface transformers
+
+pip install flash-attn --no-build-isolation
+pip install "fschat[model_worker,webui]"
 ```
 
 ## Training
