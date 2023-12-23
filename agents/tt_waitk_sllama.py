@@ -1,5 +1,4 @@
 import argparse, os, sys, time, json
-sys.path.append('/mnt/taurus/home/siqiouyang/work/projects/sllama-dev/')
 
 from typing import Optional
 from simuleval.agents.states import AgentStates
