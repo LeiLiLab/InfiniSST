@@ -57,7 +57,7 @@ sbatch evl.job
 
 ```bash
 simuleval \
-  --agent agents/waitk.py \
+  --agent agents/tt_waitk_sllama.py \
   --source-segment-size 640 \
   --waitk-lagging 3 \
   --model-dir /mnt/taurus/data/xixu/runs/sllama/en-es/7b/stage2/checkpoint-2100 \
