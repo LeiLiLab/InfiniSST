@@ -41,6 +41,8 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         self.source_segment_size = args.source_segment_size
         # self.continuous_write = args.continuous_write
         self.prompt = args.prompt
+        self.max_len_a = args.max_len_a
+        self.max_len_b = args.max_len_b
         self.load_model(args.model_dir)
 
     def load_model(self, model_dir):
@@ -96,6 +98,18 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             default="<speech_here> Start by converting the English audio into Spanish written form.", 
             type=str
         )
+        parser.add_argument(
+            "--max-len-a",
+            type=int,
+            default=5,
+            help="Max number of tokens generated per second"
+        )
+        parser.add_argument(
+            "--max-len-b",
+            type=int,
+            default=10,
+            help="Max number of tokens generated additionally"
+        )
 
     def policy(self, states: Optional[AgentStates] = None):
         if states is None:
@@ -134,22 +148,27 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         conv.append_message(conv.roles[1], None)
         prompt_inputs = conv.get_prompt()
 
+        target_ids = self.tokenizer.encode(" ".join(states.target), add_special_tokens=False)
+        max_number_of_tokens = length_in_seconds * self.max_len_a + self.max_len_b
+
         prediction_ids = []
         prediction = []
-        while len(prediction_ids) == 0 or states.source_finished:
-            target_ids = self.tokenizer.encode(" ".join(states.target),add_special_tokens=False)
+        while len(target_ids) + len(prediction_ids) <= max_number_of_tokens and \
+            (len(prediction_ids) == 0 or states.source_finished):
+            
             inputs = self.tokenizer([prompt_inputs])
             input_ids = inputs.input_ids[0] + target_ids + prediction_ids
             input_ids = torch.as_tensor([input_ids]).cuda()
 
             stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
             
-            output = self.model(
-                input_ids=input_ids,
-                speech_batch=speech_batch,
-                src_lengths=n_frames.to(device=self.model.device),
-                after_lens=speech_lens.to(device=self.model.device),
-            )[0][0, -1]
+            with torch.inference_mode():
+                output = self.model(
+                    input_ids=input_ids,
+                    speech_batch=speech_batch,
+                    src_lengths=n_frames.to(device=self.model.device),
+                    after_lens=speech_lens.to(device=self.model.device),
+                )[0][0, -1]
 
             prediction_id = output.argmax().item()
             prediction_ids.append(prediction_id)
