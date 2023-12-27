@@ -142,6 +142,9 @@ class WaitkSpeechLlama(SpeechToTextAgent):
                 length_in_seconds * 1000 / self.source_segment_size
             ) < self.waitk_lagging:
                 return ReadAction()
+            
+        if states.source_finished and length_in_seconds < 0.32:
+            return WriteAction(content="", finished=True)
 
         source = torch.tensor(states.source).to(
             device=self.model.device, dtype=self.model.dtype
