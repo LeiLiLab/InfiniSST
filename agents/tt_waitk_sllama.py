@@ -6,6 +6,8 @@ from simuleval.utils import entrypoint
 from simuleval.data.segments import SpeechSegment
 from simuleval.agents import SpeechToTextAgent
 from simuleval.agents.actions import WriteAction, ReadAction
+from simuleval.agents.states import AgentStates
+from dataclasses import dataclass
 
 import numpy
 import torch
@@ -18,6 +20,17 @@ from eval.utils import disable_torch_init
 from model.model import SpeechLlamaForCausalLM
 from model.utils import KeywordsStoppingCriteria
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
+
+@dataclass
+class S2TAgentStates(AgentStates):
+    target_ids: list
+    pending_target_ids: list
+
+    def reset(self):
+        super().reset()
+        self.target_ids = []
+        self.pending_target_ids = []
+
 
 @entrypoint
 class WaitkSpeechLlama(SpeechToTextAgent):
@@ -41,7 +54,12 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         self.source_segment_size = args.source_segment_size
         # self.continuous_write = args.continuous_write
         self.prompt = args.prompt
+        self.max_len_a = args.max_len_a
+        self.max_len_b = args.max_len_b
         self.load_model(args.model_dir)
+    
+    def build_states(self):
+        return S2TAgentStates([], [])
 
     def load_model(self, model_dir):
         load_type = torch.float16 # torch.float32
@@ -96,8 +114,20 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             default="<speech_here> Start by converting the English audio into Spanish written form.", 
             type=str
         )
+        parser.add_argument(
+            "--max-len-a",
+            type=int,
+            default=5,
+            help="Max number of tokens generated per second"
+        )
+        parser.add_argument(
+            "--max-len-b",
+            type=int,
+            default=10,
+            help="Max number of tokens generated additionally"
+        )
 
-    def policy(self, states: Optional[AgentStates] = None):
+    def policy(self, states: Optional[S2TAgentStates] = None):
         if states is None:
             states = self.states
 
@@ -112,6 +142,9 @@ class WaitkSpeechLlama(SpeechToTextAgent):
                 length_in_seconds * 1000 / self.source_segment_size
             ) < self.waitk_lagging:
                 return ReadAction()
+            
+        if states.source_finished and length_in_seconds < 0.32:
+            return WriteAction(content="", finished=True)
 
         source = torch.tensor(states.source).to(
             device=self.model.device, dtype=self.model.dtype
@@ -134,31 +167,48 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         conv.append_message(conv.roles[1], None)
         prompt_inputs = conv.get_prompt()
 
+        max_number_of_tokens = length_in_seconds * self.max_len_a + self.max_len_b
+
         prediction_ids = []
-        prediction = []
-        while len(prediction_ids) == 0 or states.source_finished:
-            target_ids = self.tokenizer.encode(" ".join(states.target),add_special_tokens=False)
+        last_token = None
+        while len(states.target_ids) + len(prediction_ids) <= max_number_of_tokens and \
+            (len(prediction_ids) == 0 or states.source_finished):
+            
             inputs = self.tokenizer([prompt_inputs])
-            input_ids = inputs.input_ids[0] + target_ids + prediction_ids
+            input_ids = inputs.input_ids[0] + states.target_ids + prediction_ids
             input_ids = torch.as_tensor([input_ids]).cuda()
 
             stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
             
-            output = self.model(
-                input_ids=input_ids,
-                speech_batch=speech_batch,
-                src_lengths=n_frames.to(device=self.model.device),
-                after_lens=speech_lens.to(device=self.model.device),
-            )[0][0, -1]
+            with torch.inference_mode():
+                output = self.model(
+                    input_ids=input_ids,
+                    speech_batch=speech_batch,
+                    src_lengths=n_frames.to(device=self.model.device),
+                    after_lens=speech_lens.to(device=self.model.device),
+                )[0][0, -1]
 
             prediction_id = output.argmax().item()
             prediction_ids.append(prediction_id)
-            prediction.extend(self.tokenizer.convert_ids_to_tokens([prediction_id]))
             
-            if prediction[-1] == stop_str:
+            if prediction_id == self.tokenizer.eos_token_id:
                 break
 
-        return WriteAction(
-            content=self.tokenizer.decode(prediction_ids, skip_special_tokens=True),
-            finished=states.source_finished and prediction[-1] == stop_str,
-        )
+        states.target_ids.extend(prediction_ids)
+        states.pending_target_ids.extend(prediction_ids)
+
+        possible_full_word = self.tokenizer.decode(states.pending_target_ids, skip_special_tokens=True)
+        if states.source_finished:
+            return WriteAction(
+                content=possible_full_word,
+                finished=True,
+            )
+        elif len(possible_full_word.split()) > 1:
+            full_word = possible_full_word.split()[0]
+            states.pending_target_ids = states.pending_target_ids[-1:]
+            return WriteAction(
+                content=full_word,
+                finished=False,
+            )
+        else:
+            return ReadAction()
