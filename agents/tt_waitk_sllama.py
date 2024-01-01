@@ -57,6 +57,7 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         self.prompt = args.prompt
         self.max_len_a = args.max_len_a
         self.max_len_b = args.max_len_b
+        self.repeat_penalty = args.repeat_penalty
         self.load_model(args.model_dir)
     
     def build_states(self):
@@ -127,6 +128,12 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             default=20,
             help="Max number of tokens generated additionally"
         )
+        parser.add_argument(
+            "--repeat-penalty",
+            type=float,
+            default=1.0,
+            help="Repetition penalty for generation"
+        )
 
     def policy(self, states: Optional[S2TAgentStates] = None):
         if states is None:
@@ -179,46 +186,45 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             input_ids = inputs.input_ids[0] + states.target_ids + prediction_ids
             input_ids_tensor = torch.as_tensor([input_ids]).cuda()
 
-            # stopping_criteria = SpaceStoppingCriteria(self.tokenizer)
+            stopping_criteria = SpaceStoppingCriteria(self.tokenizer)
             with torch.inference_mode():
-                output = self.model(
-                    input_ids=input_ids_tensor,
-                    speech_batch=speech_batch,
-                    src_lengths=n_frames.to(device=self.model.device),
-                    after_lens=speech_lens.to(device=self.model.device),
-                )[0][0, -1]
-
-                # output_ids = self.model.generate(
-                #     attention_mask=input_ids_tensor.ne(self.tokenizer.pad_token_id),
+                # output = self.model(
                 #     input_ids=input_ids_tensor,
                 #     speech_batch=speech_batch,
                 #     src_lengths=n_frames.to(device=self.model.device),
                 #     after_lens=speech_lens.to(device=self.model.device),
-                #     do_sample=False,
-                #     num_beams=1,
-                #     max_new_tokens=500,
-                #     # repetition_penalty=1.0,
-                #     stopping_criteria=[stopping_criteria]
-                # )
+                # )[0][0, -1]
 
-            # if stopping_criteria(output_ids, None):
-            #     output_ids = output_ids[:, :-1]
+                output_ids = self.model.generate(
+                    attention_mask=input_ids_tensor.ne(self.tokenizer.pad_token_id),
+                    input_ids=input_ids_tensor,
+                    speech_batch=speech_batch,
+                    src_lengths=n_frames.to(device=self.model.device),
+                    after_lens=speech_lens.to(device=self.model.device),
+                    do_sample=False,
+                    num_beams=1,
+                    max_new_tokens=500,
+                    repetition_penalty=self.repeat_penalty,
+                    stopping_criteria=[stopping_criteria]
+                )
+            if stopping_criteria(output_ids, None):
+                output_ids = output_ids[:, :-1]
 
-            # input_token_len = input_ids_tensor.shape[1]
-            # prediction_id = output_ids[0, input_token_len:].tolist()
+            input_token_len = input_ids_tensor.shape[1]
+            prediction_id = output_ids[0, input_token_len:].tolist()
 
-            prediction_id = output.argmax().item()
-            if prediction_id in input_ids[-2:]:
-                break
+            # prediction_id = output.argmax().item()
+            # if prediction_id in input_ids[-2:]:
+            #     break
 
-            n_space_after = self.tokenizer.decode(input_ids + [prediction_id], skip_special_tokens=True).count(' ')
-            if n_space == -1:
-                n_space = n_space_after
-            elif n_space_after > n_space and not states.source_finished:
-                break
+            # n_space_after = self.tokenizer.decode(input_ids + [prediction_id], skip_special_tokens=True).count(' ')
+            # if n_space == -1:
+            #     n_space = n_space_after
+            # elif n_space_after > n_space and not states.source_finished:
+            #     break
                 
-            prediction_ids.append(prediction_id)
-            # prediction_ids.extend(prediction_id)
+            # prediction_ids.append(prediction_id)
+            prediction_ids.extend(prediction_id)
 
             # print(self.tokenizer.decode(input_ids + [prediction_id], skip_special_tokens=True))
             # print(self.tokenizer.decode(input_ids + prediction_id, skip_special_tokens=True))
