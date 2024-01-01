@@ -220,7 +220,7 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             prediction_ids.append(prediction_id)
             # prediction_ids.extend(prediction_id)
 
-            print(self.tokenizer.decode(input_ids + [prediction_id], skip_special_tokens=True))
+            # print(self.tokenizer.decode(input_ids + [prediction_id], skip_special_tokens=True))
             # print(self.tokenizer.decode(input_ids + prediction_id, skip_special_tokens=True))
             
             if prediction_ids[-1] == self.tokenizer.eos_token_id:
