@@ -124,10 +124,13 @@ class DataCollatorForSupervisedDataset(object):
     tokenizer: transformers.PreTrainedTokenizer
     length_after_ssl: None
     length_after_adp: None
+    model: SpeechLlamaForCausalLM
     prompt_list_st = ['<speech_here>']
-
+    def reset_speech_features_flag(self):
+        self.model.model.speech_features_extracted = False
     def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
         # todo: sort samples by descending number of frames
+        self.reset_speech_features_flag()
         indices = torch.tensor([x.index for x in samples], dtype=torch.long)
         speech_batch = _collate_frames([x.source for x in samples], is_audio_input=True)
         n_frames = torch.tensor([x.source.size(0) for x in samples], dtype=torch.long)
@@ -137,7 +140,6 @@ class DataCollatorForSupervisedDataset(object):
      
         to_adds = [int(speech_len)*DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
         to_adds = [DEFAULT_SPEECH_START_TOKEN + to_add + DEFAULT_SPEECH_END_TOKEN for to_add in to_adds]
-        tasks = [x.task for x in samples]
         # prompts = []
         # for task in tasks:
         #      if task == "asr":
@@ -202,12 +204,13 @@ class DataCollatorForSupervisedDataset(object):
 def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer,
                                 data_args,
                                 length_after_ssl,
-                                length_after_adp) -> Dict:
+                                length_after_adp,
+                                model) -> Dict:
     """Make dataset and collator for supervised fine-tuning."""
 
     train_dataset = PromptSpeechToTextDatasetCreator.from_tsv(data_args.data_path, data_args.data_split_train)
     eval_dataset = PromptSpeechToTextDatasetCreator.from_tsv(data_args.data_path, data_args.data_split_eval) if data_args.data_split_eval is not None else None 
-    data_collator = DataCollatorForSupervisedDataset(tokenizer, length_after_ssl, length_after_adp)
+    data_collator = DataCollatorForSupervisedDataset(tokenizer, length_after_ssl, length_after_adp, model)
 
     return dict(train_dataset=train_dataset,
                 eval_dataset=eval_dataset,
@@ -282,7 +285,8 @@ def train():
     data_module = make_supervised_data_module(tokenizer=tokenizer,
                                               data_args=data_args,
                                               length_after_ssl=length_after_ssl,
-                                              length_after_adp=length_after_adp)
+                                              length_after_adp=length_after_adp,
+                                              model=model)
     trainer = Trainer(model=model,
                     tokenizer=tokenizer,
                     args=training_args,
