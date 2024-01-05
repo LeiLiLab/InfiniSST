@@ -10,7 +10,6 @@ from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 from train.dataset import PromptSpeechToTextDatasetCreator, SpeechToTextDatasetItem
 import conversation as conversation_lib
 from conversation import SeparatorStyle
-from train.llama_flash_attn_decoding import replace_llama_attn_with_flash_attn
 
 import os
 import requests
@@ -27,7 +26,7 @@ DEFAULT_SPEECH_PATCH_TOKEN = "<sp_patch>"
 DEFAULT_SPEECH_START_TOKEN = "<sp_start>"
 DEFAULT_SPEECH_END_TOKEN = "<sp_end>"
 
-prompt_list = ['<speech_here> Start by converting the English audio into Spanish written form.',]
+prompt_list = ['<speech_here>']
 
 def eval_model(args):
     load_type = torch.float16 # torch.float32
@@ -90,12 +89,9 @@ def eval_model(args):
         to_adds = [int(speech_len)*DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
         to_adds = [DEFAULT_SPEECH_START_TOKEN + to_add + DEFAULT_SPEECH_END_TOKEN for to_add in to_adds]
     
-        qs = prompt_list[0]
-        before, after = qs.split('<speech_here>')
-        mm_prompts = [before + to_add + after for to_add in to_adds]
         
         conv.messages = []
-        conv.append_message(conv.roles[0], mm_prompts[0])
+        conv.append_message(conv.roles[0], to_adds[0])
         conv.append_message(conv.roles[1], None)
         prompt_inputs = conv.get_prompt()
         inputs = tokenizer([prompt_inputs])
@@ -103,7 +99,11 @@ def eval_model(args):
 
         stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
         keywords = [stop_str]
-        stopping_criteria = KeywordsStoppingCriteria(keywords, tokenizer, input_ids)   
+        stopping_criteria = KeywordsStoppingCriteria(keywords, tokenizer, input_ids)  
+
+        # extract new speech features 
+        model.model.speech_features_extracted = False
+        
         with torch.inference_mode():
             output_ids = model.generate(
                 attention_mask=input_ids.ne(tokenizer.pad_token_id),

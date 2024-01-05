@@ -124,12 +124,7 @@ class DataCollatorForSupervisedDataset(object):
     tokenizer: transformers.PreTrainedTokenizer
     length_after_ssl: None
     length_after_adp: None
-    prompt_list_asr = ['<speech_here> Describe the speech concisely.', '<speech_here> Can you transcribe the speech into a written format?',
-                   '<speech_here> Begin by converting the spoken words into written text.', '<speech_here> Focus on translating the audible content into text.',
-                   '<speech_here> Transcribe the speech by carefully listening to it.', '<speech_here> Would you kindly write down the content of the speech?',
-                   '<speech_here> Analyze the speech and create a written transcription.', '<speech_here> Engage with the speech to produce a text-based version.',
-                   '<speech_here> Can you document the speech in written form?', '<speech_here> Transform the spoken words into text accurately.']
-    prompt_list_st = ['<speech_here> Start by converting the English audio into Spanish written form.','<speech_here> Start by converting the English audio into Spanish written form.']
+    prompt_list_st = ['<speech_here>']
 
     def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
         # todo: sort samples by descending number of frames
@@ -143,23 +138,23 @@ class DataCollatorForSupervisedDataset(object):
         to_adds = [int(speech_len)*DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
         to_adds = [DEFAULT_SPEECH_START_TOKEN + to_add + DEFAULT_SPEECH_END_TOKEN for to_add in to_adds]
         tasks = [x.task for x in samples]
-        prompts = []
-        for task in tasks:
-             if task == "asr":
-                 prompt = random.choice(self.prompt_list_asr)
-             elif task == "st":
-                 prompt = self.prompt_list_st[0]
-             else: # default is st
-                 prompt = self.prompt_list_st[0]
-             prompts.append(prompt)
+        # prompts = []
+        # for task in tasks:
+        #      if task == "asr":
+        #          prompt = random.choice(self.prompt_list_asr)
+        #      elif task == "st":
+        #          prompt = self.prompt_list_st[0]
+        #      else: # default is st
+        #          prompt = self.prompt_list_st[0]
+        #      prompts.append(prompt)
 
         conv = conversation_lib.default_conversation.copy()
         conversations = []
-        for prompt, to_add, text in zip(prompts, to_adds, texts):
+        for to_add, text in zip(to_adds, texts):
             conv.messages = []
-            before, after = prompt.split('<speech_here>')
-            mm_prompt = before + to_add + after
-            conv.append_message(conv.roles[0], mm_prompt)
+            # before, after = prompt.split('<speech_here>')
+            # mm_prompt = before + to_add + after
+            conv.append_message(conv.roles[0], to_add)
             conv.append_message(conv.roles[1], text)
             conversations.append(conv.get_prompt())
         input_ids = self.tokenizer(

@@ -36,6 +36,7 @@ class SpeechLlamaModel(LlamaModel):
             self.length_after_ssl, self.length_after_adp = self.initialize_speech_modules(config.speech_tower_path, None,
                                                          config.len_adapter_channels, config.len_adapter_kernel_sizes,
                                                          config.stage1_complete, ssl_fintuned)      
+        self.speech_features_extracted = False
 
     def initialize_speech_modules(self, speech_tower_path, speech_tower_type=None,
                                    len_adapter_channels=None, len_adapter_kernel_sizes=None,
@@ -125,31 +126,41 @@ class SpeechLlamaModel(LlamaModel):
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
 
-        speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens).transpose(0, 1)
+        # speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens).transpose(0, 1)
+        speech_features = None
+        if not self.speech_features_extracted:
+            speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens).transpose(0, 1)
+            self.speech_features_extracted = True
             
         new_input_embeds = []
         cur_speech_idx = 0
         # inputs_embeds: B*T*d
         # speech_features: B*T1*d
-        for i in range(inputs_embeds.size(0)):
-            cur_speech_features = speech_features[i][:after_lens[i]]
-            cur_input_embeds = inputs_embeds[i]
-            cur_input_ids = input_ids[i]                
-            if (cur_input_ids == self.config.sp_start_token_id).sum() == 0:
-                new_input_embeds.append(cur_input_embeds)
-                continue
-            speech_start_pos = torch.where(cur_input_ids == self.config.sp_start_token_id)[0]
-            speech_end_pos = torch.where(cur_input_ids == self.config.sp_end_token_id)[0]
-            if orig_embeds_params is not None:
-                cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos].detach(), cur_input_embeds[speech_start_pos], cur_speech_features, cur_input_embeds[speech_end_pos], cur_input_embeds[speech_end_pos + 1:].detach()), dim=0)
-            else:
-                cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos+1], cur_speech_features, cur_input_embeds[speech_end_pos:]), dim=0)
-            new_input_embeds.append(cur_new_input_embeds)  
-        inputs_embeds = torch.stack(new_input_embeds, dim=0)  
+        if speech_features is not None:
+            for i in range(inputs_embeds.size(0)):
+                cur_speech_features = speech_features[i][:after_lens[i]]
+                cur_input_embeds = inputs_embeds[i]
+                cur_input_ids = input_ids[i]                
+                if (cur_input_ids == self.config.sp_start_token_id).sum() == 0:
+                    new_input_embeds.append(cur_input_embeds)
+                    continue
+                speech_start_pos = torch.where(cur_input_ids == self.config.sp_start_token_id)[0]
+                speech_end_pos = torch.where(cur_input_ids == self.config.sp_end_token_id)[0]
+                if orig_embeds_params is not None:
+                    cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos].detach(), cur_input_embeds[speech_start_pos], cur_speech_features, cur_input_embeds[speech_end_pos], cur_input_embeds[speech_end_pos + 1:].detach()), dim=0)
+                else:
+                    cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos+1], cur_speech_features, cur_input_embeds[speech_end_pos:]), dim=0)
+                new_input_embeds.append(cur_new_input_embeds)  
+            inputs_embeds = torch.stack(new_input_embeds, dim=0)  
+
         return super(SpeechLlamaModel, self).forward(
-            input_ids=None, attention_mask=attention_mask, past_key_values=past_key_values,
-            inputs_embeds=inputs_embeds, use_cache=use_cache,
-            output_attentions=output_attentions, output_hidden_states=output_hidden_states,
+            input_ids=None, 
+            attention_mask=attention_mask, 
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds, 
+            use_cache=use_cache,
+            output_attentions=output_attentions, 
+            output_hidden_states=output_hidden_states,
             return_dict=return_dict
         ) 
     
