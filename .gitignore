@@ -1,3 +1,6 @@
 slurm-*.out
 results
-*.pyc
+**/*.pyc
+**/stderr*
+**/stdout*
+.vscode/launch.json
