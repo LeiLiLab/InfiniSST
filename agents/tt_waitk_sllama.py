@@ -178,9 +178,7 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         max_number_of_tokens = length_in_seconds * self.max_len_a + self.max_len_b
 
         prediction_ids = []
-        n_space = -1
-        while states.source_finished or \
-            len(states.target_ids) + len(prediction_ids) <= max_number_of_tokens:
+        while len(states.target_ids) + len(prediction_ids) <= max_number_of_tokens:
             
             inputs = self.tokenizer([prompt_inputs])
             input_ids = inputs.input_ids[0] + states.target_ids + prediction_ids
@@ -224,6 +222,11 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             #     break
                 
             # prediction_ids.append(prediction_id)
+
+            if prediction_id[-1] == self.tokenizer.eos_token_id and not states.source_finished:
+                prediction_id = prediction_id[:-1]
+                if len(prediction_id) == 0:
+                    break
             prediction_ids.extend(prediction_id)
 
             # print(self.tokenizer.decode(input_ids + [prediction_id], skip_special_tokens=True))
@@ -232,16 +235,19 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             if prediction_ids[-1] == self.tokenizer.eos_token_id:
                 break
 
+            if not states.source_finished:
+                break
+        
         states.target_ids.extend(prediction_ids)
-        # states.pending_target_ids.extend(prediction_ids)
-
-        # possible_full_word = self.tokenizer.decode(states.pending_target_ids, skip_special_tokens=True)
         possible_full_word = self.tokenizer.decode(prediction_ids, skip_special_tokens=True)
 
-        return WriteAction(
-            content=possible_full_word,
-            finished=states.source_finished,
-        )
+        if possible_full_word != '' or states.source_finished:
+            return WriteAction(
+                content=possible_full_word,
+                finished=states.source_finished,
+            )
+        else:
+            return ReadAction()
 
         # if states.source_finished:
         #     return WriteAction(
