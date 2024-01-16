@@ -71,6 +71,13 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             padding_side="right",
             use_fast=False,
         )
+
+        if not os.path.exists(os.path.join(model_dir, 'config_large.json')):
+            config = json.load(open(os.path.join(model_dir, 'config.json')))
+            config['large_model'] = True
+            update_config = os.path.join(model_dir, 'config_large.json')
+            json.dump(config, open(update_config, 'w'), indent=2)
+
         self.model = SpeechLlamaForCausalLM.from_pretrained(
             model_dir,
             torch_dtype=load_type,
