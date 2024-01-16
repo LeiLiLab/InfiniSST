@@ -16,7 +16,7 @@
 
 import os, sys, random
 os.environ['WANDB_DISABLED'] = 'true'
-sys.path.append('/home/xixu/sllama')
+# sys.path.append('/home/xixu/sllama')
 import copy
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple, Union
@@ -36,8 +36,6 @@ import conversation as conversation_lib
 from train.dataset import PromptSpeechToTextDatasetCreator, SpeechToTextDatasetItem
 from model.model import SpeechLlamaForCausalLM
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
-from train.llama_flash_attn_monkey_patch import replace_llama_attn_with_flash_attn
-# from train.llama_flash_attn_patch import replace_llama_attn_with_flash_attn
 # TODO: import and use code from ../data/dataset.py
 
 IGNORE_INDEX = -100
@@ -127,28 +125,30 @@ class DataCollatorForSupervisedDataset(object):
     tokenizer: transformers.PreTrainedTokenizer
     length_after_ssl: None
     length_after_adp: None
-    prompt_list_asr = ['<speech_here> Describe the speech concisely.', '<speech_here> Can you transcribe the speech into a written format?',
-                   '<speech_here> Begin by converting the spoken words into written text.', '<speech_here> Focus on translating the audible content into text.',
-                   '<speech_here> Transcribe the speech by carefully listening to it.', '<speech_here> Would you kindly write down the content of the speech?',
-                   '<speech_here> Analyze the speech and create a written transcription.', '<speech_here> Engage with the speech to produce a text-based version.',
-                   '<speech_here> Can you document the speech in written form?', '<speech_here> Transform the spoken words into text accurately.']
-    prompt_list_st = ['<speech_here> Start by converting the English audio into Spanish written form.','<speech_here> Start by converting the English audio into Spanish written form.']
+    model: SpeechLlamaForCausalLM
+    prompt_list_st = ['<speech_here>']
 
     segment_size = 320 # unit: ms
     sample_rate = 16000
     min_k, max_k = 1, 9
 
+    def reset_speech_features_flag(self):
+        self.model.model.speech_features_extracted = False
     def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
         # todo: sort samples by descending number of frames
+        self.reset_speech_features_flag()
         indices = torch.tensor([x.index for x in samples], dtype=torch.long)
 
-        segment_frame = self.segment_size / 1000 * self.sample_rate
+        segment_frame = int(self.segment_size / 1000 * self.sample_rate)
+        complete = []
         for x in samples:
             ratio, k = np.random.rand(), np.random.randint(self.min_k, self.max_k + 1)
             n_segment = int(np.maximum(np.ceil(ratio * x.source.size(0) / segment_frame), k))
 
             if n_segment >= np.ceil(x.source.size(0) / segment_frame):
+                complete.append(True)
                 continue
+            complete.append(False)
 
             words = x.target.split(' ')
             text_prefix = ' '.join(words[:n_segment - k + 1])
@@ -156,7 +156,7 @@ class DataCollatorForSupervisedDataset(object):
 
             x.source = speech_prefix
             x.target = text_prefix
-
+        
         speech_batch = _collate_frames([x.source for x in samples], is_audio_input=True)
         n_frames = torch.tensor([x.source.size(0) for x in samples], dtype=torch.long)
         speech_lens = self.length_after_adp(self.length_after_ssl(n_frames)) # after forward ssl model and length adapter
@@ -165,31 +165,30 @@ class DataCollatorForSupervisedDataset(object):
      
         to_adds = [int(speech_len)*DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
         to_adds = [DEFAULT_SPEECH_START_TOKEN + to_add + DEFAULT_SPEECH_END_TOKEN for to_add in to_adds]
-        tasks = [x.task for x in samples]
-        prompts = []
-        for task in tasks:
-             if task == "asr":
-                 prompt = random.choice(self.prompt_list_asr)
-             elif task == "st":
-                 prompt = self.prompt_list_st[0]
-             else: # default is st
-                 prompt = self.prompt_list_st[0]
-             prompts.append(prompt)
+        # prompts = []
+        # for task in tasks:
+        #      if task == "asr":
+        #          prompt = random.choice(self.prompt_list_asr)
+        #      elif task == "st":
+        #          prompt = self.prompt_list_st[0]
+        #      else: # default is st
+        #          prompt = self.prompt_list_st[0]
+        #      prompts.append(prompt)
 
         conv = conversation_lib.default_conversation.copy()
         conversations = []
-        for prompt, to_add, text in zip(prompts, to_adds, texts):
+        for to_add, text, c in zip(to_adds, texts, complete):
             conv.messages = []
-            before, after = prompt.split('<speech_here>')
-            mm_prompt = before + to_add + after
-            conv.append_message(conv.roles[0], mm_prompt)
+            # before, after = prompt.split('<speech_here>')
+            # mm_prompt = before + to_add + after
+            conv.append_message(conv.roles[0], to_add)
             conv.append_message(conv.roles[1], text)
-            conversations.append(conv.get_prompt())
+            conversations.append(conv.get_prompt().replace('</s>', '</s>' if c else ''))
         input_ids = self.tokenizer(
             conversations,
             return_tensors="pt",
-            padding="max_length",
-            max_length=self.tokenizer.model_max_length,
+            padding="longest",
+            #max_length=tokenizer.model_max_length,
             truncation=False,
         ).input_ids
         targets = input_ids.clone()
@@ -206,19 +205,15 @@ class DataCollatorForSupervisedDataset(object):
                 if len(parts) != 2:
                     break
                 parts[0] += sep
-                round_len = len(self.tokenizer(rou).input_ids)
+                round_len = len(self.tokenizer(rou).input_ids) - int(not conversation.endswith(conv.sep2))
                 instruction_len = len(self.tokenizer(parts[0]).input_ids) - 2
                 target[cur_len : cur_len + instruction_len] = IGNORE_INDEX
                 cur_len += round_len
             target[cur_len:] = IGNORE_INDEX
-
-        # print("Debugging Batch Tensor Shapes:")
-        # print("Input IDs shape:", input_ids.shape)
-        # print("Targets shape:", targets.shape)
-        # print("Attention Mask shape:", input_ids.ne(self.tokenizer.pad_token_id).shape)
-        # print("Speech Batch shape:", speech_batch.shape)
-        # print("Source Lengths shape:", n_frames.shape)
-        # print("After Lengths shape:", speech_lens.shape)
+        #print("conversations:", conversations[0])
+        #print("input_ids:", input_ids[0])
+        #print("targets:", targets[0])
+        #print(self.tokenizer.convert_ids_to_tokens(input_ids[0]))
         
         batch = dict(
             input_ids=input_ids,
@@ -234,12 +229,13 @@ class DataCollatorForSupervisedDataset(object):
 def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer,
                                 data_args,
                                 length_after_ssl,
-                                length_after_adp) -> Dict:
+                                length_after_adp,
+                                model) -> Dict:
     """Make dataset and collator for supervised fine-tuning."""
 
     train_dataset = PromptSpeechToTextDatasetCreator.from_tsv(data_args.data_path, data_args.data_split_train)
     eval_dataset = PromptSpeechToTextDatasetCreator.from_tsv(data_args.data_path, data_args.data_split_eval) if data_args.data_split_eval is not None else None 
-    data_collator = DataCollatorForSupervisedDataset(tokenizer, length_after_ssl, length_after_adp)
+    data_collator = DataCollatorForSupervisedDataset(tokenizer, length_after_ssl, length_after_adp, model)
 
     return dict(train_dataset=train_dataset,
                 eval_dataset=eval_dataset,
@@ -263,10 +259,9 @@ def train():
         print(e)
     world_size = int(os.environ.get("WORLD_SIZE", 1))
     device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)} if world_size != 1 else "auto" 
-    replace_llama_attn_with_flash_attn()    
     model = SpeechLlamaForCausalLM.from_pretrained(
         model_args.model_name_or_path,
-        cache_dir=training_args.cache_dir,
+        # cache_dir=training_args.cache_dir,
         #low_cpu_mem_usage=True,
         config=update_config,
         #device_map=device_map,
@@ -318,7 +313,8 @@ def train():
     data_module = make_supervised_data_module(tokenizer=tokenizer,
                                               data_args=data_args,
                                               length_after_ssl=length_after_ssl,
-                                              length_after_adp=length_after_adp)
+                                              length_after_adp=length_after_adp,
+                                              model=model)
     trainer = Trainer(model=model,
                     tokenizer=tokenizer,
                     args=training_args,
