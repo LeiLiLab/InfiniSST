@@ -273,6 +273,13 @@ def train():
           
     if model_args.freeze_speech_foundation: # freeze speech foundation model  
         model.model.speech_tower.requires_grad_(False) 
+    else: # train transformer encoder
+        model.model.speech_tower.requires_grad_(False)
+        for param in model.model.speech_tower.encoder.parameters():
+            param.requires_grad = True
+        for param in model.model.speech_tower.layer_norm.parameters():
+            param.requires_grad = True
+
     if model_args.freeze_length_adapter: # freeze length adapter 
         model.model.mm_length_adapter.requires_grad_(False)  
     if model_args.freeze_mm_adapter: # freeze mm adapter 
