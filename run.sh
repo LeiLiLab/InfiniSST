@@ -26,20 +26,19 @@ torchrun --nproc_per_node=$SLURM_GPUS \
     --save_strategy "steps" \
     --save_steps 1000 \
     --save_total_limit 10 \
-    --learning_rate 2e-3 \
+    --learning_rate 2e-4 \
     --weight_decay 0. \
-    --warmup_ratio 0.03 \
+    --warmup_ratio 0.2 \
     --lr_scheduler_type "cosine" \
     --logging_steps 1 \
     --gradient_checkpointing True \
-    --seed 1234 \
+    --seed 998244353 \
     --report_to none \
     --fp16 True \
     --deepspeed ../configs/deepspeed_config.json \
 
 # # stage2 train
 llm_model=/mnt/data/xixu/runs/sllama/en-es/7b/wWav2vec/stage1/checkpoint-13000
-ssl_model=/mnt/data/xixu/models/wav2_vec_vox_960h_pl.pt
 data_path=/mnt/data/xixu/datasets/must-c-v1.0/en-es
 save_path=/mnt/data/xixu/runs/sllama/7b/wWav2vec/stage2
 
@@ -71,7 +70,7 @@ torchrun  --nproc_per_node=$SLURM_GPUS\
     --data_path ${data_path} \
     --data_split_train 'train' \
     --data_split_eval 'dev' \
-    --freeze_speech_foundation Flase \
+    --freeze_speech_foundation False \
     --freeze_backbone False \
     --only_tune_adapter False \
     --output_dir ${save_path} \
@@ -86,11 +85,11 @@ torchrun  --nproc_per_node=$SLURM_GPUS\
     --save_total_limit 10 \
     --learning_rate 2e-5 \
     --weight_decay 0. \
-    --warmup_ratio 0.03 \
+    --warmup_ratio 0.2 \
     --lr_scheduler_type "cosine" \
     --logging_steps 1 \
     --gradient_checkpointing True \
-    --seed 1234 \
+    --seed 998244353 \
     --report_to none \
     --fp16 True \
     --deepspeed ../configs/deepspeed_config_stage3.json \

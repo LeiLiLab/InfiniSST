@@ -35,6 +35,7 @@ import conversation as conversation_lib
 from train.dataset import PromptSpeechToTextDatasetCreator, SpeechToTextDatasetItem
 from model.model import SpeechLlamaForCausalLM
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
+from train.uni_wav2vec_monkey_patch import replace_forward
 # TODO: import and use code from ../data/dataset.py
 
 IGNORE_INDEX = -100
@@ -248,10 +249,12 @@ def train():
     
     length_adapter_weights = torch.load(os.path.join(model_args.model_name_or_path, 'length_adapter.bin'), map_location='cpu')
     mlp_adapter_weights = torch.load(os.path.join(model_args.model_name_or_path, 'mlp_adapter.bin'), map_location='cpu')
+    speech_tower_weights = torch.load(os.path.join(model_args.model_name_or_path, 'speech_tower.bin'), map_location='cpu')
     
     model.model.mm_length_adapter.load_state_dict(length_adapter_weights)
     model.model.mm_mlp_adapter.load_state_dict(mlp_adapter_weights)
-            
+    model.model.speech_tower.load_state_dict(speech_tower_weights)
+
     model.config.use_cache = False
     # load tokenizer
     tokenizer = transformers.AutoTokenizer.from_pretrained(
@@ -287,6 +290,9 @@ def train():
         
     model.initialize_speech_tokenizer(tokenizer=tokenizer, device=training_args.device,
                                       only_tune_adapter=model_args.only_tune_adapter, stage1=False) 
+    
+    # replace uni wav2vec forward
+    # replace_forward()
                                                    
 
     data_module = make_supervised_data_module(tokenizer=tokenizer,
