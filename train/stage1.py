@@ -257,8 +257,12 @@ def train():
        
     if model_args.freeze_speech_foundation: # freeze the ssl model after add the ssl model by initialize_speech_modules   
         model.model.speech_tower.requires_grad_(False)
-    else:
-        model.model.speech_tower.requires_grad_(True)
+    else: # train transformer encoder
+        model.model.speech_tower.requires_grad_(False)
+        for param in model.model.speech_tower.encoder.parameters():
+            param.requires_grad = True
+        for param in model.model.speech_tower.layer_norm.parameters():
+            param.requires_grad = True
                                                       
     data_module = make_supervised_data_module(tokenizer=tokenizer,
                                               data_args=data_args,

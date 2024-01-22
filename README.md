@@ -28,25 +28,32 @@ sbatch run.job
 ```
 
 ### Before Stage 2 Training
-Ensure that the adapters have been extracted before proceeding with stage 2 training. Use the following commands:
+Make sure Speech Encoder and the adapters have been extracted before proceeding with stage 2 training. Use the following commands:
 ```bash
 cd train
+llm_model='path_to_your_stage1_weights'
 
-python ./zero_to_fp32.py ${llm_model}/checkpoint-12000 ${llm_model}/checkpoint-12000/pytorch_model.bin
+python ./zero_to_fp32.py ${llm_model} ${llm_model}/pytorch_model.bin
 
-model_path=/mnt/data/xixu/runs/sllama/en-es/13b/stage1
 python ./extract_adapter.py \
-  --model_name_or_path ${model_path}/checkpoint-12000 \
+  --model_name_or_path ${llm_model} \
   --extracted_name 'mm_length_adapter' \
-  --output ${model_path}/length_adapter.bin 
+  --output ${llm_model}/length_adapter.bin 
+
 python ./extract_adapter.py \
-  --model_name_or_path ${model_path}/checkpoint-12000 \
+  --model_name_or_path ${llm_model} \
   --extracted_name 'mm_mlp_adapter' \
-  --output ${model_path}/mlp_adapter.bin 
+  --output ${llm_model}/mlp_adapter.bin 
+
+python ./extract_adapter.py \
+    --model_name_or_path ${llm_model} \
+    --extracted_name 'speech_tower' \
+    --output ${llm_model}/speech_tower.bin
 ```
 
-### Train Speech Encoder together in Stage1
-please set --freeze_speech_foundation to False
+### Speech Encoder  
+set `--freeze_speech_foundation` to False to train Speech Encoder togther \
+add `replace_forward()` to enable uni-directional encoding
 
 ## Evaluation
 ```bash
