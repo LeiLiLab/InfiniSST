@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=128GB
-#SBATCH --gpus=6
+#SBATCH --gpus=4
 ##SBATCH --constraint=xeon-4116 
 #SBATCH --partition=taurus
 #SBATCH --time=1-2:34:56 

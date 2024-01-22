@@ -19,6 +19,7 @@ from conversation import SeparatorStyle
 from eval.utils import disable_torch_init
 from model.model import SpeechLlamaForCausalLM
 from model.utils import SpaceStoppingCriteria
+from train.uni_wav2vec_monkey_patch import replace_forward
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 
 @dataclass
@@ -58,6 +59,7 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         self.max_len_a = args.max_len_a
         self.max_len_b = args.max_len_b
         self.repeat_penalty = args.repeat_penalty
+        self.uni = getattr(args, "uni", False)
         self.load_model(args.model_dir)
     
     def build_states(self):
@@ -99,14 +101,20 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             ssl_fintuned=self.model.config.ssl_fintuned,
         )
 
-        self.model.model.speech_tower.to(dtype=load_type, device=device_input)
         length_adapter_weights = torch.load(os.path.join(model_dir, 'length_adapter.bin'), map_location='cpu')
         mlp_adapter_weights = torch.load(os.path.join(model_dir, 'mlp_adapter.bin'), map_location='cpu')
+        speech_tower_weights = torch.load(os.path.join(model_dir, 'speech_tower.bin'), map_location='cpu')
+
         self.model.model.mm_length_adapter.load_state_dict(length_adapter_weights)
         self.model.model.mm_mlp_adapter.load_state_dict(mlp_adapter_weights)
-        self.model.model.mm_length_adapter.to(dtype=load_type, device=device_input)
-        self.model.model.mm_mlp_adapter.to(dtype=load_type, device=device_input)        
+        self.model.model.speech_tower.load_state_dict(speech_tower_weights)
 
+        self.model.model.mm_length_adapter.to(dtype=load_type, device=device_input)
+        self.model.model.mm_mlp_adapter.to(dtype=load_type, device=device_input)     
+        self.model.model.speech_tower.to(dtype=load_type, device=device_input)
+
+        if self.uni:
+            replace_forward()
 
     @staticmethod
     def add_args(parser):
@@ -117,7 +125,15 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         #     type=int,
         #     help="Max number of words to write at each step",
         # )
-        parser.add_argument("--model-dir", required=True, type=str)
+        parser.add_argument(
+            "--model-dir", 
+            required=True, 
+            type=str
+        )
+        parser.add_argument(
+            "--uni", 
+            action="store_true"
+        )
         parser.add_argument(
             "--prompt", 
             default="<speech_here> Start by converting the English audio into Spanish written form.", 
@@ -172,13 +188,13 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         to_adds = [int(speech_len)*self.DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
         to_adds = [self.DEFAULT_SPEECH_START_TOKEN + to_add + self.DEFAULT_SPEECH_END_TOKEN for to_add in to_adds]
 
-        qs = self.prompt
-        before, after = qs.split('<speech_here>')
-        mm_prompts = [before + to_add + after for to_add in to_adds]
+        # qs = self.prompt
+        # before, after = qs.split('<speech_here>')
+        # mm_prompts = [before + to_add + after for to_add in to_adds]
 
         conv = conversation_lib.default_conversation.copy()
         conv.messages = []
-        conv.append_message(conv.roles[0], mm_prompts[0])
+        conv.append_message(conv.roles[0], to_adds[0])
         conv.append_message(conv.roles[1], None)
         prompt_inputs = conv.get_prompt()
 
@@ -191,6 +207,7 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             input_ids = inputs.input_ids[0] + states.target_ids + prediction_ids
             input_ids_tensor = torch.as_tensor([input_ids]).cuda()
 
+            self.model.model.speech_features_extracted = False
             stopping_criteria = SpaceStoppingCriteria(self.tokenizer)
             with torch.inference_mode():
                 # output = self.model(
