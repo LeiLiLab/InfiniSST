@@ -14,6 +14,7 @@
 # pip install "fschat[model_worker,webui]"
 
 use sid's conda env
+conda install seaborn -c conda-forge
 pip install jupyter
 
 git clone https://github.com/facebookresearch/SimulEval.git
