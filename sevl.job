@@ -6,30 +6,33 @@
 #SBATCH --mem=64GB
 #SBATCH --gpus=1
 ##SBATCH --constraint=xeon-4116 
-#SBATCH --partition=taurus
+#SBATCH --partition=aries
 #SBATCH --time=1-2:34:56 
 ##SBATCH --dependency=afterok:job_id
-#SBATCH --array=2-7
+#SBATCH --array=13
 #SBATCH --account=siqiouyang
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=siqiouya@andrew.cmu.edu
-##SBATCH --output=stdout_sevl.txt
-##SBATCH --error=stderr_sevl.txt
+#SBATCH --output=/mnt/taurus/home/siqiouyang/work/projects/sllama/slurm-%j.txt
 
-src_segment_size=640
+conda config --append envs_dirs /mnt/taurus/home/siqiouyang/anaconda3/envs/
+source /mnt/taurus/home/siqiouyang/anaconda3/bin/activate sllama
+
+src_segment_size=320
 k=${SLURM_ARRAY_TASK_ID}
-repeat_penalty=1.3
 
-mkdir -p ./results/wait-k-word-rp-${repeat_penalty}
+checkpoint_dir=/mnt/taurus/data/xixu/runs/sllama/en-es/7b/wWav2vec/stage2/checkpoint-2000
 
-export PYTHONPATH=/mnt/taurus/home/siqiouyang/work/projects/sllama/
+mkdir -p ${checkpoint_dir}/simul-results/wait-k-word
+
+export PYTHONPATH=/mnt/taurus/home/siqiouyang/work/projects/sllama/:/mnt/taurus/home/siqiouyang/work/projects/SimulEval/
 simuleval \
-  --agent agents/tt_waitk_sllama.py \
+  --agent /mnt/taurus/home/siqiouyang/work/projects/sllama/agents/tt_waitk_sllama.py \
   --source-segment-size ${src_segment_size} \
-  --waitk-lagging ${k} --repeat-penalty ${repeat_penalty} \
-  --model-dir /mnt/taurus/data/xixu/runs/sllama/en-es/7b/stage2/checkpoint-2100 \
-  --prompt "<speech_here> Start by converting the English audio into Spanish written form." \
+  --waitk-lagging ${k} --repeat-penalty 1.0 \
+  --model-dir ${checkpoint_dir} \
+  --prompt "<speech_here>" \
   --source /mnt/taurus/data/xixu/datasets/must-c-v1.0/en-es/tst-COMMON.source \
   --target /mnt/taurus/data/xixu/datasets/must-c-v1.0/en-es/tst-COMMON.target \
-  --output ./results/wait-k-word-rp-${repeat_penalty}/wait-${src_segment_size}ms-${k} \
+  --output ${checkpoint_dir}/simul-results/wait-k-word/wait-${src_segment_size}ms-${k} \
   --quality-metrics BLEU --sacrebleu-tokenizer 13a

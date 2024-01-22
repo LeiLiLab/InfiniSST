@@ -66,12 +66,16 @@ def eval_model(args):
     
     length_adapter_weights = torch.load(args.length_adapter_path, map_location='cpu')
     mlp_adapter_weights = torch.load(args.mlp_adapter_path, map_location='cpu')
+    speech_tower_weights = torch.load(args.speech_tower_path, map_location='cpu')
+
     
     model.model.mm_length_adapter.load_state_dict(length_adapter_weights)
     model.model.mm_mlp_adapter.load_state_dict(mlp_adapter_weights)
+    model.model.speech_tower.load_state_dict(speech_tower_weights)
     
     model.model.mm_length_adapter.to(dtype=load_type, device=device_input)
     model.model.mm_mlp_adapter.to(dtype=load_type, device=device_input)
+    model.model.speech_tower.to(dtype=load_type, device=device_input)
         
     test_dataset = PromptSpeechToTextDatasetCreator.from_tsv(args.data_path, args.data_split)
   
@@ -81,8 +85,10 @@ def eval_model(args):
     ref_file = open(os.path.join(args.result, args.data_split, "ref"), "w")
     hyp_file = open(os.path.join(args.result, args.data_split, "hyp"), "w")
     conv = conversation_lib.default_conversation.copy()
+
     # change wav2vec to uni-directional
     replace_forward()
+
     for test_data in tqdm(test_dataset):
         source, ref, id = test_data.source, test_data.target, test_data.id                  
         speech_batch = _collate_frames([source], is_audio_input=True)
@@ -139,6 +145,7 @@ if __name__ == "__main__":
     parser.add_argument("--data-split", type=str, required=True)
     parser.add_argument("--result", type=str, required=True)
     parser.add_argument("--beam", type=int, default=1)
+    parser.add_argument("--speech-tower-path", type=str, required=True)
     args = parser.parse_args()
 
     eval_model(args)
