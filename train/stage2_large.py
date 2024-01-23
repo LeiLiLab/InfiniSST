@@ -231,7 +231,7 @@ def train():
     update_config = os.path.join(model_args.model_name_or_path, 'config_large.json')
     json.dump(config, open(update_config, 'w'), indent=2)  
     world_size = int(os.environ.get("WORLD_SIZE", 1))
-    device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)} if world_size != 1 else "auto"     
+    device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)} if world_size != 1 else "auto"
     model = SpeechLlamaForCausalLM.from_pretrained(
         model_args.model_name_or_path,
         cache_dir=training_args.cache_dir,
@@ -240,7 +240,7 @@ def train():
         #device_map=device_map,
     )
     length_after_ssl, length_after_adp = model.model.initialize_speech_modules(
-        speech_tower_path=model.config.speech_tower_path,
+        speeh_tower_path=model.config.speech_tower_path,
         speech_tower_type=None,
         len_adapter_channels=model.config.len_adapter_channels,
         len_adapter_kernel_sizes=model.config.len_adapter_kernel_sizes,
@@ -282,15 +282,15 @@ def train():
             param.requires_grad = True
         for param in model.model.speech_tower.layer_norm.parameters():
             param.requires_grad = True
-
+    
     if model_args.freeze_length_adapter: # freeze length adapter 
         model.model.mm_length_adapter.requires_grad_(False)  
     if model_args.freeze_mm_adapter: # freeze mm adapter 
         model.model.mm_mlp_adapter.requires_grad_(False)          
         
     model.initialize_speech_tokenizer(tokenizer=tokenizer, device=training_args.device,
-                                      only_tune_adapter=model_args.only_tune_adapter, stage1=False) 
-    
+                                      only_tune_adapter=model_args.only_tune_adapter, stage1=False)
+
     # replace uni wav2vec forward
     # replace_forward()
                                                    
