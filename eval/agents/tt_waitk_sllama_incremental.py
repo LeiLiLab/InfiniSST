@@ -23,6 +23,7 @@ from train.uni_wav2vec_monkey_patch import replace_forward
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 
 from eval.agents.tt_waitk_sllama import S2TAgentStates, WaitkSpeechLlama
+from train.uni_wav2vec_monkey_patch import uni_forward
 
 @dataclass
 class IncrementalS2TAgentStates(S2TAgentStates):
@@ -45,8 +46,8 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
     """
 
     def __init__(self, args):
-        args.uni = True
         super().__init__(args)
+        uni_forward()
     
     def build_states(self):
         return IncrementalS2TAgentStates([], [], None, -1, 0)
@@ -78,7 +79,7 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
         source = torch.tensor(states.source).to(
             device=self.model.device, dtype=self.model.dtype
         )
-        source = F.layer_norm(source, source.size())
+        # source = F.layer_norm(source, source.size())
         speech_batch = _collate_frames([source[states.num_frames_read:]], is_audio_input=True)
         n_frames = torch.tensor([source.size(0)], dtype=torch.long)
         speech_lens = self.length_after_adp(self.length_after_ssl(n_frames)) - \

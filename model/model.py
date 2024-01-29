@@ -82,9 +82,9 @@ class SpeechLlamaModel(LlamaModel):
                   
         return (length_after_ssl, length_after_adp) 
                 
-    def get_ssl_feature_w2v(self, src_tokens, src_lengths, after_lens, past_key_values=None):
+    def get_ssl_feature_w2v(self, src_tokens, src_lengths, after_lens):
         padding_mask = lengths_to_padding_mask(src_lengths)
-        res = self.speech_tower.extract_features(src_tokens, padding_mask, past_key_values=past_key_values)
+        res = self.speech_tower.extract_features(src_tokens, padding_mask)
         feature, padding_mask = res["x"], res["padding_mask"]
         if padding_mask is None:
         # Create a padding mask of shape [batch_size, seq_length] with all False values

@@ -178,7 +178,7 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         source = torch.tensor(states.source).to(
             device=self.model.device, dtype=self.model.dtype
         )
-        source = F.layer_norm(source, source.size())
+        # source = F.layer_norm(source, source.size())
         speech_batch = _collate_frames([source], is_audio_input=True)
         n_frames = torch.tensor([source.size(0)], dtype=torch.long)
         speech_lens = self.length_after_adp(self.length_after_ssl(n_frames))
@@ -260,7 +260,6 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             if not states.source_finished:
                 break
         
-        states.num_frames_read = len(states.source)
         states.target_ids.extend(prediction_ids)
         possible_full_word = self.tokenizer.decode(prediction_ids, skip_special_tokens=True)
 

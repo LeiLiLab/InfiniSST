@@ -10,6 +10,7 @@ from fairseq.models.wav2vec import (
     Wav2Vec2Model,
     Wav2VecEncoder    
 )
+from fairseq.models.speech_to_text import lengths_to_padding_mask
 from fairseq.models.wav2vec.utils import pad_to_multiple
 from fairseq.modules import GradMultiply
 from fairseq.utils import index_put, is_xla_tensor
@@ -291,7 +292,15 @@ def uni_transformer_encoder_extract_features(self,
     if padding_mask is not None:
         x = index_put(x, padding_mask, 0)
 
-    x_conv = self.pos_conv(x.transpose(1, 2))
+    x_pad = F.pad(
+        x.transpose(1, 2), 
+        (self.pos_conv[0].padding[0] - 1, 0), 
+        'constant', 
+        0
+    )
+
+    x_conv = self.pos_conv(x_pad)
+    x_conv = x_conv[:, :, :-(self.pos_conv[0].padding[0] - 1)]
     x_conv = x_conv.transpose(1, 2)
     x = x + x_conv
 
@@ -433,10 +442,31 @@ def uni_self_attn_forward(
 
     return x, (attn, layer_result)
 
+
+def uni_get_ssl_feature_w2v(self, src_tokens, src_lengths, after_lens, past_key_values=None):
+    padding_mask = lengths_to_padding_mask(src_lengths)
+    res = self.speech_tower.extract_features(src_tokens, padding_mask, past_key_values=past_key_values)
+    feature, padding_mask = res["x"], res["padding_mask"]
+    if padding_mask is None:
+    # Create a padding mask of shape [batch_size, seq_length] with all False values
+        padding_mask = torch.zeros(feature.shape[:2], dtype=torch.bool, device=feature.device)
+    output_length = (1 - padding_mask.int()).sum(dim=1)
+    feature, input_lengths = self.mm_length_adapter(feature, output_length)
+    assert after_lens.equal(input_lengths), "pre calculate length not match with the forward length"
+    feature = self.mm_mlp_adapter(feature)       
+    return feature
+
+
 def replace_forward():
+    TransformerEncoder.extract_features = uni_transformer_encoder_extract_features
+    TransformerSentenceEncoderLayer.forward = uni_self_attn_forward
+    
+
+def uni_forward():
     Wav2Vec2Model.extract_features = uni_w2v2_extract_features
     Wav2Vec2Model.forward = uni_w2v2_forward
     TransformerEncoder.forward = uni_transformer_encoder_forward
     TransformerEncoder.extract_features = uni_transformer_encoder_extract_features
     TransformerSentenceEncoderLayer.forward = uni_self_attn_forward
     SpeechLlamaModel.forward = SpeechLlamaModel.forward_incremental
+    SpeechLlamaModel.get_ssl_feature_w2v = uni_get_ssl_feature_w2v
