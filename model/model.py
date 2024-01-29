@@ -82,9 +82,9 @@ class SpeechLlamaModel(LlamaModel):
                   
         return (length_after_ssl, length_after_adp) 
                 
-    def get_ssl_feature_w2v(self, src_tokens, src_lengths, after_lens):
+    def get_ssl_feature_w2v(self, src_tokens, src_lengths, after_lens, past_key_values=None):
         padding_mask = lengths_to_padding_mask(src_lengths)
-        res = self.speech_tower.extract_features(src_tokens, padding_mask)
+        res = self.speech_tower.extract_features(src_tokens, padding_mask, past_key_values=past_key_values)
         feature, padding_mask = res["x"], res["padding_mask"]
         if padding_mask is None:
         # Create a padding mask of shape [batch_size, seq_length] with all False values
@@ -105,6 +105,105 @@ class SpeechLlamaModel(LlamaModel):
         x, padding_mask = self.hubert_model.extract_features(**hubert_args)
         output_length = (1 - padding_mask.int()).sum(dim=1)
         return x, padding_mask, output_length  
+    
+    def forward_incremental(
+        self,
+        input_ids: torch.LongTensor = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        past_key_values: Optional[List[torch.FloatTensor]] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        use_cache: Optional[bool] = True,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        speech_batch: Optional[torch.FloatTensor] = None,
+        src_lengths: Optional[List[torch.FloatTensor]] = None,
+        after_lens: Optional[List[torch.FloatTensor]] = None,
+        return_dict: Optional[bool] = None,
+        states: Optional[object] = None,
+    ):
+        orig_embeds_params = getattr(self, 'orig_embeds_params', None)
+
+        if inputs_embeds is None:
+            inputs_embeds = self.embed_tokens(input_ids)
+
+        # speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens).transpose(0, 1)
+        speech_features = None
+        if not self.speech_features_extracted:
+            speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens, past_key_values=states.w2v2_past_key_values).transpose(0, 1)
+
+            if states.past_key_values is not None:
+                speech_past_key_values = [
+                    [p[i][:, :, :states.speech_prefix_length, :] for i in range(2)]
+                    for p in states.past_key_values
+                ]
+                text_past_key_values = [
+                    [p[i][:, :, states.speech_prefix_length:, :] for i in range(2)]
+                    for p in states.past_key_values
+                ]
+                 
+                speech_of_llama_output = super(SpeechLlamaModel, self).forward(
+                    input_ids=None, 
+                    attention_mask=None, 
+                    past_key_values=speech_past_key_values,
+                    inputs_embeds=speech_features, 
+                    use_cache=use_cache,
+                    output_attentions=False, 
+                    output_hidden_states=False,
+                    return_dict=return_dict
+                )
+
+                past_key_values = [
+                    [
+                        torch.cat([speech_of_llama_output.past_key_values[i][j], text_past_key_values[i][j]], dim=2)
+                        for j in range(2)
+                    ]
+                    for i in range(len(self.layers))
+                ]
+                states.speech_prefix_length = speech_of_llama_output.past_key_values[0][0].shape[2]
+
+            else:
+                cur_input_embeds = inputs_embeds[0]
+                cur_input_ids = input_ids[0]
+
+                speech_start_pos = torch.where(cur_input_ids == self.config.sp_start_token_id)[0]
+                speech_end_pos = torch.where(cur_input_ids == self.config.sp_end_token_id)[0]
+
+                states.speech_prefix_length = speech_start_pos + 1 + speech_features[0].shape[0]
+                
+                cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos+1], speech_features[0], cur_input_embeds[speech_end_pos:]), dim=0)
+                cur_new_input_embeds = cur_new_input_embeds.unsqueeze(0)
+
+                speech_of_llama_output = super(SpeechLlamaModel, self).forward(
+                    input_ids=None, 
+                    attention_mask=None, 
+                    past_key_values=None,
+                    inputs_embeds=cur_new_input_embeds[:, :-1, :], 
+                    use_cache=use_cache,
+                    output_attentions=False, 
+                    output_hidden_states=False,
+                    return_dict=return_dict
+                )
+
+                past_key_values = speech_of_llama_output.past_key_values
+            
+            self.speech_features_extracted = True
+        else:
+            past_key_values = states.past_key_values
+        
+        sllama_output = super(SpeechLlamaModel, self).forward(
+            input_ids=None, 
+            attention_mask=None, 
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds[:, -1:, :], 
+            use_cache=use_cache,
+            output_attentions=output_attentions, 
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict
+        )
+
+        states.past_key_values = sllama_output.past_key_values
+
+        return sllama_output
               
     def forward(
         self,
@@ -119,6 +218,7 @@ class SpeechLlamaModel(LlamaModel):
         src_lengths: Optional[List[torch.FloatTensor]] = None,
         after_lens: Optional[List[torch.FloatTensor]] = None,
         return_dict: Optional[bool] = None,
+        states: Optional[object] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
     
         orig_embeds_params = getattr(self, 'orig_embeds_params', None)
@@ -155,7 +255,7 @@ class SpeechLlamaModel(LlamaModel):
 
         return super(SpeechLlamaModel, self).forward(
             input_ids=None, 
-            attention_mask=attention_mask, 
+            attention_mask=attention_mask,
             past_key_values=past_key_values,
             inputs_embeds=inputs_embeds, 
             use_cache=use_cache,
@@ -201,6 +301,7 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
         src_lengths: Optional[List[torch.FloatTensor]] = None,
         after_lens: Optional[List[torch.FloatTensor]] = None,
         return_dict: Optional[bool] = None,
+        states: Optional[object] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -220,7 +321,8 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
             return_dict=return_dict,
             speech_batch=speech_batch,
             src_lengths=src_lengths,
-            after_lens=after_lens
+            after_lens=after_lens,
+            states=states,
         )
 
         hidden_states = outputs[0]
@@ -270,6 +372,7 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
                 "speech_batch": kwargs.get("speech_batch", None),
                 "src_lengths": kwargs.get("src_lengths", None),
                 "after_lens": kwargs.get("after_lens", None),
+                "states": kwargs.get("states", None),
             }
         )
         return model_inputs
