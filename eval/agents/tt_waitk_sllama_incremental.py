@@ -22,143 +22,36 @@ from model.utils import SpaceStoppingCriteria
 from train.uni_wav2vec_monkey_patch import replace_forward
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 
+from eval.agents.tt_waitk_sllama import S2TAgentStates, WaitkSpeechLlama
+
 @dataclass
-class S2TAgentStates(AgentStates):
-    target_ids: list
-    pending_target_ids: list
+class IncrementalS2TAgentStates(S2TAgentStates):
+    w2v2_past_key_values: list
+    past_key_values: list
+    speech_prefix_length: int
+    num_frames_read: int
 
     def reset(self):
         super().reset()
-        self.target_ids = []
-        self.pending_target_ids = []
-
+        self.w2v2_past_key_values = []
+        self.past_key_values = None
+        self.speech_prefix_length = -1
+        self.num_frames_read = 0
 
 @entrypoint
-class WaitkSpeechLlama(SpeechToTextAgent):
+class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
     """
     The agent generate the number of seconds from an input audio.
     """
 
-    IGNORE_INDEX = -100
-    DEFAULT_PAD_TOKEN = "[PAD]"
-    DEFAULT_EOS_TOKEN = "</s>"
-    DEFAULT_BOS_TOKEN = "<s>"
-    DEFAULT_UNK_TOKEN = "<unk>"
-    DEFAULT_SPEECH_TOKEN = "<speech>"
-    DEFAULT_SPEECH_PATCH_TOKEN = "<sp_patch>"
-    DEFAULT_SPEECH_START_TOKEN = "<sp_start>"
-    DEFAULT_SPEECH_END_TOKEN = "<sp_end>"
-
     def __init__(self, args):
+        args.uni = True
         super().__init__(args)
-        transformers.set_seed(998244353)
-        self.waitk_lagging = args.waitk_lagging
-        self.source_segment_size = args.source_segment_size
-        # self.continuous_write = args.continuous_write
-        self.prompt = args.prompt
-        self.max_len_a = args.max_len_a
-        self.max_len_b = args.max_len_b
-        self.repeat_penalty = args.repeat_penalty
-        self.uni = getattr(args, "uni", False)
-        self.load_model(args.model_dir)
     
     def build_states(self):
-        return S2TAgentStates([], [])
+        return IncrementalS2TAgentStates([], [], None, -1, 0)
 
-    def load_model(self, model_dir):
-        load_type = torch.float16 # torch.float32
-        disable_torch_init()
-        self.tokenizer = transformers.AutoTokenizer.from_pretrained(
-            model_dir,
-            padding_side="right",
-            use_fast=False,
-        )
-
-        if not os.path.exists(os.path.join(model_dir, 'config_large.json')):
-            config = json.load(open(os.path.join(model_dir, 'config.json')))
-            config['large_model'] = True
-            update_config = os.path.join(model_dir, 'config_large.json')
-            json.dump(config, open(update_config, 'w'), indent=2)
-
-        self.model = SpeechLlamaForCausalLM.from_pretrained(
-            model_dir,
-            torch_dtype=load_type,
-            low_cpu_mem_usage=True,
-            device_map='auto',
-            config=os.path.join(model_dir, 'config_large.json'),
-        ).eval()
-
-        if 'model.embed_tokens' in self.model.hf_device_map.keys():
-            device_input = 'cuda:' + str(self.model.hf_device_map['model.embed_tokens'])    
-        else:
-            device_input = 'cuda'  
-
-        self.length_after_ssl, self.length_after_adp = self.model.model.initialize_speech_modules(
-            speech_tower_path='/mnt/taurus/data/xixu/models/wav2_vec_vox_960h_pl.pt',
-            speech_tower_type=None,
-            len_adapter_channels=self.model.config.len_adapter_channels,
-            len_adapter_kernel_sizes=self.model.config.len_adapter_kernel_sizes,
-            ssl_fintuned=self.model.config.ssl_fintuned,
-        )
-
-        length_adapter_weights = torch.load(os.path.join(model_dir, 'length_adapter.bin'), map_location='cpu')
-        mlp_adapter_weights = torch.load(os.path.join(model_dir, 'mlp_adapter.bin'), map_location='cpu')
-        speech_tower_weights = torch.load(os.path.join(model_dir, 'speech_tower.bin'), map_location='cpu')
-
-        self.model.model.mm_length_adapter.load_state_dict(length_adapter_weights)
-        self.model.model.mm_mlp_adapter.load_state_dict(mlp_adapter_weights)
-        self.model.model.speech_tower.load_state_dict(speech_tower_weights)
-
-        self.model.model.mm_length_adapter.to(dtype=load_type, device=device_input)
-        self.model.model.mm_mlp_adapter.to(dtype=load_type, device=device_input)     
-        self.model.model.speech_tower.to(dtype=load_type, device=device_input)
-
-        if self.uni:
-            replace_forward()
-
-    @staticmethod
-    def add_args(parser):
-        parser.add_argument("--waitk-lagging", default=1, type=int)
-        # parser.add_argument(
-        #     "--continuous-write",
-        #     default=1,
-        #     type=int,
-        #     help="Max number of words to write at each step",
-        # )
-        parser.add_argument(
-            "--model-dir", 
-            required=True, 
-            type=str
-        )
-        parser.add_argument(
-            "--uni", 
-            action="store_true"
-        )
-        parser.add_argument(
-            "--prompt", 
-            default="<speech_here> Start by converting the English audio into Spanish written form.", 
-            type=str
-        )
-        parser.add_argument(
-            "--max-len-a",
-            type=int,
-            default=5,
-            help="Max number of tokens generated per second"
-        )
-        parser.add_argument(
-            "--max-len-b",
-            type=int,
-            default=20,
-            help="Max number of tokens generated additionally"
-        )
-        parser.add_argument(
-            "--repeat-penalty",
-            type=float,
-            default=1.0,
-            help="Repetition penalty for generation"
-        )
-
-    def policy(self, states: Optional[S2TAgentStates] = None):
+    def policy(self, states: Optional[IncrementalS2TAgentStates] = None):
         if states is None:
             states = self.states
 
@@ -177,15 +70,22 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         if states.source_finished and length_in_seconds < 0.32:
             return WriteAction(content="", finished=True)
 
+        if len(states.w2v2_past_key_values) == 0:
+            states.w2v2_past_key_values = [
+                {} for _ in range(self.model.model.speech_tower.cfg.encoder_layers)
+            ]
+        
         source = torch.tensor(states.source).to(
             device=self.model.device, dtype=self.model.dtype
         )
         source = F.layer_norm(source, source.size())
-        speech_batch = _collate_frames([source], is_audio_input=True)
+        speech_batch = _collate_frames([source[states.num_frames_read:]], is_audio_input=True)
         n_frames = torch.tensor([source.size(0)], dtype=torch.long)
-        speech_lens = self.length_after_adp(self.length_after_ssl(n_frames))
+        speech_lens = self.length_after_adp(self.length_after_ssl(n_frames)) - \
+            self.length_after_adp(self.length_after_ssl(torch.tensor(states.num_frames_read)))
+        n_frames -= states.num_frames_read
 
-        to_adds = [int(speech_len)*self.DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
+        to_adds = [100*self.DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
         to_adds = [self.DEFAULT_SPEECH_START_TOKEN + to_add + self.DEFAULT_SPEECH_END_TOKEN for to_add in to_adds]
 
         # qs = self.prompt
@@ -227,7 +127,9 @@ class WaitkSpeechLlama(SpeechToTextAgent):
                     num_beams=1,
                     max_new_tokens=500,
                     repetition_penalty=self.repeat_penalty,
-                    stopping_criteria=[stopping_criteria]
+                    stopping_criteria=[stopping_criteria],
+                    states=states,
+                    use_cache=True
                 )
             if stopping_criteria(output_ids, None):
                 output_ids = output_ids[:, :-1]
@@ -262,6 +164,7 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             if not states.source_finished:
                 break
         
+        states.num_frames_read = len(states.source)
         states.target_ids.extend(prediction_ids)
         possible_full_word = self.tokenizer.decode(prediction_ids, skip_special_tokens=True)
 
@@ -272,18 +175,3 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             )
         else:
             return ReadAction()
-
-        # if states.source_finished:
-        #     return WriteAction(
-        #         content=possible_full_word,
-        #         finished=True,
-        #     )
-        # elif len(possible_full_word.split()) > 1:
-        #     full_word = possible_full_word.split()[0]
-        #     states.pending_target_ids = states.pending_target_ids[-1:]
-        #     return WriteAction(
-        #         content=full_word,
-        #         finished=False,
-        #     )
-        # else:
-        #     return ReadAction()

@@ -13,6 +13,7 @@ from fairseq.models.wav2vec import (
 from fairseq.models.wav2vec.utils import pad_to_multiple
 from fairseq.modules import GradMultiply
 from fairseq.utils import index_put, is_xla_tensor
+from model.model import SpeechLlamaModel
 
 original_forward = TransformerSentenceEncoderLayer.forward
 
@@ -74,6 +75,13 @@ def generate_2d_causal_mask(seq_len, dtype, device='gpu'):
 #         need_weights=need_weights,
 #         att_args=att_args)
 
+def uni_w2v2_extract_features(self, source, padding_mask, mask=False, layer=None, 
+                              past_key_values=None):
+    res = self.forward(
+        source, padding_mask, mask=mask, features_only=True, layer=layer, 
+        past_key_values=past_key_values
+    )
+    return res
 
 def uni_w2v2_forward(
     self,
@@ -266,7 +274,7 @@ def uni_w2v2_forward(
     return result
 
 def uni_transformer_encoder_forward(self, x, padding_mask=None, layer=None, past_key_values=None):
-    x, layer_results = self.extract_features(x, padding_mask, layer, past_key_values)
+    x, layer_results = self.extract_features(x, padding_mask, layer, past_key_values=past_key_values)
 
     if self.layer_norm_first and layer is None:
         x = self.layer_norm(x)
@@ -359,10 +367,10 @@ def uni_self_attn_forward(
     saved_states = None
     total_length = x.size(0)
     prefix_length = 0
-    if past_key_value is not None:
-        saved_states = self.attn._get_input_buffer(past_key_value)
+    if past_key_value is not None and len(past_key_value) > 0:
+        saved_states = self.self_attn._get_input_buffer(past_key_value)
         prefix_length = saved_states["prev_key"].size(2)
-        total += prefix_length
+        total_length += prefix_length
 
     causal_mask = generate_2d_causal_mask(total_length, dtype=x.dtype,device=x.device)[prefix_length:]
 
@@ -426,7 +434,9 @@ def uni_self_attn_forward(
     return x, (attn, layer_result)
 
 def replace_forward():
+    Wav2Vec2Model.extract_features = uni_w2v2_extract_features
     Wav2Vec2Model.forward = uni_w2v2_forward
     TransformerEncoder.forward = uni_transformer_encoder_forward
     TransformerEncoder.extract_features = uni_transformer_encoder_extract_features
     TransformerSentenceEncoderLayer.forward = uni_self_attn_forward
+    SpeechLlamaModel.forward = SpeechLlamaModel.forward_incremental
