@@ -1,3 +1,4 @@
+from typing import Dict, List, Optional, Tuple
 import fairseq
 import numpy as np
 import torch 
@@ -10,11 +11,38 @@ from fairseq.models.wav2vec import (
     Wav2Vec2Model,
     Wav2VecEncoder    
 )
-from fairseq.models.speech_to_text import lengths_to_padding_mask
+from fairseq.models.speech_to_text import lengths_to_padding_mask, Conv1dSubsampler
 from fairseq.models.wav2vec.utils import pad_to_multiple
 from fairseq.modules import GradMultiply
 from fairseq.utils import index_put, is_xla_tensor
 from model.model import SpeechLlamaModel
+
+class ZeroPadConv1dSubsampler(Conv1dSubsampler):
+    def __init__(
+        self,
+        in_channels: int,
+        mid_channels: int,
+        out_channels: int,
+        kernel_sizes: List[int] = (3, 3),
+    ):
+        super(Conv1dSubsampler, self).__init__()
+        self.n_layers = len(kernel_sizes)
+        self.conv_layers = nn.ModuleList(
+            nn.Conv1d(
+                in_channels if i == 0 else mid_channels // 2,
+                mid_channels if i < self.n_layers - 1 else out_channels * 2,
+                k,
+                stride=2,
+                padding=0,
+            )
+            for i, k in enumerate(kernel_sizes)
+        )
+    
+    def get_out_seq_lens_tensor(self, in_seq_lens_tensor):
+        out = in_seq_lens_tensor.clone()
+        for _ in range(self.n_layers):
+            out = ((out.float() - 3) / 2 + 1).floor().long()
+        return out 
 
 original_forward = TransformerSentenceEncoderLayer.forward
 
@@ -77,10 +105,10 @@ def generate_2d_causal_mask(seq_len, dtype, device='gpu'):
 #         att_args=att_args)
 
 def uni_w2v2_extract_features(self, source, padding_mask, mask=False, layer=None, 
-                              past_key_values=None):
+                              past_key_values=None, past_features=None):
     res = self.forward(
         source, padding_mask, mask=mask, features_only=True, layer=layer, 
-        past_key_values=past_key_values
+        past_key_values=past_key_values, past_features=past_features
     )
     return res
 
@@ -95,6 +123,7 @@ def uni_w2v2_forward(
     mask_channel_indices=None,
     padding_count=None,
     past_key_values=None,
+    past_features=None,
 ):
 
     if self.feature_grad_mult > 0:
@@ -179,7 +208,13 @@ def uni_w2v2_forward(
         y = unmasked_features
         mask_indices = None
 
-    x, layer_results = self.encoder(x, padding_mask=padding_mask, layer=layer, past_key_values=past_key_values)
+    x, layer_results = self.encoder(
+        x, 
+        padding_mask=padding_mask, 
+        layer=layer, 
+        past_key_values=past_key_values, 
+        past_features=past_features,
+    )
 
     if features_only:
         return {
@@ -274,20 +309,25 @@ def uni_w2v2_forward(
 
     return result
 
-def uni_transformer_encoder_forward(self, x, padding_mask=None, layer=None, past_key_values=None):
-    x, layer_results = self.extract_features(x, padding_mask, layer, past_key_values=past_key_values)
+def uni_transformer_encoder_forward(self, x, padding_mask=None, layer=None, past_key_values=None, past_features=None):
+    x, layer_results = self.extract_features(x, padding_mask, layer, past_key_values=past_key_values, past_features=past_features)
 
     if self.layer_norm_first and layer is None:
         x = self.layer_norm(x)
 
+    if past_features is not None:
+        x = torch.cat([past_features, x], dim=1)
+
     return x, layer_results
 
-def uni_transformer_encoder_extract_features(self,
+def uni_transformer_encoder_extract_features(
+    self,
     x,
     padding_mask=None,
     tgt_layer=None,
     min_layer=0,
     past_key_values=None,
+    past_features=None,
 ):
     if padding_mask is not None:
         x = index_put(x, padding_mask, 0)
@@ -304,13 +344,11 @@ def uni_transformer_encoder_extract_features(self,
     x_conv = x_conv.transpose(1, 2)
     x = x + x_conv
 
-    if not self.layer_norm_first:
-        x = self.layer_norm(x)
-
     # pad to the sequence length dimension
     x, pad_length = pad_to_multiple(
         x, self.required_seq_len_multiple, dim=-2, value=0
     )
+
     if pad_length > 0 and padding_mask is None:
         padding_mask = x.new_zeros((x.size(0), x.size(1)), dtype=torch.bool)
         padding_mask[:, -pad_length:] = True
@@ -318,6 +356,16 @@ def uni_transformer_encoder_extract_features(self,
         padding_mask, _ = pad_to_multiple(
             padding_mask, self.required_seq_len_multiple, dim=-1, value=True
         )
+
+    prefix_length = 0
+    if past_key_values is not None and len(past_key_values[0]) > 0:
+        saved_states = self.layers[0].self_attn._get_input_buffer(past_key_values[0])
+        prefix_length = saved_states["prev_key"].size(2)
+    x = x[:, prefix_length:, :]
+
+    if not self.layer_norm_first:
+        x = self.layer_norm(x)
+
     x = F.dropout(x, p=self.dropout, training=self.training)
 
     # B x T x C -> T x B x C
@@ -329,7 +377,7 @@ def uni_transformer_encoder_extract_features(self,
         dropout_probability = np.random.random() if self.layerdrop > 0 else 1
         if not self.training or (dropout_probability > self.layerdrop):
             x, (z, lr) = layer(
-                x, self_attn_padding_mask=padding_mask, need_weights=False,
+                x, self_attn_padding_mask=padding_mask[:, prefix_length:], need_weights=False,
                 past_key_value=past_key_values[i] if past_key_values is not None else None,
             )
             if i >= min_layer:
@@ -356,6 +404,13 @@ def uni_transformer_encoder_extract_features(self,
             )
 
         layer_results = [undo_pad(*u) for u in layer_results]
+
+        if past_key_values is not None:
+            for past_key_value in past_key_values:
+                for _, p in past_key_value.items():
+                    p['prev_key'] = p['prev_key'][:, :, :-pad_length, :]
+                    p['prev_value'] = p['prev_value'][:, :, :-pad_length, :]
+                    p['prev_key_padding_mask'] = p['prev_key_padding_mask'][:, :-pad_length]
 
     return x, layer_results
 
@@ -443,26 +498,82 @@ def uni_self_attn_forward(
     return x, (attn, layer_result)
 
 
-def uni_get_ssl_feature_w2v(self, src_tokens, src_lengths, after_lens, past_key_values=None):
+def uni_get_ssl_feature_w2v(self, src_tokens, src_lengths, after_lens, states):
     padding_mask = lengths_to_padding_mask(src_lengths)
-    res = self.speech_tower.extract_features(src_tokens, padding_mask, past_key_values=past_key_values)
+    res = self.speech_tower.extract_features(
+        src_tokens, 
+        padding_mask, 
+        past_key_values=states.w2v2_past_key_values,
+        past_features=states.w2v2_past_features
+    )
     feature, padding_mask = res["x"], res["padding_mask"]
+    states.w2v2_past_features = feature
     if padding_mask is None:
     # Create a padding mask of shape [batch_size, seq_length] with all False values
         padding_mask = torch.zeros(feature.shape[:2], dtype=torch.bool, device=feature.device)
     output_length = (1 - padding_mask.int()).sum(dim=1)
     feature, input_lengths = self.mm_length_adapter(feature, output_length)
     assert after_lens.equal(input_lengths), "pre calculate length not match with the forward length"
-    feature = self.mm_mlp_adapter(feature)       
-    return feature
+    feature = self.mm_mlp_adapter(feature)    
+    res = feature[states.speech_past_length:]
+    states.speech_past_length = feature.size(0)
+    return res
+
+
+def uni_initialize_speech_modules(
+        self, speech_tower_path, speech_tower_type=None,
+        len_adapter_channels=None, len_adapter_kernel_sizes=None,
+        stage1_complete=False, ssl_fintuned=False
+):
+    # loading pretrained ssl model
+    # wav2vec 2.0
+    if not ssl_fintuned: # ssl model
+        state = fairseq.checkpoint_utils.load_checkpoint_to_cpu(speech_tower_path)
+        w2v_args = state["args"]
+        task = fairseq.tasks.setup_task(w2v_args)
+        model = task.build_model(w2v_args)
+        model.load_state_dict(state["model"], strict=True)
+        speech_dimension = w2v_args.encoder_embed_dim
+    else: # ctc finetune, w2v-ctc
+        state = fairseq.checkpoint_utils.load_checkpoint_to_cpu(speech_tower_path)
+        model = Wav2VecEncoder(state['cfg']['model'], None)
+        new = {}
+        for key in state['model'].keys():
+            new_key = key.replace('w2v_encoder.', '')
+            if not new_key.startswith('proj'):
+                new[new_key] = state['model'][key]
+        model.load_state_dict(new, strict=True)
+        model = model.w2v_model
+        speech_dimension = state['cfg']['model']['w2v_args']['model'].encoder_embed_dim
+            
+    self.speech_tower = model
+    self.mm_length_adapter = ZeroPadConv1dSubsampler(
+                                    speech_dimension,
+                                    len_adapter_channels,
+                                    speech_dimension,
+                                    [int(k) for k in len_adapter_kernel_sizes.split(',')]
+                                ) 
+    self.mm_mlp_adapter = nn.Linear(speech_dimension, self.config.hidden_size)
+    length_after_ssl = self.speech_tower._get_feat_extract_output_lengths
+    length_after_adp = self.mm_length_adapter.get_out_seq_lens_tensor
+    
+    if not stage1_complete:
+        self.config.speech_tower_path = speech_tower_path
+        self.config.len_adapter_channels = len_adapter_channels
+        self.config.len_adapter_kernel_sizes = len_adapter_kernel_sizes
+        self.config.stage1_complete = True
+        self.config.ssl_fintuned = ssl_fintuned
+                
+    return (length_after_ssl, length_after_adp)
 
 
 def replace_forward():
     TransformerEncoder.extract_features = uni_transformer_encoder_extract_features
     TransformerSentenceEncoderLayer.forward = uni_self_attn_forward
+    SpeechLlamaModel.initialize_speech_modules = uni_initialize_speech_modules
     
 
-def uni_forward():
+def replace_forward_incremental():
     Wav2Vec2Model.extract_features = uni_w2v2_extract_features
     Wav2Vec2Model.forward = uni_w2v2_forward
     TransformerEncoder.forward = uni_transformer_encoder_forward
@@ -470,3 +581,4 @@ def uni_forward():
     TransformerSentenceEncoderLayer.forward = uni_self_attn_forward
     SpeechLlamaModel.forward = SpeechLlamaModel.forward_incremental
     SpeechLlamaModel.get_ssl_feature_w2v = uni_get_ssl_feature_w2v
+    SpeechLlamaModel.initialize_speech_modules = uni_initialize_speech_modules

@@ -23,21 +23,23 @@ from train.uni_wav2vec_monkey_patch import replace_forward
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 
 from eval.agents.tt_waitk_sllama import S2TAgentStates, WaitkSpeechLlama
-from train.uni_wav2vec_monkey_patch import uni_forward
+from train.uni_wav2vec_monkey_patch import replace_forward_incremental
 
 @dataclass
 class IncrementalS2TAgentStates(S2TAgentStates):
     w2v2_past_key_values: list
+    w2v2_past_features: torch.Tensor
     past_key_values: list
     speech_prefix_length: int
-    num_frames_read: int
+    speech_past_length: int
 
     def reset(self):
         super().reset()
         self.w2v2_past_key_values = []
+        self.w2v2_past_features = None
         self.past_key_values = None
         self.speech_prefix_length = -1
-        self.num_frames_read = 0
+        self.speech_past_length = 0
 
 @entrypoint
 class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
@@ -47,10 +49,10 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
 
     def __init__(self, args):
         super().__init__(args)
-        uni_forward()
+        replace_forward_incremental()
     
     def build_states(self):
-        return IncrementalS2TAgentStates([], [], None, -1, 0)
+        return IncrementalS2TAgentStates([], [], None, None, -1, 0)
 
     def policy(self, states: Optional[IncrementalS2TAgentStates] = None):
         if states is None:
@@ -80,13 +82,11 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
             device=self.model.device, dtype=self.model.dtype
         )
         # source = F.layer_norm(source, source.size())
-        speech_batch = _collate_frames([source[states.num_frames_read:]], is_audio_input=True)
+        speech_batch = _collate_frames([source], is_audio_input=True)
         n_frames = torch.tensor([source.size(0)], dtype=torch.long)
-        speech_lens = self.length_after_adp(self.length_after_ssl(n_frames)) - \
-            self.length_after_adp(self.length_after_ssl(torch.tensor(states.num_frames_read)))
-        n_frames -= states.num_frames_read
+        speech_lens = length_after_adp(length_after_ssl(n_frames))
 
-        to_adds = [100*self.DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
+        to_adds = [0*self.DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
         to_adds = [self.DEFAULT_SPEECH_START_TOKEN + to_add + self.DEFAULT_SPEECH_END_TOKEN for to_add in to_adds]
 
         # qs = self.prompt
