@@ -19,11 +19,11 @@ from conversation import SeparatorStyle
 from eval.utils import disable_torch_init
 from model.model import SpeechLlamaForCausalLM
 from model.utils import SpaceStoppingCriteria
-from train.uni_wav2vec_monkey_patch import replace_forward
+from train.uni_wav2vec_monkey_patch import replace_uni_train
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 
 from eval.agents.tt_waitk_sllama import S2TAgentStates, WaitkSpeechLlama
-from train.uni_wav2vec_monkey_patch import replace_forward_incremental
+from train.uni_wav2vec_monkey_patch import replace_uni_decode
 
 @dataclass
 class IncrementalS2TAgentStates(S2TAgentStates):
@@ -48,8 +48,8 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
     """
 
     def __init__(self, args):
+        replace_uni_decode()
         super().__init__(args)
-        replace_forward_incremental()
     
     def build_states(self):
         return IncrementalS2TAgentStates([], [], None, None, -1, 0)
