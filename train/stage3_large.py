@@ -36,7 +36,7 @@ import conversation as conversation_lib
 from train.dataset import PromptSpeechToTextDatasetCreator, SpeechToTextDatasetItem
 from model.model import SpeechLlamaForCausalLM
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
-from train.uni_wav2vec_monkey_patch import replace_forward
+from train.uni_wav2vec_monkey_patch import replace_uni_train
 # TODO: import and use code from ../data/dataset.py
 
 IGNORE_INDEX = -100
@@ -81,6 +81,7 @@ class ModelArguments:
             "choices": ["auto", "bfloat16", "float16", "float32"],
         },
     )
+    unidirectional: bool = field(default=False)
 
 
 
@@ -257,6 +258,11 @@ def train():
     json.dump(config, open(update_config, 'w'), indent=2)  
     world_size = int(os.environ.get("WORLD_SIZE", 1))
     device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)} if world_size != 1 else "auto"
+
+    # replace uni wav2vec forward
+    if model_args.unidirectional:
+        replace_uni_train()
+
     model = SpeechLlamaForCausalLM.from_pretrained(
         model_args.model_name_or_path,
         cache_dir=training_args.cache_dir,
@@ -316,10 +322,7 @@ def train():
     model.initialize_speech_tokenizer(tokenizer=tokenizer, device=training_args.device,
                                       only_tune_adapter=model_args.only_tune_adapter, stage1=False)
 
-    # replace uni wav2vec forward
-    # replace_forward()
-                                                   
-
+                    
     data_module = make_supervised_data_module(tokenizer=tokenizer,
                                               data_args=data_args,
                                               length_after_ssl=length_after_ssl,

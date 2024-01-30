@@ -10,7 +10,7 @@ from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 from train.dataset import PromptSpeechToTextDatasetCreator, SpeechToTextDatasetItem
 import conversation as conversation_lib
 from conversation import SeparatorStyle
-from train.uni_wav2vec_monkey_patch import replace_forward
+from train.uni_wav2vec_monkey_patch import replace_uni_train
 
 import os
 import requests
@@ -44,6 +44,8 @@ def eval_model(args):
     update_config = os.path.join(args.model_name, 'config_large.json')
     json.dump(config, open(update_config, 'w'), indent=2)
     # replace_llama_attn_with_flash_attn()
+    # change wav2vec to uni-directional
+    replace_uni_train()
     model = SpeechLlamaForCausalLM.from_pretrained(args.model_name,
                                                    torch_dtype=load_type,
                                                    low_cpu_mem_usage=True,
@@ -85,9 +87,6 @@ def eval_model(args):
     ref_file = open(os.path.join(args.result, args.data_split, "ref"), "w")
     hyp_file = open(os.path.join(args.result, args.data_split, "hyp"), "w")
     conv = conversation_lib.default_conversation.copy()
-
-    # change wav2vec to uni-directional
-    replace_forward()
 
     for test_data in tqdm(test_dataset):
         source, ref, id = test_data.source, test_data.target, test_data.id                  

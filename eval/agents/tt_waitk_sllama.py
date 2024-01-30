@@ -19,7 +19,7 @@ from conversation import SeparatorStyle
 from eval.utils import disable_torch_init
 from model.model import SpeechLlamaForCausalLM
 from model.utils import SpaceStoppingCriteria
-from train.uni_wav2vec_monkey_patch import replace_forward
+from train.uni_wav2vec_monkey_patch import replace_uni_train
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 
 @dataclass
@@ -78,6 +78,9 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             update_config = os.path.join(model_dir, 'config_large.json')
             json.dump(config, open(update_config, 'w'), indent=2)
 
+        if self.uni:
+            replace_uni_train()
+
         self.model = SpeechLlamaForCausalLM.from_pretrained(
             model_dir,
             torch_dtype=load_type,
@@ -111,8 +114,6 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         self.model.model.mm_mlp_adapter.to(dtype=load_type, device=device_input)     
         self.model.model.speech_tower.to(dtype=load_type, device=device_input)
 
-        if self.uni:
-            replace_forward()
 
     @staticmethod
     def add_args(parser):

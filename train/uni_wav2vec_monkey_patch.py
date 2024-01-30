@@ -567,13 +567,13 @@ def uni_initialize_speech_modules(
     return (length_after_ssl, length_after_adp)
 
 
-def replace_forward():
+def replace_uni_train():
     TransformerEncoder.extract_features = uni_transformer_encoder_extract_features
     TransformerSentenceEncoderLayer.forward = uni_self_attn_forward
     SpeechLlamaModel.initialize_speech_modules = uni_initialize_speech_modules
     
 
-def replace_forward_incremental():
+def replace_uni_decode():
     Wav2Vec2Model.extract_features = uni_w2v2_extract_features
     Wav2Vec2Model.forward = uni_w2v2_forward
     TransformerEncoder.forward = uni_transformer_encoder_forward
