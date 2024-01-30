@@ -129,7 +129,7 @@ class SpeechLlamaModel(LlamaModel):
         # speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens).transpose(0, 1)
         speech_features = None
         if not self.speech_features_extracted:
-            speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens, past_key_values=states.w2v2_past_key_values).transpose(0, 1)
+            speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens, states=states).transpose(0, 1)
 
             if states.past_key_values is not None:
                 speech_past_key_values = [
@@ -202,6 +202,9 @@ class SpeechLlamaModel(LlamaModel):
         )
 
         states.past_key_values = sllama_output.past_key_values
+
+
+        return speech_of_llama_output
 
         return sllama_output
               
