@@ -15,8 +15,8 @@
 #    limitations under the License.
 
 import os, sys, random
-os.environ['WANDB_DISABLED'] = 'true'
-sys.path.append('/home/xixu/sllama')
+# os.environ['WANDB_DISABLED'] = 'true'
+# sys.path.append('/home/xixu/sllama')
 import copy
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple, Union
@@ -34,6 +34,7 @@ from torch.utils.data import Dataset
 import conversation as conversation_lib
 from train.dataset import PromptSpeechToTextDatasetCreator, SpeechToTextDatasetItem
 from model.model import SpeechLlamaForCausalLM
+from train.uni_wav2vec_monkey_patch import replace_uni_train
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 # TODO: import and use code from ../data/dataset.py
 
@@ -77,6 +78,7 @@ class ModelArguments:
             "choices": ["auto", "bfloat16", "float16", "float32"],
         },
     )
+    unidirectional: bool = field(default=False)
 
 
 @dataclass
@@ -125,8 +127,10 @@ class DataCollatorForSupervisedDataset(object):
     model: SpeechLlamaForCausalLM
     prompt_list_asr = ['<speech_here> Try to decipher the spoken language and write it down.']
     prompt_list_st = ['<speech_here>']
+
     def reset_speech_features_flag(self):
         self.model.model.speech_features_extracted = False
+    
     def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
         # todo: sort samples by descending number of frames
         self.reset_speech_features_flag()
@@ -181,7 +185,7 @@ class DataCollatorForSupervisedDataset(object):
         #print("input_ids:", input_ids[0])
         #print("targets:", targets[0])
         #print(self.tokenizer.convert_ids_to_tokens(input_ids[0]))
-        
+                
         batch = dict(
             input_ids=input_ids,
             labels=targets,
@@ -189,7 +193,7 @@ class DataCollatorForSupervisedDataset(object):
             speech_batch=speech_batch,
             src_lengths=n_frames, # src length,ssl_fintuned
             after_lens=speech_lens, # length after forward ssl and adapter
-        )      
+        )
 
         return batch
 
@@ -217,6 +221,10 @@ def train():
     set_seed(training_args.seed) 
     world_size = int(os.environ.get("WORLD_SIZE", 1))
     device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)} if world_size != 1 else "auto"
+
+    if model_args.unidirectional:
+        replace_uni_train()
+
     model = SpeechLlamaForCausalLM.from_pretrained(
         model_args.model_name_or_path,
         cache_dir=training_args.cache_dir,
@@ -224,7 +232,7 @@ def train():
         load_in_8bit=False,
         #device_map=device_map,
     )
-            
+
     model.config.use_cache = False
 
     tokenizer = transformers.AutoTokenizer.from_pretrained(
@@ -254,7 +262,7 @@ def train():
     model.model.speech_tower.to(device=training_args.device)
     model.model.mm_length_adapter.to(device=training_args.device)
     model.model.mm_mlp_adapter.to(device=training_args.device) 
-       
+    
     if model_args.freeze_speech_foundation: # freeze the ssl model after add the ssl model by initialize_speech_modules   
         model.model.speech_tower.requires_grad_(False)
     else: # train transformer encoder

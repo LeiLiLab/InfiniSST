@@ -80,7 +80,7 @@ class ModelArguments:
             "choices": ["auto", "bfloat16", "float16", "float32"],
         },
     )
-
+    unidirectional: bool = field(default=False)
 
 
 @dataclass
@@ -234,7 +234,8 @@ def train():
     device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)} if world_size != 1 else "auto"
 
     # replace uni wav2vec forward
-    # replace_uni_train()
+    if model_args.unidirectional:
+        replace_uni_train()
     
     model = SpeechLlamaForCausalLM.from_pretrained(
         model_args.model_name_or_path,

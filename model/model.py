@@ -61,7 +61,7 @@ class SpeechLlamaModel(LlamaModel):
             model.load_state_dict(new, strict=True)
             model = model.w2v_model
             speech_dimension = state['cfg']['model']['w2v_args']['model'].encoder_embed_dim
-              
+            
         self.speech_tower = model
         self.mm_length_adapter = Conv1dSubsampler(
                                      speech_dimension,
@@ -121,6 +121,8 @@ class SpeechLlamaModel(LlamaModel):
         return_dict: Optional[bool] = None,
         states: Optional[object] = None,
     ):
+        assert input_ids.size(0) == 1
+
         orig_embeds_params = getattr(self, 'orig_embeds_params', None)
 
         if inputs_embeds is None:
@@ -140,16 +142,33 @@ class SpeechLlamaModel(LlamaModel):
                     [p[i][:, :, states.speech_prefix_length:, :] for i in range(2)]
                     for p in states.past_key_values
                 ]
+
+                speech_position_ids = torch.arange(
+                    states.speech_prefix_length, 
+                    states.speech_prefix_length + speech_features.size(1),
+                    dtype=torch.long,
+                    device=self.position_ids.device,
+                ).unsqueeze(0)
                  
                 speech_of_llama_output = super(SpeechLlamaModel, self).forward(
                     input_ids=None, 
                     attention_mask=None, 
                     past_key_values=speech_past_key_values,
                     inputs_embeds=speech_features, 
+                    position_ids=speech_position_ids,
                     use_cache=use_cache,
                     output_attentions=False, 
                     output_hidden_states=False,
                     return_dict=return_dict
+                )
+
+                self.position_ids = torch.cat(
+                    (
+                        self.position_ids[:, :states.speech_prefix_length],
+                        speech_position_ids,
+                        self.position_ids[:, states.speech_prefix_length:]
+                    ),
+                    dim=1
                 )
 
                 past_key_values = [
@@ -168,16 +187,21 @@ class SpeechLlamaModel(LlamaModel):
                 speech_start_pos = torch.where(cur_input_ids == self.config.sp_start_token_id)[0]
                 speech_end_pos = torch.where(cur_input_ids == self.config.sp_end_token_id)[0]
 
-                states.speech_prefix_length = speech_start_pos + 1 + speech_features[0].shape[0]
+                states.speech_prefix_length = speech_start_pos[0] + 1 + speech_features[0].shape[0]
                 
                 cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos+1], speech_features[0], cur_input_embeds[speech_end_pos:]), dim=0)
                 cur_new_input_embeds = cur_new_input_embeds.unsqueeze(0)
+
+                self.position_ids = torch.arange(0, inputs_embeds.size(1), dtype=torch.long, device=input_ids.device)
+                self.position_ids[states.speech_prefix_length:] -= speech_features[0].shape[0]
+                self.position_ids = self.position_ids.unsqueeze(0)
 
                 speech_of_llama_output = super(SpeechLlamaModel, self).forward(
                     input_ids=None, 
                     attention_mask=None, 
                     past_key_values=None,
                     inputs_embeds=cur_new_input_embeds[:, :-1, :], 
+                    position_ids=self.position_ids[:, :-1],
                     use_cache=use_cache,
                     output_attentions=False, 
                     output_hidden_states=False,
@@ -189,12 +213,14 @@ class SpeechLlamaModel(LlamaModel):
             self.speech_features_extracted = True
         else:
             past_key_values = states.past_key_values
+            self.position_ids = torch.cat([self.position_ids, self.position_ids[:, -1:] + 1], dim=1)
         
         sllama_output = super(SpeechLlamaModel, self).forward(
             input_ids=None, 
             attention_mask=None, 
             past_key_values=past_key_values,
             inputs_embeds=inputs_embeds[:, -1:, :], 
+            position_ids=self.position_ids[:, -1:],
             use_cache=use_cache,
             output_attentions=output_attentions, 
             output_hidden_states=output_hidden_states,
@@ -202,9 +228,6 @@ class SpeechLlamaModel(LlamaModel):
         )
 
         states.past_key_values = sllama_output.past_key_values
-
-
-        return speech_of_llama_output
 
         return sllama_output
               
@@ -234,6 +257,17 @@ class SpeechLlamaModel(LlamaModel):
         if not self.speech_features_extracted:
             speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens).transpose(0, 1)
             self.speech_features_extracted = True
+
+            position_ids = []
+            for i in range(inputs_embeds.size(0)):
+                position_id = torch.arange(0, input_ids[i].size(0), dtype=torch.long, device=input_ids.device)
+                speech_start_pos = torch.where(input_ids[i] == self.config.sp_start_token_id)[0]
+                speech_end_pos = torch.where(input_ids[i] == self.config.sp_end_token_id)[0]
+                position_id[speech_end_pos:] -= speech_end_pos - speech_start_pos - 1
+                position_ids.append(position_id)
+            self.position_ids = torch.stack(position_ids, dim=0)
+        else:
+            self.position_ids = torch.cat([self.position_ids, self.position_ids[:, -1:] + 1], dim=1)
             
         new_input_embeds = []
         cur_speech_idx = 0
@@ -249,15 +283,17 @@ class SpeechLlamaModel(LlamaModel):
                     continue
                 speech_start_pos = torch.where(cur_input_ids == self.config.sp_start_token_id)[0]
                 speech_end_pos = torch.where(cur_input_ids == self.config.sp_end_token_id)[0]
-                if orig_embeds_params is not None:
-                    cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos].detach(), cur_input_embeds[speech_start_pos], cur_speech_features, cur_input_embeds[speech_end_pos], cur_input_embeds[speech_end_pos + 1:].detach()), dim=0)
-                else:
-                    cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos+1], cur_speech_features, cur_input_embeds[speech_end_pos:]), dim=0)
-                new_input_embeds.append(cur_new_input_embeds)  
+                # if orig_embeds_params is not None:
+                #     cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos].detach(), cur_input_embeds[speech_start_pos], cur_speech_features, cur_input_embeds[speech_end_pos], cur_input_embeds[speech_end_pos + 1:].detach()), dim=0)
+                # else:
+                cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos+1], cur_speech_features, cur_input_embeds[speech_end_pos:]), dim=0)
+                new_input_embeds.append(cur_new_input_embeds)
+
             inputs_embeds = torch.stack(new_input_embeds, dim=0)  
 
         return super(SpeechLlamaModel, self).forward(
             input_ids=None, 
+            position_ids=self.position_ids,
             attention_mask=attention_mask,
             past_key_values=past_key_values,
             inputs_embeds=inputs_embeds, 
@@ -265,7 +301,7 @@ class SpeechLlamaModel(LlamaModel):
             output_attentions=output_attentions, 
             output_hidden_states=output_hidden_states,
             return_dict=return_dict
-        ) 
+        )
     
 ## try not add prompt
     
@@ -401,12 +437,12 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
             self.config.sp_start_token_id = sp_start_token_id
             self.config.sp_end_token_id = sp_end_token_id 
 
-        if only_tune_adapter: 
-            self.get_model().orig_embeds_params = [self.get_input_embeddings().weight.data.clone().to(device=device)]
-            for p in self.get_input_embeddings().parameters():
-                p.requires_grad = True                 
-            for p in self.get_output_embeddings().parameters():
-                p.requires_grad = False
+        # if only_tune_adapter: 
+        #     self.get_model().orig_embeds_params = [self.get_input_embeddings().weight.data.clone().to(device=device)]
+        #     for p in self.get_input_embeddings().parameters():
+        #         p.requires_grad = True                 
+        #     for p in self.get_output_embeddings().parameters():
+        #         p.requires_grad = False
                    
 AutoConfig.register("SpeechLlama", SpeechLlamaConfig)
 AutoModelForCausalLM.register(SpeechLlamaConfig, SpeechLlamaForCausalLM)
