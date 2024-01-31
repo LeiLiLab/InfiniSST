@@ -84,7 +84,7 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
         # source = F.layer_norm(source, source.size())
         speech_batch = _collate_frames([source], is_audio_input=True)
         n_frames = torch.tensor([source.size(0)], dtype=torch.long)
-        speech_lens = length_after_adp(length_after_ssl(n_frames))
+        speech_lens = self.length_after_adp(self.length_after_ssl(n_frames))
 
         to_adds = [0*self.DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
         to_adds = [self.DEFAULT_SPEECH_START_TOKEN + to_add + self.DEFAULT_SPEECH_END_TOKEN for to_add in to_adds]
