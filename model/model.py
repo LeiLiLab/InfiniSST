@@ -283,10 +283,10 @@ class SpeechLlamaModel(LlamaModel):
                     continue
                 speech_start_pos = torch.where(cur_input_ids == self.config.sp_start_token_id)[0]
                 speech_end_pos = torch.where(cur_input_ids == self.config.sp_end_token_id)[0]
-                # if orig_embeds_params is not None:
-                #     cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos].detach(), cur_input_embeds[speech_start_pos], cur_speech_features, cur_input_embeds[speech_end_pos], cur_input_embeds[speech_end_pos + 1:].detach()), dim=0)
-                # else:
-                cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos+1], cur_speech_features, cur_input_embeds[speech_end_pos:]), dim=0)
+                if orig_embeds_params is not None:
+                    cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos].detach(), cur_input_embeds[speech_start_pos], cur_speech_features, cur_input_embeds[speech_end_pos], cur_input_embeds[speech_end_pos + 1:].detach()), dim=0)
+                else:
+                    cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos+1], cur_speech_features, cur_input_embeds[speech_end_pos:]), dim=0)
                 new_input_embeds.append(cur_new_input_embeds)
 
             inputs_embeds = torch.stack(new_input_embeds, dim=0)  
@@ -437,12 +437,12 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
             self.config.sp_start_token_id = sp_start_token_id
             self.config.sp_end_token_id = sp_end_token_id 
 
-        # if only_tune_adapter: 
-        #     self.get_model().orig_embeds_params = [self.get_input_embeddings().weight.data.clone().to(device=device)]
-        #     for p in self.get_input_embeddings().parameters():
-        #         p.requires_grad = True                 
-        #     for p in self.get_output_embeddings().parameters():
-        #         p.requires_grad = False
+        if only_tune_adapter: 
+            self.get_model().orig_embeds_params = [self.get_input_embeddings().weight.data.clone().to(device=device)]
+            for p in self.get_input_embeddings().parameters():
+                p.requires_grad = True                 
+            for p in self.get_output_embeddings().parameters():
+                p.requires_grad = False
                    
 AutoConfig.register("SpeechLlama", SpeechLlamaConfig)
 AutoModelForCausalLM.register(SpeechLlamaConfig, SpeechLlamaForCausalLM)
