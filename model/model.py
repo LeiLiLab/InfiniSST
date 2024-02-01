@@ -1,3 +1,5 @@
+import random
+import time
 import fairseq
 from typing import List, Optional, Tuple, Union
 
@@ -22,6 +24,7 @@ DEFAULT_SPEECH_END_TOKEN = "<sp_end>"
 
 class SpeechLlamaConfig(LlamaConfig):
     model_type = "SpeechLlama"
+    inference = False
 
 
 class SpeechLlamaModel(LlamaModel):
@@ -256,7 +259,8 @@ class SpeechLlamaModel(LlamaModel):
         speech_features = None
         if not self.speech_features_extracted:
             speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens).transpose(0, 1)
-            self.speech_features_extracted = True
+            if self.config.inference:
+                self.speech_features_extracted = True
 
             position_ids = []
             for i in range(inputs_embeds.size(0)):
