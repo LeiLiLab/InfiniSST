@@ -114,6 +114,8 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         self.model.model.mm_mlp_adapter.to(dtype=load_type, device=device_input)     
         self.model.model.speech_tower.to(dtype=load_type, device=device_input)
 
+        self.model.model.config.inference = True
+
 
     @staticmethod
     def add_args(parser):
