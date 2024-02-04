@@ -297,7 +297,7 @@ class SpeechLlamaModel(LlamaModel):
 
         return super(SpeechLlamaModel, self).forward(
             input_ids=None, 
-            position_ids=self.position_ids,
+            position_ids=self.position_ids[:, -inputs_embeds.size(1):],
             attention_mask=attention_mask,
             past_key_values=past_key_values,
             inputs_embeds=inputs_embeds, 

@@ -15,8 +15,6 @@
 #    limitations under the License.
 
 import os, sys, random
-os.environ['WANDB_DISABLED'] = 'true'
-sys.path.append('/home/xixu/sllama')
 import copy
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple, Union
@@ -245,7 +243,7 @@ def train():
         #device_map=device_map,
     )
     length_after_ssl, length_after_adp = model.model.initialize_speech_modules(
-        speeh_tower_path=model.config.speech_tower_path,
+        model.config.speech_tower_path,
         speech_tower_type=None,
         len_adapter_channels=model.config.len_adapter_channels,
         len_adapter_kernel_sizes=model.config.len_adapter_kernel_sizes,
