@@ -377,8 +377,9 @@ def uni_transformer_encoder_extract_features(
         dropout_probability = np.random.random() if self.layerdrop > 0 else 1
         if not self.training or (dropout_probability > self.layerdrop):
             x, (z, lr) = layer(
-                x, self_attn_padding_mask=padding_mask[:, prefix_length:], need_weights=False,
-                past_key_value=past_key_values[i] if past_key_values is not None else None,
+                x, 
+                self_attn_padding_mask=padding_mask[:, prefix_length:] if padding_mask is not None else None, 
+                need_weights=False, past_key_value=past_key_values[i] if past_key_values is not None else None,
             )
             if i >= min_layer:
                 layer_results.append((x, z, lr))
@@ -521,9 +522,9 @@ def uni_get_ssl_feature_w2v(self, src_tokens, src_lengths, after_lens, states):
 
 
 def uni_initialize_speech_modules(
-        self, speech_tower_path, speech_tower_type=None,
-        len_adapter_channels=None, len_adapter_kernel_sizes=None,
-        stage1_complete=False, ssl_fintuned=False
+    self, speech_tower_path, speech_tower_type=None,
+    len_adapter_channels=None, len_adapter_kernel_sizes=None,
+    stage1_complete=False, ssl_fintuned=False
 ):
     # loading pretrained ssl model
     # wav2vec 2.0

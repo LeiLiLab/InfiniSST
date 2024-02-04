@@ -1,5 +1,4 @@
 import argparse, sys, time, json
-sys.path.append('/home/xixu/sllama')
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from tqdm import tqdm
 import torch, transformers
@@ -78,6 +77,8 @@ def eval_model(args):
     model.model.mm_length_adapter.to(dtype=load_type, device=device_input)
     model.model.mm_mlp_adapter.to(dtype=load_type, device=device_input)
     model.model.speech_tower.to(dtype=load_type, device=device_input)
+
+    model.model.config.inference = True
         
     test_dataset = PromptSpeechToTextDatasetCreator.from_tsv(args.data_path, args.data_split)
   
@@ -111,26 +112,29 @@ def eval_model(args):
 
         # extract new speech features 
         model.model.speech_features_extracted = False
-        
-        with torch.inference_mode():
-            output_ids = model.generate(
-                attention_mask=input_ids.ne(tokenizer.pad_token_id),
-                input_ids=input_ids.to(device=device_input),
-                speech_batch=speech_batch.to(dtype=load_type, device=device_input),
-                src_lengths=n_frames.to(device=device_input),
-                after_lens=speech_lens.to(device=device_input),
-                #do_sample=True,
-                #temperature=0.8,
-                num_beams=args.beam,
-                max_new_tokens=500,
-                stopping_criteria=[stopping_criteria])    
-        input_token_len = input_ids.shape[1]
-        outputs = tokenizer.batch_decode(output_ids[:, input_token_len:], skip_special_tokens=True)[0]
-        outputs = outputs.strip()
-        print(outputs)
-        if outputs.endswith(stop_str):
-            outputs = outputs[:-len(stop_str)]
-        outputs = outputs.strip()
+        try:
+            with torch.inference_mode():
+                output_ids = model.generate(
+                    attention_mask=input_ids.ne(tokenizer.pad_token_id),
+                    input_ids=input_ids.to(device=device_input),
+                    speech_batch=speech_batch.to(dtype=load_type, device=device_input),
+                    src_lengths=n_frames.to(device=device_input),
+                    after_lens=speech_lens.to(device=device_input),
+                    #do_sample=True,
+                    #temperature=0.8,
+                    num_beams=args.beam,
+                    max_new_tokens=500,
+                    stopping_criteria=[stopping_criteria])    
+            input_token_len = input_ids.shape[1]
+            outputs = tokenizer.batch_decode(output_ids[:, input_token_len:], skip_special_tokens=True)[0]
+            outputs = outputs.strip()
+            print(outputs)
+            if outputs.endswith(stop_str):
+                outputs = outputs[:-len(stop_str)]
+            outputs = outputs.strip()
+        except Exception as e:
+            outputs = ""
+            print(e)
         print(f"{id} decode complete,\nref:{ref} \nhyp:{outputs}")
         print(f"{id}\t{ref}", file=ref_file)
         print(f"{id}\t{outputs}", file=hyp_file)
