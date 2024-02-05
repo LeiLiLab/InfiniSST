@@ -61,6 +61,8 @@ class SpeechToTextDatasetItem(object):
     task: None
     src_text: None
     target: Optional[torch.Tensor] = None
+    speech_word: Optional[List] = None
+    text_word: Optional[List] = None
     
 class PromptSpeechToTextDataset(SpeechToTextDataset):
 
@@ -71,12 +73,16 @@ class PromptSpeechToTextDataset(SpeechToTextDataset):
         tgt_texts: Optional[List[str]] = None,
         ids: Optional[List[str]] = None,
         tasks: Optional[List[str]] = None,
+        speech_words: Optional[List] = None,
+        text_words: Optional[List] = None
     ):
         self.audio_paths = audio_paths
         self.tgt_texts = tgt_texts
         self.src_texts = src_texts
         self.ids = ids
         self.tasks = tasks
+        self.speech_words = speech_words
+        self.text_words = text_words
 
     def __getitem__(
         self, index: int
@@ -91,9 +97,12 @@ class PromptSpeechToTextDataset(SpeechToTextDataset):
         id = self.ids[index]
         task = self.tasks[index]
         src_text = self.src_texts[index]
+        speech_word = self.speech_words[index] if self.speech_words is not None else None
+        text_word = self.text_words[index] if self.text_words is not None else None
         
         return SpeechToTextDatasetItem(
-            index=index, source=source, target=text, src_text=src_text, id=id, task=task
+            index=index, source=source, target=text, src_text=src_text, id=id, task=task,
+            speech_word=speech_word, text_word=text_word
         )
     def __len__(self):
         return len(self.audio_paths)
@@ -141,10 +150,15 @@ class PromptSpeechToTextDatasetCreator(object):
         src_texts = [s.get(cls.KEY_SRC_TEXT, cls.DEFAULT_SRC_TEXT) for s in samples]
         tasks = [s.get(cls.TASK, cls.DEFAULT_TASK) for s in samples] 
 
+        speech_words = [s.get('speech_word', None) for s in samples]
+        text_words = [s.get('text_word', None) for s in samples]
+
         return PromptSpeechToTextDataset(
             audio_paths,
             src_texts=src_texts,
             tgt_texts=tgt_texts,
             ids=ids,
             tasks=tasks,
+            speech_words=speech_words,
+            text_words=text_words
         )
