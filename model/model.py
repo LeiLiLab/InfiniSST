@@ -329,6 +329,34 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
     
     def get_output_embeddings(self):
         return self.lm_head
+    
+    def initialize_speech_tokenizer(self, tokenizer, device,
+                                    only_tune_adapter=False, stage1=True): 
+        if stage1:                            
+            num_new_tokens = tokenizer.add_tokens([DEFAULT_SPEECH_PATCH_TOKEN, DEFAULT_SPEECH_START_TOKEN, DEFAULT_SPEECH_END_TOKEN], special_tokens=True)
+            self.resize_token_embeddings(len(tokenizer))        
+            input_embeddings = self.get_input_embeddings().weight.data
+            output_embeddings = self.get_output_embeddings().weight.data
+
+            input_embeddings_avg = input_embeddings[:-num_new_tokens].mean(
+                    dim=0, keepdim=True)
+            output_embeddings_avg = output_embeddings[:-num_new_tokens].mean(
+                    dim=0, keepdim=True)
+
+            input_embeddings[-num_new_tokens:] = input_embeddings_avg
+            output_embeddings[-num_new_tokens:] = output_embeddings_avg
+
+            sp_patch_token_id, sp_start_token_id, sp_end_token_id = tokenizer.convert_tokens_to_ids([DEFAULT_SPEECH_PATCH_TOKEN, DEFAULT_SPEECH_START_TOKEN, DEFAULT_SPEECH_END_TOKEN])                
+            self.config.sp_patch_token_id = sp_patch_token_id
+            self.config.sp_start_token_id = sp_start_token_id
+            self.config.sp_end_token_id = sp_end_token_id 
+
+        if only_tune_adapter: 
+            self.get_model().orig_embeds_params = [self.get_input_embeddings().weight.data.clone().to(device=device)]
+            for p in self.get_input_embeddings().parameters():
+                p.requires_grad = True                 
+            for p in self.get_output_embeddings().parameters():
+                p.requires_grad = False
 
     def forward(
         self,
@@ -395,6 +423,43 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
+    
+    def forward_waco(
+        self,
+        src_text: torch.LongTensor,
+        src_speech: torch.FloatTensor,
+        text_word: List[Union[torch.LongTensor, None]],
+        speech_word: List[Union[torch.LongTensor, None]],
+        src_speech_lengths: torch.LongTensor,
+        after_speech_lengths: torch.LongTensor,
+    ) -> Union[Tuple, CausalLMOutputWithPast]:
+        src_text_emb = self.model.embed_tokens(src_text)
+        src_speech_emb = self.model.get_ssl_feature_w2v(src_speech, src_speech_lengths, after_speech_lengths).transpose(0, 1)
+
+        speech_word_emb = []
+        text_word_emb = []
+        for i in range(len(text_word)):
+            s_word, t_word = speech_word[i], text_word[i]
+            if s_word is not None:
+                for (s_l, s_r), (t_l, t_r) in zip(s_word, t_word):
+                    s_word_emb = src_speech_emb[i][s_l : s_r + 1].mean(dim=0)
+                    t_word_emb = src_text_emb[i][t_l : t_r + 1].mean(dim=0)
+                    speech_word_emb.append(s_word_emb)
+                    text_word_emb.append(t_word_emb)
+        speech_word_emb = torch.stack(speech_word_emb, dim=0)
+        text_word_emb = torch.stack(text_word_emb, dim=0)
+
+        st_sim = F.cosine_similarity(
+            speech_word_emb.unsqueeze(1), 
+            text_word_emb.unsqueeze(0), 
+            dim=-1
+        )
+        loss = F.cross_entropy(
+            st_sim / self.config.temp,
+            torch.arange(st_sim.size(0), device=st_sim.device)
+        )
+        return loss
+
 
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
@@ -420,33 +485,6 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
         )
         return model_inputs
     
-    def initialize_speech_tokenizer(self, tokenizer, device,
-                                    only_tune_adapter=False, stage1=True): 
-        if stage1:                            
-            num_new_tokens = tokenizer.add_tokens([DEFAULT_SPEECH_PATCH_TOKEN, DEFAULT_SPEECH_START_TOKEN, DEFAULT_SPEECH_END_TOKEN], special_tokens=True)
-            self.resize_token_embeddings(len(tokenizer))        
-            input_embeddings = self.get_input_embeddings().weight.data
-            output_embeddings = self.get_output_embeddings().weight.data
-
-            input_embeddings_avg = input_embeddings[:-num_new_tokens].mean(
-                    dim=0, keepdim=True)
-            output_embeddings_avg = output_embeddings[:-num_new_tokens].mean(
-                    dim=0, keepdim=True)
-
-            input_embeddings[-num_new_tokens:] = input_embeddings_avg
-            output_embeddings[-num_new_tokens:] = output_embeddings_avg
-
-            sp_patch_token_id, sp_start_token_id, sp_end_token_id = tokenizer.convert_tokens_to_ids([DEFAULT_SPEECH_PATCH_TOKEN, DEFAULT_SPEECH_START_TOKEN, DEFAULT_SPEECH_END_TOKEN])                
-            self.config.sp_patch_token_id = sp_patch_token_id
-            self.config.sp_start_token_id = sp_start_token_id
-            self.config.sp_end_token_id = sp_end_token_id 
-
-        if only_tune_adapter: 
-            self.get_model().orig_embeds_params = [self.get_input_embeddings().weight.data.clone().to(device=device)]
-            for p in self.get_input_embeddings().parameters():
-                p.requires_grad = True                 
-            for p in self.get_output_embeddings().parameters():
-                p.requires_grad = False
                    
 AutoConfig.register("SpeechLlama", SpeechLlamaConfig)
 AutoModelForCausalLM.register(SpeechLlamaConfig, SpeechLlamaForCausalLM)
