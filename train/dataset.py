@@ -16,6 +16,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import torch
+from torch.utils.data import DistributedSampler
 from fairseq.data import (
     ConcatDataset,
     Dictionary,
@@ -69,6 +70,7 @@ class PromptSpeechToTextDataset(SpeechToTextDataset):
     def __init__(
         self,
         audio_paths: List[str],
+        n_frames: Optional[List[int]] = None,
         src_texts: Optional[List[str]] = None,
         tgt_texts: Optional[List[str]] = None,
         ids: Optional[List[str]] = None,
@@ -77,6 +79,7 @@ class PromptSpeechToTextDataset(SpeechToTextDataset):
         text_words: Optional[List] = None
     ):
         self.audio_paths = audio_paths
+        self.n_frames = n_frames
         self.tgt_texts = tgt_texts
         self.src_texts = src_texts
         self.ids = ids
@@ -91,8 +94,8 @@ class PromptSpeechToTextDataset(SpeechToTextDataset):
             self.audio_paths[index],
         )
         source = torch.from_numpy(source).float()
-        with torch.no_grad():
-            source = F.layer_norm(source, source.shape)       
+        # with torch.no_grad():
+        #     source = F.layer_norm(source, source.shape)
         text = self.tgt_texts[index]
         id = self.ids[index]
         task = self.tasks[index]
@@ -146,15 +149,19 @@ class PromptSpeechToTextDatasetCreator(object):
         samples = cls._load_samples_from_tsv(root, split)
         ids = [s[cls.KEY_ID] for s in samples]
         audio_paths = [s[cls.KEY_AUDIO] for s in samples]
+        n_frames = [int(s[cls.KEY_N_FRAMES]) for s in samples]
         tgt_texts = [s[cls.KEY_TGT_TEXT] for s in samples]
         src_texts = [s.get(cls.KEY_SRC_TEXT, cls.DEFAULT_SRC_TEXT) for s in samples]
         tasks = [s.get(cls.TASK, cls.DEFAULT_TASK) for s in samples] 
 
-        speech_words = [s.get('speech_word', None) for s in samples]
-        text_words = [s.get('text_word', None) for s in samples]
+        speech_words_str = [s.get('speech_word', '') for s in samples]
+        text_words_str = [s.get('text_word', '') for s in samples]
+        speech_words = [eval(s) if s != '' else None for s in speech_words_str]
+        text_words = [eval(s) if s != '' else None for s in text_words_str]        
 
         return PromptSpeechToTextDataset(
             audio_paths,
+            n_frames=n_frames,
             src_texts=src_texts,
             tgt_texts=tgt_texts,
             ids=ids,
@@ -162,3 +169,49 @@ class PromptSpeechToTextDatasetCreator(object):
             speech_words=speech_words,
             text_words=text_words
         )
+
+
+class SpeechSampler(DistributedSampler):
+    def __init__(self, dataset, shuffle, batch_size):
+        super().__init__(dataset=dataset, shuffle=shuffle)
+        self.batch_size = batch_size
+        self._obtain_batches()
+
+    def _obtain_batches(self):
+        sizes = list(zip(self.dataset.n_frames, range(len(self.dataset))))
+        sorted_sizes = sorted(sizes)
+
+        batch_indices = []
+        indices, sum_size = [], 0
+        n_skipped = 0
+        for size, idx in sorted_sizes:
+            if size <= self.batch_size:
+                if sum_size + size <= self.batch_size:
+                    indices.append(idx)
+                    sum_size += size
+                else:
+                    batch_indices.append(indices)
+                    indices = [idx]
+                    sum_size = size
+            else:
+                n_skipped += 1
+        print('{} out of {} samples skipped'.format(n_skipped, len(sorted_sizes)))
+        assert len(indices) > 0
+        batch_indices.append(indices)
+        self.batch_indices = batch_indices
+    
+    def __iter__(self):
+        if self.shuffle:
+            g = torch.Generator()
+            g.manual_seed(self.seed + self.epoch)
+            indices_batch_ind = torch.randperm(len(self.batch_indices), generator=g).tolist()
+        else:
+            indices_batch_ind = list(range(len(self.batch_indices)))
+
+        indices_batch_ind = indices_batch_ind[self.rank:len(self):self.num_replicas]
+
+        for i in indices_batch_ind:
+            yield self.batch_indices[i]
+        
+    def __len__(self):
+        return len(self.batch_indices)

@@ -15,34 +15,7 @@ from fairseq.models.speech_to_text import lengths_to_padding_mask, Conv1dSubsamp
 from fairseq.models.wav2vec.utils import pad_to_multiple
 from fairseq.modules import GradMultiply
 from fairseq.utils import index_put, is_xla_tensor
-from model.model import SpeechLlamaModel
-
-class ZeroPadConv1dSubsampler(Conv1dSubsampler):
-    def __init__(
-        self,
-        in_channels: int,
-        mid_channels: int,
-        out_channels: int,
-        kernel_sizes: List[int] = (3, 3),
-    ):
-        super(Conv1dSubsampler, self).__init__()
-        self.n_layers = len(kernel_sizes)
-        self.conv_layers = nn.ModuleList(
-            nn.Conv1d(
-                in_channels if i == 0 else mid_channels // 2,
-                mid_channels if i < self.n_layers - 1 else out_channels * 2,
-                k,
-                stride=2,
-                padding=0,
-            )
-            for i, k in enumerate(kernel_sizes)
-        )
-    
-    def get_out_seq_lens_tensor(self, in_seq_lens_tensor):
-        out = in_seq_lens_tensor.clone()
-        for _ in range(self.n_layers):
-            out = ((out.float() - 3) / 2 + 1).floor().long()
-        return out 
+from model.model import SpeechLlamaModel, ZeroPadConv1dSubsampler
 
 original_forward = TransformerSentenceEncoderLayer.forward
 
