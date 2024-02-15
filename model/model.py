@@ -2,24 +2,210 @@ import random
 import time
 import fairseq
 from typing import List, Optional, Tuple, Union
+from lightning.pytorch.utilities.types import EVAL_DATALOADERS
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
+from torch.utils.data import DataLoader
 from fairseq.models.speech_to_text import (
     lengths_to_padding_mask,
     Conv1dSubsampler,
 )
 from fairseq.models.wav2vec import Wav2VecEncoder
+from fairseq.optim.lr_scheduler.inverse_square_root_schedule import (
+    InverseSquareRootLRScheduleConfig,
+    InverseSquareRootSchedule
+)
+from torch.optim.optimizer import Optimizer
 from transformers import AutoConfig, AutoModelForCausalLM, \
                          LlamaConfig, LlamaModel, LlamaForCausalLM
 
 from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
 
+import lightning as L
+from train.dataset import SpeechSampler
+
 DEFAULT_SPEECH_PATCH_TOKEN = "<sp_patch>"
 DEFAULT_SPEECH_START_TOKEN = "<sp_start>"
 DEFAULT_SPEECH_END_TOKEN = "<sp_end>"
+
+
+class ZeroPadConv1dSubsampler(Conv1dSubsampler):
+    def __init__(
+        self,
+        in_channels: int,
+        mid_channels: int,
+        out_channels: int,
+        kernel_sizes: List[int] = (3, 3),
+    ):
+        super(Conv1dSubsampler, self).__init__()
+        self.n_layers = len(kernel_sizes)
+        self.conv_layers = nn.ModuleList(
+            nn.Conv1d(
+                in_channels if i == 0 else mid_channels // 2,
+                mid_channels if i < self.n_layers - 1 else out_channels * 2,
+                k,
+                stride=2,
+                padding=0,
+            )
+            for i, k in enumerate(kernel_sizes)
+        )
+    
+    def get_out_seq_lens_tensor(self, in_seq_lens_tensor):
+        out = in_seq_lens_tensor.clone()
+        for _ in range(self.n_layers):
+            out = ((out.float() - 3) / 2 + 1).floor().long()
+        return out 
+
+
+class SpeechEncoder(L.LightningModule):
+    def __init__(
+        self, 
+        speech_tower_path, ssl_finetuned, 
+        len_adapter_channels, len_adapter_kernel_sizes, 
+        llm_embedding, unidirectional, temp,
+        lr, warmup_updates,
+    ):
+        super().__init__()
+        if not ssl_finetuned: # ssl model
+            state = fairseq.checkpoint_utils.load_checkpoint_to_cpu(speech_tower_path)
+            w2v_args = state["args"]
+            task = fairseq.tasks.setup_task(w2v_args)
+            model = task.build_model(w2v_args)
+            model.load_state_dict(state["model"], strict=True)
+            speech_dimension = w2v_args.encoder_embed_dim
+        else: # ctc finetune, w2v-ctc
+            state = fairseq.checkpoint_utils.load_checkpoint_to_cpu(speech_tower_path)
+            model = Wav2VecEncoder(state['cfg']['model'], None)
+            new = {}
+            for key in state['model'].keys():
+                new_key = key.replace('w2v_encoder.', '')
+                if not new_key.startswith('proj'):
+                    new[new_key] = state['model'][key]
+            model.load_state_dict(new, strict=True)
+            model = model.w2v_model
+            speech_dimension = state['cfg']['model']['w2v_args']['model'].encoder_embed_dim
+            
+        self.speech_tower = model
+
+        if unidirectional:
+            self.mm_length_adapter = ZeroPadConv1dSubsampler(
+                                    speech_dimension,
+                                    len_adapter_channels,
+                                    speech_dimension,
+                                    [int(k) for k in len_adapter_kernel_sizes.split(',')]
+                                )             
+        else:
+            self.mm_length_adapter = Conv1dSubsampler(
+                                        speech_dimension,
+                                        len_adapter_channels,
+                                        speech_dimension,
+                                        [int(k) for k in len_adapter_kernel_sizes.split(',')]
+                                    ) 
+            
+        self.mm_mlp_adapter = nn.Linear(speech_dimension, llm_embedding.embedding_dim)
+        self.length_after_ssl = self.speech_tower._get_feat_extract_output_lengths
+        self.length_after_adp = self.mm_length_adapter.get_out_seq_lens_tensor
+
+        self.llm_embedding = llm_embedding
+        self.llm_embedding.requires_grad_(False)
+
+        self.lr = lr
+        self.warmup_updates = warmup_updates
+        self.temp = temp
+
+    def train_dataloader(self):
+        train_sampler = SpeechSampler(self.train_ds, shuffle=True, batch_size=self.train_bsz, min_ms=320)
+        train_dataloader = DataLoader(self.train_ds, batch_sampler=train_sampler, collate_fn=self.collate)
+        return train_dataloader
+    
+    def val_dataloader(self):
+        dev_sampler = SpeechSampler(self.dev_ds, shuffle=False, batch_size=self.dev_bsz, min_ms=320)
+        dev_dataloader = DataLoader(self.dev_ds, batch_sampler=dev_sampler, collate_fn=self.collate)
+        return dev_dataloader
+
+    def get_ssl_feature_w2v(self, src_tokens, src_lengths, after_lens):
+        padding_mask = lengths_to_padding_mask(src_lengths)
+        res = self.speech_tower.extract_features(src_tokens, padding_mask)
+        feature, padding_mask = res["x"], res["padding_mask"]
+        if padding_mask is None:
+        # Create a padding mask of shape [batch_size, seq_length] with all False values
+            padding_mask = torch.zeros(feature.shape[:2], dtype=torch.bool, device=feature.device)
+        output_length = (1 - padding_mask.int()).sum(dim=1)
+        feature, input_lengths = self.mm_length_adapter(feature, output_length)
+        # assert after_lens.equal(input_lengths), "pre calculate length not match with the forward length"
+        feature = self.mm_mlp_adapter(feature)       
+        return feature
+    
+    def forward(self, batch):
+        src_text = batch["src_text"]
+        src_speech = batch["src_speech"]
+        src_speech_lengths = batch["src_speech_lengths"]
+        after_speech_lengths = batch["after_speech_lengths"]
+        text_word = batch["text_word"]
+        speech_word = batch["speech_word"]
+
+        src_text_emb = self.llm_embedding(src_text).float()
+        src_speech_emb = self.get_ssl_feature_w2v(src_speech, src_speech_lengths, after_speech_lengths).transpose(0, 1).float()
+
+        speech_word_emb = []
+        text_word_emb = []
+        for i in range(len(text_word)):
+            s_word, t_word = speech_word[i], text_word[i]
+            if s_word is not None:
+                for j in range(s_word.size(0)):
+                    s_l, s_r = s_word[j]
+                    t_l, t_r = t_word[j]
+                    s_word_emb = src_speech_emb[i][s_l : s_r + 1].mean(dim=0)
+                    t_word_emb = src_text_emb[i][t_l : t_r + 1].mean(dim=0)
+                    speech_word_emb.append(s_word_emb)
+                    text_word_emb.append(t_word_emb)
+        speech_word_emb = torch.stack(speech_word_emb, dim=0)
+        text_word_emb = torch.stack(text_word_emb, dim=0)
+
+        st_sim = F.cosine_similarity(
+            speech_word_emb.unsqueeze(1), 
+            text_word_emb.unsqueeze(0), 
+            dim=-1
+        )
+        loss = F.cross_entropy(
+            st_sim / self.temp,
+            torch.arange(st_sim.size(0), device=st_sim.device)
+        )
+        
+        return loss
+
+
+    def training_step(self, batch, batch_idx):
+        loss = self.forward(batch)
+        self.log("train_loss", loss, batch_size=batch["src_speech_lengths"].sum() / 16000)
+        return loss
+    
+    def validation_step(self, batch, batch_idx):
+        loss = self.forward(batch)
+        self.log("val_loss", loss, batch_size=batch["src_speech_lengths"].sum() / 16000)
+    
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+        
+        warmup_init_lr = 0 if self.warmup_updates > 0 else self.lr
+        lr_step = (self.lr - warmup_init_lr) / self.warmup_updates
+        decay_factor = self.lr * self.warmup_updates**0.5
+        scheduler = torch.optim.lr_scheduler.LambdaLR(
+            optimizer, 
+            lambda x: decay_factor * x**-0.5 / self.lr if x >= self.warmup_updates \
+                else (warmup_init_lr + x * lr_step) / self.lr
+        )
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "interval": "step",
+                "frequency": 1
+            }
+        }
 
 
 class SpeechLlamaConfig(LlamaConfig):
@@ -423,43 +609,6 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
-    
-    def forward_waco(
-        self,
-        src_text: torch.LongTensor,
-        src_speech: torch.FloatTensor,
-        text_word: List[Union[torch.LongTensor, None]],
-        speech_word: List[Union[torch.LongTensor, None]],
-        src_speech_lengths: torch.LongTensor,
-        after_speech_lengths: torch.LongTensor,
-    ) -> Union[Tuple, CausalLMOutputWithPast]:
-        src_text_emb = self.model.embed_tokens(src_text)
-        src_speech_emb = self.model.get_ssl_feature_w2v(src_speech, src_speech_lengths, after_speech_lengths).transpose(0, 1)
-
-        speech_word_emb = []
-        text_word_emb = []
-        for i in range(len(text_word)):
-            s_word, t_word = speech_word[i], text_word[i]
-            if s_word is not None:
-                for (s_l, s_r), (t_l, t_r) in zip(s_word, t_word):
-                    s_word_emb = src_speech_emb[i][s_l : s_r + 1].mean(dim=0)
-                    t_word_emb = src_text_emb[i][t_l : t_r + 1].mean(dim=0)
-                    speech_word_emb.append(s_word_emb)
-                    text_word_emb.append(t_word_emb)
-        speech_word_emb = torch.stack(speech_word_emb, dim=0)
-        text_word_emb = torch.stack(text_word_emb, dim=0)
-
-        st_sim = F.cosine_similarity(
-            speech_word_emb.unsqueeze(1), 
-            text_word_emb.unsqueeze(0), 
-            dim=-1
-        )
-        loss = F.cross_entropy(
-            st_sim / self.config.temp,
-            torch.arange(st_sim.size(0), device=st_sim.device)
-        )
-        return loss
-
 
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
