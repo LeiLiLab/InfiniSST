@@ -118,7 +118,7 @@ class PromptSpeechToTextDatasetCreator(object):
     KEY_SPEAKER, KEY_SRC_TEXT = "speaker", "src_text"
     KEY_SRC_LANG, KEY_TGT_LANG = "src_lang", "tgt_lang"
     # default values
-    DEFAULT_SPEAKER = DEFAULT_SRC_TEXT = DEFAULT_LANG = DEFAULT_LANG_N_FRAMES = DEFAULT_TASK = ""
+    DEFAULT_SPEAKER = DEFAULT_SRC_TEXT = DEFAULT_TGT_TEXT = DEFAULT_LANG = DEFAULT_LANG_N_FRAMES = DEFAULT_TASK = ""
     TASK = "task"
 
     @classmethod
@@ -150,7 +150,7 @@ class PromptSpeechToTextDatasetCreator(object):
         ids = [s[cls.KEY_ID] for s in samples]
         audio_paths = [s[cls.KEY_AUDIO] for s in samples]
         n_frames = [int(s[cls.KEY_N_FRAMES]) for s in samples]
-        tgt_texts = [s[cls.KEY_TGT_TEXT] for s in samples]
+        tgt_texts = [s.get(cls.KEY_TGT_TEXT, cls.DEFAULT_TGT_TEXT) for s in samples]
         src_texts = [s.get(cls.KEY_SRC_TEXT, cls.DEFAULT_SRC_TEXT) for s in samples]
         tasks = [s.get(cls.TASK, cls.DEFAULT_TASK) for s in samples] 
 
@@ -172,12 +172,12 @@ class PromptSpeechToTextDatasetCreator(object):
 
 
 class SpeechSampler(DistributedSampler):
-    def __init__(self, dataset, shuffle, batch_size):
+    def __init__(self, dataset, shuffle, batch_size, min_ms=0):
         super().__init__(dataset=dataset, shuffle=shuffle)
         self.batch_size = batch_size
-        self._obtain_batches()
+        self._obtain_batches(min_ms)
 
-    def _obtain_batches(self):
+    def _obtain_batches(self, min_ms):
         sizes = list(zip(self.dataset.n_frames, range(len(self.dataset))))
         sorted_sizes = sorted(sizes)
 
@@ -185,7 +185,8 @@ class SpeechSampler(DistributedSampler):
         indices, sum_size = [], 0
         n_skipped = 0
         for size, idx in sorted_sizes:
-            if size <= self.batch_size:
+            if self.dataset.speech_words[idx] is not None and \
+                size <= self.batch_size and size >= min_ms * 16:
                 if sum_size + size <= self.batch_size:
                     indices.append(idx)
                     sum_size += size

@@ -38,7 +38,7 @@ from train.uni_wav2vec_monkey_patch import replace_uni_train
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 
 import lightning as L
-from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor
 from lightning.pytorch.loggers import WandbLogger
 
 # TODO: import and use code from ../data/dataset.py
@@ -63,6 +63,7 @@ def parse_args():
     parser.add_argument("--len-adapter-channels", type=int, default=1024)
     parser.add_argument("--len-adapter-kernel-sizes", type=str, default="3,3")
     parser.add_argument("--unidirectional", action="store_true")
+    parser.add_argument("--temp", type=float)
     parser.add_argument("--lr", type=float)
     parser.add_argument("--warmup-updates", type=int)
     # trainer
@@ -170,6 +171,7 @@ def train():
     args = parse_args()
     # Set seed before initializing model.
     set_seed(args.seed)
+    torch.set_float32_matmul_precision('high')
 
     if args.unidirectional:
         replace_uni_train()
@@ -195,6 +197,7 @@ def train():
         args.len_adapter_kernel_sizes,
         copy.deepcopy(llm.model.embed_tokens),
         args.unidirectional,
+        args.temp,
         lr=args.lr,
         warmup_updates=args.warmup_updates,
     )
@@ -219,10 +222,14 @@ def train():
     model.dev_bsz = args.dev_batch_size
 
     checkpoint_callback = ModelCheckpoint(
+        dirpath=args.save_dir,
         monitor='val_loss',
         save_top_k=1,
         mode='min',
         every_n_train_steps=args.eval_step
+    )
+    lr_monitor = LearningRateMonitor(
+        logging_interval='step'
     )
 
     wandb_logger = WandbLogger(
@@ -243,7 +250,7 @@ def train():
         log_every_n_steps=args.log_step,
         val_check_interval=args.eval_step,
         logger=wandb_logger,
-        callbacks=[checkpoint_callback]
+        callbacks=[checkpoint_callback, lr_monitor]
     )
 
     trainer.fit(model)
