@@ -19,23 +19,28 @@ import os, sys, random
 # sys.path.append('/home/xixu/sllama')
 import copy
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple, Union
+from typing import Iterator, List, Optional, Tuple, Union
 import json
 import logging
 import pathlib
-from typing import Dict, Optional, Sequence
+import argparse
+from typing import Dict
 
 import torch
 import torch.nn as nn
 
 import transformers
-from transformers import Trainer, set_seed
-from torch.utils.data import Dataset
-import conversation as conversation_lib
+from transformers import set_seed
+from torch.utils.data import DataLoader
 from train.dataset import PromptSpeechToTextDatasetCreator, SpeechToTextDatasetItem
-from model.model import SpeechLlamaForCausalLM
+from model.model import SpeechEncoder, SpeechLlamaForCausalLM
 from train.uni_wav2vec_monkey_patch import replace_uni_train
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
+
+import lightning as L
+from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor
+from lightning.pytorch.loggers import WandbLogger
+
 # TODO: import and use code from ../data/dataset.py
 
 IGNORE_INDEX = -100
@@ -49,74 +54,40 @@ DEFAULT_SPEECH_START_TOKEN = "<sp_start>"
 DEFAULT_SPEECH_END_TOKEN = "<sp_end>"
 
 
-@dataclass
-class ModelArguments:
-    model_name_or_path: Optional[str] = field(default="facebook/opt-125m")
-    version: Optional[str] = field(default="v0")
-    freeze_backbone: bool = field(default=False)
-    freeze_speech_foundation: bool = field(default=False)
-    only_tune_adapter: bool = field(default=False)
-    speech_tower_path: Optional[str] = field(default=None)
-    speech_tower_type: Optional[str] = field(default=None)
-    ssl_fintuned: bool = field(default=False)
-    pretrain_mm_adapter: Optional[str] = field(default=None)
-    len_adapter_channels: int = field(
-        default=1024,
-        metadata={"help": "# of channels in the Length adapter (Conv1d)"}
-    )
-    len_adapter_kernel_sizes: str = field(
-        default="3,3",
-        metadata={"help": "kernel sizes of the Length adapter (Conv1d)"}
-    )    
-    torch_dtype: Optional[str] = field(
-        default=None,
-        metadata={
-            "help": (
-                "Override the default `torch.dtype` and load the model under this dtype. If `auto` is passed, the "
-                "dtype will be automatically derived from the model's weights."
-            ),
-            "choices": ["auto", "bfloat16", "float16", "float32"],
-        },
-    )
-    unidirectional: bool = field(default=False)
-    temp: float = field(default=1.0)
+def parse_args():
+    parser = argparse.ArgumentParser()
+    # lightning module
+    parser.add_argument("--llm-path", type=str)
+    parser.add_argument("--speech-encoder-path", type=str)
+    parser.add_argument("--ssl-finetuned", action="store_true")
+    parser.add_argument("--len-adapter-channels", type=int, default=1024)
+    parser.add_argument("--len-adapter-kernel-sizes", type=str, default="3,3")
+    parser.add_argument("--unidirectional", action="store_true")
+    parser.add_argument("--temp", type=float)
+    parser.add_argument("--lr", type=float)
+    parser.add_argument("--warmup-updates", type=int)
+    # trainer
+    parser.add_argument("--strategy", type=str)
+    parser.add_argument("--device-type", type=str)
+    parser.add_argument("--n-device", type=int)
+    parser.add_argument("--max-steps", type=int)
+    parser.add_argument("--save-dir", type=str)
+    parser.add_argument("--precision", type=str)
+    parser.add_argument("--wandb-run-name", type=str)
+    parser.add_argument("--eval-step", type=int)
+    parser.add_argument("--log-step", type=int)
+    parser.add_argument("--grad-acc-steps", type=int)
+    parser.add_argument("--clip-norm", type=float)
+    parser.add_argument("--seed", type=int, default=998244353)
+    # data
+    parser.add_argument("--data-path", type=str)
+    parser.add_argument("--train-split", type=str)
+    parser.add_argument("--dev-split", type=str)
+    parser.add_argument("--train-batch-size", type=int)
+    parser.add_argument("--dev-batch-size", type=int)
 
-
-@dataclass
-class DataArguments:
-    data_path: str = field(default=None,
-                           metadata={"help": "Path to the training data."})
-    data_split_train: str = field(default=None,
-                           metadata={"help": "Path to the training data."})
-    data_split_eval: str = field(default=None,
-                           metadata={"help": "Path to the training data."}) 
-                           
-@dataclass
-class TrainingArguments(transformers.TrainingArguments):
-    cache_dir: Optional[str] = field(default=None)
-    optim: str = field(default="adamw_torch")
-    remove_unused_columns: bool = field(default=False)
-    freeze_mm_mlp_adapter: bool = field(default=False)
-    use_lora: bool = field(
-        default=False,
-        metadata={"help": "Whether to use LoRA."}
-    )
-    lora_config: Optional[str] = field(
-        default=None,
-        metadata={"help": "LoRA config file."},
-    )
-
-def safe_save_model_for_hf_trainer(trainer: transformers.Trainer,
-                                   output_dir: str):
-    """Collects the state dict and dump to disk."""
-    state_dict = trainer.model.state_dict()
-    if trainer.args.should_save:
-        cpu_state_dict = {
-            key: value.cpu()
-            for key, value in state_dict.items()
-        }
-        del state_dict
-        trainer._save(output_dir, state_dict=cpu_state_dict)  # noqa
+    args = parser.parse_args()
+    return args
 
 @dataclass
 class DataCollatorForSupervisedDataset(object):
@@ -125,16 +96,12 @@ class DataCollatorForSupervisedDataset(object):
     tokenizer: transformers.PreTrainedTokenizer
     length_after_ssl: None
     length_after_adp: None
-    model: SpeechLlamaForCausalLM
     prompt_list_asr = ['<speech_here> Try to decipher the spoken language and write it down.']
     prompt_list_st = ['<speech_here>']
 
-    def reset_speech_features_flag(self):
-        self.model.model.speech_features_extracted = False
     
     def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
         # todo: sort samples by descending number of frames
-        self.reset_speech_features_flag()
         indices = torch.tensor([x.index for x in samples], dtype=torch.long)
         src_speech = _collate_frames([x.source for x in samples], is_audio_input=True)
         n_frames = torch.tensor([x.source.size(0) for x in samples], dtype=torch.long)
@@ -147,7 +114,7 @@ class DataCollatorForSupervisedDataset(object):
             padding="longest",
             truncation=False,
             add_special_tokens=False
-        )
+        ).input_ids
 
         text_word = [x.text_word for x in samples]
         speech_word = []
@@ -160,6 +127,8 @@ class DataCollatorForSupervisedDataset(object):
                 w[:, 0] = (w[:, 0] * speech_lens[i]).floor()
                 w[:, 1] = (w[:, 1] * speech_lens[i]).ceil() - 1
                 speech_word.append(w.long())
+            else:
+                speech_word.append(None)
 
         batch = dict(
             src_text=src_text,
@@ -172,101 +141,119 @@ class DataCollatorForSupervisedDataset(object):
 
         return batch
 
-def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer,
-                                data_args,
-                                length_after_ssl,
-                                length_after_adp,
-                                model) -> Dict:
+
+def make_supervised_data_module(
+    tokenizer: transformers.PreTrainedTokenizer,
+    data_path,
+    train_split,
+    dev_split,
+    length_after_ssl,
+    length_after_adp,
+) -> Dict:
     """Make dataset and collator for supervised fine-tuning."""
 
-    train_dataset = PromptSpeechToTextDatasetCreator.from_tsv(data_args.data_path, data_args.data_split_train)
-    eval_dataset = PromptSpeechToTextDatasetCreator.from_tsv(data_args.data_path, data_args.data_split_eval) if data_args.data_split_eval is not None else None
-    data_collator = DataCollatorForSupervisedDataset(tokenizer, length_after_ssl, length_after_adp, model)
+    train_dataset = PromptSpeechToTextDatasetCreator.from_tsv(data_path, train_split)
+    dev_dataset = PromptSpeechToTextDatasetCreator.from_tsv(data_path, dev_split)    
+    data_collator = DataCollatorForSupervisedDataset(tokenizer, length_after_ssl, length_after_adp)
 
-    return dict(train_dataset=train_dataset,
-                eval_dataset=eval_dataset,
-                data_collator=data_collator)
+    return train_dataset, dev_dataset, data_collator
+
+
+    train_sampler = SpeechSampler(train_dataset, shuffle=True, batch_size=train_batch_size)
+    dev_sampler = SpeechSampler(dev_dataset, shuffle=False, batch_size=dev_batch_size)
+
+    train_dataloader = DataLoader(train_dataset, batch_sampler=train_sampler, collate_fn=data_collator)
+    dev_dataloader = DataLoader(dev_dataset, batch_sampler=dev_sampler, collate_fn=data_collator)
+
+    return train_dataloader, dev_dataloader
 
 def train():
-    parser = transformers.HfArgumentParser(
-        (ModelArguments, DataArguments, TrainingArguments))
-    model_args, data_args, training_args = parser.parse_args_into_dataclasses()
-
+    args = parse_args()
     # Set seed before initializing model.
-    set_seed(training_args.seed) 
-    world_size = int(os.environ.get("WORLD_SIZE", 1))
-    device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)} if world_size != 1 else "auto"
+    set_seed(args.seed)
+    torch.set_float32_matmul_precision('high')
 
-    if model_args.unidirectional:
+    if args.unidirectional:
         replace_uni_train()
 
-    model = SpeechLlamaForCausalLM.from_pretrained(
-        model_args.model_name_or_path,
-        cache_dir=training_args.cache_dir,
+    llm = SpeechLlamaForCausalLM.from_pretrained(
+        args.llm_path,
         low_cpu_mem_usage=True,
         load_in_8bit=False,
-        #device_map=device_map,
+        device_map='cpu',
     )
-    SpeechLlamaForCausalLM.forward = SpeechLlamaForCausalLM.forward_waco
-
-    model.config.use_cache = False
 
     tokenizer = transformers.AutoTokenizer.from_pretrained(
-        model_args.model_name_or_path,
-        cache_dir=training_args.cache_dir,
+        args.llm_path,
         padding_side="right",
         use_fast=False,
     )
     tokenizer.pad_token = tokenizer.eos_token
 
-    if model_args.freeze_backbone: # freeze llama model, adapter and ssl model is not added here
-        model.model.requires_grad_(False)
-        model.lm_head.requires_grad_(False)
-    
-    # add speech token. freeze input and output embedding if needed. lm_head is freezed here if needed.
-    # if only_tune_adapter, the added DEFAULT_SPEECH_START_TOKEN and DEFAULT_SPEECH_END_TOKEN is also learned.       
-    model.initialize_speech_tokenizer(tokenizer=tokenizer, device=training_args.device,
-                                      only_tune_adapter=model_args.only_tune_adapter)  
-                                       
-    length_after_ssl, length_after_adp = model.model.initialize_speech_modules(
-        speech_tower_path=model_args.speech_tower_path,
-        speech_tower_type=model_args.speech_tower_type,
-        len_adapter_channels=model_args.len_adapter_channels,
-        len_adapter_kernel_sizes=model_args.len_adapter_kernel_sizes,
-        ssl_fintuned=model_args.ssl_fintuned,
+    model = SpeechEncoder(
+        args.speech_encoder_path,
+        args.ssl_finetuned,
+        args.len_adapter_channels,
+        args.len_adapter_kernel_sizes,
+        copy.deepcopy(llm.model.embed_tokens),
+        args.unidirectional,
+        args.temp,
+        lr=args.lr,
+        warmup_updates=args.warmup_updates,
     )
-    model.model.speech_tower.to(device=training_args.device)
-    model.model.mm_length_adapter.to(device=training_args.device)
-    model.model.mm_mlp_adapter.to(device=training_args.device) 
-    
-    if model_args.freeze_speech_foundation: # freeze the ssl model after add the ssl model by initialize_speech_modules   
-        model.model.speech_tower.requires_grad_(False)
-    else: # train transformer encoder
-        model.model.speech_tower.requires_grad_(False)
-        for param in model.model.speech_tower.encoder.parameters():
-            param.requires_grad = True
-        for param in model.model.speech_tower.layer_norm.parameters():
-            param.requires_grad = True
-                                                      
-    data_module = make_supervised_data_module(tokenizer=tokenizer,
-                                              data_args=data_args,
-                                              length_after_ssl=length_after_ssl,
-                                              length_after_adp=length_after_adp,
-                                              model=model)
-    
-    model.forward = model.forward_waco
-    trainer = Trainer(model=model,
-                    tokenizer=tokenizer,
-                    args=training_args,
-                    **data_module)
+    del llm
+    model.speech_tower.requires_grad_(False)
+    for param in model.speech_tower.encoder.parameters():
+        param.requires_grad = True
+    for param in model.speech_tower.layer_norm.parameters():
+        param.requires_grad = True
 
-    if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
-        trainer.train(resume_from_checkpoint=True)
-    else:
-        trainer.train()
-    trainer.save_state()
-    safe_save_model_for_hf_trainer(trainer=trainer,
-                                   output_dir=training_args.output_dir)
+    data = make_supervised_data_module(
+        tokenizer=tokenizer,
+        data_path=args.data_path,
+        train_split=args.train_split,
+        dev_split=args.dev_split,
+        length_after_ssl=model.length_after_ssl,
+        length_after_adp=model.length_after_adp,
+    )
+
+    model.train_ds, model.dev_ds, model.collate = data
+    model.train_bsz = args.train_batch_size
+    model.dev_bsz = args.dev_batch_size
+
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=args.save_dir,
+        monitor='val_loss',
+        save_top_k=1,
+        mode='min',
+        every_n_train_steps=args.eval_step
+    )
+    lr_monitor = LearningRateMonitor(
+        logging_interval='step'
+    )
+
+    wandb_logger = WandbLogger(
+        name=args.wandb_run_name,
+        log_model="all"
+    )
+
+    trainer = L.Trainer(
+        accelerator=args.device_type,
+        devices=args.n_device,
+        strategy=args.strategy,
+        precision=args.precision,
+        max_steps=args.max_steps,
+        accumulate_grad_batches=args.grad_acc_steps,
+        gradient_clip_val=args.clip_norm,
+        use_distributed_sampler=False,
+        default_root_dir=args.save_dir,
+        log_every_n_steps=args.log_step,
+        val_check_interval=args.eval_step,
+        logger=wandb_logger,
+        callbacks=[checkpoint_callback, lr_monitor]
+    )
+
+    trainer.fit(model)
 
 
 if __name__ == "__main__":
