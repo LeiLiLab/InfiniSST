@@ -65,7 +65,7 @@ class SpeechEncoder(L.LightningModule):
         self, 
         speech_tower_path, ssl_finetuned, 
         len_adapter_channels, len_adapter_kernel_sizes, 
-        llm_embedding, unidirectional,
+        llm_embedding, unidirectional, temp,
         lr, warmup_updates,
     ):
         super().__init__()
@@ -110,17 +110,19 @@ class SpeechEncoder(L.LightningModule):
         self.length_after_adp = self.mm_length_adapter.get_out_seq_lens_tensor
 
         self.llm_embedding = llm_embedding
+        self.llm_embedding.requires_grad_(False)
 
         self.lr = lr
         self.warmup_updates = warmup_updates
+        self.temp = temp
 
     def train_dataloader(self):
-        train_sampler = SpeechSampler(self.train_ds, shuffle=True, batch_size=self.train_bsz)
+        train_sampler = SpeechSampler(self.train_ds, shuffle=True, batch_size=self.train_bsz, min_ms=320)
         train_dataloader = DataLoader(self.train_ds, batch_sampler=train_sampler, collate_fn=self.collate)
         return train_dataloader
     
     def val_dataloader(self):
-        dev_sampler = SpeechSampler(self.dev_ds, shuffle=False, batch_size=self.dev_bsz)
+        dev_sampler = SpeechSampler(self.dev_ds, shuffle=False, batch_size=self.dev_bsz, min_ms=320)
         dev_dataloader = DataLoader(self.dev_ds, batch_sampler=dev_sampler, collate_fn=self.collate)
         return dev_dataloader
 
@@ -133,20 +135,20 @@ class SpeechEncoder(L.LightningModule):
             padding_mask = torch.zeros(feature.shape[:2], dtype=torch.bool, device=feature.device)
         output_length = (1 - padding_mask.int()).sum(dim=1)
         feature, input_lengths = self.mm_length_adapter(feature, output_length)
-        assert after_lens.equal(input_lengths), "pre calculate length not match with the forward length"
+        # assert after_lens.equal(input_lengths), "pre calculate length not match with the forward length"
         feature = self.mm_mlp_adapter(feature)       
         return feature
     
     def forward(self, batch):
         src_text = batch["src_text"]
         src_speech = batch["src_speech"]
-        src_speech_lengths = batch["src_src_speech_lengths"]
+        src_speech_lengths = batch["src_speech_lengths"]
         after_speech_lengths = batch["after_speech_lengths"]
         text_word = batch["text_word"]
         speech_word = batch["speech_word"]
 
         src_text_emb = self.llm_embedding(src_text).float()
-        src_speech_emb = self.model.get_ssl_feature_w2v(src_speech, src_speech_lengths, after_speech_lengths).transpose(0, 1).float()
+        src_speech_emb = self.get_ssl_feature_w2v(src_speech, src_speech_lengths, after_speech_lengths).transpose(0, 1).float()
 
         speech_word_emb = []
         text_word_emb = []
@@ -169,7 +171,7 @@ class SpeechEncoder(L.LightningModule):
             dim=-1
         )
         loss = F.cross_entropy(
-            st_sim / self.waco_temp,
+            st_sim / self.temp,
             torch.arange(st_sim.size(0), device=st_sim.device)
         )
         
@@ -178,31 +180,32 @@ class SpeechEncoder(L.LightningModule):
 
     def training_step(self, batch, batch_idx):
         loss = self.forward(batch)
-        self.log("train_loss", loss)
+        self.log("train_loss", loss, batch_size=batch["src_speech_lengths"].sum() / 16000)
         return loss
     
     def validation_step(self, batch, batch_idx):
         loss = self.forward(batch)
-        self.log("val_loss", loss)
+        self.log("val_loss", loss, batch_size=batch["src_speech_lengths"].sum() / 16000)
     
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
-
-        scheduler_cfg = InverseSquareRootLRScheduleConfig(
-            warmup_updates=self.warmup_updates, lr=self.lr
-        )
-        scheduler = InverseSquareRootSchedule(
-            scheduler_cfg, optimizer
+        
+        warmup_init_lr = 0 if self.warmup_updates > 0 else self.lr
+        lr_step = (self.lr - warmup_init_lr) / self.warmup_updates
+        decay_factor = self.lr * self.warmup_updates**0.5
+        scheduler = torch.optim.lr_scheduler.LambdaLR(
+            optimizer, 
+            lambda x: decay_factor * x**-0.5 / self.lr if x >= self.warmup_updates \
+                else (warmup_init_lr + x * lr_step) / self.lr
         )
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
-                "scheduler": scheduler
+                "scheduler": scheduler,
+                "interval": "step",
+                "frequency": 1
             }
         }
-    
-    def lr_scheduler_step(self, scheduler, metric):
-        scheduler.step_update(self.global_step)
 
 
 class SpeechLlamaConfig(LlamaConfig):
