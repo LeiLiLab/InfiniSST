@@ -14,6 +14,10 @@ from fairseq.models.speech_to_text import (
     Conv1dSubsampler,
 )
 from fairseq.models.wav2vec import Wav2VecEncoder
+from fairseq.optim.adam import (
+    FairseqAdamConfig,
+    FairseqAdam,
+)
 from fairseq.optim.lr_scheduler.inverse_square_root_schedule import (
     InverseSquareRootLRScheduleConfig,
     InverseSquareRootSchedule
@@ -65,8 +69,8 @@ class SpeechEncoder(L.LightningModule):
         self, 
         speech_tower_path, ssl_finetuned, 
         len_adapter_channels, len_adapter_kernel_sizes, 
-        llm_embedding, unidirectional,
-        lr, warmup_updates,
+        llm_embedding, unidirectional, temp,
+        lr, warmup_updates, tokenizer,
     ):
         super().__init__()
         if not ssl_finetuned: # ssl model
@@ -104,23 +108,28 @@ class SpeechEncoder(L.LightningModule):
                                         speech_dimension,
                                         [int(k) for k in len_adapter_kernel_sizes.split(',')]
                                     ) 
-            
+        self.tokenizer = tokenizer
         self.mm_mlp_adapter = nn.Linear(speech_dimension, llm_embedding.embedding_dim)
         self.length_after_ssl = self.speech_tower._get_feat_extract_output_lengths
         self.length_after_adp = self.mm_length_adapter.get_out_seq_lens_tensor
-
+        num_classes = len(self.tokenizer) + 1
+        self.ctc_head = nn.Linear(llm_embedding.embedding_dim, num_classes) 
         self.llm_embedding = llm_embedding
+        self.llm_embedding.requires_grad_(False)
 
         self.lr = lr
         self.warmup_updates = warmup_updates
+        self.temp = temp
+        self.blank_idx = 32000
+
 
     def train_dataloader(self):
-        train_sampler = SpeechSampler(self.train_ds, shuffle=True, batch_size=self.train_bsz)
+        train_sampler = SpeechSampler(self.train_ds, shuffle=True, batch_size=self.train_bsz, min_ms=320)
         train_dataloader = DataLoader(self.train_ds, batch_sampler=train_sampler, collate_fn=self.collate)
         return train_dataloader
     
     def val_dataloader(self):
-        dev_sampler = SpeechSampler(self.dev_ds, shuffle=False, batch_size=self.dev_bsz)
+        dev_sampler = SpeechSampler(self.dev_ds, shuffle=False, batch_size=self.dev_bsz, min_ms=320)
         dev_dataloader = DataLoader(self.dev_ds, batch_sampler=dev_sampler, collate_fn=self.collate)
         return dev_dataloader
 
@@ -133,76 +142,82 @@ class SpeechEncoder(L.LightningModule):
             padding_mask = torch.zeros(feature.shape[:2], dtype=torch.bool, device=feature.device)
         output_length = (1 - padding_mask.int()).sum(dim=1)
         feature, input_lengths = self.mm_length_adapter(feature, output_length)
-        assert after_lens.equal(input_lengths), "pre calculate length not match with the forward length"
+        # assert after_lens.equal(input_lengths), "pre calculate length not match with the forward length"
         feature = self.mm_mlp_adapter(feature)       
         return feature
     
     def forward(self, batch):
-        src_text = batch["src_text"]
         src_speech = batch["src_speech"]
-        src_speech_lengths = batch["src_src_speech_lengths"]
+        src_speech_lengths = batch["after_speech_lengths"]
         after_speech_lengths = batch["after_speech_lengths"]
-        text_word = batch["text_word"]
-        speech_word = batch["speech_word"]
+        targets = batch["targets"]
+        target_lengths = batch["target_lengths"]
+        processed_length = batch["processed_lengths"]
+        # src_text_emb = self.llm_embedding(src_text).float()
+        src_speech_emb = self.get_ssl_feature_w2v(src_speech, src_speech_lengths, after_speech_lengths).transpose(0, 1).float()
 
-        src_text_emb = self.llm_embedding(src_text).float()
-        src_speech_emb = self.model.get_ssl_feature_w2v(src_speech, src_speech_lengths, after_speech_lengths).transpose(0, 1).float()
+        logits = self.ctc_head(src_speech_emb) 
+        log_probs = F.log_softmax(logits, dim=2).transpose(0, 1)  # Shape (T, N, C) for CTC
+        ctc_loss = F.ctc_loss(log_probs, targets, processed_length, target_lengths, blank=self.blank_idx, reduction='mean', zero_infinity=True)
 
-        speech_word_emb = []
-        text_word_emb = []
-        for i in range(len(text_word)):
-            s_word, t_word = speech_word[i], text_word[i]
-            if s_word is not None:
-                for j in range(s_word.size(0)):
-                    s_l, s_r = s_word[j]
-                    t_l, t_r = t_word[j]
-                    s_word_emb = src_speech_emb[i][s_l : s_r + 1].mean(dim=0)
-                    t_word_emb = src_text_emb[i][t_l : t_r + 1].mean(dim=0)
-                    speech_word_emb.append(s_word_emb)
-                    text_word_emb.append(t_word_emb)
-        speech_word_emb = torch.stack(speech_word_emb, dim=0)
-        text_word_emb = torch.stack(text_word_emb, dim=0)
 
-        st_sim = F.cosine_similarity(
-            speech_word_emb.unsqueeze(1), 
-            text_word_emb.unsqueeze(0), 
-            dim=-1
-        )
-        loss = F.cross_entropy(
-            st_sim / self.waco_temp,
-            torch.arange(st_sim.size(0), device=st_sim.device)
-        )
+
+        # speech_word_emb = []
+        # text_word_emb = []
+        # for i in range(len(text_word)):
+        #     s_word, t_word = speech_word[i], text_word[i]
+        #     if s_word is not None:
+        #         for j in range(s_word.size(0)):
+        #             s_l, s_r = s_word[j]
+        #             t_l, t_r = t_word[j]
+        #             s_word_emb = src_speech_emb[i][s_l : s_r + 1].mean(dim=0)
+        #             t_word_emb = src_text_emb[i][t_l : t_r + 1].mean(dim=0)
+        #             speech_word_emb.append(s_word_emb)
+        #             text_word_emb.append(t_word_emb)
+        # speech_word_emb = torch.stack(speech_word_emb, dim=0)
+        # text_word_emb = torch.stack(text_word_emb, dim=0)
+
+        # st_sim = F.cosine_similarity(
+        #     speech_word_emb.unsqueeze(1), 
+        #     text_word_emb.unsqueeze(0), 
+        #     dim=-1
+        # )
+        # loss = F.cross_entropy(
+        #     st_sim / self.temp,
+        #     torch.arange(st_sim.size(0), device=st_sim.device)
+        # )
         
-        return loss
+        return ctc_loss
 
 
     def training_step(self, batch, batch_idx):
         loss = self.forward(batch)
-        self.log("train_loss", loss)
+        self.log("train_loss", loss, batch_size=batch["src_speech_lengths"].sum() / 16000)
         return loss
     
     def validation_step(self, batch, batch_idx):
         loss = self.forward(batch)
-        self.log("val_loss", loss)
+        self.log("val_loss", loss, batch_size=batch["src_speech_lengths"].sum() / 16000)
     
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
-
-        scheduler_cfg = InverseSquareRootLRScheduleConfig(
-            warmup_updates=self.warmup_updates, lr=self.lr
-        )
-        scheduler = InverseSquareRootSchedule(
-            scheduler_cfg, optimizer
+        
+        warmup_init_lr = 0 if self.warmup_updates > 0 else self.lr
+        lr_step = (self.lr - warmup_init_lr) / self.warmup_updates
+        decay_factor = self.lr * self.warmup_updates**0.5
+        scheduler = torch.optim.lr_scheduler.LambdaLR(
+            optimizer, 
+            lambda x: decay_factor * x**-0.5 / self.lr if x >= self.warmup_updates \
+                else (warmup_init_lr + x * lr_step) / self.lr
         )
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
-                "scheduler": scheduler
+                "scheduler": scheduler,
+                "interval": "step",
+                "frequency": 1
             }
         }
-    
-    def lr_scheduler_step(self, scheduler, metric):
-        scheduler.step_update(self.global_step)
 
 
 class SpeechLlamaConfig(LlamaConfig):

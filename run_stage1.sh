@@ -6,33 +6,35 @@
 #SBATCH --mem=256GB
 #SBATCH --gpus=4
 ##SBATCH --constraint=xeon-4116 
-#SBATCH --partition=gemini
-#SBATCH --time=1-00:00:00
+#SBATCH --partition=taurus
+#SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
 ##SBATCH --array=1-7
-#SBATCH --account=siqiouyang
+#SBATCH --account=xixu
 #SBATCH --mail-type=ALL
-##SBATCH --mail-user=siqiouya@andrew.cmu.edu
-##SBATCH --output=/home/xixu/slurm.txts
+##SBATCH --mail-user=xixu@andrew.cmu.edu
+#SBATCH --output=s1_ctc.txt
 
-conda config --append envs_dirs /mnt/taurus/home/siqiouyang/anaconda3/envs/
-source /mnt/taurus/home/siqiouyang/anaconda3/bin/activate /mnt/taurus/home/siqiouyang/anaconda3/envs/sllama
 
-cd train
+
+cd /mnt/gemini/home/xixu/sllama_ctc/train
 
 llm_model=/mnt/taurus/data/xixu/llm/llama-2-7b/hf
 ssl_model=/mnt/taurus/data/xixu/models/wav2_vec_vox_960h_pl.pt
 data_path=/mnt/taurus/data/xixu/datasets/must-c-v1.0/en-es
-save_path=/mnt/taurus/data/siqiouyang/runs/sllama/en-es/7b/uni/stage1-reference
+save_path=/mnt/taurus/data1/xixu/runs/sllama/en-es/7b/uni/stage1_ctc
+stage0_path=/mnt/taurus/data1/xixu/runs/sllama/en-es/7b/uni/stage0
 
-# export WANDB_WATCH=all
 export WANDB_PROJECT=en-es
 
-export PYTHONPATH=/home/siqiouyang/work/projects/sllama
-torchrun --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:9104 \
-    stage1.py \
+export PYTHONPATH=/mnt/gemini/home/xixu/sllama_ctc
+
+torchrun --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:9105 \
+    /mnt/gemini/home/xixu/sllama_ctc/train/stage1.py \
     --model_name_or_path ${llm_model} \
     --speech_tower_path ${ssl_model} \
+    --stage0 True \
+    --stage0_path ${stage0_path} \
     --ssl_fintuned True \
     --data_path ${data_path} \
     --data_split_train 'train' \
@@ -54,11 +56,11 @@ torchrun --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:9104 \
     --weight_decay 0. \
     --warmup_ratio 0.2 \
     --lr_scheduler_type "cosine" \
-    --logging_steps 100 \
+    --logging_steps 20 \
     --gradient_checkpointing True \
     --seed 998244353 \
     --report_to wandb \
-    --run_name 7b-uni-stage1-reference \
+    --run_name 7b-uni-stage1_ctc \
     --fp16 True \
-    --deepspeed ../configs/deepspeed_config.json # \
-    # --unidirectional True
+    --deepspeed ../configs/deepspeed_config.json \
+    --unidirectional True

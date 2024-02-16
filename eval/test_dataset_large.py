@@ -44,7 +44,8 @@ def eval_model(args):
     json.dump(config, open(update_config, 'w'), indent=2)
     # replace_llama_attn_with_flash_attn()
     # change wav2vec to uni-directional
-    replace_uni_train()
+    if args.unidirectional:
+        replace_uni_train()
     model = SpeechLlamaForCausalLM.from_pretrained(args.model_name,
                                                    torch_dtype=load_type,
                                                    low_cpu_mem_usage=True,
@@ -57,7 +58,7 @@ def eval_model(args):
         device_input = 'cuda'  
         device_input = 'cuda'
     length_after_ssl, length_after_adp = model.model.initialize_speech_modules(
-        speech_tower_path=model.config.speech_tower_path,
+        speech_tower_path='/mnt/taurus/data/xixu/models/wav2_vec_vox_960h_pl.pt',
         speech_tower_type=None,
         len_adapter_channels=model.config.len_adapter_channels,
         len_adapter_kernel_sizes=model.config.len_adapter_kernel_sizes,
@@ -92,6 +93,9 @@ def eval_model(args):
     for test_data in tqdm(test_dataset):
         source, ref, id = test_data.source, test_data.target, test_data.id                  
         speech_batch = _collate_frames([source], is_audio_input=True)
+
+        print(speech_batch.size())
+
         n_frames = torch.tensor([source.size(0)], dtype=torch.long)
         speech_lens = length_after_adp(length_after_ssl(n_frames))
     
@@ -128,7 +132,6 @@ def eval_model(args):
             input_token_len = input_ids.shape[1]
             outputs = tokenizer.batch_decode(output_ids[:, input_token_len:], skip_special_tokens=True)[0]
             outputs = outputs.strip()
-            print(outputs)
             if outputs.endswith(stop_str):
                 outputs = outputs[:-len(stop_str)]
             outputs = outputs.strip()
@@ -149,6 +152,7 @@ if __name__ == "__main__":
     parser.add_argument("--result", type=str, required=True)
     parser.add_argument("--beam", type=int, default=1)
     parser.add_argument("--speech-tower-path", type=str, required=True)
+    parser.add_argument("--unidirectional", action="store_true")
     args = parser.parse_args()
 
     eval_model(args)

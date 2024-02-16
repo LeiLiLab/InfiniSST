@@ -1,0 +1,409 @@
+[2024-02-14 02:47:43,478] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2024-02-14 02:47:43,516] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2024-02-14 02:47:43,533] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2024-02-14 02:47:43,549] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+You are using a model of type llama to instantiate a model of type SpeechLlama. This is not supported for all configurations of models and can yield errors.
+You are using a model of type llama to instantiate a model of type SpeechLlama. This is not supported for all configurations of models and can yield errors.
+You are using a model of type llama to instantiate a model of type SpeechLlama. This is not supported for all configurations of models and can yield errors.
+You are using a model of type llama to instantiate a model of type SpeechLlama. This is not supported for all configurations of models and can yield errors.
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:46<01:32, 46.04s/it]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:51<00:22, 22.12s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:55<00:00, 13.79s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:55<00:00, 18.43s/it]
+/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/torch/nn/utils/weight_norm.py:30: UserWarning: torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.
+  warnings.warn("torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.")
+INFO: Using 16bit Automatic Mixed Precision (AMP)
+2024-02-14 02:49:24 | INFO | lightning.pytorch.utilities.rank_zero | Using 16bit Automatic Mixed Precision (AMP)
+INFO: GPU available: True (cuda), used: True
+2024-02-14 02:49:24 | INFO | lightning.pytorch.utilities.rank_zero | GPU available: True (cuda), used: True
+INFO: TPU available: False, using: 0 TPU cores
+2024-02-14 02:49:24 | INFO | lightning.pytorch.utilities.rank_zero | TPU available: False, using: 0 TPU cores
+INFO: IPU available: False, using: 0 IPUs
+2024-02-14 02:49:24 | INFO | lightning.pytorch.utilities.rank_zero | IPU available: False, using: 0 IPUs
+INFO: HPU available: False, using: 0 HPUs
+2024-02-14 02:49:24 | INFO | lightning.pytorch.utilities.rank_zero | HPU available: False, using: 0 HPUs
+INFO: Initializing distributed: GLOBAL_RANK: 0, MEMBER: 1/4
+2024-02-14 02:49:24 | INFO | lightning.fabric.utilities.distributed | Initializing distributed: GLOBAL_RANK: 0, MEMBER: 1/4
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:46<01:32, 46.08s/it]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:49<00:21, 21.06s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:52<00:00, 12.97s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:52<00:00, 17.65s/it]
+/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/torch/nn/utils/weight_norm.py:30: UserWarning: torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.
+  warnings.warn("torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.")
+INFO: Initializing distributed: GLOBAL_RANK: 1, MEMBER: 2/4
+2024-02-14 02:49:24 | INFO | lightning.fabric.utilities.distributed | Initializing distributed: GLOBAL_RANK: 1, MEMBER: 2/4
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:45<01:31, 46.00s/it]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:51<00:22, 22.03s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:54<00:00, 13.29s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:54<00:00, 18.04s/it]
+/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/torch/nn/utils/weight_norm.py:30: UserWarning: torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.
+  warnings.warn("torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.")
+INFO: Initializing distributed: GLOBAL_RANK: 2, MEMBER: 3/4
+2024-02-14 02:49:25 | INFO | lightning.fabric.utilities.distributed | Initializing distributed: GLOBAL_RANK: 2, MEMBER: 3/4
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards:  33%|███▎      | 1/3 [00:46<01:32, 46.03s/it]Loading checkpoint shards:  67%|██████▋   | 2/3 [00:51<00:22, 22.14s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:55<00:00, 13.73s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:55<00:00, 18.39s/it]
+/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/torch/nn/utils/weight_norm.py:30: UserWarning: torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.
+  warnings.warn("torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.")
+INFO: Initializing distributed: GLOBAL_RANK: 3, MEMBER: 4/4
+2024-02-14 02:49:26 | INFO | lightning.fabric.utilities.distributed | Initializing distributed: GLOBAL_RANK: 3, MEMBER: 4/4
+INFO: ----------------------------------------------------------------------------------------------------
+distributed_backend=nccl
+All distributed processes registered. Starting with 4 processes
+----------------------------------------------------------------------------------------------------
+
+2024-02-14 02:49:26 | INFO | lightning.pytorch.utilities.rank_zero | ----------------------------------------------------------------------------------------------------
+distributed_backend=nccl
+All distributed processes registered. Starting with 4 processes
+----------------------------------------------------------------------------------------------------
+
+gemini:4150538:4150538 [0] NCCL INFO Bootstrap : Using enp2s0f0:128.111.28.104<0>
+gemini:4150538:4150538 [0] NCCL INFO NET/Plugin : Plugin load (libnccl-net.so) returned 2 : libnccl-net.so: cannot open shared object file: No such file or directory
+gemini:4150538:4150538 [0] NCCL INFO NET/Plugin : No plugin found, using internal implementation
+gemini:4150538:4150538 [0] NCCL INFO cudaDriverVersion 12000
+NCCL version 2.18.1+cuda12.1
+wandb: Currently logged in as: xixu (cmu_idl_team). Use `wandb login --relogin` to force relogin
+wandb: wandb version 0.16.3 is available!  To upgrade, please run:
+wandb:  $ pip install wandb --upgrade
+wandb: Tracking run with wandb version 0.16.2
+wandb: Run data is saved locally in ./wandb/run-20240214_024933-xk1dy5w7
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run stage0
+wandb: ⭐️ View project at https://wandb.ai/cmu_idl_team/en-es
+wandb: 🚀 View run at https://wandb.ai/cmu_idl_team/en-es/runs/xk1dy5w7
+INFO: LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+2024-02-14 02:49:36 | INFO | lightning.pytorch.accelerators.cuda | LOCAL_RANK: 3 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+INFO: LOCAL_RANK: 2 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+INFO: LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+2024-02-14 02:49:36 | INFO | lightning.pytorch.accelerators.cuda | LOCAL_RANK: 2 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+2024-02-14 02:49:36 | INFO | lightning.pytorch.accelerators.cuda | LOCAL_RANK: 1 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+INFO: LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+2024-02-14 02:49:36 | INFO | lightning.pytorch.accelerators.cuda | LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0,1,2,3]
+INFO: 
+  | Name              | Type                    | Params
+--------------------------------------------------------------
+0 | speech_tower      | Wav2Vec2Model           | 315 M 
+1 | mm_length_adapter | ZeroPadConv1dSubsampler | 6.3 M 
+2 | mm_mlp_adapter    | Linear                  | 4.2 M 
+3 | ctc_head          | Linear                  | 131 M 
+4 | llm_embedding     | Embedding               | 131 M 
+--------------------------------------------------------------
+452 M     Trainable params
+135 M     Non-trainable params
+588 M     Total params
+2,352.447 Total estimated model params size (MB)
+2024-02-14 02:49:36 | INFO | lightning.pytorch.callbacks.model_summary | 
+  | Name              | Type                    | Params
+--------------------------------------------------------------
+0 | speech_tower      | Wav2Vec2Model           | 315 M 
+1 | mm_length_adapter | ZeroPadConv1dSubsampler | 6.3 M 
+2 | mm_mlp_adapter    | Linear                  | 4.2 M 
+3 | ctc_head          | Linear                  | 131 M 
+4 | llm_embedding     | Embedding               | 131 M 
+--------------------------------------------------------------
+452 M     Trainable params
+135 M     Non-trainable params
+588 M     Total params
+2,352.447 Total estimated model params size (MB)
+INFO: SLURM auto-requeueing enabled. Setting signal handlers.
+2024-02-14 02:49:37 | INFO | lightning.pytorch.trainer.connectors.signal_connector | SLURM auto-requeueing enabled. Setting signal handlers.
+INFO: SLURM auto-requeueing enabled. Setting signal handlers.
+2024-02-14 02:49:37 | INFO | lightning.pytorch.trainer.connectors.signal_connector | SLURM auto-requeueing enabled. Setting signal handlers.
+INFO: SLURM auto-requeueing enabled. Setting signal handlers.
+2024-02-14 02:49:37 | INFO | lightning.pytorch.trainer.connectors.signal_connector | SLURM auto-requeueing enabled. Setting signal handlers.
+INFO: SLURM auto-requeueing enabled. Setting signal handlers.
+2024-02-14 02:49:37 | INFO | lightning.pytorch.trainer.connectors.signal_connector | SLURM auto-requeueing enabled. Setting signal handlers.
+Sanity Checking: |          | 0/? [00:00<?, ?it/s]196 out of 1312 samples skipped
+/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:441: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+196 out of 1312 samples skipped
+gemini:4150539:4150539 [1] NCCL INFO cudaDriverVersion 12000
+gemini:4150539:4150539 [1] NCCL INFO Bootstrap : Using enp2s0f0:128.111.28.104<0>
+gemini:4150539:4150539 [1] NCCL INFO NET/Plugin : Plugin load (libnccl-net.so) returned 2 : libnccl-net.so: cannot open shared object file: No such file or directory
+gemini:4150539:4150539 [1] NCCL INFO NET/Plugin : No plugin found, using internal implementation
+gemini:4150539:4154726 [1] NCCL INFO NET/IB : No device found.
+gemini:4150539:4154726 [1] NCCL INFO NET/Socket : Using [0]enp2s0f0:128.111.28.104<0> [1]virbr0:192.168.122.1<0>
+gemini:4150539:4154726 [1] NCCL INFO Using network Socket
+gemini:4150539:4154726 [1] NCCL INFO Setting affinity for GPU 1 to ffffffff,00000000,ffffffff
+gemini:4150539:4154726 [1] NCCL INFO NVLS multicast support is not available on dev 1
+gemini:4150539:4154726 [1] NCCL INFO Trees [0] 2/-1/-1->1->0 [1] 0/-1/-1->1->-1 [2] -1/-1/-1->1->0 [3] 0/-1/-1->1->2 [4] 2/-1/-1->1->0 [5] 0/-1/-1->1->-1 [6] -1/-1/-1->1->0 [7] 0/-1/-1->1->2
+gemini:4150539:4154726 [1] NCCL INFO P2P Chunksize set to 524288
+gemini:4150539:4154726 [1] NCCL INFO Channel 00/0 : 1[21000] -> 2[41000] via P2P/IPC
+gemini:4150539:4154726 [1] NCCL INFO Channel 01/0 : 1[21000] -> 2[41000] via P2P/IPC
+gemini:4150539:4154726 [1] NCCL INFO Channel 04/0 : 1[21000] -> 2[41000] via P2P/IPC
+gemini:4150539:4154726 [1] NCCL INFO Channel 05/0 : 1[21000] -> 2[41000] via P2P/IPC
+gemini:4150539:4154726 [1] NCCL INFO Channel 02/0 : 1[21000] -> 0[1000] via P2P/IPC
+gemini:4150539:4154726 [1] NCCL INFO Channel 03/0 : 1[21000] -> 0[1000] via P2P/IPC
+gemini:4150539:4154726 [1] NCCL INFO Channel 06/0 : 1[21000] -> 0[1000] via P2P/IPC
+gemini:4150539:4154726 [1] NCCL INFO Channel 07/0 : 1[21000] -> 0[1000] via P2P/IPC
+gemini:4150539:4154726 [1] NCCL INFO Connected all rings
+gemini:4150539:4154726 [1] NCCL INFO Channel 03/0 : 1[21000] -> 2[41000] via P2P/IPC
+gemini:4150539:4154726 [1] NCCL INFO Channel 07/0 : 1[21000] -> 2[41000] via P2P/IPC
+gemini:4150539:4154726 [1] NCCL INFO Channel 00/0 : 1[21000] -> 0[1000] via P2P/IPC
+gemini:4150539:4154726 [1] NCCL INFO Channel 01/0 : 1[21000] -> 0[1000] via P2P/IPC
+gemini:4150539:4154726 [1] NCCL INFO Channel 04/0 : 1[21000] -> 0[1000] via P2P/IPC
+gemini:4150539:4154726 [1] NCCL INFO Channel 05/0 : 1[21000] -> 0[1000] via P2P/IPC
+gemini:4150539:4154726 [1] NCCL INFO Connected all trees
+gemini:4150539:4154726 [1] NCCL INFO threadThresholds 8/8/64 | 32/8/64 | 512 | 512
+gemini:4150539:4154726 [1] NCCL INFO 8 coll channels, 0 nvls channels, 8 p2p channels, 2 p2p channels per peer
+gemini:4150539:4154726 [1] NCCL INFO comm 0x61fd8890 rank 1 nranks 4 cudaDev 1 busId 21000 commId 0x78f84cfa035172b1 - Init COMPLETE
+Traceback (most recent call last):
+  File "/home/xixu/sllama_ctc/train/stage0.py", line 273, in <module>
+    train()
+  File "/home/xixu/sllama_ctc/train/stage0.py", line 269, in train
+    trainer.fit(model)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 543, in fit
+    call._call_and_handle_interrupt(
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/call.py", line 43, in _call_and_handle_interrupt
+    return trainer.strategy.launcher.launch(trainer_fn, *args, trainer=trainer, **kwargs)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/strategies/launchers/subprocess_script.py", line 105, in launch
+    return function(*args, **kwargs)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 579, in _fit_impl
+    self._run(model, ckpt_path=ckpt_path)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 986, in _run
+    results = self._run_stage()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 1030, in _run_stage
+    self._run_sanity_check()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 1059, in _run_sanity_check
+    val_loop.run()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/loops/utilities.py", line 182, in _decorator
+    return loop_run(self, *args, **kwargs)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/loops/evaluation_loop.py", line 128, in run
+    batch, batch_idx, dataloader_idx = next(data_fetcher)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/loops/fetchers.py", line 133, in __next__
+    batch = super().__next__()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/loops/fetchers.py", line 60, in __next__
+    batch = next(self.iterator)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/utilities/combined_loader.py", line 341, in __next__
+    out = next(self._iterator)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/utilities/combined_loader.py", line 142, in __next__
+    out = next(self.iterators[0])
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 630, in __next__
+    data = self._next_data()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 674, in _next_data
+    data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/torch/utils/data/_utils/fetch.py", line 54, in fetch
+    return self.collate_fn(data)
+  File "/home/xixu/sllama_ctc/train/stage0.py", line 114, in __call__
+    encoded_text = self.tokenizer.encode(x['src_text'], add_special_tokens=False)
+TypeError: 'SpeechToTextDatasetItem' object is not subscriptable
+196 out of 1312 samples skipped
+gemini:4150541:4150541 [3] NCCL INFO cudaDriverVersion 12000
+gemini:4150541:4150541 [3] NCCL INFO Bootstrap : Using enp2s0f0:128.111.28.104<0>
+gemini:4150541:4150541 [3] NCCL INFO NET/Plugin : Plugin load (libnccl-net.so) returned 2 : libnccl-net.so: cannot open shared object file: No such file or directory
+gemini:4150541:4150541 [3] NCCL INFO NET/Plugin : No plugin found, using internal implementation
+gemini:4150541:4154725 [3] NCCL INFO NET/IB : No device found.
+gemini:4150541:4154725 [3] NCCL INFO NET/Socket : Using [0]enp2s0f0:128.111.28.104<0> [1]virbr0:192.168.122.1<0>
+gemini:4150541:4154725 [3] NCCL INFO Using network Socket
+gemini:4150541:4154725 [3] NCCL INFO Setting affinity for GPU 3 to ffffffff,00000000,ffffffff
+gemini:4150541:4154725 [3] NCCL INFO NVLS multicast support is not available on dev 3
+gemini:4150541:4154725 [3] NCCL INFO Trees [0] -1/-1/-1->3->2 [1] 2/-1/-1->3->0 [2] 0/-1/-1->3->2 [3] 2/-1/-1->3->-1 [4] -1/-1/-1->3->2 [5] 2/-1/-1->3->0 [6] 0/-1/-1->3->2 [7] 2/-1/-1->3->-1
+gemini:4150541:4154725 [3] NCCL INFO P2P Chunksize set to 524288
+gemini:4150541:4154725 [3] NCCL INFO Channel 00/0 : 3[61000] -> 0[1000] via P2P/IPC
+gemini:4150541:4154725 [3] NCCL INFO Channel 01/0 : 3[61000] -> 0[1000] via P2P/IPC
+gemini:4150541:4154725 [3] NCCL INFO Channel 04/0 : 3[61000] -> 0[1000] via P2P/IPC
+gemini:4150541:4154725 [3] NCCL INFO Channel 05/0 : 3[61000] -> 0[1000] via P2P/IPC
+gemini:4150541:4154725 [3] NCCL INFO Channel 02/0 : 3[61000] -> 2[41000] via P2P/IPC
+gemini:4150541:4154725 [3] NCCL INFO Channel 03/0 : 3[61000] -> 2[41000] via P2P/IPC
+gemini:4150541:4154725 [3] NCCL INFO Channel 06/0 : 3[61000] -> 2[41000] via P2P/IPC
+gemini:4150541:4154725 [3] NCCL INFO Channel 07/0 : 3[61000] -> 2[41000] via P2P/IPC
+gemini:4150541:4154725 [3] NCCL INFO Connected all rings
+gemini:4150541:4154725 [3] NCCL INFO Channel 02/0 : 3[61000] -> 0[1000] via P2P/IPC
+gemini:4150541:4154725 [3] NCCL INFO Channel 06/0 : 3[61000] -> 0[1000] via P2P/IPC
+gemini:4150541:4154725 [3] NCCL INFO Channel 00/0 : 3[61000] -> 2[41000] via P2P/IPC
+gemini:4150541:4154725 [3] NCCL INFO Channel 01/0 : 3[61000] -> 2[41000] via P2P/IPC
+gemini:4150541:4154725 [3] NCCL INFO Channel 04/0 : 3[61000] -> 2[41000] via P2P/IPC
+gemini:4150541:4154725 [3] NCCL INFO Channel 05/0 : 3[61000] -> 2[41000] via P2P/IPC
+gemini:4150541:4154725 [3] NCCL INFO Connected all trees
+gemini:4150541:4154725 [3] NCCL INFO threadThresholds 8/8/64 | 32/8/64 | 512 | 512
+gemini:4150541:4154725 [3] NCCL INFO 8 coll channels, 0 nvls channels, 8 p2p channels, 2 p2p channels per peer
+gemini:4150541:4154725 [3] NCCL INFO comm 0x62d27a90 rank 3 nranks 4 cudaDev 3 busId 61000 commId 0x78f84cfa035172b1 - Init COMPLETE
+Traceback (most recent call last):
+  File "/home/xixu/sllama_ctc/train/stage0.py", line 273, in <module>
+    train()
+  File "/home/xixu/sllama_ctc/train/stage0.py", line 269, in train
+    trainer.fit(model)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 543, in fit
+    call._call_and_handle_interrupt(
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/call.py", line 43, in _call_and_handle_interrupt
+    return trainer.strategy.launcher.launch(trainer_fn, *args, trainer=trainer, **kwargs)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/strategies/launchers/subprocess_script.py", line 105, in launch
+    return function(*args, **kwargs)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 579, in _fit_impl
+    self._run(model, ckpt_path=ckpt_path)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 986, in _run
+    results = self._run_stage()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 1030, in _run_stage
+    self._run_sanity_check()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 1059, in _run_sanity_check
+    val_loop.run()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/loops/utilities.py", line 182, in _decorator
+    return loop_run(self, *args, **kwargs)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/loops/evaluation_loop.py", line 128, in run
+    batch, batch_idx, dataloader_idx = next(data_fetcher)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/loops/fetchers.py", line 133, in __next__
+    batch = super().__next__()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/loops/fetchers.py", line 60, in __next__
+    batch = next(self.iterator)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/utilities/combined_loader.py", line 341, in __next__
+    out = next(self._iterator)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/utilities/combined_loader.py", line 142, in __next__
+    out = next(self.iterators[0])
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 630, in __next__
+    data = self._next_data()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 674, in _next_data
+    data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/torch/utils/data/_utils/fetch.py", line 54, in fetch
+    return self.collate_fn(data)
+  File "/home/xixu/sllama_ctc/train/stage0.py", line 114, in __call__
+    encoded_text = self.tokenizer.encode(x['src_text'], add_special_tokens=False)
+TypeError: 'SpeechToTextDatasetItem' object is not subscriptable
+196 out of 1312 samples skipped
+gemini:4150540:4150540 [2] NCCL INFO cudaDriverVersion 12000
+gemini:4150540:4150540 [2] NCCL INFO Bootstrap : Using enp2s0f0:128.111.28.104<0>
+gemini:4150540:4150540 [2] NCCL INFO NET/Plugin : Plugin load (libnccl-net.so) returned 2 : libnccl-net.so: cannot open shared object file: No such file or directory
+gemini:4150540:4150540 [2] NCCL INFO NET/Plugin : No plugin found, using internal implementation
+gemini:4150540:4154727 [2] NCCL INFO NET/IB : No device found.
+gemini:4150540:4154727 [2] NCCL INFO NET/Socket : Using [0]enp2s0f0:128.111.28.104<0> [1]virbr0:192.168.122.1<0>
+gemini:4150540:4154727 [2] NCCL INFO Using network Socket
+gemini:4150540:4154727 [2] NCCL INFO Setting affinity for GPU 2 to ffffffff,00000000,ffffffff
+gemini:4150540:4154727 [2] NCCL INFO NVLS multicast support is not available on dev 2
+gemini:4150540:4154727 [2] NCCL INFO Trees [0] 3/-1/-1->2->1 [1] -1/-1/-1->2->3 [2] 3/-1/-1->2->-1 [3] 1/-1/-1->2->3 [4] 3/-1/-1->2->1 [5] -1/-1/-1->2->3 [6] 3/-1/-1->2->-1 [7] 1/-1/-1->2->3
+gemini:4150540:4154727 [2] NCCL INFO P2P Chunksize set to 524288
+gemini:4150540:4154727 [2] NCCL INFO Channel 00/0 : 2[41000] -> 3[61000] via P2P/IPC
+gemini:4150540:4154727 [2] NCCL INFO Channel 01/0 : 2[41000] -> 3[61000] via P2P/IPC
+gemini:4150540:4154727 [2] NCCL INFO Channel 04/0 : 2[41000] -> 3[61000] via P2P/IPC
+gemini:4150540:4154727 [2] NCCL INFO Channel 05/0 : 2[41000] -> 3[61000] via P2P/IPC
+gemini:4150540:4154727 [2] NCCL INFO Channel 02/0 : 2[41000] -> 1[21000] via P2P/IPC
+gemini:4150540:4154727 [2] NCCL INFO Channel 03/0 : 2[41000] -> 1[21000] via P2P/IPC
+gemini:4150540:4154727 [2] NCCL INFO Channel 06/0 : 2[41000] -> 1[21000] via P2P/IPC
+gemini:4150540:4154727 [2] NCCL INFO Channel 07/0 : 2[41000] -> 1[21000] via P2P/IPC
+gemini:4150540:4154727 [2] NCCL INFO Connected all rings
+gemini:4150540:4154727 [2] NCCL INFO Channel 02/0 : 2[41000] -> 3[61000] via P2P/IPC
+gemini:4150540:4154727 [2] NCCL INFO Channel 03/0 : 2[41000] -> 3[61000] via P2P/IPC
+gemini:4150540:4154727 [2] NCCL INFO Channel 06/0 : 2[41000] -> 3[61000] via P2P/IPC
+gemini:4150540:4154727 [2] NCCL INFO Channel 07/0 : 2[41000] -> 3[61000] via P2P/IPC
+gemini:4150540:4154727 [2] NCCL INFO Channel 00/0 : 2[41000] -> 1[21000] via P2P/IPC
+gemini:4150540:4154727 [2] NCCL INFO Channel 04/0 : 2[41000] -> 1[21000] via P2P/IPC
+gemini:4150540:4154727 [2] NCCL INFO Connected all trees
+gemini:4150540:4154727 [2] NCCL INFO threadThresholds 8/8/64 | 32/8/64 | 512 | 512
+gemini:4150540:4154727 [2] NCCL INFO 8 coll channels, 0 nvls channels, 8 p2p channels, 2 p2p channels per peer
+gemini:4150540:4154727 [2] NCCL INFO comm 0x626f8640 rank 2 nranks 4 cudaDev 2 busId 41000 commId 0x78f84cfa035172b1 - Init COMPLETE
+Traceback (most recent call last):
+  File "/home/xixu/sllama_ctc/train/stage0.py", line 273, in <module>
+    train()
+  File "/home/xixu/sllama_ctc/train/stage0.py", line 269, in train
+    trainer.fit(model)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 543, in fit
+    call._call_and_handle_interrupt(
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/call.py", line 43, in _call_and_handle_interrupt
+    return trainer.strategy.launcher.launch(trainer_fn, *args, trainer=trainer, **kwargs)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/strategies/launchers/subprocess_script.py", line 105, in launch
+    return function(*args, **kwargs)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 579, in _fit_impl
+    self._run(model, ckpt_path=ckpt_path)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 986, in _run
+    results = self._run_stage()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 1030, in _run_stage
+    self._run_sanity_check()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 1059, in _run_sanity_check
+    val_loop.run()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/loops/utilities.py", line 182, in _decorator
+    return loop_run(self, *args, **kwargs)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/loops/evaluation_loop.py", line 128, in run
+    batch, batch_idx, dataloader_idx = next(data_fetcher)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/loops/fetchers.py", line 133, in __next__
+    batch = super().__next__()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/loops/fetchers.py", line 60, in __next__
+    batch = next(self.iterator)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/utilities/combined_loader.py", line 341, in __next__
+    out = next(self._iterator)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/utilities/combined_loader.py", line 142, in __next__
+    out = next(self.iterators[0])
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 630, in __next__
+    data = self._next_data()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 674, in _next_data
+    data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/torch/utils/data/_utils/fetch.py", line 54, in fetch
+    return self.collate_fn(data)
+  File "/home/xixu/sllama_ctc/train/stage0.py", line 114, in __call__
+    encoded_text = self.tokenizer.encode(x['src_text'], add_special_tokens=False)
+TypeError: 'SpeechToTextDatasetItem' object is not subscriptable
+gemini:4150539:4154741 [1] NCCL INFO [Service thread] Connection closed by localRank 1
+gemini:4150539:4150539 [1] NCCL INFO comm 0x61fd8890 rank 1 nranks 4 cudaDev 1 busId 21000 - Abort COMPLETE
+srun: error: gemini: task 1: Exited with exit code 1
+gemini:4150541:4154740 [3] NCCL INFO [Service thread] Connection closed by localRank 3
+gemini:4150541:4150541 [3] NCCL INFO comm 0x62d27a90 rank 3 nranks 4 cudaDev 3 busId 61000 - Abort COMPLETE
+srun: error: gemini: task 3: Exited with exit code 1
+gemini:4150540:4154742 [2] NCCL INFO [Service thread] Connection closed by localRank 2
+gemini:4150540:4150540 [2] NCCL INFO comm 0x626f8640 rank 2 nranks 4 cudaDev 2 busId 41000 - Abort COMPLETE
+srun: error: gemini: task 2: Exited with exit code 1
+wandb: - 0.015 MB of 0.015 MB uploadedwandb: \ 0.015 MB of 0.015 MB uploadedwandb: | 0.015 MB of 0.015 MB uploadedwandb: / 0.015 MB of 0.015 MB uploadedwandb: - 0.015 MB of 0.015 MB uploadedwandb: \ 0.020 MB of 0.030 MB uploadedwandb: 🚀 View run stage0 at: https://wandb.ai/cmu_idl_team/en-es/runs/xk1dy5w7
+wandb: ️⚡ View job at https://wandb.ai/cmu_idl_team/en-es/jobs/QXJ0aWZhY3RDb2xsZWN0aW9uOjEzOTU4NjI2Mg==/version_details/v0
+wandb: Synced 6 W&B file(s), 0 media file(s), 2 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20240214_024933-xk1dy5w7/logs
+Traceback (most recent call last):
+  File "/home/xixu/sllama_ctc/train/stage0.py", line 273, in <module>
+    train()
+  File "/home/xixu/sllama_ctc/train/stage0.py", line 269, in train
+    trainer.fit(model)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 543, in fit
+    call._call_and_handle_interrupt(
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/call.py", line 43, in _call_and_handle_interrupt
+    return trainer.strategy.launcher.launch(trainer_fn, *args, trainer=trainer, **kwargs)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/strategies/launchers/subprocess_script.py", line 105, in launch
+    return function(*args, **kwargs)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 579, in _fit_impl
+    self._run(model, ckpt_path=ckpt_path)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 986, in _run
+    results = self._run_stage()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 1030, in _run_stage
+    self._run_sanity_check()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/trainer/trainer.py", line 1059, in _run_sanity_check
+    val_loop.run()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/loops/utilities.py", line 182, in _decorator
+    return loop_run(self, *args, **kwargs)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/loops/evaluation_loop.py", line 128, in run
+    batch, batch_idx, dataloader_idx = next(data_fetcher)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/loops/fetchers.py", line 133, in __next__
+    batch = super().__next__()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/loops/fetchers.py", line 60, in __next__
+    batch = next(self.iterator)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/utilities/combined_loader.py", line 341, in __next__
+    out = next(self._iterator)
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/lightning/pytorch/utilities/combined_loader.py", line 142, in __next__
+    out = next(self.iterators[0])
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 630, in __next__
+    data = self._next_data()
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 674, in _next_data
+    data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
+  File "/home/xixu/anaconda3/envs/sllama/lib/python3.8/site-packages/torch/utils/data/_utils/fetch.py", line 54, in fetch
+    return self.collate_fn(data)
+  File "/home/xixu/sllama_ctc/train/stage0.py", line 114, in __call__
+    encoded_text = self.tokenizer.encode(x['src_text'], add_special_tokens=False)
+TypeError: 'SpeechToTextDatasetItem' object is not subscriptable
+gemini:4150538:4154716 [0] NCCL INFO NET/IB : No device found.
+gemini:4150538:4154716 [0] NCCL INFO NET/Socket : Using [0]enp2s0f0:128.111.28.104<0> [1]virbr0:192.168.122.1<0>
+gemini:4150538:4154716 [0] NCCL INFO Using network Socket
+gemini:4150538:4154716 [0] NCCL INFO Setting affinity for GPU 0 to ffffffff,00000000,ffffffff
+gemini:4150538:4154716 [0] NCCL INFO NVLS multicast support is not available on dev 0
+gemini:4150538:4154716 [0] NCCL INFO Channel 00/08 :    0   1   2   3
+gemini:4150538:4154716 [0] NCCL INFO Channel 01/08 :    0   1   2   3
+gemini:4150538:4154716 [0] NCCL INFO Channel 02/08 :    0   3   2   1
+gemini:4150538:4154716 [0] NCCL INFO Channel 03/08 :    0   3   2   1
+gemini:4150538:4154716 [0] NCCL INFO Channel 04/08 :    0   1   2   3
+gemini:4150538:4154716 [0] NCCL INFO Channel 05/08 :    0   1   2   3
+gemini:4150538:4154716 [0] NCCL INFO Channel 06/08 :    0   3   2   1
+gemini:4150538:4154716 [0] NCCL INFO Channel 07/08 :    0   3   2   1
+gemini:4150538:4154716 [0] NCCL INFO Trees [0] 1/-1/-1->0->-1 [1] 3/-1/-1->0->1 [2] 1/-1/-1->0->3 [3] -1/-1/-1->0->1 [4] 1/-1/-1->0->-1 [5] 3/-1/-1->0->1 [6] 1/-1/-1->0->3 [7] -1/-1/-1->0->1
+gemini:4150538:4154716 [0] NCCL INFO P2P Chunksize set to 524288
+gemini:4150538:4154716 [0] NCCL INFO Channel 00/0 : 0[1000] -> 1[21000] via P2P/IPC
+gemini:4150538:4154716 [0] NCCL INFO Channel 01/0 : 0[1000] -> 1[21000] via P2P/IPC
+gemini:4150538:4154716 [0] NCCL INFO Channel 04/0 : 0[1000] -> 1[21000] via P2P/IPC
+gemini:4150538:4154716 [0] NCCL INFO Channel 05/0 : 0[1000] -> 1[21000] via P2P/IPC
+gemini:4150538:4154716 [0] NCCL INFO Channel 02/0 : 0[1000] -> 3[61000] via P2P/IPC
+gemini:4150538:4154716 [0] NCCL INFO Channel 03/0 : 0[1000] -> 3[61000] via P2P/IPC
+gemini:4150538:4154716 [0] NCCL INFO Channel 06/0 : 0[1000] -> 3[61000] via P2P/IPC
+gemini:4150538:4154716 [0] NCCL INFO Channel 07/0 : 0[1000] -> 3[61000] via P2P/IPC
+gemini:4150538:4154716 [0] NCCL INFO Connected all rings
+gemini:4150538:4154716 [0] NCCL INFO Channel 02/0 : 0[1000] -> 1[21000] via P2P/IPC
+gemini:4150538:4154716 [0] NCCL INFO Channel 03/0 : 0[1000] -> 1[21000] via P2P/IPC
+gemini:4150538:4154716 [0] NCCL INFO Channel 06/0 : 0[1000] -> 1[21000] via P2P/IPC
+gemini:4150538:4154716 [0] NCCL INFO Channel 07/0 : 0[1000] -> 1[21000] via P2P/IPC
+gemini:4150538:4154716 [0] NCCL INFO Channel 01/0 : 0[1000] -> 3[61000] via P2P/IPC
+gemini:4150538:4154716 [0] NCCL INFO Channel 05/0 : 0[1000] -> 3[61000] via P2P/IPC
+gemini:4150538:4154716 [0] NCCL INFO Connected all trees
+gemini:4150538:4154716 [0] NCCL INFO threadThresholds 8/8/64 | 32/8/64 | 512 | 512
+gemini:4150538:4154716 [0] NCCL INFO 8 coll channels, 0 nvls channels, 8 p2p channels, 2 p2p channels per peer
+gemini:4150538:4154716 [0] NCCL INFO comm 0x63615440 rank 0 nranks 4 cudaDev 0 busId 1000 commId 0x78f84cfa035172b1 - Init COMPLETE
+gemini:4150538:4154739 [0] NCCL INFO [Service thread] Connection closed by localRank 0
+gemini:4150538:4150538 [0] NCCL INFO comm 0x63615440 rank 0 nranks 4 cudaDev 0 busId 1000 - Abort COMPLETE
+srun: error: gemini: task 0: Exited with exit code 1

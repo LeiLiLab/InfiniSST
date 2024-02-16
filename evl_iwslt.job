@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
@@ -14,8 +13,8 @@
 #SBATCH --account=siqiouyang
 ##SBATCH --mail-type=BEGIN,END,FAIL,ALL
 ##SBATCH --mail-user=xixu@cs.cmu.edu 
-#SBATCH --output=stdout_evl_uni_b4.txt
-#SBATCH --error=stderr_evl_uni_b4.txt
+#SBATCH --output=stdout_evl_iwslt_tst2022.txt
+#SBATCH --error=stderr_evl_iwslt_tst2022.txt
 
 # test must-c mt result
 conda config --append envs_dirs /mnt/taurus/home/siqiouyang/anaconda3/envs/
@@ -23,9 +22,12 @@ source /mnt/taurus/home/siqiouyang/anaconda3/bin/activate /mnt/taurus/home/siqio
 
 cd eval
 lang=de
+split=tst2022
+beam=4
+
 model_path=/mnt/gemini/data/xixu/runs/sllama/en-de/7b/bi/stage2_c/checkpoint-300
-data_path=/mnt/taurus/data/xixu/datasets/must-c-v1.0/en-${lang}
-result=${model_path}/result_uni_b4
+data_path=/mnt/taurus/data1/siqiouyang/datasets/iwslt24/raw/en-${lang}/${split}
+result=${model_path}/result_${split}_b${beam}
 
 # python ../train/zero_to_fp32.py ${model_path} \
 #     ${model_path}/pytorch_model.bin
@@ -45,12 +47,10 @@ result=${model_path}/result_uni_b4
 #     --extracted_name 'speech_tower' \
 #     --output ${model_path}/speech_tower.bin
 
-export PYTHONPATH=/home/siqiouyang/work/projects/sllama
+export PYTHONPATH=/mnt/taurus/home/siqiouyang/work/projects/sllama
 python ./test_dataset_large.py \
-        --model-name ${model_path} --data-path ${data_path} --data-split 'tst-COMMON' \
-        --result ${result} --beam 4 \
+        --model-name ${model_path} --data-path ${data_path} --data-split 'test' \
+        --result ${result} --beam ${beam} \
         --mlp-adapter-path ${model_path}/mlp_adapter.bin \
         --length-adapter-path ${model_path}/length_adapter.bin \
         --speech-tower-path ${model_path}/speech_tower.bin
-
-python ./compute_bleu.py ${result}/tst-COMMON

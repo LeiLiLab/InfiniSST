@@ -4,10 +4,10 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=256GB
-#SBATCH --gpus=3
+#SBATCH --gpus=4
 ##SBATCH --constraint=xeon-4116 
-#SBATCH --partition=taurus
-#SBATCH --time=1-2:34:56 
+#SBATCH --partition=gemini
+#SBATCH --time=0-12:00:00
 ##SBATCH --dependency=afterok:job_id
 ##SBATCH --array=1-7
 #SBATCH --account=siqiouyang
@@ -16,12 +16,15 @@
 ##SBATCH --output=stdout_sevl.txt
 ##SBATCH --error=stderr_sevl.txt
 
+conda config --append envs_dirs /mnt/taurus/home/siqiouyang/anaconda3/envs/
+source /mnt/taurus/home/siqiouyang/anaconda3/bin/activate sllama
+
 cd train
 
-llm_model=/mnt/taurus/data/xixu/runs/sllama/en-es/7b/run3/stage2/checkpoint-3600
+llm_model=/mnt/taurus/data/xixu/runs/sllama/en-es/7b/uni/stage2/checkpoint-2000
 ssl_model=/mnt/taurus/data/xixu/models/wav2_vec_vox_960h_pl.pt
 data_path=/mnt/taurus/data/xixu/datasets/must-c-v1.0/en-es
-save_path=/mnt/taurus/data/siqiouyang/runs/sllama/en-es/7b/run2/stage3-fix
+save_path=/mnt/taurus/data/xixu/runs/sllama/en-es/7b/uni/stage3
 
 # python ./zero_to_fp32.py ${llm_model}/checkpoint-12000 ${llm_model}/checkpoint-12000/pytorch_model.bin
 
@@ -69,5 +72,6 @@ torchrun  --nproc_per_node=$SLURM_GPUS\
     --seed 1234 \
     --report_to none \
     --fp16 True \
-    --deepspeed ../configs/deepspeed_config_stage3.json
+    --deepspeed ../configs/deepspeed_config_stage3.json \
+    --unidirectional
 
