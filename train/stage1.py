@@ -16,7 +16,7 @@
 
 import os, sys, random
 os.environ['WANDB_DISABLED'] = 'true'
-sys.path.append('/home/xixu/sllama')
+sys.path.append('/mnt/taurus/data1/chinmay/sllama')
 import copy
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple, Union

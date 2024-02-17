@@ -1,11 +1,15 @@
 cd train
 
-llm_model=/mnt/data/xixu/llm/llama-2-7b/hf
-ssl_model=/mnt/data/xixu/models/wav2_vec_vox_960h_pl.pt
-data_path=/mnt/data/xixu/datasets/must-c-v1.0/en-es
-save_path=/mnt/data/xixu/runs/sllama/en-es/7b/wWav2vec/stage1
+export CUDA_VISIBLE_DEVICES=4,5,6,7
 
-torchrun --nproc_per_node=$SLURM_GPUS \
+llm_model=/mnt/taurus/data/xixu/llm/llama-2-7b/hf
+ssl_model=/mnt/taurus/data/xixu/models/wav2_vec_vox_960h_pl.pt
+data_path=/mnt/taurus/data/xixu/datasets/must-c-v1.0/en-fr/
+save_path_xis=/mnt/taurus/data/xixu/runs/sllama/en-fr/7b/wWav2vec/stage1
+save_path=/mnt/taurus/data1/chinmay/sllama/en-fr/7b/wWav2vec/stage1
+
+
+torchrun --nproc_per_node=1 \
     stage1.py \
     --model_name_or_path ${llm_model} \
     --speech_tower_path ${ssl_model} \
@@ -38,9 +42,10 @@ torchrun --nproc_per_node=$SLURM_GPUS \
     --deepspeed ../configs/deepspeed_config.json \
 
 # # stage2 train
-llm_model=/mnt/data/xixu/runs/sllama/en-es/7b/wWav2vec/stage1/checkpoint-13000
-data_path=/mnt/data/xixu/datasets/must-c-v1.0/en-es
-save_path=/mnt/data/xixu/runs/sllama/7b/wWav2vec/stage2
+llm_model=/mnt/taurus/data1/chinmay/sllama/en-fr/7b/wWav2vec/stage1/checkpoint-13000
+data_path=/mnt/taurus/data/xixu/datase /must-c-v1.0/en-fr
+save_path=/mnt/taurus/data1/chinmay/sllama/en-fr/7b/wWav2vec/stage2
+save_path_xis=/mnt/taurus/data/xixu/runs/sllama/7b/wWav2vec/stage2
 
 python ./zero_to_fp32.py ${llm_model} ${llm_model}/pytorch_model.bin
 
