@@ -59,6 +59,7 @@ class ModelArguments:
     speech_tower_path: Optional[str] = field(default=None)
     speech_tower_type: Optional[str] = field(default=None)
     ssl_fintuned: bool = field(default=False)
+    stage0_ckpt_dir: Optional[str] = field(default='')
     pretrain_mm_adapter: Optional[str] = field(default=None)
     len_adapter_channels: int = field(
         default=1024,
@@ -259,9 +260,19 @@ def train():
         len_adapter_kernel_sizes=model_args.len_adapter_kernel_sizes,
         ssl_fintuned=model_args.ssl_fintuned,
     )
+    
     model.model.speech_tower.to(device=training_args.device)
     model.model.mm_length_adapter.to(device=training_args.device)
     model.model.mm_mlp_adapter.to(device=training_args.device) 
+
+    if model_args.stage0_ckpt_dir != '':
+        speech_tower_weight = torch.load(os.path.join(model_args.stage0_ckpt_dir, 'speech_tower.bin'), map_location=training_args.device)
+        length_adapter_weight = torch.load(os.path.join(model_args.stage0_ckpt_dir, 'length_adapter.bin'), map_location=training_args.device)
+        mlp_adapter_weight = torch.load(os.path.join(model_args.stage0_ckpt_dir, 'mlp_adapter.bin'), map_location=training_args.device)
+
+        model.model.speech_tower.load_state_dict(speech_tower_weight)
+        model.model.mm_length_adapter.load_state_dict(length_adapter_weight)
+        model.model.mm_mlp_adapter.load_state_dict(mlp_adapter_weight)    
     
     if model_args.freeze_speech_foundation: # freeze the ssl model after add the ssl model by initialize_speech_modules   
         model.model.speech_tower.requires_grad_(False)
