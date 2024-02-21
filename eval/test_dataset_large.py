@@ -41,7 +41,8 @@ def eval_model(args):
     config = json.load(open(os.path.join(args.model_name, 'config.json')))
     config['large_model'] = True
     update_config = os.path.join(args.model_name, 'config_large.json')
-    json.dump(config, open(update_config, 'w'), indent=2)
+    if not os.path.exists(update_config):
+        json.dump(config, open(update_config, 'w'), indent=2)
     # replace_llama_attn_with_flash_attn()
     # change wav2vec to uni-directional
     replace_uni_train()

@@ -66,7 +66,7 @@ class SpeechEncoder(L.LightningModule):
         speech_tower_path, ssl_finetuned, 
         len_adapter_channels, len_adapter_kernel_sizes, 
         llm_embedding, unidirectional, temp,
-        lr, warmup_updates,
+        lr, warmup_updates, min_lr=1e-6
     ):
         super().__init__()
         if not ssl_finetuned: # ssl model
@@ -114,6 +114,7 @@ class SpeechEncoder(L.LightningModule):
 
         self.lr = lr
         self.warmup_updates = warmup_updates
+        self.min_lr = min_lr
         self.temp = temp
 
     def train_dataloader(self):
@@ -195,8 +196,8 @@ class SpeechEncoder(L.LightningModule):
         decay_factor = self.lr * self.warmup_updates**0.5
         scheduler = torch.optim.lr_scheduler.LambdaLR(
             optimizer, 
-            lambda x: decay_factor * x**-0.5 / self.lr if x >= self.warmup_updates \
-                else (warmup_init_lr + x * lr_step) / self.lr
+            lambda x: max(decay_factor * x**-0.5 if x >= self.warmup_updates \
+                else warmup_init_lr + x * lr_step, self.min_lr) / self.lr
         )
         return {
             "optimizer": optimizer,
