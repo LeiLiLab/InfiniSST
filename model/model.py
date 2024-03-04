@@ -382,7 +382,7 @@ class SpeechLlamaModel(LlamaModel):
                 cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos+1], speech_features[0], cur_input_embeds[speech_end_pos:]), dim=0)
                 cur_new_input_embeds = cur_new_input_embeds.unsqueeze(0)
 
-                self.position_ids = torch.arange(0, inputs_embeds.size(1), dtype=torch.long, device=input_ids.device)
+                self.position_ids = torch.arange(0, cur_new_input_embeds.size(1), dtype=torch.long, device=input_ids.device)
                 self.position_ids[states.speech_prefix_length:] -= speech_features[0].shape[0]
                 self.position_ids = self.position_ids.unsqueeze(0)
 
