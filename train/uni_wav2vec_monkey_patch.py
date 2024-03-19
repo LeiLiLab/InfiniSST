@@ -18,6 +18,7 @@ from fairseq.utils import index_put, is_xla_tensor
 from model.model import SpeechLlamaModel, ZeroPadConv1dSubsampler
 
 original_forward = TransformerSentenceEncoderLayer.forward
+BLOCKSIZE = 1
 
 # def generate_2d_causal_mask(seq_len, device='cpu'):
 #     """
@@ -46,6 +47,18 @@ def generate_2d_causal_mask(seq_len, dtype, device='gpu'):
     Returns:
         torch.Tensor: A 2D causal attention mask.
     """
+    global BLOCKSIZE
+    blocksizes = [min(BLOCKSIZE, seq_len - i * BLOCKSIZE) for i in range((seq_len + BLOCKSIZE - 1) // BLOCKSIZE)]
+    blocks = [torch.ones((s, s), device=device, dtype=dtype) for s in blocksizes]
+    mask = torch.block_diag(*blocks)
+
+    tril_row, tril_col = torch.tril_indices(seq_len, seq_len)
+    mask[tril_row, tril_col] = 1
+
+    mask.masked_fill_(mask == 0, float('-inf'))
+    mask.masked_fill_(mask == 1, 0)
+
+    return mask
     mask = torch.triu(torch.ones((seq_len, seq_len), device=device, dtype=dtype), diagonal=1)
     mask = mask.masked_fill(mask == 1, float('-inf'))
     return mask
@@ -541,13 +554,17 @@ def uni_initialize_speech_modules(
     return (length_after_ssl, length_after_adp)
 
 
-def replace_uni_train():
+def replace_uni_train(blocksize=1):
+    global BLOCKSIZE
+    BLOCKSIZE = blocksize
     TransformerEncoder.extract_features = uni_transformer_encoder_extract_features
     TransformerSentenceEncoderLayer.forward = uni_self_attn_forward
     SpeechLlamaModel.initialize_speech_modules = uni_initialize_speech_modules
     
 
-def replace_uni_decode():
+def replace_uni_decode(blocksize=1):
+    global BLOCKSIZE
+    BLOCKSIZE = blocksize
     Wav2Vec2Model.extract_features = uni_w2v2_extract_features
     Wav2Vec2Model.forward = uni_w2v2_forward
     TransformerEncoder.forward = uni_transformer_encoder_forward

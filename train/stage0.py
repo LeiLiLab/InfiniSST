@@ -63,6 +63,7 @@ def parse_args():
     parser.add_argument("--len-adapter-channels", type=int, default=1024)
     parser.add_argument("--len-adapter-kernel-sizes", type=str, default="3,3")
     parser.add_argument("--unidirectional", action="store_true")
+    parser.add_argument("--blocksize", type=int, default=1)
     parser.add_argument("--temp", type=float)
     parser.add_argument("--lr", type=float)
     parser.add_argument("--warmup-updates", type=int)
@@ -174,7 +175,7 @@ def train():
     torch.set_float32_matmul_precision('high')
 
     if args.unidirectional:
-        replace_uni_train()
+        replace_uni_train(args.blocksize)
 
     llm = SpeechLlamaForCausalLM.from_pretrained(
         args.llm_path,

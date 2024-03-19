@@ -6,3 +6,4 @@ results
 .vscode/launch.json
 slurm-*.txt
 **/wandb
+mwerSegmenter/*
