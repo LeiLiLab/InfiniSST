@@ -48,11 +48,16 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
     """
 
     def __init__(self, args):
-        replace_uni_decode()
+        replace_uni_decode(args.blocksize)
         super().__init__(args)
     
     def build_states(self):
         return IncrementalS2TAgentStates([], [], None, None, -1, 0)
+    
+    @staticmethod
+    def add_args(parser):
+        WaitkSpeechLlama.add_args(parser)
+        parser.add_argument("--blocksize", default=1, type=int)
 
     def policy(self, states: Optional[IncrementalS2TAgentStates] = None):
         if states is None:

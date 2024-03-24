@@ -80,6 +80,7 @@ class ModelArguments:
         },
     )
     unidirectional: bool = field(default=False)
+    blocksize: int = field(default=1)
 
 
 @dataclass
@@ -224,7 +225,7 @@ def train():
     device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)} if world_size != 1 else "auto"
 
     if model_args.unidirectional:
-        replace_uni_train()
+        replace_uni_train(model_args.blocksize)
 
     model = SpeechLlamaForCausalLM.from_pretrained(
         model_args.model_name_or_path,
