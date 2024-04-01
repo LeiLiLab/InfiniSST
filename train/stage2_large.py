@@ -235,7 +235,6 @@ def train():
     # replace uni wav2vec forward
     if model_args.unidirectional:
         replace_uni_train(model_args.blocksize)
-    
     model = SpeechLlamaForCausalLM.from_pretrained(
         model_args.model_name_or_path,
         cache_dir=training_args.cache_dir,
