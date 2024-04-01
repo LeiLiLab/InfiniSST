@@ -25,6 +25,7 @@ from typing import Dict, Optional, Sequence
 
 import torch
 import torch.nn as nn
+import numpy as np
 
 import transformers
 from transformers import Trainer, set_seed
@@ -79,7 +80,6 @@ class ModelArguments:
         },
     )
     unidirectional: bool = field(default=False)
-    blocksize: int = field(default=1)
 
 
 @dataclass
@@ -135,6 +135,7 @@ class DataCollatorForSupervisedDataset(object):
         speech_batch = _collate_frames([x.source for x in samples], is_audio_input=True)
         n_frames = torch.tensor([x.source.size(0) for x in samples], dtype=torch.long)
         speech_lens = self.length_after_adp(self.length_after_ssl(n_frames)) # after forward ssl model and length adapter
+        k = np.random.choice([1, 3, 5, 7, 9, 11, 13])
 
         texts = [x.target for x in samples]
      
@@ -159,6 +160,7 @@ class DataCollatorForSupervisedDataset(object):
             conv.append_message(conv.roles[0], to_add)
             conv.append_message(conv.roles[1], text)
             conversations.append(conv.get_prompt())
+
         input_ids = self.tokenizer(
             conversations,
             return_tensors="pt",
@@ -166,6 +168,7 @@ class DataCollatorForSupervisedDataset(object):
             #max_length=tokenizer.model_max_length,
             truncation=False,
         ).input_ids
+
         targets = input_ids.clone()
         sep = conv.sep + conv.roles[1] + ": "
         for conversation, target in zip(conversations, targets):
@@ -184,16 +187,44 @@ class DataCollatorForSupervisedDataset(object):
                 instruction_len = len(self.tokenizer(parts[0]).input_ids) - 2
                 target[cur_len : cur_len + instruction_len] = IGNORE_INDEX
                 cur_len += round_len
+            
             target[cur_len:] = IGNORE_INDEX
         #print("conversations:", conversations[0])
         #print("input_ids:", input_ids[0])
         #print("targets:", targets[0])
         #print(self.tokenizer.convert_ids_to_tokens(input_ids[0]))
+        sp_start_id, sp_end_id = self.tokenizer.convert_tokens_to_ids(
+            [DEFAULT_SPEECH_START_TOKEN, DEFAULT_SPEECH_END_TOKEN]
+        )
+        attention_mask = torch.zeros(len(samples), 1, input_ids.size(1), input_ids.size(1))
+        for idx, (conversation, input_id) in enumerate(zip(conversations, input_ids)):
+            parts = conversation.split(sep)
+            instruction_len = len(self.tokenizer(parts[0] + sep).input_ids) - 1
+            sp_start_pos = (input_id == sp_start_id).nonzero().item()
+            sp_end_pos = (input_id == sp_end_id).nonzero().item()
+
+            i = instruction_len
+            i_s = min(sp_start_pos + k, sp_end_pos - 1)
+            first_seg = True
+            while i < input_ids.size(1) and input_id[i] != self.tokenizer.pad_token_id:
+                j = i + 1
+                while j < input_ids.size(1) and input_id[j] != self.tokenizer.pad_token_id and \
+                    not self.tokenizer.convert_ids_to_tokens([input_id[j]])[0].startswith('▁'):
+                    j += 1
+                attention_mask[idx, 0, i : j, i_s + 1 : sp_end_pos] = -float('inf')
+                if first_seg:
+                    first_seg = False
+                    attention_mask[idx, 0, sp_end_pos : instruction_len, i_s + 1 : sp_end_pos] = -float('inf')
+                i_s = min(i_s + 1, sp_end_pos - 1)
+                i = j
+
+            if i < input_ids.size(1) and input_id[i] == self.tokenizer.pad_token_id:
+                attention_mask[idx, 0, :, i:] = -float('inf')
         
         batch = dict(
             input_ids=input_ids,
             labels=targets,
-            attention_mask=input_ids.ne(self.tokenizer.pad_token_id),
+            attention_mask=attention_mask,
             speech_batch=speech_batch,
             src_lengths=n_frames, # src length,
             after_lens=speech_lens, # length after forward ssl and adapter
@@ -227,6 +258,7 @@ def train():
     # load model
     config = json.load(open(os.path.join(model_args.model_name_or_path, 'config.json')))
     config['large_model'] = True
+    config['is_flash_attn_2_available'] = False
     update_config = os.path.join(model_args.model_name_or_path, 'config_large.json')
     json.dump(config, open(update_config, 'w'), indent=2)  
     world_size = int(os.environ.get("WORLD_SIZE", 1))
@@ -234,7 +266,8 @@ def train():
 
     # replace uni wav2vec forward
     if model_args.unidirectional:
-        replace_uni_train(model_args.blocksize)
+        replace_uni_train()
+    
     model = SpeechLlamaForCausalLM.from_pretrained(
         model_args.model_name_or_path,
         cache_dir=training_args.cache_dir,

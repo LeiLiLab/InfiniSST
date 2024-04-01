@@ -1,5 +1,4 @@
 import argparse, sys, time, json
-sys.path.append('/home/xixu/sllama')
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from tqdm import tqdm
 import torch, transformers
@@ -10,7 +9,7 @@ from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 from train.dataset import PromptSpeechToTextDatasetCreator, SpeechToTextDatasetItem
 import conversation as conversation_lib
 from conversation import SeparatorStyle
-from train.uni_wav2vec_monkey_patch import replace_forward
+from train.uni_wav2vec_monkey_patch import replace_uni_train
 
 import os
 import requests
@@ -42,8 +41,11 @@ def eval_model(args):
     config = json.load(open(os.path.join(args.model_name, 'config.json')))
     config['large_model'] = True
     update_config = os.path.join(args.model_name, 'config_large.json')
-    json.dump(config, open(update_config, 'w'), indent=2)
+    if not os.path.exists(update_config):
+        json.dump(config, open(update_config, 'w'), indent=2)
     # replace_llama_attn_with_flash_attn()
+    # change wav2vec to uni-directional
+    replace_uni_train()
     model = SpeechLlamaForCausalLM.from_pretrained(args.model_name,
                                                    torch_dtype=load_type,
                                                    low_cpu_mem_usage=True,
@@ -76,6 +78,8 @@ def eval_model(args):
     model.model.mm_length_adapter.to(dtype=load_type, device=device_input)
     model.model.mm_mlp_adapter.to(dtype=load_type, device=device_input)
     model.model.speech_tower.to(dtype=load_type, device=device_input)
+
+    model.model.config.inference = True
         
     test_dataset = PromptSpeechToTextDatasetCreator.from_tsv(args.data_path, args.data_split)
   
@@ -85,9 +89,6 @@ def eval_model(args):
     ref_file = open(os.path.join(args.result, args.data_split, "ref"), "w")
     hyp_file = open(os.path.join(args.result, args.data_split, "hyp"), "w")
     conv = conversation_lib.default_conversation.copy()
-
-    # change wav2vec to uni-directional
-    replace_forward()
 
     for test_data in tqdm(test_dataset):
         source, ref, id = test_data.source, test_data.target, test_data.id                  
@@ -112,26 +113,29 @@ def eval_model(args):
 
         # extract new speech features 
         model.model.speech_features_extracted = False
-        
-        with torch.inference_mode():
-            output_ids = model.generate(
-                attention_mask=input_ids.ne(tokenizer.pad_token_id),
-                input_ids=input_ids.to(device=device_input),
-                speech_batch=speech_batch.to(dtype=load_type, device=device_input),
-                src_lengths=n_frames.to(device=device_input),
-                after_lens=speech_lens.to(device=device_input),
-                #do_sample=True,
-                #temperature=0.8,
-                num_beams=args.beam,
-                max_new_tokens=500,
-                stopping_criteria=[stopping_criteria])    
-        input_token_len = input_ids.shape[1]
-        outputs = tokenizer.batch_decode(output_ids[:, input_token_len:], skip_special_tokens=True)[0]
-        outputs = outputs.strip()
-        print(outputs)
-        if outputs.endswith(stop_str):
-            outputs = outputs[:-len(stop_str)]
-        outputs = outputs.strip()
+        try:
+            with torch.inference_mode():
+                output_ids = model.generate(
+                    attention_mask=input_ids.ne(tokenizer.pad_token_id),
+                    input_ids=input_ids.to(device=device_input),
+                    speech_batch=speech_batch.to(dtype=load_type, device=device_input),
+                    src_lengths=n_frames.to(device=device_input),
+                    after_lens=speech_lens.to(device=device_input),
+                    #do_sample=True,
+                    #temperature=0.8,
+                    num_beams=args.beam,
+                    max_new_tokens=500,
+                    stopping_criteria=[stopping_criteria])    
+            input_token_len = input_ids.shape[1]
+            outputs = tokenizer.batch_decode(output_ids[:, input_token_len:], skip_special_tokens=True)[0]
+            outputs = outputs.strip()
+            print(outputs)
+            if outputs.endswith(stop_str):
+                outputs = outputs[:-len(stop_str)]
+            outputs = outputs.strip()
+        except Exception as e:
+            outputs = ""
+            print(e)
         print(f"{id} decode complete,\nref:{ref} \nhyp:{outputs}")
         print(f"{id}\t{ref}", file=ref_file)
         print(f"{id}\t{outputs}", file=hyp_file)

@@ -16,6 +16,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import torch
+from torch.utils.data import DistributedSampler
 from fairseq.data import (
     ConcatDataset,
     Dictionary,
@@ -61,22 +62,30 @@ class SpeechToTextDatasetItem(object):
     task: None
     src_text: None
     target: Optional[torch.Tensor] = None
+    speech_word: Optional[List] = None
+    text_word: Optional[List] = None
     
 class PromptSpeechToTextDataset(SpeechToTextDataset):
 
     def __init__(
         self,
         audio_paths: List[str],
+        n_frames: Optional[List[int]] = None,
         src_texts: Optional[List[str]] = None,
         tgt_texts: Optional[List[str]] = None,
         ids: Optional[List[str]] = None,
         tasks: Optional[List[str]] = None,
+        speech_words: Optional[List] = None,
+        text_words: Optional[List] = None
     ):
         self.audio_paths = audio_paths
+        self.n_frames = n_frames
         self.tgt_texts = tgt_texts
         self.src_texts = src_texts
         self.ids = ids
         self.tasks = tasks
+        self.speech_words = speech_words
+        self.text_words = text_words
 
     def __getitem__(
         self, index: int
@@ -85,15 +94,18 @@ class PromptSpeechToTextDataset(SpeechToTextDataset):
             self.audio_paths[index],
         )
         source = torch.from_numpy(source).float()
-        with torch.no_grad():
-            source = F.layer_norm(source, source.shape)       
+        # with torch.no_grad():
+        #     source = F.layer_norm(source, source.shape)
         text = self.tgt_texts[index]
         id = self.ids[index]
         task = self.tasks[index]
         src_text = self.src_texts[index]
+        speech_word = self.speech_words[index] if self.speech_words is not None else None
+        text_word = self.text_words[index] if self.text_words is not None else None
         
         return SpeechToTextDatasetItem(
-            index=index, source=source, target=text, src_text=src_text, id=id, task=task
+            index=index, source=source, target=text, src_text=src_text, id=id, task=task,
+            speech_word=speech_word, text_word=text_word
         )
     def __len__(self):
         return len(self.audio_paths)
@@ -106,7 +118,7 @@ class PromptSpeechToTextDatasetCreator(object):
     KEY_SPEAKER, KEY_SRC_TEXT = "speaker", "src_text"
     KEY_SRC_LANG, KEY_TGT_LANG = "src_lang", "tgt_lang"
     # default values
-    DEFAULT_SPEAKER = DEFAULT_SRC_TEXT = DEFAULT_LANG = DEFAULT_LANG_N_FRAMES = DEFAULT_TASK = ""
+    DEFAULT_SPEAKER = DEFAULT_SRC_TEXT = DEFAULT_TGT_TEXT = DEFAULT_LANG = DEFAULT_LANG_N_FRAMES = DEFAULT_TASK = ""
     TASK = "task"
 
     @classmethod
@@ -137,14 +149,70 @@ class PromptSpeechToTextDatasetCreator(object):
         samples = cls._load_samples_from_tsv(root, split)
         ids = [s[cls.KEY_ID] for s in samples]
         audio_paths = [s[cls.KEY_AUDIO] for s in samples]
-        tgt_texts = [s[cls.KEY_TGT_TEXT] for s in samples]
+        n_frames = [int(s[cls.KEY_N_FRAMES]) for s in samples]
+        tgt_texts = [s.get(cls.KEY_TGT_TEXT, cls.DEFAULT_TGT_TEXT) for s in samples]
         src_texts = [s.get(cls.KEY_SRC_TEXT, cls.DEFAULT_SRC_TEXT) for s in samples]
         tasks = [s.get(cls.TASK, cls.DEFAULT_TASK) for s in samples] 
 
+        speech_words_str = [s.get('speech_word', '') for s in samples]
+        text_words_str = [s.get('text_word', '') for s in samples]
+        speech_words = [eval(s) if s != '' else None for s in speech_words_str]
+        text_words = [eval(s) if s != '' else None for s in text_words_str]        
+
         return PromptSpeechToTextDataset(
             audio_paths,
+            n_frames=n_frames,
             src_texts=src_texts,
             tgt_texts=tgt_texts,
             ids=ids,
             tasks=tasks,
+            speech_words=speech_words,
+            text_words=text_words
         )
+
+
+class SpeechSampler(DistributedSampler):
+    def __init__(self, dataset, shuffle, batch_size, min_ms=0):
+        super().__init__(dataset=dataset, shuffle=shuffle)
+        self.batch_size = batch_size
+        self._obtain_batches(min_ms)
+
+    def _obtain_batches(self, min_ms):
+        sizes = list(zip(self.dataset.n_frames, range(len(self.dataset))))
+        sorted_sizes = sorted(sizes)
+
+        batch_indices = []
+        indices, sum_size = [], 0
+        n_skipped = 0
+        for size, idx in sorted_sizes:
+            if self.dataset.speech_words[idx] is not None and \
+                size <= self.batch_size and size >= min_ms * 16:
+                if sum_size + size <= self.batch_size:
+                    indices.append(idx)
+                    sum_size += size
+                else:
+                    batch_indices.append(indices)
+                    indices = [idx]
+                    sum_size = size
+            else:
+                n_skipped += 1
+        print('{} out of {} samples skipped'.format(n_skipped, len(sorted_sizes)))
+        assert len(indices) > 0
+        batch_indices.append(indices)
+        self.batch_indices = batch_indices
+    
+    def __iter__(self):
+        if self.shuffle:
+            g = torch.Generator()
+            g.manual_seed(self.seed + self.epoch)
+            indices_batch_ind = torch.randperm(len(self.batch_indices), generator=g).tolist()
+        else:
+            indices_batch_ind = list(range(len(self.batch_indices)))
+
+        indices_batch_ind = indices_batch_ind[self.rank:len(self):self.num_replicas]
+
+        for i in indices_batch_ind:
+            yield self.batch_indices[i]
+        
+    def __len__(self):
+        return len(self.batch_indices)
