@@ -6,14 +6,14 @@
 #SBATCH --mem=64GB
 #SBATCH --gpus=1
 ##SBATCH --constraint=xeon-4116 
-#SBATCH --partition=aries
+#SBATCH --partition=taurus
 #SBATCH --time=1-2:34:56 
 ##SBATCH --dependency=afterok:job_id
 #SBATCH --array=13
 #SBATCH --account=siqiouyang
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=siqiouya@andrew.cmu.edu
-#SBATCH --output=/mnt/taurus/home/siqiouyang/work/projects/sllama/slurm-%j.txt
+#SBATCH --output=/mnt/taurus/home/siqiouyang/work/projects/sllama-dev/slurm-%j.txt
 
 conda config --append envs_dirs /mnt/taurus/home/siqiouyang/anaconda3/envs/
 source /mnt/taurus/home/siqiouyang/anaconda3/bin/activate sllama
@@ -21,18 +21,19 @@ source /mnt/taurus/home/siqiouyang/anaconda3/bin/activate sllama
 src_segment_size=320
 k=${SLURM_ARRAY_TASK_ID}
 
-checkpoint_dir=/mnt/taurus/data/xixu/runs/sllama/en-es/7b/wWav2vec/stage2/checkpoint-2000
+checkpoint_dir=/mnt/taurus/data/xixu/runs/sllama/en-es/7b/uni/stage2/checkpoint-2000
 
-mkdir -p ${checkpoint_dir}/simul-results/wait-k-word
+mkdir -p ${checkpoint_dir}/simul-results/wait-k-word-inc-ref
 
-export PYTHONPATH=/mnt/taurus/home/siqiouyang/work/projects/sllama/:/mnt/taurus/home/siqiouyang/work/projects/SimulEval/
+export PYTHONPATH=/mnt/taurus/home/siqiouyang/work/projects/sllama-dev/:/mnt/taurus/home/siqiouyang/work/projects/SimulEval/
 simuleval \
   --agent /mnt/taurus/home/siqiouyang/work/projects/sllama/agents/tt_waitk_sllama.py \
+  --agent-class "agents.WaitkSpeechLlama" --uni \
   --source-segment-size ${src_segment_size} \
   --waitk-lagging ${k} --repeat-penalty 1.0 \
   --model-dir ${checkpoint_dir} \
   --prompt "<speech_here>" \
-  --source /mnt/taurus/data/xixu/datasets/must-c-v1.0/en-es/tst-COMMON.source \
-  --target /mnt/taurus/data/xixu/datasets/must-c-v1.0/en-es/tst-COMMON.target \
-  --output ${checkpoint_dir}/simul-results/wait-k-word/wait-${src_segment_size}ms-${k} \
+  --source /mnt/taurus/data/xixu/datasets/must-c-v1.0/en-es/tst-COMMON-debug.source \
+  --target /mnt/taurus/data/xixu/datasets/must-c-v1.0/en-es/tst-COMMON-debug.target \
+  --output ${checkpoint_dir}/simul-results/wait-k-word-inc-ref/wait-${src_segment_size}ms-${k} \
   --quality-metrics BLEU --sacrebleu-tokenizer 13a
