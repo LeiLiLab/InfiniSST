@@ -43,9 +43,11 @@ def eval_model(args):
     update_config = os.path.join(args.model_name, 'config_large.json')
     if not os.path.exists(update_config):
         json.dump(config, open(update_config, 'w'), indent=2)
-    # replace_llama_attn_with_flash_attn()
-    # change wav2vec to uni-directional
-    replace_uni_train()
+
+    if args.uni:
+        print("Replace forward function in UniWav2Vec2")
+        replace_uni_train()
+
     model = SpeechLlamaForCausalLM.from_pretrained(args.model_name,
                                                    torch_dtype=load_type,
                                                    low_cpu_mem_usage=True,
@@ -58,13 +60,14 @@ def eval_model(args):
         device_input = 'cuda'  
         device_input = 'cuda'
     length_after_ssl, length_after_adp = model.model.initialize_speech_modules(
-        speech_tower_path=model.config.speech_tower_path,
-        speech_tower_type=None,
+        speech_tower_path=args.speech_tower_path,
+        speech_tower_type=args.speech_tower_type,
         len_adapter_channels=model.config.len_adapter_channels,
         len_adapter_kernel_sizes=model.config.len_adapter_kernel_sizes,
         ssl_fintuned=model.config.ssl_fintuned,
+        stage1_complete=model.config.stage1_complete,
     )
-    model.model.speech_tower.to(dtype=load_type, device=device_input)
+
     
     length_adapter_weights = torch.load(args.length_adapter_path, map_location='cpu')
     mlp_adapter_weights = torch.load(args.mlp_adapter_path, map_location='cpu')
@@ -113,6 +116,7 @@ def eval_model(args):
 
         # extract new speech features 
         model.model.speech_features_extracted = False
+        model.eval()
         try:
             with torch.inference_mode():
                 output_ids = model.generate(
@@ -150,6 +154,8 @@ if __name__ == "__main__":
     parser.add_argument("--result", type=str, required=True)
     parser.add_argument("--beam", type=int, default=1)
     parser.add_argument("--speech-tower-path", type=str, required=True)
+    parser.add_argument("--speech-tower-type", type=str, required=True)
+    parser.add_argument("--uni", action='store_true', default=False)
     args = parser.parse_args()
 
     eval_model(args)

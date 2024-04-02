@@ -20,7 +20,7 @@ from fairseq.optim.lr_scheduler.inverse_square_root_schedule import (
 )
 from torch.optim.optimizer import Optimizer
 from transformers import AutoConfig, AutoModelForCausalLM, \
-                         LlamaConfig, LlamaModel, LlamaForCausalLM
+                         LlamaConfig, LlamaModel, LlamaForCausalLM, WavLMModel, WavLMConfig
 
 from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
 
@@ -227,13 +227,31 @@ class SpeechLlamaModel(LlamaModel):
                                                          config.len_adapter_channels, config.len_adapter_kernel_sizes,
                                                          config.stage1_complete, ssl_fintuned)      
         self.speech_features_extracted = False
+        self.speech_tower_type = None
 
     def initialize_speech_modules(self, speech_tower_path, speech_tower_type=None,
                                    len_adapter_channels=None, len_adapter_kernel_sizes=None,
                                    stage1_complete=False, ssl_fintuned=False):
         # loading pretrained ssl model
+        # wavlm model
+        if speech_tower_type == "wavlm": 
+            print("Loading WavLM model")
+            # stage1
+            if not stage1_complete:
+                model_name ="microsoft/wavlm-large"
+                cache_dir = "/mnt/taurus/data/xixu/models"
+                model = WavLMModel.from_pretrained(model_name, cache_dir=cache_dir)
+            else:
+            # stage 2 
+                state_dict = torch.load(speech_tower_path, map_location="cpu")
+                config = WavLMConfig.from_pretrained('microsoft/wavlm-large')
+                model = WavLMModel(config)
+                model.load_state_dict(state_dict, strict=False)
+            speech_dimension = model.config.hidden_size
+            self.speech_tower_type = "wavlm"
+
         # wav2vec 2.0
-        if not ssl_fintuned: # ssl model
+        elif not ssl_fintuned: # ssl model
             state = fairseq.checkpoint_utils.load_checkpoint_to_cpu(speech_tower_path)
             w2v_args = state["args"]
             task = fairseq.tasks.setup_task(w2v_args)
@@ -241,7 +259,8 @@ class SpeechLlamaModel(LlamaModel):
             model.load_state_dict(state["model"], strict=True)
             speech_dimension = w2v_args.encoder_embed_dim
         else: # ctc finetune, w2v-ctc
-            state = fairseq.checkpoint_utils.load_checkpoint_to_cpu(speech_tower_path)
+            # state = fairseq.checkpoint_utils.load_checkpoint_to_cpu(speech_tower_path)
+            state = fairseq.checkpoint_utils.load_checkpoint_to_cpu('/mnt/taurus/data/xixu/models/wav2_vec_vox_960h_pl.pt')
             model = Wav2VecEncoder(state['cfg']['model'], None)
             new = {}
             for key in state['model'].keys():
@@ -296,6 +315,24 @@ class SpeechLlamaModel(LlamaModel):
         output_length = (1 - padding_mask.int()).sum(dim=1)
         return x, padding_mask, output_length  
     
+    def get_wavlm_features(self, src_tokens, src_lengths, after_lens, attention_mask):
+        padding_mask = lengths_to_padding_mask(src_lengths)
+        
+        # Extract features from WavLM
+        with torch.no_grad():
+            outputs = self.speech_tower(input_values=src_tokens, attention_mask=~padding_mask) 
+            feature = outputs.last_hidden_state
+
+        if padding_mask is None:
+            padding_mask = torch.zeros(feature.shape[:2], dtype=torch.bool, device=feature.device)
+        
+        output_length = (1 - padding_mask.int()).sum(dim=1)
+        
+        feature, input_lengths = self.mm_length_adapter(feature, output_length)
+        feature = self.mm_mlp_adapter(feature)
+        return feature
+    
+
     def forward_incremental(
         self,
         input_ids: torch.LongTensor = None,
@@ -442,23 +479,25 @@ class SpeechLlamaModel(LlamaModel):
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
 
-        # speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens).transpose(0, 1)
         speech_features = None
         if not self.speech_features_extracted:
-            speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens).transpose(0, 1)
+            if self.speech_tower_type == 'wavlm':
+                speech_features = self.get_wavlm_features(speech_batch, src_lengths, after_lens, attention_mask).transpose(0, 1)
+            else:
+                speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens).transpose(0, 1)
             if self.config.inference:
                 self.speech_features_extracted = True
 
-            position_ids = []
-            for i in range(inputs_embeds.size(0)):
-                position_id = torch.arange(0, input_ids[i].size(0), dtype=torch.long, device=input_ids.device)
-                speech_start_pos = torch.where(input_ids[i] == self.config.sp_start_token_id)[0]
-                speech_end_pos = torch.where(input_ids[i] == self.config.sp_end_token_id)[0]
-                position_id[speech_end_pos:] -= speech_end_pos - speech_start_pos - 1
-                position_ids.append(position_id)
-            self.position_ids = torch.stack(position_ids, dim=0)
-        else:
-            self.position_ids = torch.cat([self.position_ids, self.position_ids[:, -1:] + 1], dim=1)
+        #     position_ids = []
+        #     for i in range(inputs_embeds.size(0)):
+        #         position_id = torch.arange(0, input_ids[i].size(0), dtype=torch.long, device=input_ids.device)
+        #         speech_start_pos = torch.where(input_ids[i] == self.config.sp_start_token_id)[0]
+        #         speech_end_pos = torch.where(input_ids[i] == self.config.sp_end_token_id)[0]
+        #         position_id[speech_end_pos:] -= speech_end_pos - speech_start_pos - 1
+        #         position_ids.append(position_id)
+        #     self.position_ids = torch.stack(position_ids, dim=0)
+        # else:
+        #     self.position_ids = torch.cat([self.position_ids, self.position_ids[:, -1:] + 1], dim=1)
             
         new_input_embeds = []
         cur_speech_idx = 0
@@ -482,19 +521,28 @@ class SpeechLlamaModel(LlamaModel):
 
             inputs_embeds = torch.stack(new_input_embeds, dim=0)  
 
+        # return super(SpeechLlamaModel, self).forward(
+        #     input_ids=None, 
+        #     position_ids=self.position_ids[:, -inputs_embeds.size(1):],
+        #     attention_mask=attention_mask,
+        #     past_key_values=past_key_values,
+        #     inputs_embeds=inputs_embeds, 
+        #     use_cache=use_cache,
+        #     output_attentions=output_attentions, 
+        #     output_hidden_states=output_hidden_states,
+        #     return_dict=return_dict
+        # )
         return super(SpeechLlamaModel, self).forward(
             input_ids=None, 
-            position_ids=self.position_ids[:, -inputs_embeds.size(1):],
-            attention_mask=attention_mask,
+            attention_mask=attention_mask, 
             past_key_values=past_key_values,
             inputs_embeds=inputs_embeds, 
             use_cache=use_cache,
             output_attentions=output_attentions, 
             output_hidden_states=output_hidden_states,
             return_dict=return_dict
-        )
+        ) 
     
-## try not add prompt
     
 class SpeechLlamaForCausalLM(LlamaForCausalLM):
     config_class = SpeechLlamaConfig

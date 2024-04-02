@@ -58,7 +58,10 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         self.max_len_b = args.max_len_b
         self.repeat_penalty = args.repeat_penalty
         self.uni = getattr(args, "uni", False)
+        self.speech_tower_path = args.speech_tower_path
+        self.speech_tower_type = args.speech_tower_type
         self.load_model(args.model_dir)
+
     
     def build_states(self):
         return S2TAgentStates([])
@@ -94,12 +97,21 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         else:
             device_input = 'cuda'  
 
+        # self.length_after_ssl, self.length_after_adp = self.model.model.initialize_speech_modules(
+        #     speech_tower_path='/mnt/taurus/data/xixu/models/wav2_vec_vox_960h_pl.pt',
+        #     speech_tower_type=None,
+        #     len_adapter_channels=self.model.config.len_adapter_channels,
+        #     len_adapter_kernel_sizes=self.model.config.len_adapter_kernel_sizes,
+        #     ssl_fintuned=self.model.config.ssl_fintuned,
+        # )
+            
         self.length_after_ssl, self.length_after_adp = self.model.model.initialize_speech_modules(
-            speech_tower_path='/mnt/taurus/data/xixu/models/wav2_vec_vox_960h_pl.pt',
-            speech_tower_type=None,
+            speech_tower_path=self.speech_tower_path,
+            speech_tower_type=self.speech_tower_type,
             len_adapter_channels=self.model.config.len_adapter_channels,
             len_adapter_kernel_sizes=self.model.config.len_adapter_kernel_sizes,
             ssl_fintuned=self.model.config.ssl_fintuned,
+            stage1_complete=self.model.config.stage1_complete,
         )
 
         length_adapter_weights = torch.load(os.path.join(model_dir, 'length_adapter.bin'), map_location='cpu')
@@ -133,7 +145,8 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         )
         parser.add_argument(
             "--uni", 
-            action="store_true"
+            action="store_true",
+            default=False
         )
         parser.add_argument(
             "--prompt", 
@@ -157,6 +170,18 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             type=float,
             default=1.0,
             help="Repetition penalty for generation"
+        )
+        parser.add_argument(
+            "--speech-tower-path",
+            type=str,
+            default=None,
+            help="Path to the speech tower"
+        )
+        parser.add_argument(
+            "--speech-tower-type",
+            type=str,
+            default=None,
+            help="Type of the speech tower"
         )
 
     def policy(self, states: Optional[S2TAgentStates] = None):

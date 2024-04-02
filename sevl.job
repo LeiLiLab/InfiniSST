@@ -9,31 +9,37 @@
 #SBATCH --partition=taurus
 #SBATCH --time=1-2:34:56 
 ##SBATCH --dependency=afterok:job_id
-#SBATCH --array=13
-#SBATCH --account=siqiouyang
+#SBATCH --array=1
+#SBATCH --account=xixu
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=siqiouya@andrew.cmu.edu
-#SBATCH --output=/mnt/taurus/home/siqiouyang/work/projects/sllama-dev/slurm-%j.txt
+##SBATCH --mail-user=xixu@andrew.cmu.edu
+#SBATCH --output=results/sevl-debug_es.txt
 
-conda config --append envs_dirs /mnt/taurus/home/siqiouyang/anaconda3/envs/
-source /mnt/taurus/home/siqiouyang/anaconda3/bin/activate sllama
+# conda config --append envs_dirs /mnt/taurus/home/siqiouyang/anaconda3/envs/
+# source /mnt/taurus/home/siqiouyang/anaconda3/bin/activate sllama
 
 src_segment_size=320
-k=${SLURM_ARRAY_TASK_ID}
+# k=${SLURM_ARRAY_TASK_ID}
+k=100
 
-checkpoint_dir=/mnt/taurus/data/xixu/runs/sllama/en-es/7b/uni/stage2/checkpoint-2000
+# checkpoint_dir=/mnt/taurus/data/xixu/runs/sllama/en-es/7b/uni/stage2/checkpoint-2000
+checkpoint_dir=/mnt/taurus/data1/xixu/runs/sllama/wavlm_clean/stage2/checkpoint-1900
+# checkpoint_dir=/mnt/data/xixu/runs/sllama/en-es/7b/wWav2vec/stage2/checkpoint-2000
 
-mkdir -p ${checkpoint_dir}/simul-results/wait-k-word-inc-ref
+mkdir -p ${checkpoint_dir}/debug_results
 
-export PYTHONPATH=/mnt/taurus/home/siqiouyang/work/projects/sllama-dev/:/mnt/taurus/home/siqiouyang/work/projects/SimulEval/
+export PYTHONPATH=/mnt/taurus/home/xixu/sllama_new
+
 simuleval \
-  --agent /mnt/taurus/home/siqiouyang/work/projects/sllama/agents/tt_waitk_sllama.py \
-  --agent-class "agents.WaitkSpeechLlama" --uni \
+  --agent /mnt/taurus/home/xixu/sllama_new/eval/agents/tt_waitk_sllama.py \
+  --agent-class "agents.WaitkSpeechLlama" \
   --source-segment-size ${src_segment_size} \
   --waitk-lagging ${k} --repeat-penalty 1.0 \
   --model-dir ${checkpoint_dir} \
+  --speech-tower-path ${checkpoint_dir}/speech_tower.bin \
+  --speech-tower-type wav2vec \
   --prompt "<speech_here>" \
-  --source /mnt/taurus/data/xixu/datasets/must-c-v1.0/en-es/tst-COMMON-debug.source \
-  --target /mnt/taurus/data/xixu/datasets/must-c-v1.0/en-es/tst-COMMON-debug.target \
-  --output ${checkpoint_dir}/simul-results/wait-k-word-inc-ref/wait-${src_segment_size}ms-${k} \
+  --source /mnt/data1/xixu/MUSTC_v3/tst-COMMON.source \
+  --target /mnt/data1/xixu/MUSTC_v3/tst-COMMON.target \
+  --output ${checkpoint_dir}/debug_results/debug-${src_segment_size}ms-${k} \
   --quality-metrics BLEU --sacrebleu-tokenizer 13a
