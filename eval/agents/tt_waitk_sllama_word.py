@@ -95,7 +95,7 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             device_input = 'cuda'  
 
         self.length_after_ssl, self.length_after_adp = self.model.model.initialize_speech_modules(
-            speech_tower_path='/mnt/taurus/data/xixu/models/wav2_vec_vox_960h_pl.pt',
+            speech_tower_path='/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt',
             speech_tower_type=None,
             len_adapter_channels=self.model.config.len_adapter_channels,
             len_adapter_kernel_sizes=self.model.config.len_adapter_kernel_sizes,
@@ -202,13 +202,13 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         max_number_of_tokens = length_in_seconds * self.max_len_a + self.max_len_b
 
         prediction_ids = []
+        self.model.model.speech_features_extracted = False
         while len(states.target_ids) + len(prediction_ids) <= max_number_of_tokens:
             
             inputs = self.tokenizer([prompt_inputs])
             input_ids = inputs.input_ids[0] + states.target_ids + prediction_ids
             input_ids_tensor = torch.as_tensor([input_ids]).cuda()
 
-            self.model.model.speech_features_extracted = False
             stopping_criteria = SpaceStoppingCriteria(self.tokenizer)
             with torch.inference_mode():
                 # output = self.model(
