@@ -45,7 +45,7 @@ def eval_model(args):
         json.dump(config, open(update_config, 'w'), indent=2)
     # replace_llama_attn_with_flash_attn()
     # change wav2vec to uni-directional
-    replace_uni_train()
+    replace_uni_train(args.blocksize)
     model = SpeechLlamaForCausalLM.from_pretrained(args.model_name,
                                                    torch_dtype=load_type,
                                                    low_cpu_mem_usage=True,
@@ -150,6 +150,7 @@ if __name__ == "__main__":
     parser.add_argument("--result", type=str, required=True)
     parser.add_argument("--beam", type=int, default=1)
     parser.add_argument("--speech-tower-path", type=str, required=True)
+    parser.add_argument("--blocksize", type=int, default=1)
     args = parser.parse_args()
 
     eval_model(args)
