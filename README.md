@@ -81,7 +81,7 @@ python ./extract_adapter.py \
 
 ### Speech Encoder  
 set `--freeze_speech_foundation` to False to train Speech Encoder togther \
-add `replace_uni_train()` to enable uni-directional encoding
+add `replace_uni_train(blocksize)` to enable block uni-directional encoding
 
 ## Evaluation
 ```bash

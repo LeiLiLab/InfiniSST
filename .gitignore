@@ -4,6 +4,6 @@ results
 **/stderr*
 **/stdout*
 .vscode/launch.json
-slurm-*.txt
 **/wandb
 mwerSegmenter/*
+slurm*

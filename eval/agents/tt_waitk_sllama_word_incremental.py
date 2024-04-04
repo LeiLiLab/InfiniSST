@@ -22,7 +22,7 @@ from model.utils import SpaceStoppingCriteria
 from train.uni_wav2vec_monkey_patch import replace_uni_train
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 
-from eval.agents.tt_waitk_sllama import S2TAgentStates, WaitkSpeechLlama
+from eval.agents.tt_waitk_sllama_word import S2TAgentStates, WaitkSpeechLlama
 from train.uni_wav2vec_monkey_patch import replace_uni_decode
 
 @dataclass

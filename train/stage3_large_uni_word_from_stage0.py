@@ -231,7 +231,7 @@ class DataCollatorForSupervisedDataset(object):
             speech_batch=speech_batch,
             src_lengths=n_frames, # src length,
             after_lens=speech_lens, # length after forward ssl and adapter
-        )      
+        )
 
         return batch
 
@@ -281,14 +281,14 @@ def train():
     length_after_ssl, length_after_adp = model.model.initialize_speech_modules(
         '/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt',
         speech_tower_type=None,
-        len_adapter_channels=model.config.len_adapter_channels,
-        len_adapter_kernel_sizes=model.config.len_adapter_kernel_sizes,
-        ssl_fintuned=model.config.ssl_fintuned,
+        len_adapter_channels=model_args.len_adapter_channels,
+        len_adapter_kernel_sizes=model_args.len_adapter_kernel_sizes,
+        ssl_fintuned=model_args.ssl_fintuned,
     )
     
-    length_adapter_weights = torch.load(os.path.join(model_args.model_name_or_path, 'length_adapter.bin'), map_location='cpu')
-    mlp_adapter_weights = torch.load(os.path.join(model_args.model_name_or_path, 'mlp_adapter.bin'), map_location='cpu')
-    speech_tower_weights = torch.load(os.path.join(model_args.model_name_or_path, 'speech_tower.bin'), map_location='cpu')
+    length_adapter_weights = torch.load(os.path.join(model_args.speech_tower_path, 'length_adapter.bin'), map_location='cpu')
+    mlp_adapter_weights = torch.load(os.path.join(model_args.speech_tower_path, 'mlp_adapter.bin'), map_location='cpu')
+    speech_tower_weights = torch.load(os.path.join(model_args.speech_tower_path, 'speech_tower.bin'), map_location='cpu')
     
     model.model.mm_length_adapter.load_state_dict(length_adapter_weights)
     model.model.mm_mlp_adapter.load_state_dict(mlp_adapter_weights)
@@ -302,6 +302,8 @@ def train():
         padding_side="right",
         use_fast=False,
     )
+    tokenizer.pad_token = tokenizer.eos_token
+
     model.model.speech_tower.to(device=training_args.device)
     model.model.mm_length_adapter.to(device=training_args.device)
     model.model.mm_mlp_adapter.to(device=training_args.device)  
@@ -328,7 +330,7 @@ def train():
         model.model.mm_mlp_adapter.requires_grad_(False)          
         
     model.initialize_speech_tokenizer(tokenizer=tokenizer, device=training_args.device,
-                                      only_tune_adapter=model_args.only_tune_adapter, stage1=False)
+                                      only_tune_adapter=model_args.only_tune_adapter, stage1=True)
                                                    
 
     data_module = make_supervised_data_module(tokenizer=tokenizer,
