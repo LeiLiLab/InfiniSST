@@ -1,4 +1,4 @@
-import argparse, os, sys, time, json
+import argparse, os, sys, time, json, copy
 
 from typing import Optional
 from simuleval.agents.states import AgentStates
@@ -21,14 +21,17 @@ from model.model import SpeechLlamaForCausalLM
 from model.utils import SpaceStoppingCriteria
 from train.uni_wav2vec_monkey_patch import replace_uni_train
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
+from fairseq.examples.speech_to_text.data_utils import load_df_from_tsv
 
 @dataclass
 class S2TAgentStates(AgentStates):
     target_ids: list
+    ref_target_ids: list
 
     def reset(self):
         super().reset()
         self.target_ids = []
+        self.ref_target_ids = None
 
 
 @entrypoint
@@ -59,9 +62,12 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         self.repeat_penalty = args.repeat_penalty
         self.uni = getattr(args, "uni", False)
         self.load_model(args.model_dir)
+        if args.tsv is not None:
+            self.load_benchmark_data(args.tsv)
+        self.test_instance_id = 0
     
     def build_states(self):
-        return S2TAgentStates([])
+        return S2TAgentStates([], None)
 
     def load_model(self, model_dir):
         load_type = torch.float16 # torch.float32
@@ -116,6 +122,25 @@ class WaitkSpeechLlama(SpeechToTextAgent):
 
         self.model.model.config.inference = True
 
+    def load_benchmark_data(self, tsv_path):
+        df = load_df_from_tsv(tsv_path)
+        self.tgt_id_segs = []
+        for t in df['tgt_text']:
+            tgt_id = self.tokenizer(
+                [t],
+                truncation=False,
+            )['input_ids'][0][1:]
+
+            tgt_id_seg = []
+            i = 0
+            while i < len(tgt_id):
+                j = i + 1
+                while j < len(tgt_id) and \
+                    not self.tokenizer.convert_ids_to_tokens([tgt_id[j]])[0].startswith('▁'):
+                    j += 1
+                tgt_id_seg.append(tgt_id[i : j])
+                i = j
+            self.tgt_id_segs.append(tgt_id_seg)
 
     @staticmethod
     def add_args(parser):
@@ -158,6 +183,12 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             default=1.0,
             help="Repetition penalty for generation"
         )
+        parser.add_argument(
+            "--tsv",
+            type=str,
+            default=None,
+            help="tsv file for benchmarking"
+        )
 
     def policy(self, states: Optional[S2TAgentStates] = None):
         if states is None:
@@ -175,7 +206,12 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             ) < self.waitk_lagging:
                 return ReadAction()
             
+        if states.ref_target_ids is None and getattr(self, "tgt_id_segs", None) is not None:
+            states.ref_target_ids = self.tgt_id_segs[self.test_instance_id]
+            
         if states.source_finished and length_in_seconds < 0.32:
+            self.test_instance_id += 1
+            states.ref_target_ids = None
             return WriteAction(content="", finished=True)
 
         source = torch.tensor(states.source).to(
@@ -228,7 +264,8 @@ class WaitkSpeechLlama(SpeechToTextAgent):
                     num_beams=1,
                     max_new_tokens=500,
                     repetition_penalty=self.repeat_penalty,
-                    stopping_criteria=[stopping_criteria]
+                    stopping_criteria=[stopping_criteria],
+                    states=states,
                 )
             if stopping_criteria(output_ids, None):
                 output_ids = output_ids[:, :-1]
@@ -265,6 +302,10 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         
         states.target_ids.extend(prediction_ids)
         possible_full_word = self.tokenizer.decode(prediction_ids, skip_special_tokens=True)
+
+        if states.source_finished:
+            self.test_instance_id += 1
+            states.ref_target_ids = None
 
         if possible_full_word != '' or states.source_finished:
             return WriteAction(

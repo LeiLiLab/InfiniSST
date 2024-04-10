@@ -347,9 +347,8 @@ def uni_transformer_encoder_extract_features(
         )
 
     prefix_length = 0
-    if past_key_values is not None and len(past_key_values[0]) > 0:
-        saved_states = self.layers[0].self_attn._get_input_buffer(past_key_values[0])
-        prefix_length = saved_states["prev_key"].size(2)
+    if past_features is not None:
+        prefix_length = past_features.size(1)
     x = x[:, prefix_length:, :]
 
     if not self.layer_norm_first:
@@ -508,6 +507,7 @@ def uni_get_ssl_feature_w2v(self, src_tokens, src_lengths, after_lens, states):
     res = feature[states.speech_past_length:]
     states.speech_past_length = feature.size(0)
     return res
+    # return feature
 
 
 def uni_initialize_speech_modules(

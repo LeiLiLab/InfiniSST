@@ -322,6 +322,9 @@ class SpeechLlamaModel(LlamaModel):
         speech_features = None
         if not self.speech_features_extracted:
             speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens, states=states).transpose(0, 1)
+            # full_speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens).transpose(0, 1)
+            # speech_features = full_speech_features[:, states.speech_past_length:]
+            # states.speech_past_length = full_speech_features.size(1)
 
             if states.past_key_values is not None:
                 speech_past_key_values = [
@@ -446,6 +449,7 @@ class SpeechLlamaModel(LlamaModel):
         speech_features = None
         if not self.speech_features_extracted:
             speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens).transpose(0, 1)
+            # speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens, states=states).transpose(0, 1)
             if self.config.inference:
                 self.speech_features_extracted = True
 
@@ -585,6 +589,19 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
 
         hidden_states = outputs[0]
         logits = self.lm_head(hidden_states)
+
+        if states is not None and getattr(states, 'ref_target_ids') is not None:
+            ref_target_ids = states.ref_target_ids
+            if len(ref_target_ids[0]) == 0:
+                if len(ref_target_ids) > 1:
+                    index = ref_target_ids[1][0]
+                    states.ref_target_ids = states.ref_target_ids[1:]
+                else:
+                    index = 2 # eos_token_id
+            else:
+                index = ref_target_ids[0][0]
+                states.ref_target_ids[0] = states.ref_target_ids[0][1:]
+            logits[0, -1, index] = logits.max() + 1
 
         loss = None
         if labels is not None:
