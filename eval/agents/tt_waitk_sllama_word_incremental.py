@@ -52,7 +52,7 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
         super().__init__(args)
     
     def build_states(self):
-        return IncrementalS2TAgentStates([], [], None, None, -1, 0)
+        return IncrementalS2TAgentStates([], None, [], None, None, -1, 0)
     
     @staticmethod
     def add_args(parser):
@@ -75,7 +75,12 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
             ) < self.waitk_lagging:
                 return ReadAction()
             
+        if states.ref_target_ids is None and getattr(self, "tgt_id_segs", None) is not None:
+            states.ref_target_ids = self.tgt_id_segs[self.test_instance_id]
+            
         if states.source_finished and length_in_seconds < 0.32:
+            self.test_instance_id += 1
+            states.ref_target_ids = None
             return WriteAction(content="", finished=True)
 
         if len(states.w2v2_past_key_values) == 0:
@@ -173,6 +178,10 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
         states.num_frames_read = len(states.source)
         states.target_ids.extend(prediction_ids)
         possible_full_word = self.tokenizer.decode(prediction_ids, skip_special_tokens=True)
+
+        if states.source_finished:
+            self.test_instance_id += 1
+            states.ref_target_ids = None
 
         if possible_full_word != '' or states.source_finished:
             return WriteAction(
