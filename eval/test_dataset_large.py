@@ -9,7 +9,7 @@ from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 from train.dataset import PromptSpeechToTextDatasetCreator, SpeechToTextDatasetItem
 import conversation as conversation_lib
 from conversation import SeparatorStyle
-from train.uni_wav2vec_monkey_patch import replace_uni_train
+# from train.uni_wav2vec_monkey_patch import replace_uni_train
 
 import os
 import requests
@@ -59,7 +59,7 @@ def eval_model(args):
     else:
         device_input = 'cuda'  
         device_input = 'cuda'
-    length_after_ssl, length_after_adp = model.model.initialize_speech_modules(
+    model.length_after_ssl, model.length_after_adp = model.model.initialize_speech_modules(
         speech_tower_path=args.speech_tower_path,
         speech_tower_type=args.speech_tower_type,
         len_adapter_channels=model.config.len_adapter_channels,
@@ -97,7 +97,7 @@ def eval_model(args):
         source, ref, id = test_data.source, test_data.target, test_data.id                  
         speech_batch = _collate_frames([source], is_audio_input=True)
         n_frames = torch.tensor([source.size(0)], dtype=torch.long)
-        speech_lens = length_after_adp(length_after_ssl(n_frames))
+        speech_lens = model.length_after_adp(model.length_after_ssl(n_frames))
     
         to_adds = [int(speech_len)*DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
         to_adds = [DEFAULT_SPEECH_START_TOKEN + to_add + DEFAULT_SPEECH_END_TOKEN for to_add in to_adds]
@@ -129,7 +129,8 @@ def eval_model(args):
                     #temperature=0.8,
                     num_beams=args.beam,
                     max_new_tokens=500,
-                    stopping_criteria=[stopping_criteria])    
+                    stopping_criteria=[stopping_criteria])
+                    
             input_token_len = input_ids.shape[1]
             outputs = tokenizer.batch_decode(output_ids[:, input_token_len:], skip_special_tokens=True)[0]
             outputs = outputs.strip()

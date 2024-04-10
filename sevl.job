@@ -9,24 +9,23 @@
 #SBATCH --partition=taurus
 #SBATCH --time=1-2:34:56 
 ##SBATCH --dependency=afterok:job_id
-#SBATCH --array=1
+#SBATCH --array=1-7
 #SBATCH --account=xixu
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=xixu@andrew.cmu.edu
-#SBATCH --output=results/sevl-debug_es.txt
+#SBATCH --output=results/recomputation/%a.txt
 
 # conda config --append envs_dirs /mnt/taurus/home/siqiouyang/anaconda3/envs/
 # source /mnt/taurus/home/siqiouyang/anaconda3/bin/activate sllama
 
 src_segment_size=320
-# k=${SLURM_ARRAY_TASK_ID}
-k=100
+k=$((SLURM_ARRAY_TASK_ID * 2 - 1))
+# k=1
 
-# checkpoint_dir=/mnt/taurus/data/xixu/runs/sllama/en-es/7b/uni/stage2/checkpoint-2000
-checkpoint_dir=/mnt/taurus/data1/xixu/runs/sllama/wavlm_clean/stage2/checkpoint-1900
+checkpoint_dir=/mnt/data/xixu/runs/sllama/en-es/7b/wWav2vec/stage2/checkpoint-2000
 # checkpoint_dir=/mnt/data/xixu/runs/sllama/en-es/7b/wWav2vec/stage2/checkpoint-2000
 
-mkdir -p ${checkpoint_dir}/debug_results
+mkdir -p ${checkpoint_dir}/recomputation/
 
 export PYTHONPATH=/mnt/taurus/home/xixu/sllama_new
 
@@ -39,7 +38,8 @@ simuleval \
   --speech-tower-path ${checkpoint_dir}/speech_tower.bin \
   --speech-tower-type wav2vec \
   --prompt "<speech_here>" \
-  --source /mnt/data1/xixu/MUSTC_v3/tst-COMMON.source \
-  --target /mnt/data1/xixu/MUSTC_v3/tst-COMMON.target \
-  --output ${checkpoint_dir}/debug_results/debug-${src_segment_size}ms-${k} \
-  --quality-metrics BLEU --sacrebleu-tokenizer 13a
+  --source /mnt/data/xixu/datasets/must-c-v1.0/en-es/tst-COMMON.source \
+  --target /mnt/data/xixu/datasets/must-c-v1.0/en-es/tst-COMMON.target \
+  --output ${checkpoint_dir}/recomputation/${src_segment_size}ms-${k} \
+  --quality-metrics BLEU --sacrebleu-tokenizer 13a \
+  --recomputation

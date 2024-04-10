@@ -221,13 +221,15 @@ class SpeechLlamaModel(LlamaModel):
         super(SpeechLlamaModel, self).__init__(config)
         large_model = getattr(config, 'large_model', False)
         lora_train = getattr(config, 'lora_train', False)
-        if hasattr(config, "stage1_complete") and not large_model and not lora_train:
-            ssl_fintuned = getattr(config, 'ssl_fintuned', False)
-            self.length_after_ssl, self.length_after_adp = self.initialize_speech_modules(config.speech_tower_path, None,
-                                                         config.len_adapter_channels, config.len_adapter_kernel_sizes,
-                                                         config.stage1_complete, ssl_fintuned)      
+        # if hasattr(config, "stage1_complete") and not large_model and not lora_train:
+        #     ssl_fintuned = getattr(config, 'ssl_fintuned', False)
+        #     self.length_after_ssl, self.length_after_adp = self.initialize_speech_modules(config.speech_tower_path, None,
+        #                                                  config.len_adapter_channels, config.len_adapter_kernel_sizes,
+        #                                                  config.stage1_complete, ssl_fintuned)  ## may cause problem    
         self.speech_features_extracted = False
         self.speech_tower_type = None
+        self.pri_speech_feature = None
+        self.recomputation = False
 
     def initialize_speech_modules(self, speech_tower_path, speech_tower_type=None,
                                    len_adapter_channels=None, len_adapter_kernel_sizes=None,
@@ -252,6 +254,7 @@ class SpeechLlamaModel(LlamaModel):
 
         # wav2vec 2.0
         elif not ssl_fintuned: # ssl model
+            print("Loading Wav2Vec2 model")
             state = fairseq.checkpoint_utils.load_checkpoint_to_cpu(speech_tower_path)
             w2v_args = state["args"]
             task = fairseq.tasks.setup_task(w2v_args)
@@ -260,6 +263,7 @@ class SpeechLlamaModel(LlamaModel):
             speech_dimension = w2v_args.encoder_embed_dim
         else: # ctc finetune, w2v-ctc
             # state = fairseq.checkpoint_utils.load_checkpoint_to_cpu(speech_tower_path)
+            print("Loading Wav2Vec2 model")
             state = fairseq.checkpoint_utils.load_checkpoint_to_cpu('/mnt/taurus/data/xixu/models/wav2_vec_vox_960h_pl.pt')
             model = Wav2VecEncoder(state['cfg']['model'], None)
             new = {}
@@ -333,130 +337,130 @@ class SpeechLlamaModel(LlamaModel):
         return feature
     
 
-    def forward_incremental(
-        self,
-        input_ids: torch.LongTensor = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        past_key_values: Optional[List[torch.FloatTensor]] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        use_cache: Optional[bool] = True,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        speech_batch: Optional[torch.FloatTensor] = None,
-        src_lengths: Optional[List[torch.FloatTensor]] = None,
-        after_lens: Optional[List[torch.FloatTensor]] = None,
-        return_dict: Optional[bool] = None,
-        states: Optional[object] = None,
-    ):
-        assert input_ids.size(0) == 1
+    # def forward_incremental(
+    #     self,
+    #     input_ids: torch.LongTensor = None,
+    #     attention_mask: Optional[torch.Tensor] = None,
+    #     past_key_values: Optional[List[torch.FloatTensor]] = None,
+    #     inputs_embeds: Optional[torch.FloatTensor] = None,
+    #     use_cache: Optional[bool] = True,
+    #     output_attentions: Optional[bool] = None,
+    #     output_hidden_states: Optional[bool] = None,
+    #     speech_batch: Optional[torch.FloatTensor] = None,
+    #     src_lengths: Optional[List[torch.FloatTensor]] = None,
+    #     after_lens: Optional[List[torch.FloatTensor]] = None,
+    #     return_dict: Optional[bool] = None,
+    #     states: Optional[object] = None,
+    # ):
+    #     assert input_ids.size(0) == 1
 
-        orig_embeds_params = getattr(self, 'orig_embeds_params', None)
+    #     orig_embeds_params = getattr(self, 'orig_embeds_params', None)
 
-        if inputs_embeds is None:
-            inputs_embeds = self.embed_tokens(input_ids)
+    #     if inputs_embeds is None:
+    #         inputs_embeds = self.embed_tokens(input_ids)
 
-        # speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens).transpose(0, 1)
-        speech_features = None
-        if not self.speech_features_extracted:
-            speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens, states=states).transpose(0, 1)
+    #     # speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens).transpose(0, 1)
+    #     speech_features = None
+    #     if not self.speech_features_extracted:
+    #         speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens, states=states).transpose(0, 1)
 
-            if states.past_key_values is not None:
-                speech_past_key_values = [
-                    [p[i][:, :, :states.speech_prefix_length, :] for i in range(2)]
-                    for p in states.past_key_values
-                ]
-                text_past_key_values = [
-                    [p[i][:, :, states.speech_prefix_length:, :] for i in range(2)]
-                    for p in states.past_key_values
-                ]
+    #         if states.past_key_values is not None:
+    #             speech_past_key_values = [
+    #                 [p[i][:, :, :states.speech_prefix_length, :] for i in range(2)]
+    #                 for p in states.past_key_values
+    #             ]
+    #             text_past_key_values = [
+    #                 [p[i][:, :, states.speech_prefix_length:, :] for i in range(2)]
+    #                 for p in states.past_key_values
+    #             ]
 
-                speech_position_ids = torch.arange(
-                    states.speech_prefix_length, 
-                    states.speech_prefix_length + speech_features.size(1),
-                    dtype=torch.long,
-                    device=self.position_ids.device,
-                ).unsqueeze(0)
+    #             speech_position_ids = torch.arange(
+    #                 states.speech_prefix_length, 
+    #                 states.speech_prefix_length + speech_features.size(1),
+    #                 dtype=torch.long,
+    #                 device=self.position_ids.device,
+    #             ).unsqueeze(0)
                  
-                speech_of_llama_output = super(SpeechLlamaModel, self).forward(
-                    input_ids=None, 
-                    attention_mask=None, 
-                    past_key_values=speech_past_key_values,
-                    inputs_embeds=speech_features, 
-                    position_ids=speech_position_ids,
-                    use_cache=use_cache,
-                    output_attentions=False, 
-                    output_hidden_states=False,
-                    return_dict=return_dict
-                )
+    #             speech_of_llama_output = super(SpeechLlamaModel, self).forward(
+    #                 input_ids=None, 
+    #                 attention_mask=None, 
+    #                 past_key_values=speech_past_key_values,
+    #                 inputs_embeds=speech_features, 
+    #                 position_ids=speech_position_ids,
+    #                 use_cache=use_cache,
+    #                 output_attentions=False, 
+    #                 output_hidden_states=False,
+    #                 return_dict=return_dict
+    #             )
 
-                self.position_ids = torch.cat(
-                    (
-                        self.position_ids[:, :states.speech_prefix_length],
-                        speech_position_ids,
-                        self.position_ids[:, states.speech_prefix_length:]
-                    ),
-                    dim=1
-                )
+    #             self.position_ids = torch.cat(
+    #                 (
+    #                     self.position_ids[:, :states.speech_prefix_length],
+    #                     speech_position_ids,
+    #                     self.position_ids[:, states.speech_prefix_length:]
+    #                 ),
+    #                 dim=1
+    #             )
 
-                past_key_values = [
-                    [
-                        torch.cat([speech_of_llama_output.past_key_values[i][j], text_past_key_values[i][j]], dim=2)
-                        for j in range(2)
-                    ]
-                    for i in range(len(self.layers))
-                ]
-                states.speech_prefix_length = speech_of_llama_output.past_key_values[0][0].shape[2]
+    #             past_key_values = [
+    #                 [
+    #                     torch.cat([speech_of_llama_output.past_key_values[i][j], text_past_key_values[i][j]], dim=2)
+    #                     for j in range(2)
+    #                 ]
+    #                 for i in range(len(self.layers))
+    #             ]
+    #             states.speech_prefix_length = speech_of_llama_output.past_key_values[0][0].shape[2]
 
-            else:
-                cur_input_embeds = inputs_embeds[0]
-                cur_input_ids = input_ids[0]
+    #         else:
+    #             cur_input_embeds = inputs_embeds[0]
+    #             cur_input_ids = input_ids[0]
 
-                speech_start_pos = torch.where(cur_input_ids == self.config.sp_start_token_id)[0]
-                speech_end_pos = torch.where(cur_input_ids == self.config.sp_end_token_id)[0]
+    #             speech_start_pos = torch.where(cur_input_ids == self.config.sp_start_token_id)[0]
+    #             speech_end_pos = torch.where(cur_input_ids == self.config.sp_end_token_id)[0]
 
-                states.speech_prefix_length = speech_start_pos[0] + 1 + speech_features[0].shape[0]
+    #             states.speech_prefix_length = speech_start_pos[0] + 1 + speech_features[0].shape[0]
                 
-                cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos+1], speech_features[0], cur_input_embeds[speech_end_pos:]), dim=0)
-                cur_new_input_embeds = cur_new_input_embeds.unsqueeze(0)
+    #             cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos+1], speech_features[0], cur_input_embeds[speech_end_pos:]), dim=0)
+    #             cur_new_input_embeds = cur_new_input_embeds.unsqueeze(0)
 
-                self.position_ids = torch.arange(0, cur_new_input_embeds.size(1), dtype=torch.long, device=input_ids.device)
-                self.position_ids[states.speech_prefix_length:] -= speech_features[0].shape[0]
-                self.position_ids = self.position_ids.unsqueeze(0)
+    #             self.position_ids = torch.arange(0, cur_new_input_embeds.size(1), dtype=torch.long, device=input_ids.device)
+    #             self.position_ids[states.speech_prefix_length:] -= speech_features[0].shape[0]
+    #             self.position_ids = self.position_ids.unsqueeze(0)
 
-                speech_of_llama_output = super(SpeechLlamaModel, self).forward(
-                    input_ids=None, 
-                    attention_mask=None, 
-                    past_key_values=None,
-                    inputs_embeds=cur_new_input_embeds[:, :-1, :], 
-                    position_ids=self.position_ids[:, :-1],
-                    use_cache=use_cache,
-                    output_attentions=False, 
-                    output_hidden_states=False,
-                    return_dict=return_dict
-                )
+    #             speech_of_llama_output = super(SpeechLlamaModel, self).forward(
+    #                 input_ids=None, 
+    #                 attention_mask=None, 
+    #                 past_key_values=None,
+    #                 inputs_embeds=cur_new_input_embeds[:, :-1, :], 
+    #                 position_ids=self.position_ids[:, :-1],
+    #                 use_cache=use_cache,
+    #                 output_attentions=False, 
+    #                 output_hidden_states=False,
+    #                 return_dict=return_dict
+    #             )
 
-                past_key_values = speech_of_llama_output.past_key_values
+    #             past_key_values = speech_of_llama_output.past_key_values
             
-            self.speech_features_extracted = True
-        else:
-            past_key_values = states.past_key_values
-            self.position_ids = torch.cat([self.position_ids, self.position_ids[:, -1:] + 1], dim=1)
+    #         self.speech_features_extracted = True
+    #     else:
+    #         past_key_values = states.past_key_values
+    #         self.position_ids = torch.cat([self.position_ids, self.position_ids[:, -1:] + 1], dim=1)
         
-        sllama_output = super(SpeechLlamaModel, self).forward(
-            input_ids=None, 
-            attention_mask=None, 
-            past_key_values=past_key_values,
-            inputs_embeds=inputs_embeds[:, -1:, :], 
-            position_ids=self.position_ids[:, -1:],
-            use_cache=use_cache,
-            output_attentions=output_attentions, 
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict
-        )
+    #     sllama_output = super(SpeechLlamaModel, self).forward(
+    #         input_ids=None, 
+    #         attention_mask=None, 
+    #         past_key_values=past_key_values,
+    #         inputs_embeds=inputs_embeds[:, -1:, :], 
+    #         position_ids=self.position_ids[:, -1:],
+    #         use_cache=use_cache,
+    #         output_attentions=output_attentions, 
+    #         output_hidden_states=output_hidden_states,
+    #         return_dict=return_dict
+    #     )
 
-        states.past_key_values = sllama_output.past_key_values
+    #     states.past_key_values = sllama_output.past_key_values
 
-        return sllama_output
+    #     return sllama_output
               
     def forward(
         self,
@@ -482,11 +486,23 @@ class SpeechLlamaModel(LlamaModel):
         speech_features = None
         if not self.speech_features_extracted:
             if self.speech_tower_type == 'wavlm':
+                # print("Extracting features from WavLM")
                 speech_features = self.get_wavlm_features(speech_batch, src_lengths, after_lens, attention_mask).transpose(0, 1)
             else:
+                # print("Extracting features from Wav2Vec2")
                 speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens).transpose(0, 1)
             if self.config.inference:
                 self.speech_features_extracted = True
+
+            if self.recomputation == True:
+                if self.pri_speech_feature is not None:
+                    batch_size = speech_features.size(0)
+                    pri_seq_length = self.pri_speech_feature.size(1)
+                    # print("Recomputation: ", pri_seq_length, speech_features.size(1))
+                    for idx in range(batch_size):
+                        speech_features[idx, :pri_seq_length, :] = self.pri_speech_feature[idx]
+                    
+                self.pri_speech_feature = speech_features
 
         #     position_ids = []
         #     for i in range(inputs_embeds.size(0)):

@@ -18,8 +18,8 @@ import conversation as conversation_lib
 from conversation import SeparatorStyle
 from eval.utils import disable_torch_init
 from model.model import SpeechLlamaForCausalLM
-from model.utils import SpaceStoppingCriteria
-from train.uni_wav2vec_monkey_patch import replace_uni_train
+from model.utils import SpaceStoppingCriteria, KeywordsStoppingCriteria
+# from train.uni_wav2vec_monkey_patch import replace_uni_train
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 
 @dataclass
@@ -58,10 +58,11 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         self.max_len_b = args.max_len_b
         self.repeat_penalty = args.repeat_penalty
         self.uni = getattr(args, "uni", False)
+        self.recomputation = getattr(args, "recomputation", False)
         self.speech_tower_path = args.speech_tower_path
         self.speech_tower_type = args.speech_tower_type
         self.load_model(args.model_dir)
-
+ 
     
     def build_states(self):
         return S2TAgentStates([])
@@ -81,16 +82,15 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             update_config = os.path.join(model_dir, 'config_large.json')
             json.dump(config, open(update_config, 'w'), indent=2)
 
-        if self.uni:
-            replace_uni_train()
+        # if self.uni:
+        #     replace_uni_train()
 
         self.model = SpeechLlamaForCausalLM.from_pretrained(
             model_dir,
             torch_dtype=load_type,
             low_cpu_mem_usage=True,
             device_map='auto',
-            config=os.path.join(model_dir, 'config_large.json'),
-        ).eval()
+            config=os.path.join(model_dir, 'config_large.json'),).eval()
 
         if 'model.embed_tokens' in self.model.hf_device_map.keys():
             device_input = 'cuda:' + str(self.model.hf_device_map['model.embed_tokens'])    
@@ -105,7 +105,7 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         #     ssl_fintuned=self.model.config.ssl_fintuned,
         # )
             
-        self.length_after_ssl, self.length_after_adp = self.model.model.initialize_speech_modules(
+        self.model.model.length_after_ssl, self.model.model.length_after_adp = self.model.model.initialize_speech_modules(
             speech_tower_path=self.speech_tower_path,
             speech_tower_type=self.speech_tower_type,
             len_adapter_channels=self.model.config.len_adapter_channels,
@@ -127,6 +127,10 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         self.model.model.speech_tower.to(dtype=load_type, device=device_input)
 
         self.model.model.config.inference = True
+
+        if self.recomputation:
+            print('Enable recomputation')
+            self.model.model.recomputation = True
 
 
     @staticmethod
@@ -183,6 +187,12 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             default=None,
             help="Type of the speech tower"
         )
+        parser.add_argument(
+            '--recomputation',
+            action='store_true',
+            default=False,
+            help='Whether to recompute the speech tower'
+        )
 
     def policy(self, states: Optional[S2TAgentStates] = None):
         if states is None:
@@ -209,7 +219,7 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         # source = F.layer_norm(source, source.size())
         speech_batch = _collate_frames([source], is_audio_input=True)
         n_frames = torch.tensor([source.size(0)], dtype=torch.long)
-        speech_lens = self.length_after_adp(self.length_after_ssl(n_frames))
+        speech_lens = self.model.model.length_after_adp(self.model.model.length_after_ssl(n_frames))
 
         to_adds = [int(speech_len)*self.DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
         to_adds = [self.DEFAULT_SPEECH_START_TOKEN + to_add + self.DEFAULT_SPEECH_END_TOKEN for to_add in to_adds]
@@ -227,14 +237,22 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         max_number_of_tokens = length_in_seconds * self.max_len_a + self.max_len_b
 
         prediction_ids = []
+        # self.model.model.speech_features_extracted = False # appears bug when move it here
         while len(states.target_ids) + len(prediction_ids) <= max_number_of_tokens:
             
             inputs = self.tokenizer([prompt_inputs])
             input_ids = inputs.input_ids[0] + states.target_ids + prediction_ids
+            input_ids = inputs.input_ids[0]
             input_ids_tensor = torch.as_tensor([input_ids]).cuda()
 
             self.model.model.speech_features_extracted = False
-            stopping_criteria = SpaceStoppingCriteria(self.tokenizer)
+            # stopping_criteria = SpaceStoppingCriteria(self.tokenizer)
+            # change to keyword stopping criteria
+            stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
+            keywords = [stop_str]
+            stopping_criteria = KeywordsStoppingCriteria(keywords, self.tokenizer, input_ids_tensor)
+            ##
+            self.model.eval()
             with torch.inference_mode():
                 # output = self.model(
                 #     input_ids=input_ids_tensor,
@@ -246,13 +264,13 @@ class WaitkSpeechLlama(SpeechToTextAgent):
                 output_ids = self.model.generate(
                     attention_mask=input_ids_tensor.ne(self.tokenizer.pad_token_id),
                     input_ids=input_ids_tensor,
-                    speech_batch=speech_batch,
+                    speech_batch=speech_batch.to(device=self.model.device),
                     src_lengths=n_frames.to(device=self.model.device),
                     after_lens=speech_lens.to(device=self.model.device),
-                    do_sample=False,
+                    # do_sample=False,
                     num_beams=1,
                     max_new_tokens=500,
-                    repetition_penalty=self.repeat_penalty,
+                    # repetition_penalty=self.repeat_penalty,
                     stopping_criteria=[stopping_criteria]
                 )
             if stopping_criteria(output_ids, None):
@@ -290,8 +308,11 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         
         states.target_ids.extend(prediction_ids)
         possible_full_word = self.tokenizer.decode(prediction_ids, skip_special_tokens=True)
+        possible_full_word = possible_full_word.strip()
 
         if possible_full_word != '' or states.source_finished:
+            if states.source_finished:
+                self.model.model.pri_speech_feature = None
             return WriteAction(
                 content=possible_full_word,
                 finished=states.source_finished,
