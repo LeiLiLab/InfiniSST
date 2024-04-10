@@ -62,8 +62,8 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         self.repeat_penalty = args.repeat_penalty
         self.uni = getattr(args, "uni", False)
         self.load_model(args.model_dir)
-        if args.tsv is not None:
-            self.load_benchmark_data(args.tsv)
+        if getattr(args, "force_target", False):
+            self.load_benchmark_data(args.target)
         self.test_instance_id = 0
     
     def build_states(self):
@@ -122,10 +122,11 @@ class WaitkSpeechLlama(SpeechToTextAgent):
 
         self.model.model.config.inference = True
 
-    def load_benchmark_data(self, tsv_path):
-        df = load_df_from_tsv(tsv_path)
+    def load_benchmark_data(self, target_file):
+        with open(target_file, 'r') as r:
+            target_texts = [line.strip() for line in r.readlines() if line.strip() != '']
         self.tgt_id_segs = []
-        for t in df['tgt_text']:
+        for t in target_texts:
             tgt_id = self.tokenizer(
                 [t],
                 truncation=False,
@@ -184,10 +185,8 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             help="Repetition penalty for generation"
         )
         parser.add_argument(
-            "--tsv",
-            type=str,
-            default=None,
-            help="tsv file for benchmarking"
+            "--force-target",
+            action="store_true"
         )
 
     def policy(self, states: Optional[S2TAgentStates] = None):
