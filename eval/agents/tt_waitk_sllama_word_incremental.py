@@ -142,6 +142,10 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
                     states=states,
                     use_cache=True
                 )
+
+            if getattr(self, "prof", None) is not None:
+                self.prof.step()
+            
             if stopping_criteria(output_ids, None):
                 output_ids = output_ids[:, :-1]
 
@@ -174,6 +178,7 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
 
             if not states.source_finished:
                 break
+            
         
         states.num_frames_read = len(states.source)
         states.target_ids.extend(prediction_ids)
@@ -182,6 +187,15 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
         if states.source_finished:
             self.test_instance_id += 1
             states.ref_target_ids = None
+
+            if getattr(self, "prof", None):
+                self.prof.stop()
+
+            self.prof = torch.profiler.profile(
+                schedule=torch.profiler.schedule(wait=0, warmup=1, active=100),
+                on_trace_ready=torch.profiler.tensorboard_trace_handler("profile/recomp_llm/#{}".format(self.test_instance_id)),
+            )
+            self.prof.start()
 
         if possible_full_word != '' or states.source_finished:
             return WriteAction(
