@@ -33,10 +33,10 @@ class S2TAgentStates(AgentStates):
 
 
 @entrypoint
-class RALCP(SpeechToTextAgent):
+class HoldN(SpeechToTextAgent):
     """
     The agent generate the number of seconds from an input audio.
-    https://arxiv.org/pdf/2309.06706.pdf
+    https://www.isca-archive.org/interspeech_2020/liu20s_interspeech.pdf
     """
 
     IGNORE_INDEX = -100
@@ -52,7 +52,7 @@ class RALCP(SpeechToTextAgent):
     def __init__(self, args):
         super().__init__(args)
         transformers.set_seed(998244353)
-        self.agreement_threshold = args.agreement_threshold
+        self.hold_n = args.hold_n
         self.beam = args.beam
         self.min_start_sec = args.min_start_sec
         self.source_segment_size = args.source_segment_size
@@ -135,9 +135,9 @@ class RALCP(SpeechToTextAgent):
     @staticmethod
     def add_args(parser):
         parser.add_argument(
-            "--agreement-threshold", 
-            default=1.0, 
-            type=float,
+            "--hold-n", 
+            default=0, 
+            type=int,
         )
         parser.add_argument(
             "--beam",
@@ -249,8 +249,8 @@ class RALCP(SpeechToTextAgent):
                 after_lens=speech_lens.to(device=self.device),
                 do_sample=False,
                 num_beams=self.beam,
-                num_return_sequences=self.beam,
-                max_new_tokens=30,
+                # num_return_sequences=self.beam,
+                max_new_tokens=100,
                 # repetition_penalty=self.repeat_penalty,
                 stopping_criteria=[stopping_criteria]
             )
@@ -259,31 +259,9 @@ class RALCP(SpeechToTextAgent):
         if states.source_finished:
             prediction_ids.extend(output_ids[0, input_token_len:].tolist())
         else:
-            prediction_id_tensor = output_ids[:, input_token_len:]
+            prediction_id_tensor = output_ids[0, input_token_len:]
+            prediction_id = prediction_id_tensor[:-self.hold_n].tolist()
 
-            finished = [False] * self.beam
-            prediction_id = []
-            for i in range(prediction_id_tensor.size(1)):
-                cnt = Counter()
-                max_cnt = max_id = -1
-                for j, id in enumerate(prediction_id_tensor[:, i]):
-                    id = id.item()
-                    if not finished[j]:
-                        cnt[id] += 1
-                        if cnt[id] > max_cnt:
-                            max_cnt = cnt[id]
-                            max_id = id
-                    if id == self.tokenizer.eos_token_id:
-                        finished[j] = True
-                if max_cnt / self.beam < self.agreement_threshold:
-                    break
-                for j, id in enumerate(prediction_id_tensor[:, i]):
-                    if id != max_id:
-                        finished[j] = True
-                prediction_id.append(max_id)
-                if max_id == self.tokenizer.eos_token_id:
-                    break
-            
             if len(prediction_id) > 0:
                 if prediction_id[-1] == self.tokenizer.eos_token_id:
                     prediction_id = prediction_id[:-1]
