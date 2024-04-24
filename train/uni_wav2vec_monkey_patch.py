@@ -4,6 +4,8 @@ import numpy as np
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
+from torch import Tensor
+from torch.nn import Parameter
 from fairseq.models.wav2vec.wav2vec2 import Wav2Vec2Model, Wav2Vec2Config
 from fairseq.models.wav2vec import (
     TransformerEncoder,
@@ -14,7 +16,11 @@ from fairseq.models.wav2vec import (
 from fairseq.models.speech_to_text import lengths_to_padding_mask, Conv1dSubsampler
 from fairseq.models.wav2vec.utils import pad_to_multiple
 from fairseq.modules import GradMultiply
+from fairseq.modules.multihead_attention import MultiheadAttention
+from fairseq.modules.fairseq_dropout import FairseqDropout
+from fairseq.modules.quant_noise import quant_noise
 from fairseq.utils import index_put, is_xla_tensor
+from fairseq import utils
 from model.model import SpeechLlamaModel, ZeroPadConv1dSubsampler
 from transformers.modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 from transformers.modeling_outputs import BaseModelOutputWithPast
@@ -38,7 +44,7 @@ BLOCKSIZE = 1
 #     mask = mask.masked_fill(mask == 1, float('-inf'))
 #     return mask
 
-def generate_2d_causal_mask(seq_len, dtype, device='gpu'):
+def generate_2d_causal_mask(seq_len, prefix_len, dtype, device='gpu'):
     """
     Generates a 2D causal mask for multi-head attention.
     
@@ -52,14 +58,14 @@ def generate_2d_causal_mask(seq_len, dtype, device='gpu'):
     """
     global BLOCKSIZE
     blocksizes = [min(BLOCKSIZE, seq_len - i * BLOCKSIZE) for i in range((seq_len + BLOCKSIZE - 1) // BLOCKSIZE)]
-    blocks = [torch.ones((s, s), device=device, dtype=dtype) for s in blocksizes]
-    mask = torch.block_diag(*blocks)
 
-    tril_row, tril_col = torch.tril_indices(seq_len, seq_len)
-    mask[tril_row, tril_col] = 1
-
-    mask.masked_fill_(mask == 0, float('-inf'))
-    mask.masked_fill_(mask == 1, 0)
+    mask = torch.full((seq_len - prefix_len, seq_len), float('-inf'), device=device, dtype=dtype)
+    start_idx = 0
+    for block_size in blocksizes:
+        end_idx = start_idx + block_size
+        if end_idx > prefix_len:
+            mask[max(0, start_idx - prefix_len) : end_idx - prefix_len, :end_idx] = 1
+        start_idx = end_idx
 
     return mask
     # mask = torch.triu(torch.ones((seq_len, seq_len), device=device, dtype=dtype), diagonal=1)
@@ -94,10 +100,10 @@ def generate_2d_causal_mask(seq_len, dtype, device='gpu'):
 #         att_args=att_args)
 
 def uni_w2v2_extract_features(self, source, padding_mask, mask=False, layer=None, 
-                              past_key_values=None, past_features=None):
+                              past_features=None, start_pos=-1):
     res = self.forward(
         source, padding_mask, mask=mask, features_only=True, layer=layer, 
-        past_key_values=past_key_values, past_features=past_features
+        past_features=past_features, start_pos=start_pos,
     )
     return res
 
@@ -111,8 +117,8 @@ def uni_w2v2_forward(
     mask_indices=None,
     mask_channel_indices=None,
     padding_count=None,
-    past_key_values=None,
     past_features=None,
+    start_pos=-1,
 ):
 
     if self.feature_grad_mult > 0:
@@ -201,8 +207,8 @@ def uni_w2v2_forward(
         x, 
         padding_mask=padding_mask, 
         layer=layer, 
-        past_key_values=past_key_values, 
         past_features=past_features,
+        start_pos=start_pos,
     )
 
     if features_only:
@@ -298,8 +304,8 @@ def uni_w2v2_forward(
 
     return result
 
-def uni_transformer_encoder_forward(self, x, padding_mask=None, layer=None, past_key_values=None, past_features=None):
-    x, layer_results = self.extract_features(x, padding_mask, layer, past_key_values=past_key_values, past_features=past_features)
+def uni_transformer_encoder_forward(self, x, padding_mask=None, layer=None, past_features=None, start_pos=-1):
+    x, layer_results = self.extract_features(x, padding_mask, layer, past_features=past_features, start_pos=start_pos)
 
     if self.layer_norm_first and layer is None:
         x = self.layer_norm(x)
@@ -315,8 +321,8 @@ def uni_transformer_encoder_extract_features(
     padding_mask=None,
     tgt_layer=None,
     min_layer=0,
-    past_key_values=None,
     past_features=None,
+    start_pos=-1,
 ):
     if padding_mask is not None:
         x = index_put(x, padding_mask, 0)
@@ -359,6 +365,14 @@ def uni_transformer_encoder_extract_features(
     # B x T x C -> T x B x C
     x = x.transpose(0, 1)
 
+    total_length = x.size(0) + prefix_length
+    causal_mask = generate_2d_causal_mask(
+        total_length, 
+        prefix_length,
+        dtype=x.dtype, 
+        device=x.device
+    )
+
     layer_results = []
     r = None
     for i, layer in enumerate(self.layers):
@@ -366,8 +380,9 @@ def uni_transformer_encoder_extract_features(
         if not self.training or (dropout_probability > self.layerdrop):
             x, (z, lr) = layer(
                 x, 
+                self_attn_mask=causal_mask,
                 self_attn_padding_mask=padding_mask[:, prefix_length:] if padding_mask is not None else None, 
-                need_weights=False, past_key_value=past_key_values[i] if past_key_values is not None else None,
+                need_weights=False, start_pos=start_pos,
             )
             if i >= min_layer:
                 layer_results.append((x, z, lr))
@@ -394,13 +409,6 @@ def uni_transformer_encoder_extract_features(
 
         layer_results = [undo_pad(*u) for u in layer_results]
 
-        if past_key_values is not None:
-            for past_key_value in past_key_values:
-                for _, p in past_key_value.items():
-                    p['prev_key'] = p['prev_key'][:, :, :-pad_length, :]
-                    p['prev_value'] = p['prev_value'][:, :, :-pad_length, :]
-                    p['prev_key_padding_mask'] = p['prev_key_padding_mask'][:, :-pad_length]
-
     return x, layer_results
 
 def uni_self_attn_forward(
@@ -410,28 +418,12 @@ def uni_self_attn_forward(
     self_attn_padding_mask: torch.Tensor = None,
     need_weights: bool = False,
     att_args=None,
-    past_key_value=None,
+    start_pos=-1,
 ):
     """
     LayerNorm is applied either before or after the self-attention/ffn
     modules similar to the original Transformer imlementation.
     """
-
-    saved_states = None
-    total_length = x.size(0)
-    prefix_length = 0
-    if past_key_value is not None and len(past_key_value) > 0:
-        saved_states = self.self_attn._get_input_buffer(past_key_value)
-        prefix_length = saved_states["prev_key"].size(2)
-        total_length += prefix_length
-
-    causal_mask = generate_2d_causal_mask(total_length, dtype=x.dtype,device=x.device)[prefix_length:]
-
-    if self_attn_mask is not None:
-        self_attn_mask = self_attn_mask + causal_mask
-    else:
-        self_attn_mask = causal_mask
-        
     residual = x
 
     if self.layer_norm_first:
@@ -443,7 +435,7 @@ def uni_self_attn_forward(
             key_padding_mask=self_attn_padding_mask,
             attn_mask=self_attn_mask,
             need_weights=False,
-            incremental_state=past_key_value,
+            start_pos=start_pos,
         )
         x = self.dropout1(x)
         x = residual + x
@@ -487,15 +479,16 @@ def uni_self_attn_forward(
     return x, (attn, layer_result)
 
 
-def uni_get_ssl_feature_w2v(self, src_tokens, src_lengths, after_lens, states):
+def uni_get_ssl_feature_w2v(self, src_tokens, src_lengths, after_lens, states=None):
     padding_mask = lengths_to_padding_mask(src_lengths)
     res = self.speech_tower.extract_features(
         src_tokens, 
         padding_mask, 
-        past_key_values=states.w2v2_past_key_values,
-        past_features=states.w2v2_past_features
+        past_features=states.w2v2_past_features,
+        start_pos=states.w2v2_start_pos,
     )
     feature, padding_mask = res["x"], res["padding_mask"]
+    states.w2v2_start_pos = feature.size(1)
     states.w2v2_past_features = feature
     if padding_mask is None:
     # Create a padding mask of shape [batch_size, seq_length] with all False values
@@ -676,6 +669,401 @@ def uni_llama_forward(
         attentions=all_self_attns,
     )
 
+def uni_mha_init(
+    self,
+    embed_dim,
+    num_heads,
+    kdim=None,
+    vdim=None,
+    dropout=0.0,
+    bias=True,
+    add_bias_kv=False,
+    add_zero_attn=False,
+    self_attention=False,
+    encoder_decoder_attention=False,
+    q_noise=0.0,
+    qn_block_size=8,
+    # TODO: pass in config rather than string.
+    # config defined in xformers.components.attention.AttentionConfig
+    xformers_att_config: Optional[str] = None,
+    xformers_blocksparse_layout: Optional[
+        torch.Tensor
+    ] = None,  # This should be part of the config
+    xformers_blocksparse_blocksize: Optional[
+        int
+    ] = 16,  # This should be part of the config
+    max_batch_size: Optional[
+        int
+    ] = 32,
+    max_seq_len: Optional[
+        int
+    ] = 1500,
+):
+    super(MultiheadAttention, self).__init__()
+
+    xformers_att_config = utils.eval_str_dict(xformers_att_config)
+    self.use_xformers = xformers_att_config is not None
+    self.embed_dim = embed_dim
+    self.kdim = kdim if kdim is not None else embed_dim
+    self.vdim = vdim if vdim is not None else embed_dim
+    self.qkv_same_dim = self.kdim == embed_dim and self.vdim == embed_dim
+
+    self.num_heads = num_heads
+    self.dropout_module = FairseqDropout(
+        dropout, module_name=self.__class__.__name__
+    )
+
+    self.head_dim = embed_dim // num_heads
+    assert (
+        self.head_dim * num_heads == self.embed_dim
+    ), "embed_dim must be divisible by num_heads"
+    self.scaling = self.head_dim**-0.5
+
+    self.self_attention = self_attention
+    self.encoder_decoder_attention = encoder_decoder_attention
+
+    assert not self.self_attention or self.qkv_same_dim, (
+        "Self-attention requires query, key and " "value to be of the same size"
+    )
+
+    self.k_proj = quant_noise(
+        nn.Linear(self.kdim, embed_dim, bias=bias), q_noise, qn_block_size
+    )
+    self.v_proj = quant_noise(
+        nn.Linear(self.vdim, embed_dim, bias=bias), q_noise, qn_block_size
+    )
+    self.q_proj = quant_noise(
+        nn.Linear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size
+    )
+
+    self.out_proj = quant_noise(
+        nn.Linear(embed_dim, embed_dim, bias=bias), q_noise, qn_block_size
+    )
+
+    if add_bias_kv:
+        self.bias_k = Parameter(torch.Tensor(1, 1, embed_dim))
+        self.bias_v = Parameter(torch.Tensor(1, 1, embed_dim))
+    else:
+        self.bias_k = self.bias_v = None
+
+    self.add_zero_attn = add_zero_attn
+    self.beam_size = 1
+    self.reset_parameters()
+
+    if self.use_xformers:
+        raise NotImplementedError
+
+    self.onnx_trace = False
+    self.skip_embed_dim_check = False
+
+    self.max_batch_size = max_batch_size
+    self.max_seq_len = max_seq_len
+
+    self.cache_k = torch.zeros(
+        (
+            self.max_batch_size * self.num_heads,
+            self.max_seq_len,
+            self.head_dim,
+        )
+    ).cuda()
+    self.cache_v = torch.zeros(
+        (
+            self.max_batch_size * self.num_heads,
+            self.max_seq_len,
+            self.head_dim,
+        )
+    ).cuda()
+    self.prev_key_padding_mask = None
+
+
+def uni_mha_forward(
+    self,
+    query,
+    key: Optional[Tensor],
+    value: Optional[Tensor],
+    key_padding_mask: Optional[Tensor] = None,
+    need_weights: bool = True,
+    static_kv: bool = False,
+    attn_mask: Optional[Tensor] = None,
+    before_softmax: bool = False,
+    need_head_weights: bool = False,
+    start_pos: int = -1,
+) -> Tuple[Tensor, Optional[Tensor]]:
+    """Input shape: Time x Batch x Channel
+
+    Args:
+        key_padding_mask (ByteTensor, optional): mask to exclude
+            keys that are pads, of shape `(batch, src_len)`, where
+            padding elements are indicated by 1s.
+        need_weights (bool, optional): return the attention weights,
+            averaged over heads (default: False).
+        attn_mask (ByteTensor, optional): typically used to
+            implement causal attention, where the mask prevents the
+            attention from looking forward in time (default: None).
+        before_softmax (bool, optional): return the raw attention
+            weights and values before the attention softmax.
+        need_head_weights (bool, optional): return the attention
+            weights for each head. Implies *need_weights*. Default:
+            return the average attention weights over all heads.
+    """
+    if need_head_weights:
+        need_weights = True
+
+    is_tpu = query.device.type == "xla"
+
+    tgt_len, bsz, embed_dim = query.size()
+    src_len = tgt_len
+    if not self.skip_embed_dim_check:
+        assert (
+            embed_dim == self.embed_dim
+        ), f"query dim {embed_dim} != {self.embed_dim}"
+    assert list(query.size()) == [tgt_len, bsz, embed_dim]
+    if key is not None:
+        src_len, key_bsz, _ = key.size()
+        if not torch.jit.is_scripting():
+            assert value is not None
+            assert src_len, key_bsz == value.shape[:2]
+
+    if (
+        not self.onnx_trace
+        and not is_tpu  # don't use PyTorch version on TPUs
+        and start_pos < 0
+        and not static_kv
+        # A workaround for quantization to work. Otherwise JIT compilation
+        # treats bias in linear module as method.
+        and not torch.jit.is_scripting()
+        # The Multihead attention implemented in pytorch forces strong dimension check
+        # for input embedding dimention and K,Q,V projection dimension.
+        # Since pruning will break the dimension check and it is not easy to modify the pytorch API,
+        # it is preferred to bypass the pytorch MHA when we need to skip embed_dim_check
+        and not self.skip_embed_dim_check
+    ):
+        assert key is not None and value is not None
+
+        if self.use_xformers:
+            return self._xformers_attn_forward(
+                query, key, value, key_padding_mask, need_weights, attn_mask
+            )
+
+        else:
+            return F.multi_head_attention_forward(
+                query,
+                key,
+                value,
+                self.embed_dim,
+                self.num_heads,
+                torch.empty([0]),
+                torch.cat((self.q_proj.bias, self.k_proj.bias, self.v_proj.bias)),
+                self.bias_k,
+                self.bias_v,
+                self.add_zero_attn,
+                self.dropout_module.p,
+                self.out_proj.weight,
+                self.out_proj.bias,
+                self.training or self.dropout_module.apply_during_inference,
+                key_padding_mask,
+                need_weights,
+                attn_mask,
+                use_separate_proj_weight=True,
+                q_proj_weight=self.q_proj.weight,
+                k_proj_weight=self.k_proj.weight,
+                v_proj_weight=self.v_proj.weight,
+            )
+
+    if self.self_attention:
+        q = self.q_proj(query)
+        k = self.k_proj(query)
+        v = self.v_proj(query)
+    elif self.encoder_decoder_attention:
+        # encoder-decoder attention
+        q = self.q_proj(query)
+        if key is None:
+            assert value is None
+            k = v = None
+        else:
+            if self.beam_size > 1 and bsz == key.size(1):
+                # key is [T, bsz*beam_size, C], reduce to [T, bsz, C]
+                key = key.view(key.size(0), -1, self.beam_size, key.size(2))[
+                    :, :, 0, :
+                ]
+                if key_padding_mask is not None:
+                    key_padding_mask = key_padding_mask.view(
+                        -1, self.beam_size, key_padding_mask.size(1)
+                    )[:, 0, :]
+            k = self.k_proj(key)
+            v = self.v_proj(key)
+
+    else:
+        assert key is not None and value is not None
+        q = self.q_proj(query)
+        k = self.k_proj(key)
+        v = self.v_proj(value)
+    q *= self.scaling
+
+    if self.bias_k is not None:
+        assert self.bias_v is not None
+        k, v, attn_mask, key_padding_mask = self._add_bias(
+            k, v, attn_mask, key_padding_mask, bsz
+        )
+
+    q = (
+        q.contiguous()
+        .view(tgt_len, bsz * self.num_heads, self.head_dim)
+        .transpose(0, 1)
+    )
+
+    kv_bsz = bsz  # need default value for scripting
+    if k is not None:
+        kv_bsz = k.size(1)
+        k = (
+            k.contiguous()
+            .view(-1, kv_bsz * self.num_heads, self.head_dim)
+            .transpose(0, 1)
+        )
+    if v is not None:
+        v = (
+            v.contiguous()
+            .view(-1, kv_bsz * self.num_heads, self.head_dim)
+            .transpose(0, 1)
+        )    
+
+    if start_pos >= 0:
+        # saved states are stored with shape (bsz, num_heads, seq_len, head_dim)
+
+        self.cache_k = self.cache_k.to(q)
+        self.cache_v = self.cache_v.to(q)
+
+        self.cache_k[:kv_bsz * self.num_heads, start_pos : start_pos + src_len] = k
+        self.cache_v[:kv_bsz * self.num_heads, start_pos : start_pos + src_len] = v
+
+        k = self.cache_k[:kv_bsz * self.num_heads, : start_pos + src_len]
+        v = self.cache_v[:kv_bsz * self.num_heads, : start_pos + src_len]
+
+        src_len += start_pos
+
+        assert k is not None and v is not None
+        if start_pos == 0:
+            self.prev_key_padding_mask = None
+        else:
+            self.prev_key_padding_mask = self.prev_key_padding_mask[:, :start_pos]
+        key_padding_mask = MultiheadAttention._append_prev_key_padding_mask(
+            key_padding_mask=key_padding_mask,
+            prev_key_padding_mask=self.prev_key_padding_mask,
+            batch_size=kv_bsz,
+            src_len=k.size(1),
+            static_kv=static_kv,
+        )
+        self.prev_key_padding_mask = key_padding_mask
+
+    assert k is not None
+    assert k.size(1) == src_len
+
+    # This is part of a workaround to get around fork/join parallelism
+    # not supporting Optional types.
+    if key_padding_mask is not None and key_padding_mask.dim() == 0:
+        key_padding_mask = None
+
+    if key_padding_mask is not None:
+        assert key_padding_mask.size(0) == kv_bsz
+        assert key_padding_mask.size(1) == src_len
+
+    if self.add_zero_attn:
+        assert v is not None
+        src_len += 1
+        k, v, key_padding_mask, attn_mask = self._append_zero_attn(
+            k=k, v=v, key_padding_mask=key_padding_mask, attn_mask=attn_mask
+        )
+
+    if self.encoder_decoder_attention and bsz != kv_bsz:
+        attn_weights = torch.einsum(
+            "bxhtd,bhsd->bxhts",
+            q.view((kv_bsz, -1, self.num_heads) + q.size()[1:]),
+            k.view((kv_bsz, self.num_heads) + k.size()[1:]),
+        )
+        attn_weights = attn_weights.reshape((-1,) + attn_weights.size()[-2:])
+    else:
+        attn_weights = torch.bmm(q, k.transpose(1, 2))
+    attn_weights = self.apply_sparse_mask(attn_weights, tgt_len, src_len, bsz)
+
+    assert list(attn_weights.size()) == [bsz * self.num_heads, tgt_len, src_len]
+
+    if attn_mask is not None:
+        attn_mask = attn_mask.unsqueeze(0)
+        if self.onnx_trace:
+            attn_mask = attn_mask.repeat(attn_weights.size(0), 1, 1)
+        attn_weights += attn_mask
+
+    if key_padding_mask is not None:
+        # don't attend to padding symbols
+        attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
+        if not is_tpu:
+            attn_weights = attn_weights.view(
+                kv_bsz, -1, self.num_heads, tgt_len, src_len
+            )
+            attn_weights = attn_weights.masked_fill(
+                key_padding_mask.unsqueeze(1)
+                .unsqueeze(2)
+                .unsqueeze(3)
+                .to(torch.bool),
+                float("-inf"),
+            )
+        else:
+            attn_weights = attn_weights.transpose(0, 2)
+            attn_weights = attn_weights.masked_fill(key_padding_mask, float("-inf"))
+            attn_weights = attn_weights.transpose(0, 2)
+        attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
+
+    if before_softmax:
+        return attn_weights, v
+
+    attn_weights_float = utils.softmax(
+        attn_weights, dim=-1, onnx_trace=self.onnx_trace
+    )
+    attn_weights = attn_weights_float.type_as(attn_weights)
+    attn_probs = self.dropout_module(attn_weights)
+
+    assert v is not None
+    if self.encoder_decoder_attention and bsz != kv_bsz:
+        attn = torch.einsum(
+            "bxhts,bhsd->bxhtd",
+            attn_probs.view(
+                (
+                    kv_bsz,
+                    -1,
+                    self.num_heads,
+                )
+                + attn_probs.size()[1:]
+            ),
+            v.view(
+                (
+                    kv_bsz,
+                    self.num_heads,
+                )
+                + v.size()[1:]
+            ),
+        )
+        attn = attn.reshape((-1,) + attn.size()[-2:])
+    else:
+        attn = torch.bmm(attn_probs, v)
+    assert list(attn.size()) == [bsz * self.num_heads, tgt_len, self.head_dim]
+    if self.onnx_trace and attn.size(1) == 1:
+        # when ONNX tracing a single decoder step (sequence length == 1)
+        # the transpose is a no-op copy before view, thus unnecessary
+        attn = attn.contiguous().view(tgt_len, bsz, self.embed_dim)
+    else:
+        attn = attn.transpose(0, 1).contiguous().view(tgt_len, bsz, self.embed_dim)
+    attn = self.out_proj(attn)
+    attn_weights: Optional[Tensor] = None
+    if need_weights:
+        attn_weights = attn_weights_float.view(
+            bsz, self.num_heads, tgt_len, src_len
+        ).transpose(1, 0)
+        if not need_head_weights:
+            # average attention weights over heads
+            attn_weights = attn_weights.mean(dim=0)
+
+    return attn, attn_weights
+
 
 def replace_uni_train(blocksize=1):
     global BLOCKSIZE
@@ -697,3 +1085,5 @@ def replace_uni_decode(blocksize=1):
     SpeechLlamaModel.forward = SpeechLlamaModel.forward_incremental
     SpeechLlamaModel.get_ssl_feature_w2v = uni_get_ssl_feature_w2v
     SpeechLlamaModel.initialize_speech_modules = uni_initialize_speech_modules
+    MultiheadAttention.__init__ = uni_mha_init
+    MultiheadAttention.forward = uni_mha_forward
