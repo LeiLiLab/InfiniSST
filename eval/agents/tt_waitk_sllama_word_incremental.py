@@ -27,16 +27,16 @@ from train.uni_wav2vec_monkey_patch import replace_uni_decode
 
 @dataclass
 class IncrementalS2TAgentStates(S2TAgentStates):
-    w2v2_past_key_values: list
     w2v2_past_features: torch.Tensor
+    w2v2_start_pos: int
     past_key_values: list
     speech_prefix_length: int
     speech_past_length: int
 
     def reset(self):
         super().reset()
-        self.w2v2_past_key_values = []
         self.w2v2_past_features = None
+        self.w2v2_start_pos = 0
         self.past_key_values = None
         self.speech_prefix_length = -1
         self.speech_past_length = 0
@@ -52,7 +52,7 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
         super().__init__(args)
     
     def build_states(self):
-        return IncrementalS2TAgentStates([], None, [], None, None, -1, 0)
+        return IncrementalS2TAgentStates([], None, None, 0, None, -1, 0)
     
     @staticmethod
     def add_args(parser):
@@ -82,12 +82,7 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
             self.test_instance_id += 1
             states.ref_target_ids = None
             return WriteAction(content="", finished=True)
-
-        if len(states.w2v2_past_key_values) == 0:
-            states.w2v2_past_key_values = [
-                {} for _ in range(self.model.model.speech_tower.cfg.encoder_layers)
-            ]
-        
+       
         source = torch.tensor(states.source).to(
             device=self.model.device, dtype=self.model.dtype
         )
@@ -143,9 +138,6 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
                     use_cache=True
                 )
 
-            if getattr(self, "prof", None) is not None:
-                self.prof.step()
-            
             if stopping_criteria(output_ids, None):
                 output_ids = output_ids[:, :-1]
 
@@ -191,11 +183,6 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
             if getattr(self, "prof", None):
                 self.prof.stop()
 
-            self.prof = torch.profiler.profile(
-                schedule=torch.profiler.schedule(wait=0, warmup=1, active=100),
-                on_trace_ready=torch.profiler.tensorboard_trace_handler("profile/recomp_llm/#{}".format(self.test_instance_id)),
-            )
-            self.prof.start()
 
         if possible_full_word != '' or states.source_finished:
             return WriteAction(
