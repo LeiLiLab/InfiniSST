@@ -7,3 +7,5 @@ results
 **/wandb
 mwerSegmenter/*
 slurm*
+profile/*
+debug/*
