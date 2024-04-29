@@ -423,6 +423,125 @@ class SpeechLlamaModel(LlamaModel):
         states.past_key_values = sllama_output.past_key_values
 
         return sllama_output
+    
+    def forward_incremental_v2(
+        self,
+        input_ids: torch.LongTensor = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        past_key_values: Optional[List[torch.FloatTensor]] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        use_cache: Optional[bool] = True,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        speech_batch: Optional[torch.FloatTensor] = None,
+        src_lengths: Optional[List[torch.FloatTensor]] = None,
+        after_lens: Optional[List[torch.FloatTensor]] = None,
+        return_dict: Optional[bool] = None,
+        states: Optional[object] = None,
+    ):
+        orig_embeds_params = getattr(self, 'orig_embeds_params', None)
+
+        if inputs_embeds is None:
+            inputs_embeds = self.embed_tokens(input_ids)
+
+        speech_features = None
+        if not self.speech_features_extracted:
+            speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens, states=states).transpose(0, 1)
+            self.speech_features_extracted = True
+
+            if states.past_key_values is not None:
+
+                bsz = speech_features.size(0)
+
+                inputs_embeds = torch.cat([speech_features, inputs_embeds[:, -1:, :]], dim=1)
+
+                sp_ft_len = speech_features.size(1)
+                speech_position_ids = torch.arange(
+                    states.speech_prefix_length, 
+                    states.speech_prefix_length + sp_ft_len,
+                    dtype=torch.long,
+                    device=states.position_ids.device,
+                ).unsqueeze(0)
+                states.speech_prefix_length += sp_ft_len
+
+                states.position_ids = torch.cat(
+                    (
+                        states.position_ids,
+                        speech_position_ids,
+                        states.position_ids[:, -1:] + 1
+                    ),
+                    dim=1
+                )
+                
+                past_len = states.past_key_values[0][0].size(2)
+                states.attention_mask[:bsz, :, past_len : past_len + sp_ft_len, : past_len][:bsz, :, :, states.future_text_mask] = float("-inf")
+                states.future_text_mask += [False] * sp_ft_len + [True]
+
+                sllama_output = super(SpeechLlamaModel, self).forward(
+                    input_ids=None, 
+                    attention_mask=states.attention_mask[:bsz, :, past_len : past_len + sp_ft_len + 1, : past_len + sp_ft_len + 1], 
+                    past_key_values=states.past_key_values,
+                    inputs_embeds=inputs_embeds, 
+                    position_ids=states.position_ids[:, past_len :],
+                    use_cache=use_cache,
+                    output_attentions=False, 
+                    output_hidden_states=False,
+                    return_dict=return_dict
+                )
+
+            else:
+                speech_start_pos = torch.where(input_ids[0] == self.config.sp_start_token_id)[0]
+                speech_end_pos = torch.where(input_ids[0] == self.config.sp_end_token_id)[0]
+
+                states.speech_prefix_length = speech_start_pos[0] + 1 + speech_features[0].shape[0]
+                
+                inputs_embeds = torch.cat((inputs_embeds[:, :speech_start_pos+1], speech_features, inputs_embeds[:, speech_end_pos:]), dim=1)
+
+                device = input_ids.device
+                max_seq_len = self.config.max_position_embeddings
+                bsz = input_ids.size(0)
+
+                states.position_ids = torch.arange(0, inputs_embeds.size(1), dtype=torch.long, device=device)
+                states.position_ids[states.speech_prefix_length:] -= speech_features[0].shape[0]
+                states.position_ids = states.position_ids.repeat(bsz, 1)
+
+                states.attention_mask = torch.ones(max_seq_len, max_seq_len, device=device).triu(diagonal=1)
+                states.attention_mask.masked_fill_(states.attention_mask == 1, float('-inf'))
+                states.attention_mask = states.attention_mask.repeat(bsz, 1, 1, 1)
+
+                states.future_text_mask = [False] * states.speech_prefix_length + [True] * (inputs_embeds.size(1) - states.speech_prefix_length)
+
+                sllama_output = super(SpeechLlamaModel, self).forward(
+                    input_ids=None, 
+                    attention_mask=None, 
+                    past_key_values=states.past_key_values,
+                    inputs_embeds=inputs_embeds, 
+                    position_ids=states.position_ids,
+                    use_cache=use_cache,
+                    output_attentions=False, 
+                    output_hidden_states=False,
+                    return_dict=return_dict
+                )
+
+        else:
+            states.position_ids = torch.cat([states.position_ids, states.position_ids[:, -1:] + 1], dim=1)
+            states.future_text_mask.append(True)
+        
+            sllama_output = super(SpeechLlamaModel, self).forward(
+                input_ids=None, 
+                attention_mask=None, 
+                past_key_values=states.past_key_values,
+                inputs_embeds=inputs_embeds[:, -1:, :], 
+                position_ids=states.position_ids[:, -1:],
+                use_cache=use_cache,
+                output_attentions=output_attentions, 
+                output_hidden_states=output_hidden_states,
+                return_dict=return_dict
+            )
+
+        states.past_key_values = sllama_output.past_key_values
+
+        return sllama_output
               
     def forward(
         self,

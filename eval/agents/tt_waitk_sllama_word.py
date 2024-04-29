@@ -216,7 +216,7 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         source = torch.tensor(states.source).to(
             device=self.model.device, dtype=self.model.dtype
         )
-        # source = F.layer_norm(source, source.size())
+        source = F.layer_norm(source, source.size())
         speech_batch = _collate_frames([source], is_audio_input=True)
         n_frames = torch.tensor([source.size(0)], dtype=torch.long)
         speech_lens = self.length_after_adp(self.length_after_ssl(n_frames))
@@ -269,6 +269,9 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             if stopping_criteria(output_ids, None):
                 output_ids = output_ids[:, :-1]
 
+            # if getattr(self, "prof", None) is not None:
+            #     self.prof.step()
+
             input_token_len = input_ids_tensor.shape[1]
             prediction_id = output_ids[0, input_token_len:].tolist()
 
@@ -305,6 +308,15 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         if states.source_finished:
             self.test_instance_id += 1
             states.ref_target_ids = None
+
+            # if getattr(self, "prof", None):
+            #     self.prof.stop()
+
+            # self.prof = torch.profiler.profile(
+            #     schedule=torch.profiler.schedule(wait=0, warmup=1, active=100, repeat=1),
+            #     on_trace_ready=torch.profiler.tensorboard_trace_handler("profile/w2v2_llama2/recomp_llama2/#{}".format(self.test_instance_id)),
+            # )
+            # self.prof.start()
 
         if possible_full_word != '' or states.source_finished:
             return WriteAction(

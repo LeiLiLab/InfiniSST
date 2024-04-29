@@ -697,7 +697,7 @@ def uni_mha_init(
     ] = 32,
     max_seq_len: Optional[
         int
-    ] = 1500,
+    ] = 3000,
 ):
     super(MultiheadAttention, self).__init__()
 
@@ -1082,8 +1082,9 @@ def replace_uni_decode(blocksize=1):
     TransformerEncoder.forward = uni_transformer_encoder_forward
     TransformerEncoder.extract_features = uni_transformer_encoder_extract_features
     TransformerSentenceEncoderLayer.forward = uni_self_attn_forward
-    SpeechLlamaModel.forward = SpeechLlamaModel.forward_incremental
+    SpeechLlamaModel.forward = SpeechLlamaModel.forward_incremental_v2
     SpeechLlamaModel.get_ssl_feature_w2v = uni_get_ssl_feature_w2v
     SpeechLlamaModel.initialize_speech_modules = uni_initialize_speech_modules
     MultiheadAttention.__init__ = uni_mha_init
     MultiheadAttention.forward = uni_mha_forward
+    LlamaModel.forward = uni_llama_forward
