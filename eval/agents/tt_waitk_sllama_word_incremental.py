@@ -32,6 +32,9 @@ class IncrementalS2TAgentStates(S2TAgentStates):
     past_key_values: list
     speech_prefix_length: int
     speech_past_length: int
+    attention_mask: torch.Tensor
+    position_ids: torch.Tensor
+    future_text_mask: list
 
     def reset(self):
         super().reset()
@@ -40,6 +43,11 @@ class IncrementalS2TAgentStates(S2TAgentStates):
         self.past_key_values = None
         self.speech_prefix_length = -1
         self.speech_past_length = 0
+        self.future_text_indices = []
+        attention_mask = None
+        future_text_mask = None
+        position_ids = None
+
 
 @entrypoint
 class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
@@ -52,7 +60,7 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
         super().__init__(args)
     
     def build_states(self):
-        return IncrementalS2TAgentStates([], None, None, 0, None, -1, 0)
+        return IncrementalS2TAgentStates([], None, None, 0, None, -1, 0, None, None, None)
     
     @staticmethod
     def add_args(parser):
@@ -138,8 +146,21 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
                     use_cache=True
                 )
 
-            if stopping_criteria(output_ids, None):
+            # if getattr(self, "prof", None) is not None:
+            #     self.prof.step()
+
+            if stopping_criteria(output_ids, None) or \
+                (output_ids[:, -1] == self.tokenizer.eos_token_id and not states.source_finished):
                 output_ids = output_ids[:, :-1]
+                states.future_text_mask.pop()
+                states.position_ids = states.position_ids[:, :-1]
+
+                states.past_key_values = list(states.past_key_values)
+                for i in range(len(states.past_key_values)):
+                    states.past_key_values[i] = (
+                        states.past_key_values[i][0][:, :, :-1],
+                        states.past_key_values[i][1][:, :, :-1]
+                    )
 
             input_token_len = input_ids_tensor.shape[1]
             prediction_id = output_ids[0, input_token_len:].tolist()
@@ -156,10 +177,8 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
                 
             # prediction_ids.append(prediction_id)
 
-            if prediction_id[-1] == self.tokenizer.eos_token_id and not states.source_finished:
-                prediction_id = prediction_id[:-1]
-                if len(prediction_id) == 0:
-                    break
+            if len(prediction_id) == 0:
+                break
             prediction_ids.extend(prediction_id)
 
             # print(self.tokenizer.decode(input_ids + [prediction_id], skip_special_tokens=True))
@@ -180,8 +199,14 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
             self.test_instance_id += 1
             states.ref_target_ids = None
 
-            if getattr(self, "prof", None):
-                self.prof.stop()
+            # if getattr(self, "prof", None):
+            #     self.prof.stop()
+
+            # self.prof = torch.profiler.profile(
+            #     schedule=torch.profiler.schedule(wait=0, warmup=1, active=100, repeat=1),
+            #     on_trace_ready=torch.profiler.tensorboard_trace_handler("profile/w2v2_llama2/uni_llama2_v2/#{}".format(self.test_instance_id)),
+            # )
+            # self.prof.start()
 
 
         if possible_full_word != '' or states.source_finished:
