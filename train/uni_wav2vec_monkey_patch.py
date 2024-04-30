@@ -428,15 +428,25 @@ def uni_self_attn_forward(
 
     if self.layer_norm_first:
         x = self.self_attn_layer_norm(x)
-        x, attn = self.self_attn(
-            query=x,
-            key=x,
-            value=x,
-            key_padding_mask=self_attn_padding_mask,
-            attn_mask=self_attn_mask,
-            need_weights=False,
-            start_pos=start_pos,
-        )
+        if start_pos == -1:
+            x, attn = self.self_attn(
+                query=x,
+                key=x,
+                value=x,
+                key_padding_mask=self_attn_padding_mask,
+                attn_mask=self_attn_mask,
+                need_weights=False,
+            )
+        else:
+            x, attn = self.self_attn(
+                query=x,
+                key=x,
+                value=x,
+                key_padding_mask=self_attn_padding_mask,
+                attn_mask=self_attn_mask,
+                need_weights=False,
+                start_pos=start_pos,
+            )
         x = self.dropout1(x)
         x = residual + x
 

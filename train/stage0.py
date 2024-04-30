@@ -121,7 +121,7 @@ class DataCollatorForSupervisedDataset(object):
         speech_word = []
         for i, x in enumerate(samples):
             w = x.speech_word
-            if w is not None:
+            if w is not None and len(w) > 0:
                 w = torch.FloatTensor(w)
                 duration = n_frames[i] / 16000
                 w /= duration
