@@ -6,7 +6,7 @@
 #SBATCH --mem=256GB
 #SBATCH --gpus=4
 ##SBATCH --constraint=xeon-4116 
-#SBATCH --partition=aries
+#SBATCH --partition=taurus
 #SBATCH --time=1-00:00:00
 ##SBATCH --dependency=afterok:job_id
 ##SBATCH --array=1-7
@@ -51,6 +51,7 @@ srun python /home/siqiouyang/work/projects/sllama/train/stage0.py \
     --precision 16-mixed \
     --wandb-run-name $name \
     --eval-step 1000 \
+    --save-step 250 \
     --log-step 100 \
     --grad-acc-steps 4 \
     --clip-norm 10.0 \
