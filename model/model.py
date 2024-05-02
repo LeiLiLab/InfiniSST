@@ -118,7 +118,7 @@ class SpeechEncoder(L.LightningModule):
         self.temp = temp
 
     def train_dataloader(self):
-        train_sampler = SpeechSampler(self.train_ds, shuffle=True, batch_size=self.train_bsz, min_ms=320)
+        train_sampler = SpeechSampler(self.train_ds, shuffle=False, batch_size=self.train_bsz, min_ms=320)
         train_dataloader = DataLoader(self.train_ds, batch_sampler=train_sampler, collate_fn=self.collate)
         return train_dataloader
     
