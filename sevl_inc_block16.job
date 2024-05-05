@@ -22,9 +22,7 @@ src_segment_size=320
 k=${SLURM_ARRAY_TASK_ID}
 blocksize=16
 
-checkpoint_dir=/data/user_data/siqiouya/runs/stage3-uni-waco-block16-fixed
-
-mkdir -p ${checkpoint_dir}/simul-results/wait-k-word-inc
+checkpoint_dir=/data/user_data/siqiouya/runs/stage3-uni-waco-word-block16-fixed-mix-from-stage0-l40
 
 export PYTHONPATH=/home/siqiouya/work/sllama:/home/siqiouya/work/SimulEval
 simuleval \
@@ -36,5 +34,5 @@ simuleval \
   --prompt "<speech_here>" \
   --source /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON.source \
   --target /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON.target \
-  --output ${checkpoint_dir}/simul-results/wait-k-word-inc/wait-${src_segment_size}ms-${k} \
+  --output ${checkpoint_dir}/simul-results/wait-k-word-inc-opt/wait-${src_segment_size}ms-${k} \
   --quality-metrics BLEU --sacrebleu-tokenizer 13a

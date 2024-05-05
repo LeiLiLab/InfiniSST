@@ -118,7 +118,7 @@ class SpeechEncoder(L.LightningModule):
         self.temp = temp
 
     def train_dataloader(self):
-        train_sampler = SpeechSampler(self.train_ds, shuffle=True, batch_size=self.train_bsz, min_ms=320)
+        train_sampler = SpeechSampler(self.train_ds, shuffle=False, batch_size=self.train_bsz, min_ms=320)
         train_dataloader = DataLoader(self.train_ds, batch_sampler=train_sampler, collate_fn=self.collate)
         return train_dataloader
     
@@ -175,18 +175,23 @@ class SpeechEncoder(L.LightningModule):
             st_sim / self.temp,
             torch.arange(st_sim.size(0), device=st_sim.device)
         )
+
+        if loss.isnan():
+            return None
         
         return loss
 
 
     def training_step(self, batch, batch_idx):
         loss = self.forward(batch)
-        self.log("train_loss", loss, batch_size=batch["src_speech_lengths"].sum() / 16000)
+        if loss is not None:
+            self.log("train_loss", loss, batch_size=batch["src_speech_lengths"].sum() / 16000)
         return loss
     
     def validation_step(self, batch, batch_idx):
         loss = self.forward(batch)
-        self.log("val_loss", loss, batch_size=batch["src_speech_lengths"].sum() / 16000)
+        if loss is not None:
+            self.log("val_loss", loss, batch_size=batch["src_speech_lengths"].sum() / 16000)
     
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
