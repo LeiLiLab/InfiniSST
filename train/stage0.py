@@ -75,6 +75,7 @@ def parse_args():
     parser.add_argument("--save-dir", type=str)
     parser.add_argument("--precision", type=str)
     parser.add_argument("--wandb-run-name", type=str)
+    parser.add_argument("--save-step", type=int)
     parser.add_argument("--eval-step", type=int)
     parser.add_argument("--log-step", type=int)
     parser.add_argument("--grad-acc-steps", type=int)
@@ -121,7 +122,7 @@ class DataCollatorForSupervisedDataset(object):
         speech_word = []
         for i, x in enumerate(samples):
             w = x.speech_word
-            if w is not None:
+            if w is not None and len(w) > 0:
                 w = torch.FloatTensor(w)
                 duration = n_frames[i] / 16000
                 w /= duration
@@ -227,7 +228,7 @@ def train():
         monitor='val_loss',
         save_top_k=1,
         mode='min',
-        every_n_train_steps=args.eval_step
+        every_n_train_steps=args.save_step
     )
     lr_monitor = LearningRateMonitor(
         logging_interval='step'
@@ -235,7 +236,7 @@ def train():
 
     wandb_logger = WandbLogger(
         name=args.wandb_run_name,
-        log_model="all"
+        # log_model="all"
     )
 
     trainer = L.Trainer(
