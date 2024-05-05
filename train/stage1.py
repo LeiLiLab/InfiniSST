@@ -141,6 +141,8 @@ class DataCollatorForSupervisedDataset(object):
         n_frames = torch.tensor([x.source.size(0) for x in samples], dtype=torch.long)
         speech_lens = self.length_after_adp(self.length_after_ssl(n_frames)) # after forward ssl model and length adapter
 
+        # print(torch.stack([speech_lens, n_frames, indices]))
+
         texts = [x.target for x in samples]
      
         to_adds = [int(speech_len)*DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
@@ -230,7 +232,7 @@ def train():
     model = SpeechLlamaForCausalLM.from_pretrained(
         model_args.model_name_or_path,
         cache_dir=training_args.cache_dir,
-        low_cpu_mem_usage=True,
+        # low_cpu_mem_usage=True,
         load_in_8bit=False,
         #device_map=device_map,
     )

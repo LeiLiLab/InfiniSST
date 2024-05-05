@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=128GB
-#SBATCH --gres=gpu:v100:1
+#SBATCH --gres=gpu:A6000:1
 ##SBATCH --nodelist=babel-3-17
 ##SBATCH --constraint=xeon-4116 
 ##SBATCH --partition=gemini
@@ -22,9 +22,7 @@ src_segment_size=320
 k=${SLURM_ARRAY_TASK_ID}
 blocksize=16
 
-checkpoint_dir=/data/user_data/siqiouya/runs/stage3-uni-waco-block16-fixed
-
-mkdir -p ${checkpoint_dir}/simul-results/wait-k-word-inc
+checkpoint_dir=/data/user_data/siqiouya/runs/stage3-uni-waco-word-block16-fixed-mix-from-stage0-l40
 
 export PYTHONPATH=/home/siqiouya/work/sllama:/home/siqiouya/work/SimulEval
 simuleval \
@@ -36,5 +34,5 @@ simuleval \
   --prompt "<speech_here>" \
   --source /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON_30s.source \
   --target /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON_30s.target \
-  --output ${checkpoint_dir}/simul-results/30s-wait-k-word-inc/wait-${src_segment_size}ms-${k} \
+  --output ${checkpoint_dir}/simul-results/30s-wait-k-word-inc-opt/wait-${src_segment_size}ms-${k} \
   --quality-metrics BLEU --sacrebleu-tokenizer 13a
