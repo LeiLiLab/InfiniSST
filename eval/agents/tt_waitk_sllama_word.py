@@ -27,11 +27,13 @@ from fairseq.examples.speech_to_text.data_utils import load_df_from_tsv
 class S2TAgentStates(AgentStates):
     target_ids: list
     ref_target_ids: list
+    position_ids: torch.Tensor
 
     def reset(self):
         super().reset()
         self.target_ids = []
         self.ref_target_ids = None
+        self.position_ids = None
 
 
 @entrypoint
@@ -64,10 +66,11 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         self.load_model(args.model_dir)
         if getattr(args, "force_target", False):
             self.load_benchmark_data(args.target)
+        self.batch_size = args.batch_size
         self.test_instance_id = 0
     
     def build_states(self):
-        return S2TAgentStates([], None)
+        return S2TAgentStates([], None, None)
 
     def load_model(self, model_dir):
         load_type = torch.float16 # torch.float32
@@ -93,7 +96,7 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             low_cpu_mem_usage=True,
             device_map='auto',
             config=os.path.join(model_dir, 'config_large.json'),
-        ).eval()
+        )
 
         if 'model.embed_tokens' in self.model.hf_device_map.keys():
             device_input = 'cuda:' + str(self.model.hf_device_map['model.embed_tokens'])    
@@ -120,7 +123,8 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         self.model.model.mm_mlp_adapter.to(dtype=load_type, device=device_input)     
         self.model.model.speech_tower.to(dtype=load_type, device=device_input)
 
-        self.model.model.config.inference = True
+        self.model.eval()        
+        self.model.model.config.inference = True        
 
     def load_benchmark_data(self, target_file):
         with open(target_file, 'r') as r:
@@ -188,6 +192,11 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             "--force-target",
             action="store_true"
         )
+        parser.add_argument(
+            "--batch-size",
+            type=int,
+            default=1
+        )
 
     def policy(self, states: Optional[S2TAgentStates] = None):
         if states is None:
@@ -212,11 +221,11 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             self.test_instance_id += 1
             states.ref_target_ids = None
             return WriteAction(content="", finished=True)
-
+       
         source = torch.tensor(states.source).to(
             device=self.model.device, dtype=self.model.dtype
         )
-        source = F.layer_norm(source, source.size())
+        # source = F.layer_norm(source, source.size())
         speech_batch = _collate_frames([source], is_audio_input=True)
         n_frames = torch.tensor([source.size(0)], dtype=torch.long)
         speech_lens = self.length_after_adp(self.length_after_ssl(n_frames))
@@ -238,69 +247,44 @@ class WaitkSpeechLlama(SpeechToTextAgent):
 
         prediction_ids = []
         self.model.model.speech_features_extracted = False
-        while len(states.target_ids) + len(prediction_ids) <= max_number_of_tokens:
             
-            inputs = self.tokenizer([prompt_inputs])
-            input_ids = inputs.input_ids[0] + states.target_ids + prediction_ids
-            input_ids_tensor = torch.as_tensor([input_ids]).cuda()
+        inputs = self.tokenizer([prompt_inputs])
+        input_ids = inputs.input_ids[0] + states.target_ids + prediction_ids
+        input_ids_tensor = torch.as_tensor([input_ids]).cuda()
 
-            stopping_criteria = SpaceStoppingCriteria(self.tokenizer)
-            with torch.inference_mode():
-                # output = self.model(
-                #     input_ids=input_ids_tensor,
-                #     speech_batch=speech_batch,
-                #     src_lengths=n_frames.to(device=self.model.device),
-                #     after_lens=speech_lens.to(device=self.model.device),
-                # )[0][0, -1]
+        stopping_criteria = SpaceStoppingCriteria(self.tokenizer)
+        with torch.inference_mode():
+            # output = self.model(
+            #     input_ids=input_ids_tensor,
+            #     speech_batch=speech_batch,
+            #     src_lengths=n_frames.to(device=self.model.device),
+            #     after_lens=speech_lens.to(device=self.model.device),
+            # )[0][0, -1]
 
-                output_ids = self.model.generate(
-                    attention_mask=input_ids_tensor.ne(self.tokenizer.pad_token_id),
-                    input_ids=input_ids_tensor,
-                    speech_batch=speech_batch,
-                    src_lengths=n_frames.to(device=self.model.device),
-                    after_lens=speech_lens.to(device=self.model.device),
-                    do_sample=False,
-                    num_beams=1,
-                    max_new_tokens=500,
-                    repetition_penalty=self.repeat_penalty,
-                    stopping_criteria=[stopping_criteria],
-                    states=states,
-                )
-            if stopping_criteria(output_ids, None):
-                output_ids = output_ids[:, :-1]
+            output_ids = self.model.generate(
+                attention_mask=input_ids_tensor.ne(self.tokenizer.pad_token_id).repeat(self.batch_size, 1),
+                input_ids=input_ids_tensor.repeat(self.batch_size, 1),
+                speech_batch=speech_batch.repeat(self.batch_size, 1),
+                src_lengths=n_frames.to(device=self.model.device).repeat(self.batch_size),
+                after_lens=speech_lens.to(device=self.model.device).repeat(self.batch_size),
+                do_sample=False,
+                num_beams=1,
+                max_new_tokens=max_number_of_tokens - len(states.target_ids) - len(prediction_ids),
+                repetition_penalty=self.repeat_penalty,
+                stopping_criteria=[stopping_criteria] if not states.source_finished else None,
+                states=states,
+            )
+        if not states.source_finished and \
+            (stopping_criteria(output_ids, None) or output_ids[0, -1] == self.tokenizer.eos_token_id):
+            output_ids = output_ids[:, :-1]
+            states.position_ids = states.position_ids[:, :-1]
 
-            # if getattr(self, "prof", None) is not None:
-            #     self.prof.step()
+        # if getattr(self, "prof", None) is not None:
+        #     self.prof.step()
 
-            input_token_len = input_ids_tensor.shape[1]
-            prediction_id = output_ids[0, input_token_len:].tolist()
-
-            # prediction_id = output.argmax().item()
-            # if prediction_id in input_ids[-2:]:
-            #     break
-
-            # n_space_after = self.tokenizer.decode(input_ids + [prediction_id], skip_special_tokens=True).count(' ')
-            # if n_space == -1:
-            #     n_space = n_space_after
-            # elif n_space_after > n_space and not states.source_finished:
-            #     break
-                
-            # prediction_ids.append(prediction_id)
-
-            if prediction_id[-1] == self.tokenizer.eos_token_id and not states.source_finished:
-                prediction_id = prediction_id[:-1]
-                if len(prediction_id) == 0:
-                    break
-            prediction_ids.extend(prediction_id)
-
-            # print(self.tokenizer.decode(input_ids + [prediction_id], skip_special_tokens=True))
-            # print(self.tokenizer.decode(input_ids + prediction_id, skip_special_tokens=True))
-            
-            if prediction_ids[-1] == self.tokenizer.eos_token_id:
-                break
-
-            if not states.source_finished:
-                break
+        input_token_len = input_ids_tensor.shape[1]
+        prediction_id = output_ids[0, input_token_len:].tolist()
+        prediction_ids.extend(prediction_id)
         
         states.target_ids.extend(prediction_ids)
         possible_full_word = self.tokenizer.decode(prediction_ids, skip_special_tokens=True)
