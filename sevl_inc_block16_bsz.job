@@ -20,18 +20,21 @@ source /home/siqiouya/anaconda3/bin/activate sllama_lightning
 
 src_segment_size=320
 k=${SLURM_ARRAY_TASK_ID}
+blocksize=16
+batch_size=8
 
-checkpoint_dir=/data/user_data/siqiouya/runs/stage2-bi-mix-fix
+checkpoint_dir=/data/user_data/siqiouya/runs/stage3-uni-waco-word-block16-fixed-mix-from-stage0-l40
 
 export PYTHONPATH=/home/siqiouya/work/sllama:/home/siqiouya/work/SimulEval
 simuleval \
-  --agent eval/agents/tt_waitk_sllama_word.py \
-  --agent-class "agents.WaitkSpeechLlama" \
+  --agent eval/agents/tt_waitk_sllama_word_incremental.py \
+  --agent-class "agents.IncrementalWaitkSpeechLlama" \
   --source-segment-size ${src_segment_size} \
   --waitk-lagging ${k} --repeat-penalty 1.0 \
-  --model-dir ${checkpoint_dir} \
+  --model-dir ${checkpoint_dir} --blocksize ${blocksize} \
   --prompt "<speech_here>" \
-  --source /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON_30s.source \
-  --target /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON_30s.target \
-  --output ${checkpoint_dir}/simul-results/30s-wait-k-word/wait-${src_segment_size}ms-${k} \
-  --quality-metrics BLEU --sacrebleu-tokenizer 13a
+  --source /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON.source \
+  --target /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON.target \
+  --output ${checkpoint_dir}/simul-results/wait-k-word-inc-opt-bsz${batch_size}/wait-${src_segment_size}ms-${k} \
+  --quality-metrics BLEU --sacrebleu-tokenizer 13a \
+  --batch-size ${batch_size}
