@@ -56,6 +56,7 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         super().__init__(args)
         transformers.set_seed(998244353)
         self.waitk_lagging = args.waitk_lagging
+        self.n_word_per_input = args.n_word_per_input
         self.source_segment_size = args.source_segment_size
         # self.continuous_write = args.continuous_write
         self.prompt = args.prompt
@@ -123,7 +124,7 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         self.model.model.mm_mlp_adapter.to(dtype=load_type, device=device_input)     
         self.model.model.speech_tower.to(dtype=load_type, device=device_input)
 
-        self.model.eval()        
+        self.model.eval()
         self.model.model.config.inference = True        
 
     def load_benchmark_data(self, target_file):
@@ -150,12 +151,7 @@ class WaitkSpeechLlama(SpeechToTextAgent):
     @staticmethod
     def add_args(parser):
         parser.add_argument("--waitk-lagging", default=1, type=int)
-        # parser.add_argument(
-        #     "--continuous-write",
-        #     default=1,
-        #     type=int,
-        #     help="Max number of words to write at each step",
-        # )
+        parser.add_argument("--n-word-per-input", default=1, type=int)
         parser.add_argument(
             "--model-dir", 
             required=True, 
@@ -252,7 +248,7 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         input_ids = inputs.input_ids[0] + states.target_ids + prediction_ids
         input_ids_tensor = torch.as_tensor([input_ids]).cuda()
 
-        stopping_criteria = SpaceStoppingCriteria(self.tokenizer)
+        stopping_criteria = SpaceStoppingCriteria(self.tokenizer, self.n_word_per_input)
         with torch.inference_mode():
             # output = self.model(
             #     input_ids=input_ids_tensor,
