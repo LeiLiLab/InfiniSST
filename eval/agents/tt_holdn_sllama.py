@@ -1,4 +1,5 @@
-import os, json
+import argparse, os, sys, time, json
+from collections import Counter
 
 from typing import Optional
 from simuleval.agents.states import AgentStates
@@ -18,10 +19,9 @@ import conversation as conversation_lib
 from conversation import SeparatorStyle
 from eval.utils import disable_torch_init
 from model.model import SpeechLlamaForCausalLM
-from model.utils import SpaceStoppingCriteria
-from train.uni_wav2vec_monkey_patch import replace_uni_train
+from model.utils import SpaceStoppingCriteria, KeywordsStoppingCriteria
+# from train.uni_wav2vec_monkey_patch import replace_uni_train
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
-from fairseq.examples.speech_to_text.data_utils import load_df_from_tsv
 
 @dataclass
 class S2TAgentStates(AgentStates):
@@ -37,9 +37,10 @@ class S2TAgentStates(AgentStates):
 
 
 @entrypoint
-class WaitkSpeechLlama(SpeechToTextAgent):
+class HoldN(SpeechToTextAgent):
     """
     The agent generate the number of seconds from an input audio.
+    https://www.isca-archive.org/interspeech_2020/liu20s_interspeech.pdf
     """
 
     IGNORE_INDEX = -100
@@ -55,21 +56,21 @@ class WaitkSpeechLlama(SpeechToTextAgent):
     def __init__(self, args):
         super().__init__(args)
         transformers.set_seed(998244353)
-        self.waitk_lagging = args.waitk_lagging
-        self.n_word_per_input = args.n_word_per_input
+        self.hold_n = args.hold_n
+        self.beam = args.beam
+        self.min_start_sec = args.min_start_sec
         self.source_segment_size = args.source_segment_size
         # self.continuous_write = args.continuous_write
         self.prompt = args.prompt
         self.max_len_a = args.max_len_a
         self.max_len_b = args.max_len_b
         self.repeat_penalty = args.repeat_penalty
-        self.uni = getattr(args, "uni", False)
         self.load_model(args.model_dir)
         if getattr(args, "force_target", False):
             self.load_benchmark_data(args.target)
         self.batch_size = args.batch_size
         self.test_instance_id = 0
-    
+
     def build_states(self):
         return S2TAgentStates([], None, None)
 
@@ -88,9 +89,6 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             update_config = os.path.join(model_dir, 'config_large.json')
             json.dump(config, open(update_config, 'w'), indent=2)
 
-        if self.uni:
-            replace_uni_train()
-
         self.model = SpeechLlamaForCausalLM.from_pretrained(
             model_dir,
             torch_dtype=load_type,
@@ -100,9 +98,9 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         )
 
         if 'model.embed_tokens' in self.model.hf_device_map.keys():
-            device_input = 'cuda:' + str(self.model.hf_device_map['model.embed_tokens'])    
+            self.device = 'cuda:' + str(self.model.hf_device_map['model.embed_tokens'])    
         else:
-            device_input = 'cuda'  
+            self.device = 'cuda'  
 
         self.length_after_ssl, self.length_after_adp = self.model.model.initialize_speech_modules(
             speech_tower_path='/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt',
@@ -120,46 +118,35 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         self.model.model.mm_mlp_adapter.load_state_dict(mlp_adapter_weights)
         self.model.model.speech_tower.load_state_dict(speech_tower_weights)
 
-        self.model.model.mm_length_adapter.to(dtype=load_type, device=device_input)
-        self.model.model.mm_mlp_adapter.to(dtype=load_type, device=device_input)     
-        self.model.model.speech_tower.to(dtype=load_type, device=device_input)
+        self.model.model.mm_length_adapter.to(dtype=load_type, device=self.device)
+        self.model.model.mm_mlp_adapter.to(dtype=load_type, device=self.device)     
+        self.model.model.speech_tower.to(dtype=load_type, device=self.device)
 
         self.model.eval()
         self.model.model.config.inference = True
 
-    def load_benchmark_data(self, target_file):
-        with open(target_file, 'r') as r:
-            target_texts = [line.strip() for line in r.readlines() if line.strip() != '']
-        self.tgt_id_segs = []
-        for t in target_texts:
-            tgt_id = self.tokenizer(
-                [t],
-                truncation=False,
-            )['input_ids'][0][1:]
-
-            tgt_id_seg = []
-            i = 0
-            while i < len(tgt_id):
-                j = i + 1
-                while j < len(tgt_id) and \
-                    not self.tokenizer.convert_ids_to_tokens([tgt_id[j]])[0].startswith('▁'):
-                    j += 1
-                tgt_id_seg.append(tgt_id[i : j])
-                i = j
-            self.tgt_id_segs.append(tgt_id_seg)
 
     @staticmethod
     def add_args(parser):
-        parser.add_argument("--waitk-lagging", default=1, type=int)
-        parser.add_argument("--n-word-per-input", default=1, type=int)
+        parser.add_argument(
+            "--hold-n", 
+            default=0, 
+            type=int,
+        )
+        parser.add_argument(
+            "--beam",
+            default=1,
+            type=int,
+        )
+        parser.add_argument(
+            "--min-start-sec",
+            default=0.32,
+            type=float,
+        )
         parser.add_argument(
             "--model-dir", 
             required=True, 
             type=str
-        )
-        parser.add_argument(
-            "--uni", 
-            action="store_true"
         )
         parser.add_argument(
             "--prompt", 
@@ -204,20 +191,17 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         else:
             length_in_seconds = float(len(states.source)) / states.source_sample_rate
 
-        if not states.source_finished:
-            if (
-                length_in_seconds * 1000 / self.source_segment_size
-            ) < self.waitk_lagging:
-                return ReadAction()
-            
+        if not states.source_finished and length_in_seconds < self.min_start_sec:
+            return ReadAction()
+        
         if states.ref_target_ids is None and getattr(self, "tgt_id_segs", None) is not None:
             states.ref_target_ids = self.tgt_id_segs[self.test_instance_id]
-            
+        
         if states.source_finished and length_in_seconds < 0.32:
             self.test_instance_id += 1
             states.ref_target_ids = None
             return WriteAction(content="", finished=True)
-
+        
         source = torch.tensor(states.source).to(
             device=self.model.device, dtype=self.model.dtype
         )
@@ -239,24 +223,18 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         conv.append_message(conv.roles[1], None)
         prompt_inputs = conv.get_prompt()
 
-        max_number_of_tokens = length_in_seconds * self.max_len_a + self.max_len_b
+        max_number_of_tokens = int(length_in_seconds * self.max_len_a + self.max_len_b)
 
         prediction_ids = []
         self.model.model.speech_features_extracted = False
-            
         inputs = self.tokenizer([prompt_inputs])
-        input_ids = inputs.input_ids[0] + states.target_ids + prediction_ids
-        input_ids_tensor = torch.as_tensor([input_ids]).cuda()
+        input_ids = inputs.input_ids[0] + states.target_ids
+        input_ids_tensor = torch.as_tensor([input_ids]).to(self.device)
 
-        stopping_criteria = SpaceStoppingCriteria(self.tokenizer, self.n_word_per_input)
+        stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
+        keywords = [stop_str]
+        stopping_criteria = KeywordsStoppingCriteria(keywords, self.tokenizer, input_ids_tensor)
         with torch.inference_mode():
-            # output = self.model(
-            #     input_ids=input_ids_tensor,
-            #     speech_batch=speech_batch,
-            #     src_lengths=n_frames.to(device=self.model.device),
-            #     after_lens=speech_lens.to(device=self.model.device),
-            # )[0][0, -1]
-
             output_ids = self.model.generate(
                 attention_mask=input_ids_tensor.ne(self.tokenizer.pad_token_id).repeat(self.batch_size, 1),
                 input_ids=input_ids_tensor.repeat(self.batch_size, 1),
@@ -264,39 +242,37 @@ class WaitkSpeechLlama(SpeechToTextAgent):
                 src_lengths=n_frames.to(device=self.model.device).repeat(self.batch_size),
                 after_lens=speech_lens.to(device=self.model.device).repeat(self.batch_size),
                 do_sample=False,
-                num_beams=1,
+                num_beams=self.beam,
                 max_new_tokens=max_number_of_tokens - len(states.target_ids) - len(prediction_ids),
                 repetition_penalty=self.repeat_penalty,
                 stopping_criteria=[stopping_criteria] if not states.source_finished else None,
                 states=states,
             )
-        if not states.source_finished and \
-            (stopping_criteria(output_ids, None) or output_ids[0, -1] == self.tokenizer.eos_token_id):
-            output_ids = output_ids[:, :-1]
-            states.position_ids = states.position_ids[:, :-1]
-
-        # if getattr(self, "prof", None) is not None:
-        #     self.prof.step()
-
-        input_token_len = input_ids_tensor.shape[1]
-        prediction_id = output_ids[0, input_token_len:].tolist()
-        prediction_ids.extend(prediction_id)
         
+        input_token_len = input_ids_tensor.shape[1]
+        if states.source_finished:
+            prediction_ids.extend(output_ids[0, input_token_len:].tolist())
+        else:
+            prediction_id_tensor = output_ids[0, input_token_len:]
+            prediction_id = prediction_id_tensor[:-self.hold_n].tolist()
+
+            if len(prediction_id) > 0:
+                if prediction_id[-1] == self.tokenizer.eos_token_id:
+                    prediction_id = prediction_id[:-1]
+                else:
+                    for i in range(len(prediction_id)):
+                        if self.tokenizer.convert_ids_to_tokens([prediction_id[len(prediction_id) - i - 1]])[0].startswith('▁'):
+                            prediction_id = prediction_id[:len(prediction_id) - i - 1]
+                            break
+
+            prediction_ids.extend(prediction_id)
+
         states.target_ids.extend(prediction_ids)
-        possible_full_word = self.tokenizer.decode(prediction_ids, skip_special_tokens=True)
+        possible_full_word = self.tokenizer.decode(prediction_ids, skip_special_tokens=True).strip()
 
         if states.source_finished:
             self.test_instance_id += 1
             states.ref_target_ids = None
-
-            # if getattr(self, "prof", None):
-            #     self.prof.stop()
-
-            # self.prof = torch.profiler.profile(
-            #     schedule=torch.profiler.schedule(wait=0, warmup=1, active=100, repeat=1),
-            #     on_trace_ready=torch.profiler.tensorboard_trace_handler("profile/w2v2_llama2/recomp_llama2/#{}".format(self.test_instance_id)),
-            # )
-            # self.prof.start()
 
         if possible_full_word != '' or states.source_finished:
             return WriteAction(
