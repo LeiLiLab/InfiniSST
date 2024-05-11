@@ -129,6 +129,7 @@ class IncrementalHoldN(HoldN):
                 after_lens=speech_lens.to(device=self.model.device).repeat(self.batch_size),
                 do_sample=False,
                 num_beams=self.beam,
+                num_return_sequences=self.beam,
                 max_new_tokens=max_number_of_tokens - len(states.target_ids) - len(prediction_ids),
                 repetition_penalty=self.repeat_penalty,
                 stopping_criteria=[stopping_criteria] if not states.source_finished else None,
@@ -142,25 +143,24 @@ class IncrementalHoldN(HoldN):
         states.past_key_values = output['past_key_values']
         
         input_token_len = input_ids_tensor.shape[1]
-        total_pop = 0
+        prediction_id_tensor = output_ids[0, input_token_len:]
+        prediction_id_tensor = prediction_id_tensor[prediction_id_tensor != self.tokenizer.eos_token_id]
         if states.source_finished:
-            prediction_ids.extend(output_ids[0, input_token_len:].tolist())
+            prediction_ids.extend(prediction_id_tensor.tolist())
+            total_pop = 0
         else:
-            prediction_id_tensor = output_ids[0, input_token_len:]
             prediction_id = prediction_id_tensor[:-self.hold_n].tolist()
-            total_pop = min(self.hold_n, prediction_id_tensor.size(0))
             if len(prediction_id) > 0:
                 if prediction_id[-1] == self.tokenizer.eos_token_id:
                     prediction_id = prediction_id[:-1]
-                    total_pop += 1
                 else:
                     for i in range(len(prediction_id)):
                         if self.tokenizer.convert_ids_to_tokens([prediction_id[len(prediction_id) - i - 1]])[0].startswith('▁'):
                             prediction_id = prediction_id[:len(prediction_id) - i - 1]
-                            total_pop += i + 1
                             break
 
             prediction_ids.extend(prediction_id)
+            total_pop = output_ids.size(1) - input_token_len - len(prediction_ids)
 
         states.future_text_mask = states.future_text_mask[:-total_pop]
         states.position_ids = states.position_ids[:, :-total_pop]
