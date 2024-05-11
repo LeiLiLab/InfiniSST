@@ -469,14 +469,25 @@ class SpeechLlamaModel(LlamaModel):
                 ).repeat(bsz, 1)
                 states.speech_prefix_length += sp_ft_len
 
+                cur_pos_id = states.position_ids[0, states.future_text_mask][-1] + 1
+                cur_pos_id = cur_pos_id.repeat(bsz, 1)
+
                 states.position_ids = torch.cat(
                     (
                         states.position_ids,
                         speech_position_ids,
-                        states.position_ids[:, -1:] + 1
+                        cur_pos_id
                     ),
                     dim=1
                 )
+
+                states.past_key_values = list(states.past_key_values)
+                for i in range(len(states.past_key_values)):
+                    ratio = bsz // states.past_key_values[i][0].size(0)
+                    states.past_key_values[i] = (
+                        states.past_key_values[i][0].repeat(ratio, 1, 1, 1),
+                        states.past_key_values[i][1].repeat(ratio, 1, 1, 1),
+                    )
                 
                 past_len = states.past_key_values[0][0].size(2)
                 states.attention_mask[:bsz, :, past_len : past_len + sp_ft_len, : past_len][:bsz, :, :, states.future_text_mask] = float("-inf")
@@ -489,8 +500,8 @@ class SpeechLlamaModel(LlamaModel):
                     inputs_embeds=inputs_embeds, 
                     position_ids=states.position_ids[:, past_len :],
                     use_cache=use_cache,
-                    output_attentions=False, 
-                    output_hidden_states=False,
+                    output_attentions=output_attentions, 
+                    output_hidden_states=output_hidden_states,
                     return_dict=return_dict
                 )
 
@@ -510,7 +521,7 @@ class SpeechLlamaModel(LlamaModel):
                 states.position_ids[states.speech_prefix_length:] -= speech_features[0].shape[0]
                 states.position_ids = states.position_ids.repeat(bsz, 1)
 
-                states.attention_mask = torch.ones(max_seq_len, max_seq_len, device=device).triu(diagonal=1)
+                states.attention_mask = torch.ones(max_seq_len, max_seq_len, device=device).triu(diagonal=1).to(self.dtype)
                 states.attention_mask.masked_fill_(states.attention_mask == 1, float('-inf'))
                 states.attention_mask = states.attention_mask.repeat(bsz, 1, 1, 1)
 
@@ -519,12 +530,12 @@ class SpeechLlamaModel(LlamaModel):
                 sllama_output = super(SpeechLlamaModel, self).forward(
                     input_ids=None, 
                     attention_mask=None, 
-                    past_key_values=states.past_key_values,
+                    past_key_values=past_key_values,
                     inputs_embeds=inputs_embeds, 
                     position_ids=states.position_ids,
                     use_cache=use_cache,
-                    output_attentions=False, 
-                    output_hidden_states=False,
+                    output_attentions=output_attentions, 
+                    output_hidden_states=output_attentions,
                     return_dict=return_dict
                 )
 
@@ -535,7 +546,7 @@ class SpeechLlamaModel(LlamaModel):
             sllama_output = super(SpeechLlamaModel, self).forward(
                 input_ids=None, 
                 attention_mask=None, 
-                past_key_values=states.past_key_values,
+                past_key_values=past_key_values,
                 inputs_embeds=inputs_embeds[:, -1:, :], 
                 position_ids=states.position_ids[:, -1:],
                 use_cache=use_cache,
@@ -574,8 +585,6 @@ class SpeechLlamaModel(LlamaModel):
         if not self.speech_features_extracted:
             speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens).transpose(0, 1)
             # speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens, states=states).transpose(0, 1)
-            if self.config.inference:
-                self.speech_features_extracted = True
 
             position_ids = []
             for i in range(inputs_embeds.size(0)):
@@ -584,9 +593,13 @@ class SpeechLlamaModel(LlamaModel):
                 speech_end_pos = torch.where(input_ids[i] == self.config.sp_end_token_id)[0]
                 position_id[speech_end_pos:] -= speech_end_pos - speech_start_pos - 1
                 position_ids.append(position_id)
-            states.position_ids = torch.stack(position_ids, dim=0)
+            position_ids = torch.stack(position_ids, dim=0)
+            if self.config.inference:
+                self.speech_features_extracted = True
+                states.position_ids = position_ids            
         else:
             states.position_ids = torch.cat([states.position_ids, states.position_ids[:, -1:] + 1], dim=1)
+            position_ids = states.position_ids
             
         new_input_embeds = []
         cur_speech_idx = 0
@@ -612,7 +625,7 @@ class SpeechLlamaModel(LlamaModel):
 
         return super(SpeechLlamaModel, self).forward(
             input_ids=None, 
-            position_ids=states.position_ids[:, -inputs_embeds.size(1):],
+            position_ids=position_ids[:, -inputs_embeds.size(1):],
             attention_mask=attention_mask,
             past_key_values=past_key_values,
             inputs_embeds=inputs_embeds, 

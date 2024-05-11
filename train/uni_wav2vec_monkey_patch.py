@@ -25,6 +25,7 @@ from model.model import SpeechLlamaModel, ZeroPadConv1dSubsampler
 from transformers.modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 from transformers.modeling_outputs import BaseModelOutputWithPast
 from transformers.models.llama.modeling_llama import LlamaModel
+from transformers.cache_utils import Cache, DynamicCache
 
 original_forward = TransformerSentenceEncoderLayer.forward
 BLOCKSIZE = 1
@@ -592,8 +593,11 @@ def uni_llama_forward(
         raise ValueError("You have to specify either input_ids or inputs_embeds")
 
     past_key_values_length = 0
-    if past_key_values is not None:
-        past_key_values_length = past_key_values[0][0].shape[2]
+    if use_cache:
+        use_legacy_cache = not isinstance(past_key_values, Cache)
+        if use_legacy_cache:
+            past_key_values = DynamicCache.from_legacy_cache(past_key_values)
+        past_key_values_length = past_key_values.get_usable_length(seq_length)
 
     if position_ids is None:
         device = input_ids.device if input_ids is not None else inputs_embeds.device
@@ -604,36 +608,23 @@ def uni_llama_forward(
 
     if inputs_embeds is None:
         inputs_embeds = self.embed_tokens(input_ids)
-    if getattr(self.config, "_flash_attn_2_enabled", False):
-        # 2d mask is passed through the layers
-        attention_mask = attention_mask if (attention_mask is not None and 0 in attention_mask) else None
-    else:
-        # 4d mask is passed through the layers
-        if attention_mask is None or len(attention_mask.size()) == 2:
-            attention_mask = _prepare_4d_causal_attention_mask(
-                attention_mask, (batch_size, seq_length), inputs_embeds, past_key_values_length
-            )
+    
+    if attention_mask is None or len(attention_mask.size()) == 2:
+        attention_mask = _prepare_4d_causal_attention_mask(
+            attention_mask, (batch_size, seq_length), inputs_embeds, past_key_values_length
+        )
 
     # embed positions
     hidden_states = inputs_embeds
 
-    if self.gradient_checkpointing and self.training:
-        if use_cache:
-            # logger.warning_once(
-            #     "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
-            # )
-            use_cache = False
-
     # decoder layers
     all_hidden_states = () if output_hidden_states else None
     all_self_attns = () if output_attentions else None
-    next_decoder_cache = () if use_cache else None
+    next_decoder_cache = None
 
-    for idx, decoder_layer in enumerate(self.layers):
+    for decoder_layer in self.layers:
         if output_hidden_states:
             all_hidden_states += (hidden_states,)
-
-        past_key_value = past_key_values[idx] if past_key_values is not None else None
 
         if self.gradient_checkpointing and self.training:
             layer_outputs = self._gradient_checkpointing_func(
@@ -641,7 +632,7 @@ def uni_llama_forward(
                 hidden_states,
                 attention_mask,
                 position_ids,
-                past_key_value,
+                past_key_values,
                 output_attentions,
                 use_cache,
             )
@@ -650,7 +641,7 @@ def uni_llama_forward(
                 hidden_states,
                 attention_mask=attention_mask,
                 position_ids=position_ids,
-                past_key_value=past_key_value,
+                past_key_value=past_key_values,
                 output_attentions=output_attentions,
                 use_cache=use_cache,
             )
@@ -658,7 +649,7 @@ def uni_llama_forward(
         hidden_states = layer_outputs[0]
 
         if use_cache:
-            next_decoder_cache += (layer_outputs[2 if output_attentions else 1],)
+            next_decoder_cache = layer_outputs[2 if output_attentions else 1]
 
         if output_attentions:
             all_self_attns += (layer_outputs[1],)
@@ -669,7 +660,9 @@ def uni_llama_forward(
     if output_hidden_states:
         all_hidden_states += (hidden_states,)
 
-    next_cache = next_decoder_cache if use_cache else None
+    next_cache = None
+    if use_cache:
+        next_cache = next_decoder_cache.to_legacy_cache() if use_legacy_cache else next_decoder_cache
     if not return_dict:
         return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
     return BaseModelOutputWithPast(
