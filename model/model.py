@@ -66,7 +66,8 @@ class SpeechEncoder(L.LightningModule):
         speech_tower_path, ssl_finetuned, 
         len_adapter_channels, len_adapter_kernel_sizes, 
         llm_embedding, unidirectional, temp,
-        lr, warmup_updates, min_lr=1e-6
+        lr, warmup_updates, min_lr=1e-6,
+        loss_fn='waco'
     ):
         super().__init__()
         if not ssl_finetuned: # ssl model
@@ -117,6 +118,8 @@ class SpeechEncoder(L.LightningModule):
         self.min_lr = min_lr
         self.temp = temp
 
+        self.loss_fn = loss_fn
+
     def train_dataloader(self):
         train_sampler = SpeechSampler(self.train_ds, shuffle=False, batch_size=self.train_bsz, min_ms=320)
         train_dataloader = DataLoader(self.train_ds, batch_sampler=train_sampler, collate_fn=self.collate)
@@ -145,36 +148,51 @@ class SpeechEncoder(L.LightningModule):
         src_speech = batch["src_speech"]
         src_speech_lengths = batch["src_speech_lengths"]
         after_speech_lengths = batch["after_speech_lengths"]
+        src_text_lengths = batch["src_text_lengths"]
         text_word = batch["text_word"]
         speech_word = batch["speech_word"]
 
-        src_text_emb = self.llm_embedding(src_text).float()
         src_speech_emb = self.get_ssl_feature_w2v(src_speech, src_speech_lengths, after_speech_lengths).transpose(0, 1).float()
 
-        speech_word_emb = []
-        text_word_emb = []
-        for i in range(len(text_word)):
-            s_word, t_word = speech_word[i], text_word[i]
-            if s_word is not None:
-                for j in range(s_word.size(0)):
-                    s_l, s_r = s_word[j]
-                    t_l, t_r = t_word[j]
-                    s_word_emb = src_speech_emb[i][s_l : s_r + 1].mean(dim=0)
-                    t_word_emb = src_text_emb[i][t_l : t_r + 1].mean(dim=0)
-                    speech_word_emb.append(s_word_emb)
-                    text_word_emb.append(t_word_emb)
-        speech_word_emb = torch.stack(speech_word_emb, dim=0)
-        text_word_emb = torch.stack(text_word_emb, dim=0)
+        if self.loss_fn == 'waco':
+            src_text_emb = self.llm_embedding(src_text).float()
+            speech_word_emb = []
+            text_word_emb = []
+            for i in range(len(text_word)):
+                s_word, t_word = speech_word[i], text_word[i]
+                if s_word is not None:
+                    for j in range(s_word.size(0)):
+                        s_l, s_r = s_word[j]
+                        t_l, t_r = t_word[j]
+                        s_word_emb = src_speech_emb[i][s_l : s_r + 1].mean(dim=0)
+                        t_word_emb = src_text_emb[i][t_l : t_r + 1].mean(dim=0)
+                        speech_word_emb.append(s_word_emb)
+                        text_word_emb.append(t_word_emb)
+            speech_word_emb = torch.stack(speech_word_emb, dim=0)
+            text_word_emb = torch.stack(text_word_emb, dim=0)
 
-        st_sim = F.cosine_similarity(
-            speech_word_emb.unsqueeze(1), 
-            text_word_emb.unsqueeze(0), 
-            dim=-1
-        )
-        loss = F.cross_entropy(
-            st_sim / self.temp,
-            torch.arange(st_sim.size(0), device=st_sim.device)
-        )
+            st_sim = F.cosine_similarity(
+                speech_word_emb.unsqueeze(1), 
+                text_word_emb.unsqueeze(0), 
+                dim=-1
+            )
+            loss = F.cross_entropy(
+                st_sim / self.temp,
+                torch.arange(st_sim.size(0), device=st_sim.device)
+            )
+        elif self.loss_fn == 'ctc':
+            logits = torch.matmul(src_speech_emb, self.llm_embedding.weight.T)
+            log_probs = F.log_softmax(logits / self.temp, dim=-1).transpose(0, 1)
+            loss = F.ctc_loss(
+                log_probs,
+                src_text,
+                after_speech_lengths,
+                src_text_lengths,
+                blank=2,
+                zero_infinity=True
+            )
+        else:
+            raise NotImplementedError
 
         if loss.isnan():
             return None

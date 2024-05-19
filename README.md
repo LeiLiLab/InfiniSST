@@ -28,6 +28,17 @@ pip install -e .
 sbatch run.job
 ```
 
+### Before Stage 0 Training
+
+```bash
+cd train
+llm_model='path to llama2'
+
+PYTHONPATH=/home/siqiouya/work/sllama \
+python extract_embedding.py \
+  --model_name_or_path ${llm_model}
+```
+
 ### Before Stage 1 Training
 Make sure Speech Encoder and the adapters have been extracted before proceeding with stage 1 training if using encoder trained on stage 0.
 ```bash
