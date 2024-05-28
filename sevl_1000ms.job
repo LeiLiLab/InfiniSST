@@ -10,7 +10,7 @@
 ##SBATCH --partition=gemini
 #SBATCH --time=1-00:00:00
 ##SBATCH --dependency=afterok:job_id
-#SBATCH --array=3-10:1
+#SBATCH --array=1-5:1
 #SBATCH --account=siqiouyang
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=siqiouya@andrew.cmu.edu
@@ -19,24 +19,21 @@
 source /home/siqiouya/anaconda3/bin/activate sllama_lightning
 
 src_segment_size=1000
-n=${SLURM_ARRAY_TASK_ID}
-beam=2
-ms=2.0
-batch_size=4
+k=${SLURM_ARRAY_TASK_ID}
+n_word_per_input=3
 
 checkpoint_dir=/data/user_data/siqiouya/runs/stage2-bi-mix-fix
 
 export PYTHONPATH=/home/siqiouya/work/sllama:/home/siqiouya/work/SimulEval
 simuleval \
-  --agent eval/agents/tt_holdn_sllama.py \
-  --agent-class "agents.HoldN" \
+  --agent eval/agents/tt_waitk_sllama_word.py \
+  --agent-class "agents.WaitkSpeechLlama" \
   --source-segment-size ${src_segment_size} \
-  --hold-n ${n} --beam ${beam} --min-start-sec ${ms} \
+  --waitk-lagging ${k} --n-word-per-input ${n_word_per_input} \
   --repeat-penalty 1.0 \
   --model-dir ${checkpoint_dir} \
   --prompt "<speech_here>" \
-  --source /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON_30s.source \
-  --target /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON_30s.target \
-  --output ${checkpoint_dir}/simul-results/30s-hold-n-bsz${batch_size}/ms${ms}-${src_segment_size}ms-beam${beam}-n${n} \
-  --quality-metrics BLEU --sacrebleu-tokenizer 13a \
-  --batch-size ${batch_size}
+  --source /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON.source \
+  --target /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON.target \
+  --output ${checkpoint_dir}/simul-results/wait-k-word-1000ms-n${n_word_per_input}/wait-${src_segment_size}ms-${k} \
+  --quality-metrics BLEU --sacrebleu-tokenizer 13a

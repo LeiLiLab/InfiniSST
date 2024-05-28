@@ -1,3 +1,4 @@
+import os
 import random
 import time
 import fairseq
@@ -470,6 +471,11 @@ class SpeechLlamaModel(LlamaModel):
         speech_features = None
         if not self.speech_features_extracted:
             speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens, states=states).transpose(0, 1)
+
+            if "RECOMP_LLM" in os.environ and os.environ["RECOMP_LLM"] == '1':
+                states.speech_past_length = 0
+                states.past_key_values = past_key_values = None
+
             self.speech_features_extracted = True
 
             if states.past_key_values is not None:
