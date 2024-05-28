@@ -25,7 +25,6 @@ from typing import Dict, Optional, Sequence
 
 import torch
 import torch.nn as nn
-import numpy as np
 
 import transformers
 from transformers import Trainer, set_seed
@@ -81,7 +80,6 @@ class ModelArguments:
     )
     unidirectional: bool = field(default=False)
     blocksize: int = field(default=1)
-    n_word_per_input: int = field(default=1)
 
 
 @dataclass
@@ -127,8 +125,6 @@ class DataCollatorForSupervisedDataset(object):
     length_after_ssl: None
     length_after_adp: None
     model: SpeechLlamaForCausalLM
-    blocksize: int
-    n_word_per_input: int
     prompt_list_st = ['<speech_here>']
     def reset_speech_features_flag(self):
         self.model.model.speech_features_extracted = False
@@ -139,8 +135,6 @@ class DataCollatorForSupervisedDataset(object):
         speech_batch = _collate_frames([x.source for x in samples], is_audio_input=True)
         n_frames = torch.tensor([x.source.size(0) for x in samples], dtype=torch.long)
         speech_lens = self.length_after_adp(self.length_after_ssl(n_frames)) # after forward ssl model and length adapter
-        # k = np.random.choice([1, 3, 5, 7, 9, 11, 13, 100])
-        k = np.random.choice([1, 2, 3, 4, 5, 100])
 
         texts = [x.target for x in samples]
      
@@ -165,7 +159,6 @@ class DataCollatorForSupervisedDataset(object):
             conv.append_message(conv.roles[0], to_add)
             conv.append_message(conv.roles[1], text)
             conversations.append(conv.get_prompt())
-
         input_ids = self.tokenizer(
             conversations,
             return_tensors="pt",
@@ -173,7 +166,6 @@ class DataCollatorForSupervisedDataset(object):
             #max_length=tokenizer.model_max_length,
             truncation=False,
         ).input_ids
-
         targets = input_ids.clone()
         sep = conv.sep + conv.roles[1] + ": "
         for conversation, target in zip(conversations, targets):
@@ -192,56 +184,20 @@ class DataCollatorForSupervisedDataset(object):
                 instruction_len = len(self.tokenizer(parts[0]).input_ids) - 2
                 target[cur_len : cur_len + instruction_len] = IGNORE_INDEX
                 cur_len += round_len
-            
             target[cur_len:] = IGNORE_INDEX
         #print("conversations:", conversations[0])
         #print("input_ids:", input_ids[0])
         #print("targets:", targets[0])
         #print(self.tokenizer.convert_ids_to_tokens(input_ids[0]))
-        sp_start_id, sp_end_id = self.tokenizer.convert_tokens_to_ids(
-            [DEFAULT_SPEECH_START_TOKEN, DEFAULT_SPEECH_END_TOKEN]
-        )
-        attention_mask = torch.triu(torch.ones(input_ids.size(1), input_ids.size(1)), diagonal=1)
-        attention_mask = attention_mask.masked_fill(attention_mask == 1, float('-inf'))
-        attention_mask = attention_mask.repeat(len(samples), 1, 1, 1)
-        for idx, (conversation, input_id) in enumerate(zip(conversations, input_ids)):
-            parts = conversation.split(sep)
-            instruction_len = len(self.tokenizer(parts[0] + sep).input_ids) - 1
-            sp_start_pos = (input_id == sp_start_id).nonzero().item()
-            sp_end_pos = (input_id == sp_end_id).nonzero().item()
-
-            i = j = instruction_len
-            step_size = self.blocksize // 4
-            i_s = min(sp_start_pos + k * step_size, sp_end_pos - 1) # each seg is 80ms = 4*20ms
-            first_seg = True
-            while i < input_ids.size(1) and input_id[i] != self.tokenizer.pad_token_id:
-                n_word = 0
-                while n_word < self.n_word_per_input:
-                    j += 1
-                    while j < input_ids.size(1) and input_id[j] != self.tokenizer.pad_token_id and \
-                        not self.tokenizer.convert_ids_to_tokens([input_id[j]])[0].startswith('▁'):
-                        j += 1
-                    n_word += 1
-                    if j == input_ids.size(1) or input_id[j] == self.tokenizer.pad_token_id:
-                        break
-                attention_mask[idx, 0, i : j, i_s + 1 : sp_end_pos] = -float('inf')
-                if first_seg:
-                    first_seg = False
-                    attention_mask[idx, 0, sp_end_pos : instruction_len, i_s + 1 : sp_end_pos] = -float('inf')
-                i_s = min(i_s + step_size, sp_end_pos - 1)
-                i = j
-
-            if i < input_ids.size(1) and input_id[i] == self.tokenizer.pad_token_id:
-                attention_mask[idx, 0, :, i:] = -float('inf')
         
         batch = dict(
             input_ids=input_ids,
             labels=targets,
-            attention_mask=attention_mask,
+            attention_mask=input_ids.ne(self.tokenizer.pad_token_id),
             speech_batch=speech_batch,
             src_lengths=n_frames, # src length,
             after_lens=speech_lens, # length after forward ssl and adapter
-        )
+        )      
 
         return batch
 
@@ -249,17 +205,12 @@ def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer,
                                 data_args,
                                 length_after_ssl,
                                 length_after_adp,
-                                model,
-                                blocksize,
-                                n_word_per_input) -> Dict:
+                                model) -> Dict:
     """Make dataset and collator for supervised fine-tuning."""
 
     train_dataset = PromptSpeechToTextDatasetCreator.from_tsv(data_args.data_path, data_args.data_split_train)
     eval_dataset = PromptSpeechToTextDatasetCreator.from_tsv(data_args.data_path, data_args.data_split_eval) if data_args.data_split_eval is not None else None 
-    data_collator = DataCollatorForSupervisedDataset(
-        tokenizer, length_after_ssl, length_after_adp, model,
-        blocksize, n_word_per_input
-    )
+    data_collator = DataCollatorForSupervisedDataset(tokenizer, length_after_ssl, length_after_adp, model)
 
     return dict(train_dataset=train_dataset,
                 eval_dataset=eval_dataset,
@@ -276,17 +227,14 @@ def train():
     # load model
     config = json.load(open(os.path.join(model_args.model_name_or_path, 'config.json')))
     config['large_model'] = True
-    config['is_flash_attn_2_available'] = False
     update_config = os.path.join(model_args.model_name_or_path, 'config_large.json')
-    if not os.path.exists(update_config):
-        json.dump(config, open(update_config, 'w'), indent=2)  
+    json.dump(config, open(update_config, 'w'), indent=2)  
     world_size = int(os.environ.get("WORLD_SIZE", 1))
     device_map = {"": int(os.environ.get("LOCAL_RANK") or 0)} if world_size != 1 else "auto"
 
     # replace uni wav2vec forward
     if model_args.unidirectional:
         replace_uni_train(model_args.blocksize)
-    
     model = SpeechLlamaForCausalLM.from_pretrained(
         model_args.model_name_or_path,
         cache_dir=training_args.cache_dir,
@@ -353,9 +301,7 @@ def train():
                                               data_args=data_args,
                                               length_after_ssl=length_after_ssl,
                                               length_after_adp=length_after_adp,
-                                              model=model,
-                                              blocksize=model_args.blocksize,
-                                              n_word_per_input=model_args.n_word_per_input)
+                                              model=model)
     trainer = Trainer(model=model,
                     tokenizer=tokenizer,
                     args=training_args,

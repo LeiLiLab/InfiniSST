@@ -67,6 +67,7 @@ def parse_args():
     parser.add_argument("--temp", type=float)
     parser.add_argument("--lr", type=float)
     parser.add_argument("--warmup-updates", type=int)
+    parser.add_argument("--loss-fn", type=str, default='waco')
     # trainer
     parser.add_argument("--strategy", type=str)
     parser.add_argument("--device-type", type=str)
@@ -118,6 +119,9 @@ class DataCollatorForSupervisedDataset(object):
             add_special_tokens=False
         ).input_ids
 
+        src_text_len = [(id != self.tokenizer.pad_token_id).sum() for id in src_text]
+        src_text_len = torch.tensor(src_text_len, dtype=torch.long)
+
         text_word = [x.text_word for x in samples]
         speech_word = []
         for i, x in enumerate(samples):
@@ -139,6 +143,7 @@ class DataCollatorForSupervisedDataset(object):
             speech_word=speech_word,
             src_speech_lengths=n_frames,
             after_speech_lengths=speech_lens,
+            src_text_lengths=src_text_len,
         )
 
         return batch
@@ -202,6 +207,7 @@ def train():
         args.temp,
         lr=args.lr,
         warmup_updates=args.warmup_updates,
+        loss_fn=args.loss_fn,
     )
     del llm
     model.speech_tower.requires_grad_(False)

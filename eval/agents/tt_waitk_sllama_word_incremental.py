@@ -117,7 +117,7 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
         inputs = self.tokenizer([prompt_inputs])
         
 
-        stopping_criteria = SpaceStoppingCriteria(self.tokenizer)
+        stopping_criteria = SpaceStoppingCriteria(self.tokenizer, 1)
         with torch.inference_mode():
             # output = self.model(
             #     input_ids=input_ids_tensor,
@@ -143,6 +143,7 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
 
             prediction_ids = []
             pop_flag = True
+            n_word = self.n_word_per_input
             while True:
                 input_ids = inputs.input_ids[0] + states.target_ids + prediction_ids
                 input_ids_tensor = torch.as_tensor([input_ids]).cuda()
@@ -154,6 +155,7 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
                     speech_batch=speech_batch.repeat(self.batch_size, 1),
                     src_lengths=n_frames.to(device=self.model.device).repeat(self.batch_size),
                     after_lens=speech_lens.to(device=self.model.device).repeat(self.batch_size),
+                    past_key_values=states.past_key_values,
                     states=states
                 )
                 logits = output.logits[0, -1]
@@ -162,8 +164,10 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
                 if not states.source_finished:
                     if self.tokenizer.convert_ids_to_tokens(token_id).startswith('▁'):
                         if len(prediction_ids) > 0:
-                            pop_flag = True
-                            break
+                            n_word -= 1
+                            if n_word == 0:
+                                pop_flag = True
+                                break
                     elif token_id == self.tokenizer.eos_token_id:
                         pop_flag = True
                         break

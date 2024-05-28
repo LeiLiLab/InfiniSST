@@ -8,4 +8,4 @@ results
 mwerSegmenter/*
 slurm*
 profile/*
-debug/*
+debug*/*
