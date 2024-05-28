@@ -47,13 +47,14 @@ class KeywordsStoppingCriteria(StoppingCriteria):
 
 
 class SpaceStoppingCriteria(StoppingCriteria):
-    def __init__(self, tokenizer):
+    def __init__(self, tokenizer, n_word):
         self.n_spaces = -1
         self.tokenizer = tokenizer
+        self.n_word = n_word
 
     def __call__(self, output_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
         text = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0]
         if self.n_spaces == -1:
             self.n_spaces = len(text.split(' '))
         else:
-            return len(text.split(' ')) > self.n_spaces
+            return len(text.split(' ')) >= self.n_spaces + self.n_word
