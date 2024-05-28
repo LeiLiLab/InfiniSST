@@ -88,6 +88,7 @@ python ./extract_adapter.py \
     --model_name_or_path ${llm_model} \
     --extracted_name 'speech_tower' \
     --output ${llm_model}/speech_tower.bin
+
 ```
 
 ### Speech Encoder  

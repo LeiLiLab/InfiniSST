@@ -23,9 +23,9 @@ src_texts = df['src_text'].tolist()
 scorer_c = LAALScorer(computation_aware=True)
 scorer = LAALScorer()
 
-os.makedirs('/data/user_data/siqiouya/cache', exist_ok=True)
-comet_model_path =  download_model("Unbabel/XCOMET-XXL", saving_directory='/data/user_data/siqiouya/cache')
-comet_model = load_from_checkpoint(comet_model_path)
+# os.makedirs('/data/user_data/siqiouya/cache', exist_ok=True)
+# comet_model_path =  download_model("Unbabel/XCOMET-XXL", saving_directory='/data/user_data/siqiouya/cache')
+# comet_model = load_from_checkpoint(comet_model_path)
 
 dirname = args.dirname
 sub_dirs = natsorted(os.listdir(dirname))
@@ -50,16 +50,16 @@ for sub_dir in sub_dirs:
     bleu = sacrebleu.corpus_bleu(hyps, [refs]).score
 
     ## comet
-    comet_data = [
-        {
-            "src": src_texts[i],
-            "mt" : hyps[i],
-            "ref": refs[i]
-        }
-        for i in range(len(hyps))
-    ]
-    comet_output = comet_model.predict(comet_data, batch_size=7, gpus=1)
-    comet_score = comet_output.system_score
+    # comet_data = [
+    #     {
+    #         "src": src_texts[i],
+    #         "mt" : hyps[i],
+    #         "ref": refs[i]
+    #     }
+    #     for i in range(len(hyps))
+    # ]
+    # comet_output = comet_model.predict(comet_data, batch_size=7, gpus=1)
+    # comet_score = comet_output.system_score
     
     laal_c_acc, laal_acc, n = 0, 0, 0
     for instance in instances:
@@ -75,7 +75,7 @@ for sub_dir in sub_dirs:
 
     print(sub_dir, ':')
     print('  ', 'BLEU    {:.1f}'.format(bleu))
-    print('  ', 'COMET   {:.2f}'.format(comet_score))
+    # print('  ', 'COMET   {:.2f}'.format(comet_score))
     print('  ', 'LAAL    {:.0f} ms'.format(laal_avg))
     print('  ', 'LAAL_CA {:.0f} ms'.format(laal_c_avg))
     print()

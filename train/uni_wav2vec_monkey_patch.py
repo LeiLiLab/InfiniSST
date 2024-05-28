@@ -1,3 +1,4 @@
+import os
 from typing import Dict, List, Optional, Tuple, Union
 import fairseq
 import numpy as np
@@ -492,12 +493,18 @@ def uni_self_attn_forward(
 
 def uni_get_ssl_feature_w2v(self, src_tokens, src_lengths, after_lens, states=None):
     padding_mask = lengths_to_padding_mask(src_lengths)
-    res = self.speech_tower.extract_features(
-        src_tokens, 
-        padding_mask, 
-        past_features=states.w2v2_past_features,
-        start_pos=states.w2v2_start_pos,
-    )
+    if "RECOMP_W2V2" in os.environ and os.environ["RECOMP_W2V2"] == '1':
+        res = self.speech_tower.extract_features(
+            src_tokens, 
+            padding_mask, 
+        )
+    else:
+        res = self.speech_tower.extract_features(
+            src_tokens, 
+            padding_mask, 
+            past_features=states.w2v2_past_features,
+            start_pos=states.w2v2_start_pos,
+        )
     feature, padding_mask = res["x"], res["padding_mask"]
     states.w2v2_start_pos = feature.size(1)
     states.w2v2_past_features = feature
