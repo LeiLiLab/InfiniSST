@@ -248,7 +248,7 @@ class SpeechLlamaModel(LlamaModel):
                 state_dict = torch.load(speech_tower_path, map_location="cpu")
                 config = WavLMConfig.from_pretrained('microsoft/wavlm-large')
                 model = WavLMModel(config)
-                model.load_state_dict(state_dict, strict=False)
+                model.load_state_dict(state_dict, strict=True)
             speech_dimension = model.config.hidden_size
             self.speech_tower_type = "wavlm"
 
