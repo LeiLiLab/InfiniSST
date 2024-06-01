@@ -1,0 +1,275 @@
+nohup: ignoring input
+Total corrected paths: 0
+Total corrected paths: 0
+Total corrected paths: 0
+[2024-06-01 05:08:43,154] torch.distributed.run: [WARNING] 
+[2024-06-01 05:08:43,154] torch.distributed.run: [WARNING] *****************************************
+[2024-06-01 05:08:43,154] torch.distributed.run: [WARNING] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+[2024-06-01 05:08:43,154] torch.distributed.run: [WARNING] *****************************************
+[2024-06-01 05:08:49,448] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2024-06-01 05:08:49,448] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2024-06-01 05:08:49,448] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2024-06-01 05:08:49,449] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+wandb: Appending key for api.wandb.ai to your netrc file: /home/yuanjinw/.netrc
+wandb: Appending key for api.wandb.ai to your netrc file: /home/yuanjinw/.netrc
+wandb: Appending key for api.wandb.ai to your netrc file: /home/yuanjinw/.netrc
+wandb: Appending key for api.wandb.ai to your netrc file: /home/yuanjinw/.netrc
+wandb: Currently logged in as: xixu (simulst). Use `wandb login --relogin` to force relogin
+wandb: Currently logged in as: xixu (simulst). Use `wandb login --relogin` to force relogin
+wandb: Currently logged in as: xixu (simulst). Use `wandb login --relogin` to force relogin
+wandb: Currently logged in as: xixu (simulst). Use `wandb login --relogin` to force relogin
+wandb: ERROR Error while calling W&B API: An internal error occurred. Please contact support. (<Response [500]>)
+wandb: ERROR Error while calling W&B API: An internal error occurred. Please contact support. (<Response [500]>)
+wandb: ERROR Error while calling W&B API: An internal error occurred. Please contact support. (<Response [500]>)
+wandb: - Waiting for wandb.init()...wandb: - Waiting for wandb.init()...wandb: - Waiting for wandb.init()...wandb: \ Waiting for wandb.init()...wandb: \ Waiting for wandb.init()...wandb: \ Waiting for wandb.init()...wandb: wandb version 0.17.0 is available!  To upgrade, please run:
+wandb:  $ pip install wandb --upgrade
+wandb: Tracking run with wandb version 0.16.2
+wandb: Run data is saved locally in /home/yuanjinw/work/sllama_gemma/train/wandb/run-20240601_050852-8xttmsda
+wandb: Run `wandb offline` to turn off syncing.
+wandb: wandb version 0.17.0 is available!  To upgrade, please run:
+wandb:  $ pip install wandb --upgrade
+wandb: Tracking run with wandb version 0.16.2
+wandb: Run data is saved locally in /home/yuanjinw/work/sllama_gemma/train/wandb/run-20240601_050852-68iqpujy
+wandb: Run `wandb offline` to turn off syncing.
+wandb: wandb version 0.17.0 is available!  To upgrade, please run:
+wandb:  $ pip install wandb --upgrade
+wandb: Tracking run with wandb version 0.16.2
+wandb: Run data is saved locally in /home/yuanjinw/work/sllama_gemma/train/wandb/run-20240601_050852-y2w4qshx
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run gemma-7B-bi-s1
+wandb: ⭐️ View project at https://wandb.ai/simulst/llm-encoder
+wandb: 🚀 View run at https://wandb.ai/simulst/llm-encoder/runs/8xttmsda
+wandb: Syncing run gemma-7B-bi-s1
+wandb: ⭐️ View project at https://wandb.ai/simulst/llm-encoder
+wandb: 🚀 View run at https://wandb.ai/simulst/llm-encoder/runs/68iqpujy
+wandb: Syncing run gemma-7B-bi-s1
+wandb: ⭐️ View project at https://wandb.ai/simulst/llm-encoder
+wandb: 🚀 View run at https://wandb.ai/simulst/llm-encoder/runs/y2w4qshx
+/home/yuanjinw/sllama/lib/python3.8/site-packages/transformers/training_args.py:1474: FutureWarning: `evaluation_strategy` is deprecated and will be removed in version 4.46 of 🤗 Transformers. Use `eval_strategy` instead
+  warnings.warn(
+[2024-06-01 05:09:00,387] [INFO] [comm.py:637:init_distributed] cdb=None
+/home/yuanjinw/sllama/lib/python3.8/site-packages/transformers/training_args.py:1474: FutureWarning: `evaluation_strategy` is deprecated and will be removed in version 4.46 of 🤗 Transformers. Use `eval_strategy` instead
+  warnings.warn(
+/home/yuanjinw/sllama/lib/python3.8/site-packages/transformers/training_args.py:1474: FutureWarning: `evaluation_strategy` is deprecated and will be removed in version 4.46 of 🤗 Transformers. Use `eval_strategy` instead
+  warnings.warn(
+[2024-06-01 05:09:00,394] [INFO] [comm.py:637:init_distributed] cdb=None
+[2024-06-01 05:09:00,397] [INFO] [comm.py:637:init_distributed] cdb=None
+wandb: wandb version 0.17.0 is available!  To upgrade, please run:
+wandb:  $ pip install wandb --upgrade
+wandb: Tracking run with wandb version 0.16.2
+wandb: Run data is saved locally in /home/yuanjinw/work/sllama_gemma/train/wandb/run-20240601_050852-xlt5cle0
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run gemma-7B-bi-s1
+wandb: ⭐️ View project at https://wandb.ai/simulst/llm-encoder
+wandb: 🚀 View run at https://wandb.ai/simulst/llm-encoder/runs/xlt5cle0
+/home/yuanjinw/sllama/lib/python3.8/site-packages/transformers/training_args.py:1474: FutureWarning: `evaluation_strategy` is deprecated and will be removed in version 4.46 of 🤗 Transformers. Use `eval_strategy` instead
+  warnings.warn(
+[2024-06-01 05:09:00,528] [INFO] [comm.py:637:init_distributed] cdb=None
+[2024-06-01 05:09:00,528] [INFO] [comm.py:668:init_distributed] Initializing TorchBackend in DeepSpeed with backend nccl
+You are using a model of type gemma to instantiate a model of type SpeechLlama. This is not supported for all configurations of models and can yield errors.
+You are using a model of type gemma to instantiate a model of type SpeechLlama. This is not supported for all configurations of models and can yield errors.
+`config.hidden_act` is ignored, you should use `config.hidden_activation` instead.
+Gemma's activation function will be set to `gelu_pytorch_tanh`. Please, use
+`config.hidden_activation` if you want to override this behaviour.
+See https://github.com/huggingface/transformers/pull/29402 for more details.
+You are using a model of type gemma to instantiate a model of type SpeechLlama. This is not supported for all configurations of models and can yield errors.
+You are using a model of type gemma to instantiate a model of type SpeechLlama. This is not supported for all configurations of models and can yield errors.
+`config.hidden_act` is ignored, you should use `config.hidden_activation` instead.
+Gemma's activation function will be set to `gelu_pytorch_tanh`. Please, use
+`config.hidden_activation` if you want to override this behaviour.
+See https://github.com/huggingface/transformers/pull/29402 for more details.
+`config.hidden_act` is ignored, you should use `config.hidden_activation` instead.
+Gemma's activation function will be set to `gelu_pytorch_tanh`. Please, use
+`config.hidden_activation` if you want to override this behaviour.
+See https://github.com/huggingface/transformers/pull/29402 for more details.
+`config.hidden_act` is ignored, you should use `config.hidden_activation` instead.
+Gemma's activation function will be set to `gelu_pytorch_tanh`. Please, use
+`config.hidden_activation` if you want to override this behaviour.
+See https://github.com/huggingface/transformers/pull/29402 for more details.
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:06<00:20,  6.74s/it]Loading checkpoint shards:  25%|██▌       | 1/4 [00:06<00:20,  6.82s/it]Loading checkpoint shards:  25%|██▌       | 1/4 [00:06<00:20,  6.85s/it]Loading checkpoint shards:  25%|██▌       | 1/4 [00:07<00:21,  7.02s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:13<00:13,  6.80s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:13<00:13,  6.75s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:13<00:13,  6.86s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:13<00:13,  6.96s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:20<00:06,  6.77s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:20<00:06,  6.81s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:20<00:06,  6.78s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:21<00:07,  7.07s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:23<00:00,  5.30s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:23<00:00,  5.86s/it]
+Loading checkpoint shards: 100%|██████████| 4/4 [00:23<00:00,  5.32s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:23<00:00,  5.87s/it]
+Loading checkpoint shards: 100%|██████████| 4/4 [00:23<00:00,  5.34s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:23<00:00,  5.87s/it]
+Loading checkpoint shards: 100%|██████████| 4/4 [00:24<00:00,  5.48s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:24<00:00,  6.03s/it]
+/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/nn/utils/weight_norm.py:28: UserWarning: torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.
+  warnings.warn("torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.")
+/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/nn/utils/weight_norm.py:28: UserWarning: torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.
+  warnings.warn("torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.")
+/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/nn/utils/weight_norm.py:28: UserWarning: torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.
+  warnings.warn("torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.")
+/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/nn/utils/weight_norm.py:28: UserWarning: torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.
+  warnings.warn("torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.")
+2024-06-01 05:09:40 | WARNING | accelerate.utils.other | Detected kernel version 4.18.0, which is below the recommended minimum of 5.5.0; this can cause the process to hang. It is recommended to upgrade the kernel to the minimum version or higher.
+/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/utils/checkpoint.py:460: UserWarning: torch.utils.checkpoint: please pass in use_reentrant=True or use_reentrant=False explicitly. The default value of use_reentrant will be updated to be False in the future. To maintain current behavior, pass use_reentrant=True. It is recommended that you use use_reentrant=False. Refer to docs for more details on the differences between the two variants.
+  warnings.warn(
+/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/utils/checkpoint.py:460: UserWarning: torch.utils.checkpoint: please pass in use_reentrant=True or use_reentrant=False explicitly. The default value of use_reentrant will be updated to be False in the future. To maintain current behavior, pass use_reentrant=True. It is recommended that you use use_reentrant=False. Refer to docs for more details on the differences between the two variants.
+  warnings.warn(
+/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/utils/checkpoint.py:460: UserWarning: torch.utils.checkpoint: please pass in use_reentrant=True or use_reentrant=False explicitly. The default value of use_reentrant will be updated to be False in the future. To maintain current behavior, pass use_reentrant=True. It is recommended that you use use_reentrant=False. Refer to docs for more details on the differences between the two variants.
+  warnings.warn(
+wandb: WARNING The `run_name` is currently set to the same value as `TrainingArguments.output_dir`. If this was not intended, please specify a different run name by setting the `TrainingArguments.run_name` parameter.
+  0%|          | 0/12186 [00:00<?, ?it/s]/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/utils/checkpoint.py:460: UserWarning: torch.utils.checkpoint: please pass in use_reentrant=True or use_reentrant=False explicitly. The default value of use_reentrant will be updated to be False in the future. To maintain current behavior, pass use_reentrant=True. It is recommended that you use use_reentrant=False. Refer to docs for more details on the differences between the two variants.
+  warnings.warn(
+/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/autograd/__init__.py:266: UserWarning: c10d::broadcast_: an autograd kernel was not registered to the Autograd key(s) but we are trying to backprop through it. This may lead to silently incorrect behavior. This behavior is deprecated and will be removed in a future version of PyTorch. If your operator is differentiable, please ensure you have registered an autograd kernel to the correct Autograd key (e.g. DispatchKey::Autograd, DispatchKey::CompositeImplicitAutograd). If your operator is not differentiable, or to squash this warning and use the previous behavior, please register torch::CppFunction::makeFallthrough() to DispatchKey::Autograd. (Triggered internally at ../torch/csrc/autograd/autograd_not_implemented_fallback.cpp:63.)
+  Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/autograd/__init__.py:266: UserWarning: c10d::broadcast_: an autograd kernel was not registered to the Autograd key(s) but we are trying to backprop through it. This may lead to silently incorrect behavior. This behavior is deprecated and will be removed in a future version of PyTorch. If your operator is differentiable, please ensure you have registered an autograd kernel to the correct Autograd key (e.g. DispatchKey::Autograd, DispatchKey::CompositeImplicitAutograd). If your operator is not differentiable, or to squash this warning and use the previous behavior, please register torch::CppFunction::makeFallthrough() to DispatchKey::Autograd. (Triggered internally at ../torch/csrc/autograd/autograd_not_implemented_fallback.cpp:63.)
+  Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/autograd/__init__.py:266: UserWarning: c10d::broadcast_: an autograd kernel was not registered to the Autograd key(s) but we are trying to backprop through it. This may lead to silently incorrect behavior. This behavior is deprecated and will be removed in a future version of PyTorch. If your operator is differentiable, please ensure you have registered an autograd kernel to the correct Autograd key (e.g. DispatchKey::Autograd, DispatchKey::CompositeImplicitAutograd). If your operator is not differentiable, or to squash this warning and use the previous behavior, please register torch::CppFunction::makeFallthrough() to DispatchKey::Autograd. (Triggered internally at ../torch/csrc/autograd/autograd_not_implemented_fallback.cpp:63.)
+  Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/autograd/__init__.py:266: UserWarning: c10d::broadcast_: an autograd kernel was not registered to the Autograd key(s) but we are trying to backprop through it. This may lead to silently incorrect behavior. This behavior is deprecated and will be removed in a future version of PyTorch. If your operator is differentiable, please ensure you have registered an autograd kernel to the correct Autograd key (e.g. DispatchKey::Autograd, DispatchKey::CompositeImplicitAutograd). If your operator is not differentiable, or to squash this warning and use the previous behavior, please register torch::CppFunction::makeFallthrough() to DispatchKey::Autograd. (Triggered internally at ../torch/csrc/autograd/autograd_not_implemented_fallback.cpp:63.)
+  Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+[2024-06-01 05:09:53,259] torch.distributed.elastic.multiprocessing.api: [WARNING] Sending process 20012 closing signal SIGTERM
+[2024-06-01 05:09:53,291] torch.distributed.elastic.multiprocessing.api: [ERROR] failed (exitcode: -15) local_rank: 0 (pid: 20010) of binary: /home/yuanjinw/sllama/bin/python
+Traceback (most recent call last):
+  File "/home/yuanjinw/sllama/bin/torchrun", line 8, in <module>
+    sys.exit(main())
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 347, in wrapper
+    return f(*args, **kwargs)
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/distributed/run.py", line 812, in main
+    run(args)
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/distributed/run.py", line 803, in run
+    elastic_launch(
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/distributed/launcher/api.py", line 135, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/distributed/launcher/api.py", line 268, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+=======================================================
+stage1.py FAILED
+-------------------------------------------------------
+Failures:
+[1]:
+  time      : 2024-06-01_05:09:53
+  host      : babel-4-28.ib
+  rank      : 1 (local_rank: 1)
+  exitcode  : -15 (pid: 20011)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 20011
+[2]:
+  time      : 2024-06-01_05:09:53
+  host      : babel-4-28.ib
+  rank      : 3 (local_rank: 3)
+  exitcode  : -15 (pid: 20013)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 20013
+-------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2024-06-01_05:09:53
+  host      : babel-4-28.ib
+  rank      : 0 (local_rank: 0)
+  exitcode  : -15 (pid: 20010)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 20010
+=======================================================
+[2024-06-01 05:09:55,476] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+Traceback (most recent call last):
+  File "./zero_to_fp32.py", line 587, in <module>
+    convert_zero_checkpoint_to_fp32_state_dict(args.checkpoint_dir, args.output_file, tag=args.tag)
+  File "./zero_to_fp32.py", line 523, in convert_zero_checkpoint_to_fp32_state_dict
+    state_dict = get_fp32_state_dict_from_zero_checkpoint(checkpoint_dir, tag)
+  File "./zero_to_fp32.py", line 502, in get_fp32_state_dict_from_zero_checkpoint
+    raise ValueError(f"Unable to find 'latest' file at {latest_path}")
+ValueError: Unable to find 'latest' file at /scratch/xixu/runs/gemma-stage1/checkpoint-13000/latest
+Traceback (most recent call last):
+  File "./extract_adapter.py", line 46, in <module>
+    ckpt = torch.load(os.path.join(args.model_name_or_path, 'pytorch_model.bin'), map_location='cpu')
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/serialization.py", line 998, in load
+    with _open_file_like(f, 'rb') as opened_file:
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/serialization.py", line 445, in _open_file_like
+    return _open_file(name_or_buffer, mode)
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/serialization.py", line 426, in __init__
+    super().__init__(open(name, mode))
+FileNotFoundError: [Errno 2] No such file or directory: '/scratch/xixu/runs/gemma-stage1/checkpoint-13000/pytorch_model.bin'
+Traceback (most recent call last):
+  File "./extract_adapter.py", line 46, in <module>
+    ckpt = torch.load(os.path.join(args.model_name_or_path, 'pytorch_model.bin'), map_location='cpu')
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/serialization.py", line 998, in load
+    with _open_file_like(f, 'rb') as opened_file:
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/serialization.py", line 445, in _open_file_like
+    return _open_file(name_or_buffer, mode)
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/serialization.py", line 426, in __init__
+    super().__init__(open(name, mode))
+FileNotFoundError: [Errno 2] No such file or directory: '/scratch/xixu/runs/gemma-stage1/checkpoint-13000/pytorch_model.bin'
+Traceback (most recent call last):
+  File "./extract_adapter.py", line 46, in <module>
+    ckpt = torch.load(os.path.join(args.model_name_or_path, 'pytorch_model.bin'), map_location='cpu')
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/serialization.py", line 998, in load
+    with _open_file_like(f, 'rb') as opened_file:
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/serialization.py", line 445, in _open_file_like
+    return _open_file(name_or_buffer, mode)
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/serialization.py", line 426, in __init__
+    super().__init__(open(name, mode))
+FileNotFoundError: [Errno 2] No such file or directory: '/scratch/xixu/runs/gemma-stage1/checkpoint-13000/pytorch_model.bin'
+[2024-06-01 05:10:04,725] torch.distributed.run: [WARNING] 
+[2024-06-01 05:10:04,725] torch.distributed.run: [WARNING] *****************************************
+[2024-06-01 05:10:04,725] torch.distributed.run: [WARNING] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+[2024-06-01 05:10:04,725] torch.distributed.run: [WARNING] *****************************************
+[2024-06-01 05:10:10,842] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2024-06-01 05:10:10,847] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2024-06-01 05:10:10,849] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2024-06-01 05:10:10,850] [INFO] [real_accelerator.py:158:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "stage2_large.py", line 50, in <module>
+  File "stage2_large.py", line 50, in <module>
+Traceback (most recent call last):
+      File "stage2_large.py", line 50, in <module>
+wandb.login(key="70ccf8fc506209e5355abe09452cbba1dd83a7e9", relogin=True)     
+wandb.login(key="70ccf8fc506209e5355abe09452cbba1dd83a7e9", relogin=True) 
+NameError: NameErrorname 'wandb' is not defined: 
+name 'wandb' is not defined
+    wandb.login(key="70ccf8fc506209e5355abe09452cbba1dd83a7e9", relogin=True) 
+NameError: name 'wandb' is not defined
+Traceback (most recent call last):
+  File "stage2_large.py", line 50, in <module>
+    wandb.login(key="70ccf8fc506209e5355abe09452cbba1dd83a7e9", relogin=True) 
+NameError: name 'wandb' is not defined
+[2024-06-01 05:10:14,768] torch.distributed.elastic.multiprocessing.api: [ERROR] failed (exitcode: 1) local_rank: 0 (pid: 20513) of binary: /home/yuanjinw/sllama/bin/python
+Traceback (most recent call last):
+  File "/home/yuanjinw/sllama/bin/torchrun", line 8, in <module>
+    sys.exit(main())
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 347, in wrapper
+    return f(*args, **kwargs)
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/distributed/run.py", line 812, in main
+    run(args)
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/distributed/run.py", line 803, in run
+    elastic_launch(
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/distributed/launcher/api.py", line 135, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/home/yuanjinw/sllama/lib/python3.8/site-packages/torch/distributed/launcher/api.py", line 268, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+stage2_large.py FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2024-06-01_05:10:14
+  host      : babel-4-28.ib
+  rank      : 1 (local_rank: 1)
+  exitcode  : 1 (pid: 20514)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[2]:
+  time      : 2024-06-01_05:10:14
+  host      : babel-4-28.ib
+  rank      : 2 (local_rank: 2)
+  exitcode  : 1 (pid: 20515)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[3]:
+  time      : 2024-06-01_05:10:14
+  host      : babel-4-28.ib
+  rank      : 3 (local_rank: 3)
+  exitcode  : 1 (pid: 20516)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2024-06-01_05:10:14
+  host      : babel-4-28.ib
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 20513)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================

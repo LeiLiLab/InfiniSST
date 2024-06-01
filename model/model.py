@@ -22,6 +22,9 @@ from fairseq.optim.lr_scheduler.inverse_square_root_schedule import (
 from torch.optim.optimizer import Optimizer
 from transformers import AutoConfig, AutoModelForCausalLM, \
                          LlamaConfig, LlamaModel, LlamaForCausalLM
+###                    
+from transformers import AutoConfig, AutoModelForCausalLM, \
+                         GemmaConfig, GemmaModel, GemmaForCausalLM
 
 from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
 
@@ -233,15 +236,15 @@ class SpeechEncoder(L.LightningModule):
         }
 
 
-class SpeechLlamaConfig(LlamaConfig):
+class SpeechLlamaConfig(GemmaConfig):
     model_type = "SpeechLlama"
     inference = False
 
 
-class SpeechLlamaModel(LlamaModel):
+class SpeechLlamaModel(GemmaModel):
     config_class = SpeechLlamaConfig
 
-    def __init__(self, config: LlamaConfig, mm_vision_tower=None, mm_hidden_size=None):
+    def __init__(self, config: GemmaConfig, mm_vision_tower=None, mm_hidden_size=None):
         super(SpeechLlamaModel, self).__init__(config)
         large_model = getattr(config, 'large_model', False)
         lora_train = getattr(config, 'lora_train', False)
@@ -661,7 +664,7 @@ class SpeechLlamaModel(LlamaModel):
     
 ## try not add prompt
     
-class SpeechLlamaForCausalLM(LlamaForCausalLM):
+class SpeechLlamaForCausalLM(GemmaForCausalLM):
     config_class = SpeechLlamaConfig
 
     def __init__(self, config):

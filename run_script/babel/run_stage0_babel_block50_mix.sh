@@ -20,6 +20,8 @@
 gpus=4
 
 source /home/siqiouya/anaconda3/bin/activate sllama_lightning
+source $HOME/sllama/bin/activate
+
 mkdir -p /scratch/siqiouya/
 
 rm -rf /scratch/siqiouya/*

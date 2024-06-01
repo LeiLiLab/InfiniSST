@@ -27,7 +27,7 @@ import torch
 import torch.nn as nn
 
 import transformers
-from transformers import Trainer, set_seed
+from transformers import Trainer, set_seed, EarlyStoppingCallback
 from torch.utils.data import Dataset
 import conversation as conversation_lib
 from train.dataset import PromptSpeechToTextDatasetCreator, SpeechToTextDatasetItem
@@ -46,6 +46,24 @@ DEFAULT_SPEECH_PATCH_TOKEN = "<sp_patch>"
 DEFAULT_SPEECH_START_TOKEN = "<sp_start>"
 DEFAULT_SPEECH_END_TOKEN = "<sp_end>"
 
+RESUME_LOGGING=False
+wandb.login(key="70ccf8fc506209e5355abe09452cbba1dd83a7e9", relogin=True) 
+run_name="gemma-7B-bi-s2"
+
+if RESUME_LOGGING:
+    run_id = ""
+    run = wandb.init(
+        id     = run_id,        ### Insert specific run id here if you want to resume a previous run
+        resume = True,          ### You need this to resume previous runs, but comment out reinit=True when using this
+        project = "llm-encoder",  ### Project should be created in your wandb account
+    )
+
+else:
+    run = wandb.init(
+        name    = run_name,     ### Wandb creates random run names if you skip this field, we recommend you give useful names
+        reinit  = True,         ### Allows reinitalizing runs when you re-run this cell
+        project = "llm-encoder",  ### Project should be created in your wandb account
+    )
 
 @dataclass
 class ModelArguments:
@@ -240,10 +258,10 @@ def train():
         cache_dir=training_args.cache_dir,
         #low_cpu_mem_usage=True,
         config=update_config,
-        #device_map=device_map,
+        device_map=device_map,
     )
     length_after_ssl, length_after_adp = model.model.initialize_speech_modules(
-        '/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt',
+        '/data/user_data/xixu/models/wav2_vec_vox_960h_pl.pt',
         speech_tower_type=None,
         len_adapter_channels=model.config.len_adapter_channels,
         len_adapter_kernel_sizes=model.config.len_adapter_kernel_sizes,
@@ -300,10 +318,13 @@ def train():
                                               length_after_ssl=length_after_ssl,
                                               length_after_adp=length_after_adp,
                                               model=model)
+
+    early_stopping_callback = EarlyStoppingCallback(early_stopping_patience=3)
     trainer = Trainer(model=model,
                     tokenizer=tokenizer,
                     args=training_args,
-                    **data_module)
+                    **data_module,)
+                    # callbacks=[early_stopping_callback])                    
 
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
         trainer.train(resume_from_checkpoint=True)

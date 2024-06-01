@@ -26,6 +26,7 @@ from model.model import SpeechLlamaModel, ZeroPadConv1dSubsampler
 from transformers.modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 from transformers.modeling_outputs import BaseModelOutputWithPast
 from transformers.models.llama.modeling_llama import LlamaModel
+from transformers.models.gemma.modeling_gemma import GemmaModel
 from transformers.cache_utils import Cache, DynamicCache
 
 original_forward = TransformerSentenceEncoderLayer.forward
@@ -1081,7 +1082,8 @@ def replace_uni_train(blocksize=1):
     TransformerEncoder.extract_features = uni_transformer_encoder_extract_features
     TransformerSentenceEncoderLayer.forward = uni_self_attn_forward
     SpeechLlamaModel.initialize_speech_modules = uni_initialize_speech_modules
-    LlamaModel.forward = uni_llama_forward
+    # LlamaModel.forward = uni_llama_forward
+    GemmaModel.forward = uni_llama_forward
     
 
 def replace_uni_decode(blocksize=1):
@@ -1097,4 +1099,4 @@ def replace_uni_decode(blocksize=1):
     SpeechLlamaModel.initialize_speech_modules = uni_initialize_speech_modules
     MultiheadAttention.__init__ = uni_mha_init
     MultiheadAttention.forward = uni_mha_forward
-    LlamaModel.forward = uni_llama_forward
+    GemmaModel.forward = uni_llama_forward
