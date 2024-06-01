@@ -56,3 +56,15 @@ old_prefix = '/scratch/siqiouya/'
 new_prefix = '/scratch/xixu/'
 corrected_count = update_audio_paths(input_path, old_prefix, new_prefix)
 print(f"Total corrected paths: {corrected_count}")
+
+input_path = '/scratch/xixu/dataset/must-c-v1.0/en-es/train_mfa_30s_mix_filtered.tsv'
+old_prefix = '/scratch/siqiouya/'
+new_prefix = '/scratch/xixu/'
+corrected_count = update_audio_paths(input_path, old_prefix, new_prefix)
+print(f"Total corrected paths: {corrected_count}")
+
+input_path = '/scratch/xixu/dataset/must-c-v1.0/en-es/dev_mfa_30s_mix_filtered.tsv'
+old_prefix = '/scratch/siqiouya/'
+new_prefix = '/scratch/xixu/'
+corrected_count = update_audio_paths(input_path, old_prefix, new_prefix)
+print(f"Total corrected paths: {corrected_count}")

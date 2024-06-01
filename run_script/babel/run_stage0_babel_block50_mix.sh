@@ -1,54 +1,36 @@
 #!/usr/bin/env bash
 
-##SBATCH --nodelist=babel-4-23
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=4
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=256GB
-#SBATCH --gres=gpu:A6000:4
-##SBATCH --nodelist=babel-3-17
-##SBATCH --constraint=xeon-4116 
-##SBATCH --partition=gemini
-#SBATCH --time=1-00:00:00
-##SBATCH --dependency=afterok:job_id
-##SBATCH --array=1-7
-#SBATCH --account=siqiouyang
-#SBATCH --mail-type=ALL
-#SBATCH --mail-user=siqiouya@andrew.cmu.edu
-##SBATCH --output=/home/xixu/slurm.txts
-
 gpus=4
 
-source /home/siqiouya/anaconda3/bin/activate sllama_lightning
 source $HOME/sllama/bin/activate
 
-mkdir -p /scratch/siqiouya/
+mkdir -p /scratch/xixu/
 
-rm -rf /scratch/siqiouya/*
+rm -rf /scratch/xixu/*
 
 echo "Copying dataset."
-/usr/bin/cp -f /data/user_data/siqiouya/dataset.tar.zst /scratch/siqiouya/
+/usr/bin/cp -f /data/user_data/yuanjinw/dataset.tar.zst /scratch/xixu/
 echo "Dataset copied."
 
 echo "Extracting dataset."
-zstd --ultra -1 -d /scratch/siqiouya/dataset.tar.zst --stdout | tar axf - -C /scratch/siqiouya/
+zstd --ultra -1 -d /scratch/xixu/dataset.tar.zst --stdout | tar axf - -C /scratch/xixu/
 # tar -axf /scratch/siqiouya/dataset.tar.zst -C /scratch/siqiouya/
 echo "Dataset extracted."
 
-llm_model=/data/user_data/siqiouya/runs/pretrained/llama-2-7b/hf
-ssl_model=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
-data_path=/scratch/siqiouya/dataset/must-c-v1.0/en-es
+llm_model=google/gemma-7b
+ssl_model=/data/user_data/yuanjinw/models/wav2_vec_vox_960h_pl.pt
+data_path=/scratch/xixu/dataset/must-c-v1.0/en-es
 name=stage0-block50-mix
-save_path=/scratch/siqiouya/runs/$name
+save_path=/scratch/xixu/runs/$name
 
 mkdir -p ${save_path}
 
 # export WANDB_WATCH=all
-export WANDB_PROJECT=en-es
+export WANDB_PROJECT=llm-encoder
 export NCCL_DEBUG=INFO
 
-export PYTHONPATH=/home/siqiouya/work/sllama
-srun python /home/siqiouya/work/sllama/train/stage0.py \
+export PYTHONPATH=/home/yuanjinw/work/sllama
+srun python /home/yuanjinw/work/sllama/train/stage0.py \
     --llm-path ${llm_model} \
     --speech-encoder-path ${ssl_model} \
     --ssl-finetuned \

@@ -1,24 +1,8 @@
 #!/usr/bin/env bash
 
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=256GB
-#SBATCH --gres=gpu:A6000:4
-##SBATCH --constraint=xeon-4116 
-##SBATCH --partition=gemini
-#SBATCH --time=1-12:00:00
-##SBATCH --dependency=afterok:job_id
-##SBATCH --array=1-7
-#SBATCH --account=siqiouyang
-#SBATCH --mail-type=ALL
-#SBATCH --mail-user=siqiouya@andrew.cmu.edu
-##SBATCH --output=slurm_stage2_A100_40G.txt
 
 gpus=4
 
-# conda config --append envs_dirs /mnt/taurus/home/siqiouyang/anaconda3/envs/
-# source /mnt/taurus/home/siqiouyang/anaconda3/bin/activate /mnt/taurus/home/siqiouyang/anaconda3/envs/sllama
 
 source /home/siqiouya/anaconda3/bin/activate sllama_lightning
 
@@ -45,7 +29,7 @@ rm -rf $save_path
 mkdir -p $save_path
 
 # export WANDB_WATCH=all
-export WANDB_PROJECT=en-es
+export WANDB_PROJECT=llm-encoder
 
 export PYTHONPATH=/home/siqiouya/work/sllama
 torchrun  --nproc_per_node=$gpus --rdzv-endpoint=0.0.0.0:9106 \

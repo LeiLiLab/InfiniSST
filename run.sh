@@ -20,6 +20,7 @@ ssl_model=/data/user_data/yuanjinw/models/wav2_vec_vox_960h_pl.pt
 data_path=/scratch/xixu/dataset/must-c-v1.0/en-es
 name=gemma-stage1
 save_path=/scratch/xixu/runs/$name
+mkdir -p ${save_path}
 
 export PYTHONPATH=/home/yuanjinw/work/sllama_gemma
 SLURM_GPUS=8

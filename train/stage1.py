@@ -52,21 +52,21 @@ DEFAULT_SPEECH_END_TOKEN = "<sp_end>"
 RESUME_LOGGING=False
 wandb.login(key="70ccf8fc506209e5355abe09452cbba1dd83a7e9", relogin=True) 
 run_name="gemma-7B-bi-s1"
+wandb.init(project="en-es", entity="simulst", name=run_name)
+# if RESUME_LOGGING:
+#     run_id = ""
+#     run = wandb.init(
+#         id     = run_id,        ### Insert specific run id here if you want to resume a previous run
+#         resume = True,          ### You need this to resume previous runs, but comment out reinit=True when using this
+#         project = "llm-encoder",  ### Project should be created in your wandb account
+#     )
 
-if RESUME_LOGGING:
-    run_id = ""
-    run = wandb.init(
-        id     = run_id,        ### Insert specific run id here if you want to resume a previous run
-        resume = True,          ### You need this to resume previous runs, but comment out reinit=True when using this
-        project = "llm-encoder",  ### Project should be created in your wandb account
-    )
-
-else:
-    run = wandb.init(
-        name    = run_name,     ### Wandb creates random run names if you skip this field, we recommend you give useful names
-        reinit  = True,         ### Allows reinitalizing runs when you re-run this cell
-        project = "llm-encoder",  ### Project should be created in your wandb account
-    )
+# else:
+#     run = wandb.init(
+#         name    = run_name,     ### Wandb creates random run names if you skip this field, we recommend you give useful names
+#         reinit  = True,         ### Allows reinitalizing runs when you re-run this cell
+#         project = "llm-encoder",  ### Project should be created in your wandb account
+#     )
 
 @dataclass
 class ModelArguments:
