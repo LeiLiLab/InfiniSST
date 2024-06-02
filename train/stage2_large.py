@@ -243,7 +243,7 @@ def train():
         #device_map=device_map,
     )
     length_after_ssl, length_after_adp = model.model.initialize_speech_modules(
-        '/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt',
+        '/data/user_data/yuanjinw/models/hubert_large_ll60k_finetune_ls960.pt',
         speech_tower_type=None,
         len_adapter_channels=model.config.len_adapter_channels,
         len_adapter_kernel_sizes=model.config.len_adapter_kernel_sizes,
