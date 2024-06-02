@@ -15,6 +15,7 @@ from fairseq.models.speech_to_text import (
     Conv1dSubsampler,
 )
 from fairseq.models.wav2vec import Wav2VecEncoder
+from fairseq.models.hubert import HubertEncoder
 from fairseq.optim.lr_scheduler.inverse_square_root_schedule import (
     InverseSquareRootLRScheduleConfig,
     InverseSquareRootSchedule
@@ -251,13 +252,47 @@ class SpeechLlamaModel(LlamaModel):
                                                          config.len_adapter_channels, config.len_adapter_kernel_sizes,
                                                          config.stage1_complete, ssl_fintuned)      
         self.speech_features_extracted = False
+        self.speech_tower_type = None
 
+    def _get_feat_extract_output_lengths(self, input_lengths: torch.LongTensor):
+        """
+        Computes the output length of the convolutional layers
+        """
+
+        def _conv_out_length(input_length, kernel_size, stride):
+            return torch.floor((input_length - kernel_size) / stride + 1)
+
+        conv_cfg_list = eval(self.speech_tower.cfg.conv_feature_layers)
+
+        for i in range(len(conv_cfg_list)):
+            input_lengths = _conv_out_length(
+                input_lengths, conv_cfg_list[i][1], conv_cfg_list[i][2]
+            )
+
+        return input_lengths.to(torch.long)  
+          
     def initialize_speech_modules(self, speech_tower_path, speech_tower_type=None,
                                    len_adapter_channels=None, len_adapter_kernel_sizes=None,
                                    stage1_complete=False, ssl_fintuned=False):
         # loading pretrained ssl model
+        if speech_tower_type == "hubert":
+            print("Loading hubert")
+            state = fairseq.checkpoint_utils.load_checkpoint_to_cpu(speech_tower_path)
+            models, cfg, task = fairseq.checkpoint_utils.load_model_ensemble_and_task([speech_tower_path])
+            _model = models[0]
+            hubert_model = _model.w2v_encoder
+            new = {}
+            for key in state['model'].keys():
+                new_key = key.replace('w2v_encoder.', '')
+                if not new_key.startswith('proj'):
+                    new[new_key] = state['model'][key]
+            hubert_model.load_state_dict(new, strict=False)
+            model = hubert_model.w2v_model
+            speech_dimension = state['cfg']['model']['w2v_args']['model'].encoder_embed_dim
+            self.speech_tower_type = "hubert"
+            print("Loading ends")
         # wav2vec 2.0
-        if not ssl_fintuned: # ssl model
+        elif not ssl_fintuned: # ssl model
             state = fairseq.checkpoint_utils.load_checkpoint_to_cpu(speech_tower_path)
             w2v_args = state["args"]
             task = fairseq.tasks.setup_task(w2v_args)
@@ -282,9 +317,12 @@ class SpeechLlamaModel(LlamaModel):
                                      len_adapter_channels,
                                      speech_dimension,
                                      [int(k) for k in len_adapter_kernel_sizes.split(',')]
-                                 ) 
+                                 )
         self.mm_mlp_adapter = nn.Linear(speech_dimension, self.config.hidden_size)
-        length_after_ssl = self.speech_tower._get_feat_extract_output_lengths
+        if speech_tower_type == "hubert":
+            length_after_ssl = self._get_feat_extract_output_lengths
+        else:
+            length_after_ssl = self.speech_tower._get_feat_extract_output_lengths
         length_after_adp = self.mm_length_adapter.get_out_seq_lens_tensor
         
         if not stage1_complete:
@@ -298,14 +336,18 @@ class SpeechLlamaModel(LlamaModel):
                 
     def get_ssl_feature_w2v(self, src_tokens, src_lengths, after_lens):
         padding_mask = lengths_to_padding_mask(src_lengths)
-        res = self.speech_tower.extract_features(src_tokens, padding_mask)
-        feature, padding_mask = res["x"], res["padding_mask"]
+        if self.speech_tower_type == "hubert":
+            feature, padding_mask = self.speech_tower.extract_features(src_tokens, padding_mask, mask=False)
+        else:
+            res = self.speech_tower.extract_features(src_tokens, padding_mask)
+            feature, padding_mask = res["x"], res["padding_mask"]
         if padding_mask is None:
         # Create a padding mask of shape [batch_size, seq_length] with all False values
             padding_mask = torch.zeros(feature.shape[:2], dtype=torch.bool, device=feature.device)
         output_length = (1 - padding_mask.int()).sum(dim=1)
         feature, input_lengths = self.mm_length_adapter(feature, output_length)
-        assert after_lens.equal(input_lengths), "pre calculate length not match with the forward length"
+        if self.speech_tower_type != "hubert":
+            assert after_lens.equal(input_lengths), "pre calculate length not match with the forward length"
         feature = self.mm_mlp_adapter(feature)       
         return feature
         
@@ -318,7 +360,7 @@ class SpeechLlamaModel(LlamaModel):
         }
         x, padding_mask = self.hubert_model.extract_features(**hubert_args)
         output_length = (1 - padding_mask.int()).sum(dim=1)
-        return x, padding_mask, output_length  
+        return x, padding_mask, output_length
     
     def forward_incremental(
         self,
