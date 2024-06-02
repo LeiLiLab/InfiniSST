@@ -34,6 +34,7 @@ from train.dataset import PromptSpeechToTextDatasetCreator, SpeechToTextDatasetI
 from model.model import SpeechLlamaForCausalLM
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 from train.uni_wav2vec_monkey_patch import replace_uni_train
+import wandb
 # TODO: import and use code from ../data/dataset.py
 
 IGNORE_INDEX = -100

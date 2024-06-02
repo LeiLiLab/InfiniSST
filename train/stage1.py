@@ -52,7 +52,7 @@ DEFAULT_SPEECH_END_TOKEN = "<sp_end>"
 RESUME_LOGGING=False
 wandb.login(key="70ccf8fc506209e5355abe09452cbba1dd83a7e9", relogin=True) 
 run_name="gemma-7B-bi-s1"
-wandb.init(project="en-es", entity="simulst", name=run_name)
+wandb.init(project="llm-encoder", entity="simulst", name=run_name)
 # if RESUME_LOGGING:
 #     run_id = ""
 #     run = wandb.init(
