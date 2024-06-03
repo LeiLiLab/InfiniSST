@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 
 cd train
-# llm_model='path to llama2'
-
-# PYTHONPATH=/home/yuanjinw/work/sllama_gemma \
-# python extract_embedding.py \
-#   --model_name_or_path ${llm_model}
 
 gpus=8
 
