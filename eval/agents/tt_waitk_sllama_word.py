@@ -69,6 +69,7 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             self.load_benchmark_data(args.target)
         self.batch_size = args.batch_size
         self.test_instance_id = 0
+        self.warmup = args.warmup
     
     def build_states(self):
         return S2TAgentStates([], None, None)
@@ -193,6 +194,11 @@ class WaitkSpeechLlama(SpeechToTextAgent):
             type=int,
             default=1
         )
+        parser.add_argument(
+            "--warmup",
+            type=int,
+            default=0,
+        )
 
     def policy(self, states: Optional[S2TAgentStates] = None):
         if states is None:
@@ -207,7 +213,7 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         if not states.source_finished:
             if (
                 length_in_seconds * 1000 / self.source_segment_size
-            ) < self.waitk_lagging:
+            ) < self.waitk_lagging + self.warmup:
                 return ReadAction()
             
         if states.ref_target_ids is None and getattr(self, "tgt_id_segs", None) is not None:
@@ -247,8 +253,11 @@ class WaitkSpeechLlama(SpeechToTextAgent):
         inputs = self.tokenizer([prompt_inputs])
         input_ids = inputs.input_ids[0] + states.target_ids + prediction_ids
         input_ids_tensor = torch.as_tensor([input_ids]).cuda()
+        n_word = self.n_word_per_input
+        if length_in_seconds == self.waitk_lagging + self.warmup:
+            n_word += self.warmup * self.n_word_per_input
 
-        stopping_criteria = SpaceStoppingCriteria(self.tokenizer, self.n_word_per_input)
+        stopping_criteria = SpaceStoppingCriteria(self.tokenizer, n_word)
         with torch.inference_mode():
             # output = self.model(
             #     input_ids=input_ids_tensor,

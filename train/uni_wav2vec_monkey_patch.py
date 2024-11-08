@@ -704,10 +704,10 @@ def uni_mha_init(
     ] = 16,  # This should be part of the config
     max_batch_size: Optional[
         int
-    ] = 32,
+    ] = 8,
     max_seq_len: Optional[
         int
-    ] = 3000,
+    ] = 6000,
 ):
     super(MultiheadAttention, self).__init__()
 
@@ -954,7 +954,7 @@ def uni_mha_forward(
         assert k is not None and v is not None
         if start_pos == 0:
             self.prev_key_padding_mask = None
-        else:
+        elif self.prev_key_padding_mask is not None:
             self.prev_key_padding_mask = self.prev_key_padding_mask[:, :start_pos]
         key_padding_mask = MultiheadAttention._append_prev_key_padding_mask(
             key_padding_mask=key_padding_mask,

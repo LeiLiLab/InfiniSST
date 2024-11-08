@@ -138,18 +138,18 @@ class IncrementalLocalAgreement(LocalAgreement):
             )
         
         output_ids = output['sequences']
-        states.past_key_values = output['past_key_values']
         
         input_token_len = input_ids_tensor.shape[1]
         if states.source_finished:
+            prediction_ids = output_ids[0, input_token_len:]
             possible_full_word = self.tokenizer.decode(output_ids[0, input_token_len:], skip_special_tokens=True).strip()
             total_pop = 0
         else:
-            best_hypo = self.tokenizer.decode(output_ids[0, len(inputs.input_ids[0]):], skip_special_tokens=True).split(' ')
+            best_hypo = output_ids[0, len(inputs.input_ids[0]):]
             self.best_hypos.append(best_hypo)
             if len(self.best_hypos) >= self.la_n:
                 min_len = min(len(hypo) for hypo in self.best_hypos[-self.la_n:])
-                longest_common_prefix = None
+                prediction_ids = None
                 for i in range(min_len):
                     equal = True
                     for j in range(1, self.la_n):
@@ -157,15 +157,15 @@ class IncrementalLocalAgreement(LocalAgreement):
                             equal = False
                             break
                     if not equal:
-                        longest_common_prefix = self.best_hypos[-self.la_n][:i]
+                        prediction_ids = self.best_hypos[-self.la_n][:i]
+                        total_pop = len(best_hypo) - i
                         break
-                if longest_common_prefix is None:
-                    longest_common_prefix = best_hypo
+                if prediction_ids is None:
+                    prediction_ids = best_hypo[:min_len]
+                    total_pop = len(best_hypo) - min_len
+                longest_common_prefix = self.tokenizer.decode(prediction_ids, skip_special_tokens=True)
                 existing_target = " ".join(states.target)
-                possible_full_word = " ".join(longest_common_prefix)[len(existing_target):].strip()
-
-                prediction_ids = self.tokenizer.encode(possible_full_word, add_special_tokens=False)
-                total_pop = output_ids.size(1) - input_token_len - len(prediction_ids)
+                possible_full_word = longest_common_prefix[len(existing_target):].strip()
             else:
                 total_pop = output_ids.size(1) - input_token_len
 
@@ -182,6 +182,8 @@ class IncrementalLocalAgreement(LocalAgreement):
 
         states.num_frames_read = len(states.source)
         states.target_ids.extend(prediction_ids)
+
+        print(self.tokenizer.decode(states.target_ids, skip_special_tokens=True))
 
         if not states.source_finished and length_in_seconds < self.la_n * self.source_segment_size / 1000:
             return ReadAction()
