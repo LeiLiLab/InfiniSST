@@ -28,12 +28,14 @@ class S2TAgentStates(AgentStates):
     target_ids: list
     ref_target_ids: list
     position_ids: torch.Tensor
+    most_attended_indices: torch.Tensor
 
     def reset(self):
         super().reset()
         self.target_ids = []
         self.ref_target_ids = None
         self.position_ids = None
+        self.most_attend_pos = torch.LongTensor([])
 
 
 @entrypoint
@@ -70,7 +72,7 @@ class AlignAtt(SpeechToTextAgent):
         self.test_instance_id = 0
 
     def build_states(self):
-        return S2TAgentStates([], None, None)
+        return S2TAgentStates([], None, None, torch.LongTensor([]))
 
     def load_model(self, model_dir):
         load_type = torch.float16
@@ -265,6 +267,13 @@ class AlignAtt(SpeechToTextAgent):
                 most_attended_idx = sum_att.argmax()
                 if speech_start_pos + most_attended_idx >= speech_end_pos - self.frame_num:
                     break
+
+                states.most_attended_indices = torch.cat(
+                    [
+                        states.most_attended_indices, 
+                        torch.LongTensor([most_attended_idx * 1280])
+                    ]
+                )
             
             prediction_ids.append(token_id)
 
@@ -284,7 +293,7 @@ class AlignAtt(SpeechToTextAgent):
         states.target_ids.extend(prediction_ids)
         possible_full_word = self.tokenizer.decode(prediction_ids, skip_special_tokens=True).strip()
 
-        print(self.tokenizer.decode(states.target_ids))
+        # print(self.tokenizer.decode(states.target_ids))
 
         if states.source_finished:
             self.test_instance_id += 1

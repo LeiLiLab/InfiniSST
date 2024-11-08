@@ -41,16 +41,16 @@ simuleval \
   --batch-size ${batch_size}
 
 
-simuleval \
-  --agent eval/agents/tt_alignatt_sllama.py \
-  --agent-class "agents.AlignAtt" \
-  --source-segment-size ${src_segment_size} \
-  --frame-num ${frame_num} \
-  --min-start-sec ${ms} \
-  --model-dir ${checkpoint_dir} \
-  --prompt "<speech_here>" \
-  --source /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON-debug-100_30s.source \
-  --target /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON-debug-100_30s.target \
-  --output debug-bi \
-  --quality-metrics BLEU --sacrebleu-tokenizer 13a \
-  --batch-size ${batch_size}
+# simuleval \
+#   --agent eval/agents/tt_alignatt_sllama.py \
+#   --agent-class "agents.AlignAtt" \
+#   --source-segment-size ${src_segment_size} \
+#   --frame-num ${frame_num} \
+#   --min-start-sec ${ms} \
+#   --model-dir ${checkpoint_dir} \
+#   --prompt "<speech_here>" \
+#   --source /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON-debug-100_30s.source \
+#   --target /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON-debug-100_30s.target \
+#   --output debug-bi \
+#   --quality-metrics BLEU --sacrebleu-tokenizer 13a \
+#   --batch-size ${batch_size}
