@@ -71,6 +71,8 @@ class HoldN(SpeechToTextAgent):
         self.batch_size = args.batch_size
         self.test_instance_id = 0
 
+        self.gen_lens = []
+
     def build_states(self):
         return S2TAgentStates([], None, None)
 
@@ -255,6 +257,9 @@ class HoldN(SpeechToTextAgent):
         else:
             prediction_id_tensor = output_ids[0, input_token_len:]
             prediction_id = prediction_id_tensor[:-self.hold_n].tolist()
+
+            self.gen_lens.append(len(self.tokenizer.decode(prediction_id_tensor, skip_special_tokens=True).split(' ')))
+            print(sum(self.gen_lens) / len(self.gen_lens))
 
             if len(prediction_id) > 0:
                 if prediction_id[-1] == self.tokenizer.eos_token_id:
