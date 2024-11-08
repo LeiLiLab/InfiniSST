@@ -32,6 +32,7 @@ class IncrementalS2TAgentStates(S2TAgentStates):
     past_key_values: list
     speech_prefix_length: int
     speech_past_length: int
+    speech_embedding_length: int
     attention_mask: torch.Tensor
     future_text_mask: list
 
@@ -42,6 +43,7 @@ class IncrementalS2TAgentStates(S2TAgentStates):
         self.past_key_values = None
         self.speech_prefix_length = -1
         self.speech_past_length = 0
+        self.speech_embedding_length = 0
         self.future_text_indices = []
         self.attention_mask = None
         self.future_text_mask = None
@@ -56,15 +58,17 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
     def __init__(self, args):
         replace_uni_decode(args.blocksize)
         super().__init__(args)
+        self.time = []
     
     def build_states(self):
-        return IncrementalS2TAgentStates([], None, None, None, 0, None, -1, 0, None, None)
+        return IncrementalS2TAgentStates([], None, None, None, 0, None, -1, 0, 0, None, None)
     
     @staticmethod
     def add_args(parser):
         WaitkSpeechLlama.add_args(parser)
         parser.add_argument("--blocksize", default=1, type=int)
 
+    @torch.inference_mode()
     def policy(self, states: Optional[IncrementalS2TAgentStates] = None):
         if states is None:
             states = self.states
@@ -75,10 +79,12 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
         else:
             length_in_seconds = float(len(states.source)) / states.source_sample_rate
 
+        # print(length_in_seconds, 's')
+
         if not states.source_finished:
             if (
                 length_in_seconds * 1000 / self.source_segment_size
-            ) < self.waitk_lagging:
+            ) < self.waitk_lagging + self.warmup:
                 return ReadAction()
             
         if states.ref_target_ids is None and getattr(self, "tgt_id_segs", None) is not None:
@@ -115,73 +121,94 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
         self.model.model.speech_features_extracted = False
             
         inputs = self.tokenizer([prompt_inputs])
+        stopping_criteria = SpaceStoppingCriteria(self.tokenizer, self.n_word_per_input)
+
+        prediction_ids = []
+        pop_flag = True
+        n_word = self.n_word_per_input
+        if length_in_seconds == self.waitk_lagging + self.warmup:
+            n_word += self.warmup * self.n_word_per_input
+
+        # start_time = time.time()
+
+        # input_ids = inputs.input_ids[0] + states.target_ids
+        # input_ids_tensor = torch.as_tensor([input_ids]).cuda()
+
+        # beam = 4
+
+        # output = self.model.generate(
+        #     attention_mask=input_ids_tensor.ne(self.tokenizer.pad_token_id),
+        #     input_ids=input_ids_tensor,
+        #     speech_batch=speech_batch,
+        #     src_lengths=n_frames.to(device=self.model.device),
+        #     after_lens=speech_lens.to(device=self.model.device),
+        #     do_sample=False,
+        #     num_beams=beam,
+        #     num_return_sequences=1,
+        #     max_new_tokens=int(max_number_of_tokens - len(states.target_ids) - len(prediction_ids)),
+        #     repetition_penalty=self.repeat_penalty,
+        #     stopping_criteria=[stopping_criteria] if not states.source_finished else None,
+        #     states=states,
+        #     use_cache=True,
+        #     output_scores=True,
+        #     return_dict_in_generate=True,
+        #     pad_token_id=self.tokenizer.eos_token_id,
+        # )
+        # if states.source_finished:
+        #     prediction_ids = output['sequences'][0, input_ids_tensor.size(1):].tolist()
+        # else:
+        #     output_ids = output['sequences'][:, :-1]
+        #     prediction_ids = output_ids[0].tolist()
+
+        #     n_word_input = len(self.tokenizer.decode(input_ids_tensor[0], skip_special_tokens=True).split(' '))
+        #     extra_pop = 0
+        #     while len(self.tokenizer.decode(prediction_ids, skip_special_tokens=True).split(' ')) - n_word_input > self.n_word_per_input:
+        #         prediction_ids.pop()
+        #         extra_pop += 1
+        #     prediction_ids = prediction_ids[input_ids_tensor.size(1):]
         
+        while True:
+            input_ids = inputs.input_ids[0] + states.target_ids + prediction_ids
+            input_ids_tensor = torch.as_tensor([input_ids]).cuda()
 
-        stopping_criteria = SpaceStoppingCriteria(self.tokenizer, 1)
-        with torch.inference_mode():
-            # output = self.model(
-            #     input_ids=input_ids_tensor,
-            #     speech_batch=speech_batch,
-            #     src_lengths=n_frames.to(device=self.model.device),
-            #     after_lens=speech_lens.to(device=self.model.device),
-            # )[0][0, -1]
+            output = self.model(
+                input_ids=input_ids_tensor.repeat(self.batch_size, 1),
+                attention_mask=input_ids_tensor.ne(self.tokenizer.pad_token_id).repeat(self.batch_size, 1),
+                use_cache=True,
+                speech_batch=speech_batch.repeat(self.batch_size, 1),
+                src_lengths=n_frames.to(device=self.model.device).repeat(self.batch_size),
+                after_lens=speech_lens.to(device=self.model.device).repeat(self.batch_size),
+                past_key_values=states.past_key_values,
+                states=states
+            )
+            logits = output.logits[0, -1]
+            token_id = logits.argmax().item()
 
-            # output_ids = self.model.generate(
-            #     attention_mask=input_ids_tensor.ne(self.tokenizer.pad_token_id).repeat(self.batch_size, 1),
-            #     input_ids=input_ids_tensor.repeat(self.batch_size, 1),
-            #     speech_batch=speech_batch.repeat(self.batch_size, 1),
-            #     src_lengths=n_frames.to(device=self.model.device).repeat(self.batch_size),
-            #     after_lens=speech_lens.to(device=self.model.device).repeat(self.batch_size),
-            #     do_sample=False,
-            #     num_beams=1,
-            #     max_new_tokens=max_number_of_tokens - len(states.target_ids) - len(prediction_ids),
-            #     repetition_penalty=self.repeat_penalty,
-            #     stopping_criteria=[stopping_criteria] if not states.source_finished else None,
-            #     states=states,
-            #     use_cache=True
-            # )
-
-            prediction_ids = []
-            pop_flag = True
-            n_word = self.n_word_per_input
-            while True:
-                input_ids = inputs.input_ids[0] + states.target_ids + prediction_ids
-                input_ids_tensor = torch.as_tensor([input_ids]).cuda()
-
-                output = self.model(
-                    input_ids=input_ids_tensor.repeat(self.batch_size, 1),
-                    attention_mask=input_ids_tensor.ne(self.tokenizer.pad_token_id).repeat(self.batch_size, 1),
-                    use_cache=True,
-                    speech_batch=speech_batch.repeat(self.batch_size, 1),
-                    src_lengths=n_frames.to(device=self.model.device).repeat(self.batch_size),
-                    after_lens=speech_lens.to(device=self.model.device).repeat(self.batch_size),
-                    past_key_values=states.past_key_values,
-                    states=states
-                )
-                logits = output.logits[0, -1]
-                token_id = logits.argmax().item()
-
-                if not states.source_finished:
-                    if self.tokenizer.convert_ids_to_tokens(token_id).startswith('▁'):
-                        if len(prediction_ids) > 0:
-                            n_word -= 1
-                            if n_word == 0:
-                                pop_flag = True
-                                break
-                    elif token_id == self.tokenizer.eos_token_id:
-                        pop_flag = True
-                        break
-                else:
-                    if token_id == self.tokenizer.eos_token_id:
-                        break
-                
-                prediction_ids.append(token_id)
-
-                if len(states.target_ids + prediction_ids) >= max_number_of_tokens:
+            if not states.source_finished:
+                if self.tokenizer.convert_ids_to_tokens(token_id).startswith('▁'):
+                    if len(prediction_ids) > 0:
+                        n_word -= 1
+                        if n_word == 0:
+                            pop_flag = True
+                            break
+                elif token_id == self.tokenizer.eos_token_id:
+                    pop_flag = True
                     break
+            else:
+                if token_id == self.tokenizer.eos_token_id:
+                    break
+            
+            prediction_ids.append(token_id)
+
+            if len(states.target_ids + prediction_ids) >= max_number_of_tokens:
+                break
 
         # if getattr(self, "prof", None) is not None:
         #     self.prof.step()
+
+        # if not states.source_finished:
+        #     self.time.append(time.time() - start_time)
+        #     print(sum(self.time) / len(self.time))
 
         if pop_flag:
             states.future_text_mask.pop()
@@ -194,9 +221,26 @@ class IncrementalWaitkSpeechLlama(WaitkSpeechLlama):
                     states.past_key_values[i][1][:, :, :-1]
                 )
 
+            # length = states.speech_embedding_length + output_ids.size(1) - extra_pop
+            # # != states.past_key_values[0][0].size(2) - extra_pop
+
+            # states.future_text_mask = states.future_text_mask[:length - 1]
+            # states.position_ids = states.position_ids[:, :length - 1]
+
+            # states.past_key_values = list(states.past_key_values)
+            # for i in range(len(states.past_key_values)):
+            #     states.past_key_values[i] = (
+            #         states.past_key_values[i][0][[0], :, :length - 1],
+            #         states.past_key_values[i][1][[0], :, :length - 1]
+            #     )
+
+            # assert states.speech_embedding_length + output['sequences'].size(1) - 2 - extra_pop == states.past_key_values[0][0].size(2) + 1
+
         states.num_frames_read = len(states.source)
         states.target_ids.extend(prediction_ids)
         possible_full_word = self.tokenizer.decode(prediction_ids, skip_special_tokens=True)
+
+        print(self.tokenizer.decode(states.target_ids, skip_special_tokens=True))
 
         if states.source_finished:
             self.test_instance_id += 1

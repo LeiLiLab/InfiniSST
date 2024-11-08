@@ -10,7 +10,7 @@
 ##SBATCH --partition=gemini
 #SBATCH --time=1-00:00:00
 ##SBATCH --dependency=afterok:job_id
-#SBATCH --array=1-5:1
+#SBATCH --array=1-5
 #SBATCH --account=siqiouyang
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=siqiouya@andrew.cmu.edu
@@ -22,21 +22,23 @@ src_segment_size=1000
 k=${SLURM_ARRAY_TASK_ID}
 blocksize=50
 n_word_per_input=3
+warmup=5
 batch_size=8
 
-checkpoint_dir=/data/user_data/siqiouya/runs/stage3-uni-waco-word-block50-fixed-mix-from-stage0
+checkpoint_dir=/data/user_data/siqiouya/runs/en-fr/stage3-uni-waco-block50-mix-from-stage0
 
 export PYTHONPATH=/home/siqiouya/work/sllama:/home/siqiouya/work/SimulEval
 simuleval \
   --agent eval/agents/tt_waitk_sllama_word_incremental.py \
   --agent-class "agents.IncrementalWaitkSpeechLlama" \
   --source-segment-size ${src_segment_size} \
-  --waitk-lagging ${k} --n-word-per-input ${n_word_per_input} \
+  --waitk-lagging ${k} --warmup ${warmup} --n-word-per-input ${n_word_per_input} \
   --repeat-penalty 1.0 \
   --model-dir ${checkpoint_dir} --blocksize ${blocksize} \
+  --max-len-a 6 --max-len-b 40 \
   --prompt "<speech_here>" \
-  --source /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON_30s.source \
-  --target /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON_30s.target \
-  --output ${checkpoint_dir}/simul-results/30s-wait-k-word-inc-opt-1000ms-n${n_word_per_input}-bsz${batch_size}/wait-${src_segment_size}ms-${k} \
+  --source /data/user_data/siqiouya/dataset/must-c-v1.0/en-fr/tst-COMMON_30s.source \
+  --target /data/user_data/siqiouya/dataset/must-c-v1.0/en-fr/tst-COMMON_30s.target \
+  --output ${checkpoint_dir}/simul-results/30s-wait-k-word-inc-opt-1000ms-n${n_word_per_input}-warmup${warmup}/wait-${src_segment_size}ms-${k} \
   --quality-metrics BLEU --sacrebleu-tokenizer 13a \
   --batch-size ${batch_size}
