@@ -15,6 +15,7 @@
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=siqiouya@andrew.cmu.edu
 ##SBATCH --output=/home/xixu/slurm.txts
+#SBATCH --output=slurm_logs/%A_%a.out
 
 source /home/siqiouya/anaconda3/bin/activate sllama_lightning
 
