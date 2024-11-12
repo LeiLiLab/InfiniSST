@@ -8,6 +8,7 @@ class SeparatorStyle(Enum):
     SINGLE = auto()
     TWO = auto()
     MPT = auto()
+    LLAMA_3 = auto()
 
 
 @dataclasses.dataclass
@@ -38,15 +39,18 @@ class Conversation:
             return ret
         elif self.sep_style == SeparatorStyle.TWO:
             seps = [self.sep, self.sep2]
-            ret = self.system + seps[0]
+            # ret = self.system + seps[0]
+            # for i, (role, message) in enumerate(self.messages):
+            #     if message:
+            #         if type(message) is tuple:
+            #             message, _, _ = message
+            #         ret += role + ": " + message + seps[i % 2]
+            #     else:
+            #         ret += role + ":"
+            # return ret
             for i, (role, message) in enumerate(self.messages):
-                if message:
-                    if type(message) is tuple:
-                        message, _, _ = message
-                    ret += role + ": " + message + seps[i % 2]
-                else:
-                    ret += role + ":"
-            return ret
+                if role == "USER":
+                    ret = message + self.sep2
         if self.sep_style == SeparatorStyle.MPT:
             ret = self.system + self.sep
             for role, message in self.messages:
@@ -57,6 +61,20 @@ class Conversation:
                 else:
                     ret += role
             return ret
+        elif self.sep_style == SeparatorStyle.LLAMA_3:
+            ret = "<|begin_of_text|>"
+            # if self.system_message:
+            #     ret += system_prompt
+            # else:
+            #     ret += ""
+            ret += self.system
+            for i, (role, message) in enumerate(self.messages):
+                if message:
+                    ret += f"<|start_header_id|>{role}<|end_header_id|>\n\n"
+                    ret += f"{message.strip()}<|eot_id|>"
+                else:
+                    ret += f"<|start_header_id|>{role}<|end_header_id|>\n\n"
+            return ret     
         else:
             raise ValueError(f"Invalid style: {self.sep_style}")
 
@@ -150,7 +168,8 @@ class Conversation:
             offset=self.offset,
             sep_style=self.sep_style,
             sep=self.sep,
-            sep2=self.sep2)
+            sep2=self.sep2,
+            stop_token_ids=self.stop_token_ids)
 
     def dict(self):
         if len(self.get_images()) > 0:
@@ -348,17 +367,28 @@ conv_llava_v1 = Conversation(
 )
 
 conv_speech_v1 = Conversation(
-    system="You are a large language and speech assistant."
-           "You are able to understand the speech content that the user provides, and assist the user with a variety of tasks using natural language."
-           "Follow the instructions carefully and explain your answers in detail.",
+    system="You are able to understand the speech content that the user provides, and assist the user to translate it into another language",
     roles=("USER", "ASSISTANT"),
     version="v1",
     messages=(),
     offset=0,
     sep_style=SeparatorStyle.TWO,
     sep=" ",
-    sep2="</s>",
+    sep2="<|eot_id|>",
+    stop_token_ids=[128001, 128009],
 )
+
+conv_speech_llama_3 = Conversation(
+        # system="<|start_header_id|>system<|end_header_id|>\n\nYou are a large language and speech translator. You are able to understand the speech content that the user provides, and assist the user to translate it into german<|eot_id|>",
+        system= "You are a large language and speech translator. You are able to understand the speech content that the user provides, and assist the user to translate it into german",
+        roles=("user", "assistant"),
+        sep_style=SeparatorStyle.LLAMA_3,
+        messages=(),
+        offset=0,
+        sep=" ",
+        sep2="<|eot_id|>",
+        stop_token_ids=[128001, 128009],
+    )
 
 default_conversation = conv_speech_v1
 conv_templates = {

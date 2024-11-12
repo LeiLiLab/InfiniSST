@@ -33,7 +33,7 @@ import conversation as conversation_lib
 from train.dataset import PromptSpeechToTextDatasetCreator, SpeechToTextDatasetItem
 from model.model import SpeechLlamaForCausalLM
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
-from train.uni_wav2vec_monkey_patch import replace_uni_train
+# from train.uni_wav2vec_monkey_patch import replace_uni_train
 # TODO: import and use code from ../data/dataset.py
 
 IGNORE_INDEX = -100
@@ -89,7 +89,12 @@ class DataArguments:
     data_split_train: str = field(default=None,
                            metadata={"help": "Path to the training data."})
     data_split_eval: str = field(default=None,
-                           metadata={"help": "Path to the training data."})                           
+                           metadata={"help": "Path to the training data."})
+    source_lang: str = field(default="English",
+                           metadata={"help": "Source language name"})
+    target_lang: str = field(default="Spanish",
+                           metadata={"help": "Target language name"})
+                           
 @dataclass
 class TrainingArguments(transformers.TrainingArguments):
     cache_dir: Optional[str] = field(default=None)
@@ -121,83 +126,147 @@ def safe_save_model_for_hf_trainer(trainer: transformers.Trainer,
 class DataCollatorForSupervisedDataset(object):
     """Collate examples for supervised fine-tuning."""
 
-    tokenizer: transformers.PreTrainedTokenizer
-    length_after_ssl: None
-    length_after_adp: None
-    model: SpeechLlamaForCausalLM
-    prompt_list_st = ['<speech_here>']
+    # tokenizer: transformers.PreTrainedTokenizer
+    # length_after_ssl: None
+    # length_after_adp: None
+    # model: SpeechLlamaForCausalLM
+    def __init__(self, tokenizer, length_after_ssl, length_after_adp, model, source_lang, target_lang):
+        self.tokenizer = tokenizer
+        self.length_after_ssl = length_after_ssl
+        self.length_after_adp = length_after_adp
+        self.model = model
+        self.source_lang = source_lang
+        self.target_lang = target_lang    
+ 
     def reset_speech_features_flag(self):
         self.model.model.speech_features_extracted = False
+    
+    # def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
+    #     # todo: sort samples by descending number of frames
+    #     self.reset_speech_features_flag()
+    #     indices = torch.tensor([x.index for x in samples], dtype=torch.long)
+    #     speech_batch = _collate_frames([x.source for x in samples], is_audio_input=True)
+    #     n_frames = torch.tensor([x.source.size(0) for x in samples], dtype=torch.long)
+    #     speech_lens = self.length_after_adp(self.length_after_ssl(n_frames)) # after forward ssl model and length adapter
+
+    #     texts = [x.target for x in samples]
+     
+    #     to_adds = [int(speech_len)*DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
+    #     to_adds = [DEFAULT_SPEECH_START_TOKEN + to_add + DEFAULT_SPEECH_END_TOKEN for to_add in to_adds]
+
+
+    #     conv = conversation_lib.default_conversation.copy()
+    #     # conv = random.choice(list(conversation_lib.conv_templates.values())).copy()
+    #     conversations = []
+    #     for to_add, text in zip(to_adds, texts):
+    #         conv.messages = []
+    #         # before, after = prompt.split('<speech_here>')
+    #         # mm_prompt = before + to_add + after
+    #         conv.append_message(conv.roles[0], to_add)
+    #         conv.append_message(conv.roles[1], text)
+    #         conversations.append(conv.get_prompt())
+    #     input_ids = self.tokenizer(
+    #         conversations,
+    #         return_tensors="pt",
+    #         padding="longest",
+    #         #max_length=tokenizer.model_max_length,
+    #         truncation=False,
+    #     ).input_ids
+    #     targets = input_ids.clone()
+    #     sep = conv.sep + conv.roles[1] + ": "
+    #     for conversation, target in zip(conversations, targets):
+    #         total_len = int(target.ne(self.tokenizer.pad_token_id).sum())
+    #         rounds = conversation.split(conv.sep2)
+    #         cur_len = 1
+    #         target[:cur_len] = IGNORE_INDEX
+    #         for i, rou in enumerate(rounds):
+    #             if rou == "":
+    #                 break
+    #             parts = rou.split(sep)
+    #             if len(parts) != 2:
+    #                 break
+    #             parts[0] += sep
+    #             round_len = len(self.tokenizer(rou).input_ids)
+    #             instruction_len = len(self.tokenizer(parts[0]).input_ids) - 2
+    #             target[cur_len : cur_len + instruction_len] = IGNORE_INDEX
+    #             cur_len += round_len
+    #         # target[cur_len:] = IGNORE_INDEX
+    #                     # Ensure the final EOS token is always in targets
+    #         if cur_len < total_len:
+    #             target[cur_len:total_len-1] = IGNORE_INDEX
+    #             target[total_len-1] = self.tokenizer.eos_token_id
+
+    #     #print("conversations:", conversations[0])
+    #     #print("input_ids:", input_ids[0])
+    #     #print("targets:", targets[0])
+    #     #print(self.tokenizer.convert_ids_to_tokens(input_ids[0]))
+                
+    #     batch = dict(
+    #         input_ids=input_ids,
+    #         labels=targets,
+    #         attention_mask=input_ids.ne(self.tokenizer.pad_token_id),
+    #         speech_batch=speech_batch,
+    #         src_lengths=n_frames, # src length,ssl_fintuned
+    #         after_lens=speech_lens, # length after forward ssl and adapter
+    #     )
+
+    #     return batch
+
     def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
-        # todo: sort samples by descending number of frames
         self.reset_speech_features_flag()
         indices = torch.tensor([x.index for x in samples], dtype=torch.long)
         speech_batch = _collate_frames([x.source for x in samples], is_audio_input=True)
         n_frames = torch.tensor([x.source.size(0) for x in samples], dtype=torch.long)
-        speech_lens = self.length_after_adp(self.length_after_ssl(n_frames)) # after forward ssl model and length adapter
+        speech_lens = self.length_after_adp(self.length_after_ssl(n_frames))
 
         texts = [x.target for x in samples]
      
-        to_adds = [int(speech_len)*DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
-        to_adds = [DEFAULT_SPEECH_START_TOKEN + to_add + DEFAULT_SPEECH_END_TOKEN for to_add in to_adds]
-        # prompts = []
-        # for task in tasks:
-        #      if task == "asr":
-        #          prompt = random.choice(self.prompt_list_asr)
-        #      elif task == "st":
-        #          prompt = self.prompt_list_st[0]
-        #      else: # default is st
-        #          prompt = self.prompt_list_st[0]
-        #      prompts.append(prompt)
+        # Create speech tokens based on length
+        speech_tokens = [int(speech_len)*DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
+        speech_tokens = [DEFAULT_SPEECH_START_TOKEN + tokens + DEFAULT_SPEECH_END_TOKEN for tokens in speech_tokens]
 
-        conv = conversation_lib.default_conversation.copy()
-        conversations = []
-        for to_add, text in zip(to_adds, texts):
-            conv.messages = []
-            # before, after = prompt.split('<speech_here>')
-            # mm_prompt = before + to_add + after
-            conv.append_message(conv.roles[0], to_add)
-            conv.append_message(conv.roles[1], text)
-            conversations.append(conv.get_prompt())
-        input_ids = self.tokenizer(
-            conversations,
-            return_tensors="pt",
-            padding="longest",
-            #max_length=tokenizer.model_max_length,
-            truncation=False,
-        ).input_ids
-        targets = input_ids.clone()
-        sep = conv.sep + conv.roles[1] + ": "
-        for conversation, target in zip(conversations, targets):
-            total_len = int(target.ne(self.tokenizer.pad_token_id).sum())
-            rounds = conversation.split(conv.sep2)
-            cur_len = 1
-            target[:cur_len] = IGNORE_INDEX
-            for i, rou in enumerate(rounds):
-                if rou == "":
-                    break
-                parts = rou.split(sep)
-                if len(parts) != 2:
-                    break
-                parts[0] += sep
-                round_len = len(self.tokenizer(rou).input_ids)
-                instruction_len = len(self.tokenizer(parts[0]).input_ids) - 2
-                target[cur_len : cur_len + instruction_len] = IGNORE_INDEX
-                cur_len += round_len
-            target[cur_len:] = IGNORE_INDEX
-        #print("conversations:", conversations[0])
-        #print("input_ids:", input_ids[0])
-        #print("targets:", targets[0])
-        #print(self.tokenizer.convert_ids_to_tokens(input_ids[0]))
+        # Create prompts
+        instruction = f"Translate the following speech from {self.source_lang} to {self.target_lang}:"
+        prompts = [f"{instruction} {speech_token} {text}<|end_of_text|>" for speech_token, text in zip(speech_tokens, texts)]
         
+        # Get instruction length for masking
+        instruction_ids = self.tokenizer(instruction + " ", add_special_tokens=False).input_ids
+        instruction_len = len(instruction_ids)
+
+        # Tokenize with explicit padding settings
+        tokenized = self.tokenizer(
+            prompts,
+            return_tensors="pt",
+            padding=True,
+            truncation=False,
+            add_special_tokens=False,
+        )
+        input_ids = tokenized.input_ids
+        attention_mask = tokenized.attention_mask
+
+        # Create targets and handle padding properly
+        targets = input_ids.clone()
+        for i in range(len(samples)):
+            # 1. Mask instruction tokens
+            targets[i, :instruction_len] = IGNORE_INDEX
+            
+            # 2. Mask speech tokens
+            start_pos = (input_ids[i] == self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_START_TOKEN)).nonzero()
+            end_pos = (input_ids[i] == self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_END_TOKEN)).nonzero()
+            if len(start_pos) > 0 and len(end_pos) > 0:
+                targets[i, start_pos[0][0]:end_pos[0][0] + 1] = IGNORE_INDEX
+            
+            # 3. Mask padding tokens
+            targets[i, attention_mask[i] == 0] = IGNORE_INDEX
+                
         batch = dict(
             input_ids=input_ids,
             labels=targets,
-            attention_mask=input_ids.ne(self.tokenizer.pad_token_id),
+            attention_mask=attention_mask,
             speech_batch=speech_batch,
-            src_lengths=n_frames, # src length,
-            after_lens=speech_lens, # length after forward ssl and adapter
-        )      
+            src_lengths=n_frames,
+            after_lens=speech_lens,
+        )
 
         return batch
 
@@ -209,9 +278,15 @@ def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer,
     """Make dataset and collator for supervised fine-tuning."""
 
     train_dataset = PromptSpeechToTextDatasetCreator.from_tsv(data_args.data_path, data_args.data_split_train)
-    eval_dataset = PromptSpeechToTextDatasetCreator.from_tsv(data_args.data_path, data_args.data_split_eval) if data_args.data_split_eval is not None else None 
-    data_collator = DataCollatorForSupervisedDataset(tokenizer, length_after_ssl, length_after_adp, model)
-
+    eval_dataset = PromptSpeechToTextDatasetCreator.from_tsv(data_args.data_path, data_args.data_split_eval) if data_args.data_split_eval is not None else None
+    data_collator = DataCollatorForSupervisedDataset(
+        tokenizer, 
+        length_after_ssl, 
+        length_after_adp, 
+        model,
+        data_args.source_lang,
+        data_args.target_lang
+    )
     return dict(train_dataset=train_dataset,
                 eval_dataset=eval_dataset,
                 data_collator=data_collator)
@@ -243,7 +318,7 @@ def train():
         #device_map=device_map,
     )
     length_after_ssl, length_after_adp = model.model.initialize_speech_modules(
-        '/data/user_data/yuanjinw/models/hubert_large_ll60k_finetune_ls960.pt',
+        '/data/user_data/yuanjinw/models/wav2_vec_vox_960h_pl.pt',
         speech_tower_type=None,
         len_adapter_channels=model.config.len_adapter_channels,
         len_adapter_kernel_sizes=model.config.len_adapter_kernel_sizes,
@@ -266,6 +341,8 @@ def train():
         padding_side="right",
         use_fast=False,
     )
+    tokenizer.pad_token = "<|finetune_right_pad_id|>"
+
     model.model.speech_tower.to(device=training_args.device)
     model.model.mm_length_adapter.to(device=training_args.device)
     model.model.mm_mlp_adapter.to(device=training_args.device)  

@@ -246,11 +246,11 @@ class SpeechLlamaModel(LlamaModel):
         super(SpeechLlamaModel, self).__init__(config)
         large_model = getattr(config, 'large_model', False)
         lora_train = getattr(config, 'lora_train', False)
-        if hasattr(config, "stage1_complete") and not large_model and not lora_train:
-            ssl_fintuned = getattr(config, 'ssl_fintuned', False)
-            self.length_after_ssl, self.length_after_adp = self.initialize_speech_modules(config.speech_tower_path, None,
-                                                         config.len_adapter_channels, config.len_adapter_kernel_sizes,
-                                                         config.stage1_complete, ssl_fintuned)      
+        # if hasattr(config, "stage1_complete") and not large_model and not lora_train:
+        #     ssl_fintuned = getattr(config, 'ssl_fintuned', False)
+            # self.length_after_ssl, self.length_after_adp = self.initialize_speech_modules(config.speech_tower_path, None,
+            #                                              config.len_adapter_channels, config.len_adapter_kernel_sizes,
+            #                                              config.stage1_complete, ssl_fintuned)      
         self.speech_features_extracted = False
         self.speech_tower_type = None
 
@@ -562,7 +562,7 @@ class SpeechLlamaModel(LlamaModel):
 
                 sllama_output = super(SpeechLlamaModel, self).forward(
                     input_ids=None, 
-                    attention_mask=states.attention_mask[:bsz, :, past_len : past_len + sp_ft_len + 1, : past_len + sp_ft_len + 1], 
+                    # attention_mask=states.attention_mask[:bsz, :, past_len : past_len + sp_ft_len + 1, : past_len + sp_ft_len + 1], 
                     past_key_values=states.past_key_values,
                     inputs_embeds=inputs_embeds, 
                     position_ids=states.position_ids[:, past_len :],
@@ -654,21 +654,22 @@ class SpeechLlamaModel(LlamaModel):
         if not self.speech_features_extracted:
             speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens).transpose(0, 1)
             # speech_features = self.get_ssl_feature_w2v(speech_batch, src_lengths, after_lens, states=states).transpose(0, 1)
-
-            position_ids = []
-            for i in range(inputs_embeds.size(0)):
-                position_id = torch.arange(0, input_ids[i].size(0), dtype=torch.long, device=input_ids.device)
-                speech_start_pos = torch.where(input_ids[i] == self.config.sp_start_token_id)[0]
-                speech_end_pos = torch.where(input_ids[i] == self.config.sp_end_token_id)[0]
-                position_id[speech_end_pos:] -= speech_end_pos - speech_start_pos - 1
-                position_ids.append(position_id)
-            position_ids = torch.stack(position_ids, dim=0)
-            if self.config.inference:
-                self.speech_features_extracted = True
-                states.position_ids = position_ids            
-        else:
-            states.position_ids = torch.cat([states.position_ids, states.position_ids[:, -1:] + 1], dim=1)
-            position_ids = states.position_ids
+        if self.config.inference:
+            self.speech_features_extracted = True
+        #     position_ids = []
+        #     for i in range(inputs_embeds.size(0)):
+        #         position_id = torch.arange(0, input_ids[i].size(0), dtype=torch.long, device=input_ids.device)
+        #         speech_start_pos = torch.where(input_ids[i] == self.config.sp_start_token_id)[0]
+        #         speech_end_pos = torch.where(input_ids[i] == self.config.sp_end_token_id)[0]
+        #         position_id[speech_end_pos:] -= speech_end_pos - speech_start_pos - 1
+        #         position_ids.append(position_id)
+        #     position_ids = torch.stack(position_ids, dim=0)
+        #     if self.config.inference:
+        #         self.speech_features_extracted = True
+        #         states.position_ids = position_ids            
+        # else:
+        #     states.position_ids = torch.cat([states.position_ids, states.position_ids[:, -1:] + 1], dim=1)
+        #     position_ids = states.position_ids
             
         new_input_embeds = []
         cur_speech_idx = 0
@@ -796,18 +797,18 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
         hidden_states = outputs[0]
         logits = self.lm_head(hidden_states)
 
-        if states is not None and getattr(states, 'ref_target_ids') is not None:
-            ref_target_ids = states.ref_target_ids
-            if len(ref_target_ids[0]) == 0:
-                if len(ref_target_ids) > 1:
-                    index = ref_target_ids[1][0]
-                    states.ref_target_ids = states.ref_target_ids[1:]
-                else:
-                    index = 2 # eos_token_id
-            else:
-                index = ref_target_ids[0][0]
-                states.ref_target_ids[0] = states.ref_target_ids[0][1:]
-            logits[0, -1, index] = logits.max() + 1
+        # if states is not None and getattr(states, 'ref_target_ids') is not None:
+        #     ref_target_ids = states.ref_target_ids
+        #     if len(ref_target_ids[0]) == 0:
+        #         if len(ref_target_ids) > 1:
+        #             index = ref_target_ids[1][0]
+        #             states.ref_target_ids = states.ref_target_ids[1:]
+        #         else:
+        #             index = 2 # eos_token_id
+        #     else:
+        #         index = ref_target_ids[0][0]
+        #         states.ref_target_ids[0] = states.ref_target_ids[0][1:]
+        #     logits[0, -1, index] = logits.max() + 1
 
         loss = None
         if labels is not None:
@@ -856,7 +857,7 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
                 "states": kwargs.get("states", None),
             }
         )
-        return model_inputs
+        return model_inputs        
     
                    
 AutoConfig.register("SpeechLlama", SpeechLlamaConfig)
