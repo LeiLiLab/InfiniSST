@@ -165,15 +165,6 @@ def make_supervised_data_module(
 
     return train_dataset, dev_dataset, data_collator
 
-
-    train_sampler = SpeechSampler(train_dataset, shuffle=True, batch_size=train_batch_size)
-    dev_sampler = SpeechSampler(dev_dataset, shuffle=False, batch_size=dev_batch_size)
-
-    train_dataloader = DataLoader(train_dataset, batch_sampler=train_sampler, collate_fn=data_collator)
-    dev_dataloader = DataLoader(dev_dataset, batch_sampler=dev_sampler, collate_fn=data_collator)
-
-    return train_dataloader, dev_dataloader
-
 def train():
     args = parse_args()
     # Set seed before initializing model.

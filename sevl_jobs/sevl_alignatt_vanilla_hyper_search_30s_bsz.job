@@ -7,14 +7,14 @@
 #SBATCH --gres=gpu:L40:1
 ##SBATCH --nodelist=babel-3-17
 ##SBATCH --constraint=xeon-4116 
-##SBATCH --partition=gemini
+#SBATCH --partition=preempt
 #SBATCH --time=1-00:00:00
 ##SBATCH --dependency=afterok:job_id
-#SBATCH --array=0-31
-#SBATCH --account=siqiouyang
+#SBATCH --array=9-31
+##SBATCH --account=siqiouya
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=siqiouya@andrew.cmu.edu
-##SBATCH --output=/home/xixu/slurm.txts
+#SBATCH --output=slurm_logs/%A_%a.out
 
 source /home/siqiouya/anaconda3/bin/activate sllama_lightning
 
@@ -24,7 +24,8 @@ frame_num=10
 ms=2.0
 batch_size=1
 
-checkpoint_dir=/data/user_data/siqiouya/runs/stage2-bi-mix-fix
+# checkpoint_dir=/data/user_data/siqiouya/runs/stage2-bi-mix-fix
+checkpoint_dir=/data/user_data/siqiouya/runs/fasst/en-de/stage2-bi-short-sid/checkpoint-1900
 
 export PYTHONPATH=/home/siqiouya/work/sllama:/home/siqiouya/work/SimulEval
 simuleval \
@@ -36,8 +37,8 @@ simuleval \
   --min-start-sec ${ms} \
   --model-dir ${checkpoint_dir} \
   --prompt "<speech_here>" \
-  --source /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON_30s.source \
-  --target /data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON_30s.target \
+  --source /data/user_data/siqiouya/dataset/must-c-v1.0/en-de/tst-COMMON.source \
+  --target /data/user_data/siqiouya/dataset/must-c-v1.0/en-de/tst-COMMON.target \
   --output ${checkpoint_dir}/simul-results/30s-alignatt_vanilla-bsz${batch_size}/ms${ms}-${src_segment_size}ms-beam${beam}-fn${frame_num}-layer${layer_idx} \
   --quality-metrics BLEU --sacrebleu-tokenizer 13a \
   --batch-size ${batch_size}
