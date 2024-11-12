@@ -58,5 +58,6 @@ class SpaceStoppingCriteria(StoppingCriteria):
             return True
         if self.n_spaces == -1:
             self.n_spaces = len(text.split(' '))
+            return False
         else:
             return len(text.split(' ')) >= self.n_spaces + self.n_word
