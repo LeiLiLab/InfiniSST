@@ -24,7 +24,7 @@ DEFAULT_SPEECH_START_TOKEN = "<sp_start>"
 DEFAULT_SPEECH_END_TOKEN = "<sp_end>"
 
 def eval_model(args):
-    load_type = torch.float16
+    load_type = torch.bfloat16
     # Model
     disable_torch_init()
     model_name = os.path.expanduser(args.model_name)
