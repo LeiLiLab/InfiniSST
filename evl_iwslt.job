@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=64GB
+#SBATCH --gpus=1
+##SBATCH --constraint=xeon-4116 
+#SBATCH --partition=gemini
+#SBATCH --time=0-2:0:0 
+##SBATCH --dependency=afterok:job_id
+##SBATCH --array=1-3 
+#SBATCH --account=siqiouyang
+##SBATCH --mail-type=BEGIN,END,FAIL,ALL
+##SBATCH --mail-user=xixu@cs.cmu.edu 
+#SBATCH --output=stdout_evl_iwslt_tst2022.txt
+#SBATCH --error=stderr_evl_iwslt_tst2022.txt
+
+# test must-c mt result
+conda config --append envs_dirs /mnt/taurus/home/siqiouyang/anaconda3/envs/
+source /mnt/taurus/home/siqiouyang/anaconda3/bin/activate /mnt/taurus/home/siqiouyang/anaconda3/envs/sllama_lightning
+
+cd eval
+lang=de
+split=tst2022
+beam=4
+
+model_path=/mnt/gemini/data/xixu/runs/sllama/en-de/7b/bi/stage2_c/checkpoint-300
+data_path=/mnt/taurus/data1/siqiouyang/datasets/iwslt24/raw/en-${lang}/${split}
+result=${model_path}/result_${split}_b${beam}
+
+# python ../train/zero_to_fp32.py ${model_path} \
+#     ${model_path}/pytorch_model.bin
+
+# python ../train/extract_adapter.py \
+#   --model_name_or_path ${model_path} \
+#   --extracted_name 'mm_length_adapter' \
+#   --output ${model_path}/length_adapter.bin 
+
+# python ../train/extract_adapter.py \
+#   --model_name_or_path ${model_path} \
+#   --extracted_name 'mm_mlp_adapter' \
+#   --output ${model_path}/mlp_adapter.bin 
+
+# python ../train/extract_adapter.py \
+#     --model_name_or_path ${model_path} \
+#     --extracted_name 'speech_tower' \
+#     --output ${model_path}/speech_tower.bin
+
+export PYTHONPATH=/mnt/taurus/home/siqiouyang/work/projects/sllama
+python ./test_dataset_large.py \
+        --model-name ${model_path} --data-path ${data_path} --data-split 'test' \
+        --result ${result} --beam ${beam} \
+        --mlp-adapter-path ${model_path}/mlp_adapter.bin \
+        --length-adapter-path ${model_path}/length_adapter.bin \
+        --speech-tower-path ${model_path}/speech_tower.bin

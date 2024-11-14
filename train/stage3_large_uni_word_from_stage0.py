@@ -225,6 +225,7 @@ class DataCollatorForSupervisedDataset(object):
                     if j == input_ids.size(1) or input_id[j] == self.tokenizer.pad_token_id:
                         break
                 attention_mask[idx, 0, i : j, i_s + 1 : sp_end_pos] = -float('inf')
+                # attention_mask[idx, 0, i_s + 1 : sp_end_pos, sp_end_pos : j] = 0
                 if first_seg:
                     first_seg = False
                     attention_mask[idx, 0, sp_end_pos : instruction_len, i_s + 1 : sp_end_pos] = -float('inf')
