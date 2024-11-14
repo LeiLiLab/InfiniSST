@@ -2,6 +2,11 @@ import torch
 from model import *
 from transformers import AutoConfig, StoppingCriteria
 
+def lengths_to_padding_mask(lens):
+    bsz, max_lens = lens.size(0), torch.max(lens).item()
+    mask = torch.arange(max_lens).to(lens.device).view(1, max_lens)
+    mask = mask.expand(bsz, -1) >= lens.view(bsz, 1).expand(-1, max_lens)
+    return mask
 
 def auto_upgrade(config):
     cfg = AutoConfig.from_pretrained(config)
