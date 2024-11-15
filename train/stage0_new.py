@@ -75,6 +75,7 @@ def parse_args():
     parser.add_argument("--grad-acc-steps", type=int)
     parser.add_argument("--clip-norm", type=float)
     parser.add_argument("--seed", type=int, default=998244353)
+    parser.add_argument("--debug-mode", action="store_true")
     # data
     parser.add_argument("--data-path", type=str)
     parser.add_argument("--train-split", type=str)
@@ -82,10 +83,7 @@ def parse_args():
     parser.add_argument("--train-batch-size", type=int)
     parser.add_argument("--dev-batch-size", type=int)
 
-    parser.add_argument("--debug-mode", action="store_true")
-
     args = parser.parse_args()
-
     return args
 
 @dataclass
@@ -180,7 +178,8 @@ def train():
         args.n_dim,
         args.n_heads,
         args.dropout,
-        args.blocksize,        
+        args.block_size,
+        args.max_cache_size,      
         copy.deepcopy(llm.model.embed_tokens),
 
         train_ds, 

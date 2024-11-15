@@ -88,7 +88,7 @@ class SpeechEncoder(L.LightningModule):
     def __init__(
         self, 
         feature_extractor_cfg,
-        n_attn_layers, n_dim, n_heads, dropout, blocksize,
+        n_attn_layers, n_dim, n_heads, dropout, block_size, max_cache_size,
         llm_embedding,
         train_ds, dev_ds, train_bsz, dev_bsz, collate_fn,
         lr, warmup_updates, min_lr=1e-6, temp=0.5, loss_fn='waco'
@@ -107,7 +107,7 @@ class SpeechEncoder(L.LightningModule):
                     depth=1,
                     heads=n_heads,
                     rotary_pos_emb=True,
-                    rotary_emb_dim=n_dim,
+                    rotary_emb_dim=n_dim // n_heads,
                     attn_dropout=dropout,
                     ff_dropout=dropout,
                 )
@@ -115,10 +115,12 @@ class SpeechEncoder(L.LightningModule):
             ]
         )
 
-        self.blocksize = blocksize
+        self.block_size = block_size
+        self.max_cache_size = max_cache_size
 
         self.llm_embedding = llm_embedding
         self.llm_embedding.requires_grad_(False)
+        self.proj = nn.Linear(n_dim, llm_embedding.embedding_dim)
 
         self.datasets = {
             "train_ds": train_ds,
@@ -172,19 +174,19 @@ class SpeechEncoder(L.LightningModule):
         def _conv_out_length(input_length, kernel_size, stride):
             return torch.floor((input_length - kernel_size) / stride + 1)
 
-        for cfg in range(self.feature_extractor_cfg):
+        for cfg in self.feature_extractor_cfg:
             input_lengths = _conv_out_length(
                 input_lengths, cfg[1], cfg[2]
             )
 
         return input_lengths.to(torch.long)
     
-    def _get_attn_mask(self, bsz, seq_len, prefix_len):
+    def _get_attn_mask(self, bsz, seq_len, prefix_len, max_cache_size=None):
         max_len = seq_len + prefix_len
 
         blocksizes = [
-            min(self.blocksize, max_len - i * self.blocksize) 
-            for i in range((max_len + self.blocksize - 1) // self.blocksize)
+            min(self.block_size, max_len - i * self.block_size) 
+            for i in range((max_len + self.block_size - 1) // self.block_size)
         ]
 
         mask = torch.zeros(seq_len, max_len, device='cuda', dtype=torch.bool)
@@ -194,16 +196,19 @@ class SpeechEncoder(L.LightningModule):
             if end_idx > prefix_len:
                 mask[max(0, start_idx - prefix_len) : end_idx - prefix_len, :end_idx] = 1
             start_idx = end_idx
-
+        
+        if max_cache_size is not None:
+            for i in range(seq_len):
+                mask[i, :max(0, i + max_len - seq_len - max_cache_size)] = 0
+        
         return mask
 
-    def encode_speech(self, src_tokens, src_lens, caches=None, max_cache_length=375): # 375 features = 375 * 0.08s = 30s
+    def encode_speech(self, src_tokens, src_lens, caches=None):
         x = self.feature_extractor(src_tokens)
         x = x.transpose(1, 2)
         x = self.dropout(x)
 
-        bsz, seq_len, _ = x.size()
-        
+        bsz, seq_len, _ = x.size()        
         
         # apply conv formula to get real output_lengths
         output_lengths = self._get_feat_extract_output_lengths(src_lens)
@@ -219,7 +224,7 @@ class SpeechEncoder(L.LightningModule):
                 output_lengths - 1,
             )
         ] = 1
-        padding_mask = (1 - padding_mask.flip([-1]).cumsum(-1).flip([-1])).bool()
+        padding_mask = padding_mask.flip([-1]).cumsum(-1).flip([-1]).bool()
 
         prefix_len = 0
         if caches is not None:
@@ -227,16 +232,19 @@ class SpeechEncoder(L.LightningModule):
             for cache in caches:
                 k, v = cache.attn_intermediates.cached_kv
                 cache.attn_intermediates.cached_kv = (
-                    k[..., -max_cache_length:, :],
-                    v[..., -max_cache_length:, :]
+                    k[..., -self.max_cache_size:, :],
+                    v[..., -self.max_cache_size:, :]
                 )
 
-        pos = torch.arange(
-            max(0, prefix_len + seq_len - max_cache_length),
-            prefix_len + seq_len
-        )
-        attn_mask = self._get_attn_mask(bsz, seq_len, prefix_len)
-        attn_mask = attn_mask[:, -max_cache_length:]
+            pos = torch.arange(
+                max(0, prefix_len + seq_len - self.max_cache_size),
+                prefix_len + seq_len
+            )
+            attn_mask = self._get_attn_mask(bsz, seq_len, prefix_len)
+            attn_mask = attn_mask[:, -self.max_cache_size:]
+        else:
+            pos = torch.arange(seq_len)
+            attn_mask = self._get_attn_mask(bsz, seq_len, 0, self.max_cache_size)
         
         updated_caches = []
         for i, layer in enumerate(self.attn_layers):
@@ -245,7 +253,7 @@ class SpeechEncoder(L.LightningModule):
                 mask=padding_mask,
                 attn_mask=attn_mask,
                 cache=caches[i] if caches else None,
-                cache_age=self.blocksize,
+                cache_age=self.block_size,
                 pos=pos,
                 return_hiddens=True,
             )
@@ -256,6 +264,8 @@ class SpeechEncoder(L.LightningModule):
                 cache.n_steps = seq_len
                 
             updated_caches.append(cache)
+        
+        x = self.proj(x)
         
         return x, updated_caches
     
@@ -269,10 +279,11 @@ class SpeechEncoder(L.LightningModule):
         speech_word = batch["speech_word"]
         text_word = batch["text_word"]
         
-        src_speech_emb = self.encode_speech(
+        src_speech_emb, _ = self.encode_speech(
             src_speech, 
             src_speech_lengths, 
-        ).float()
+        )
+        src_speech_emb = src_speech_emb.float()
 
         if self.loss_fn == 'waco':
             src_text_emb = self.llm_embedding(src_text).float()
@@ -286,8 +297,8 @@ class SpeechEncoder(L.LightningModule):
                         t_l, t_r = t_word[j]
 
                         # TODO: hard-coded here, one block equals 80ms
-                        s_l = (s_l / 0.08).floor() 
-                        s_r = (s_r / 0.08).ceil() - 1
+                        s_l = int((s_l / 0.08).floor())
+                        s_r = min(int((s_r / 0.08).ceil()), src_speech_emb.size(1)) - 1
 
                         s_word_emb = src_speech_emb[i][s_l : s_r + 1].mean(dim=0)
                         t_word_emb = src_text_emb[i][t_l : t_r + 1].mean(dim=0)
@@ -299,7 +310,7 @@ class SpeechEncoder(L.LightningModule):
             st_sim = F.cosine_similarity(
                 speech_word_emb.unsqueeze(1), 
                 text_word_emb.unsqueeze(0), 
-                dim=-1
+                dim=-1,
             )
             loss = F.cross_entropy(
                 st_sim / self.temp,
@@ -307,23 +318,26 @@ class SpeechEncoder(L.LightningModule):
             )
         else:
             raise NotImplementedError
-
-        if loss.isnan():
-            return None
         
         return loss
 
 
     def training_step(self, batch, batch_idx):
         loss = self.forward(batch)
-        if loss is not None:
+        if not loss.isnan():
             self.log("train_loss", loss, batch_size=batch["src_speech_lengths"].sum() / 16000)
+            self.log("train_nan", 0, batch_size=1)
+        else:
+            self.log("train_nan", 1, batch_size=1)
         return loss
     
     def validation_step(self, batch, batch_idx):
         loss = self.forward(batch)
-        if loss is not None:
+        if not loss.isnan():
             self.log("val_loss", loss, batch_size=batch["src_speech_lengths"].sum() / 16000)
+            self.log("val_nan", 0, batch_size=1)
+        else:
+            self.log("val_nan", 1, batch_size=1)
     
     def configure_optimizers(self):
         lr = self.optimizer_params["lr"]
