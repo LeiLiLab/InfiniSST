@@ -25,9 +25,14 @@ def add_speech_encoder_args(parser):
         default=0.1,
     )    
     parser.add_argument(
-        "--blocksize", 
+        "--block-size", 
         type=int, 
-        default=12 # blocksize=1 means 80ms
+        default=12, # blocksize=1 means 80ms
+    )
+    parser.add_argument(
+        "--max-cache-size",
+        type=int, 
+        default=125, # 125 * 0.08 = 1 second
     )
     parser.add_argument(
         "--llm-path", 
