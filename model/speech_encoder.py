@@ -75,7 +75,8 @@ class ConvFeatureExtractionModel(nn.Module):
     def forward(self, x):
 
         # BxT -> BxCxT
-        x = x.unsqueeze(1)
+        if len(x.shape) == 2:
+            x = x.unsqueeze(1)
 
         for conv in self.conv_layers:
             x = conv(x)
@@ -89,6 +90,7 @@ class SpeechEncoder(L.LightningModule):
         self, 
         feature_extractor_cfg='[(1024, 10, 5)] + [(1024, 3, 2)] * 4 + [(1024,2,2)] * 4', 
         feature_extractor_state_dict_path=None,
+        length_shrink_cfg=None,
         n_attn_layers=12, n_dim=1024, n_heads=16, dropout=0.1, block_size=16, max_cache_size=125,
         llm_embedding=None,
         train_ds=None, dev_ds=None, train_bsz=None, dev_bsz=None, collate_fn=None,
@@ -126,6 +128,11 @@ class SpeechEncoder(L.LightningModule):
 
         self.block_size = block_size
         self.max_cache_size = max_cache_size
+
+        self.length_shrink = None
+        if length_shrink_cfg is not None:
+            self.length_shrink_cfg = eval(length_shrink_cfg)
+            self.length_shrink = ConvFeatureExtractionModel(self.length_shrink_cfg)
 
         self.llm_embedding = llm_embedding
         self.llm_embedding.requires_grad_(False)
@@ -277,6 +284,9 @@ class SpeechEncoder(L.LightningModule):
                 cache.n_steps = seq_len
                 
             updated_caches.append(cache)
+
+        if self.length_shrink is not None:
+            x = self.length_shrink(x)
         
         x = self.proj(x)
         
