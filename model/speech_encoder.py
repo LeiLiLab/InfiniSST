@@ -87,16 +87,25 @@ class ConvFeatureExtractionModel(nn.Module):
 class SpeechEncoder(L.LightningModule):
     def __init__(
         self, 
-        feature_extractor_cfg,
-        n_attn_layers, n_dim, n_heads, dropout, block_size, max_cache_size,
-        llm_embedding,
-        train_ds, dev_ds, train_bsz, dev_bsz, collate_fn,
-        lr, warmup_updates, min_lr=1e-6, temp=0.5, loss_fn='waco'
+        feature_extractor_cfg='[(1024, 10, 5)] + [(1024, 3, 2)] * 4 + [(1024,2,2)] * 4', 
+        feature_extractor_state_dict_path=None,
+        n_attn_layers=12, n_dim=1024, n_heads=16, dropout=0.1, block_size=16, max_cache_size=125,
+        llm_embedding=None,
+        train_ds=None, dev_ds=None, train_bsz=None, dev_bsz=None, collate_fn=None,
+        lr=1e-4, warmup_updates=0, min_lr=1e-6, temp=0.5, loss_fn='waco'
     ):
         super().__init__()
 
         self.feature_extractor_cfg = eval(feature_extractor_cfg)
         self.feature_extractor = ConvFeatureExtractionModel(self.feature_extractor_cfg)
+
+        if feature_extractor_state_dict_path is not None:
+            state_dict = torch.load(feature_extractor_state_dict_path)
+            self.feature_extractor.load_state_dict(state_dict, strict=False)
+        
+        self.post_feature_extractor_proj = None
+        if self.feature_extractor_cfg[-1][0] != n_dim:
+            self.post_feature_extractor_proj = nn.Linear(self.feature_extractor_cfg[-1][0], n_dim)
 
         self.dropout = nn.Dropout(dropout)
 
@@ -206,9 +215,13 @@ class SpeechEncoder(L.LightningModule):
     def encode_speech(self, src_tokens, src_lens, caches=None):
         x = self.feature_extractor(src_tokens)
         x = x.transpose(1, 2)
+
+        if self.post_feature_extractor_proj is not None:
+            x = self.post_feature_extractor_proj(x)
+
         x = self.dropout(x)
 
-        bsz, seq_len, _ = x.size()        
+        bsz, seq_len, _ = x.size()
         
         # apply conv formula to get real output_lengths
         output_lengths = self._get_feat_extract_output_lengths(src_lens)
