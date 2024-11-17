@@ -174,6 +174,7 @@ def train():
 
     model = SpeechEncoder(
         args.feature_extractor_cfg,
+        args.feature_extractor_state_dict_path,
         args.n_attn_layers,
         args.n_dim,
         args.n_heads,

@@ -5,6 +5,11 @@ def add_speech_encoder_args(parser):
         default="[(1024, 10, 5)] + [(1024, 3, 2)] * 4 + [(1024,2,2)] * 4"
     )
     parser.add_argument(
+        "--feature-extractor-state-dict-path",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
         "--n-attn-layers", 
         type=int,
         default=12,
