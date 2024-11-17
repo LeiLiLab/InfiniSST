@@ -29,6 +29,7 @@ class ConvFeatureExtractionModel(nn.Module):
         conv_layers: List[Tuple[int, int, int]], # [(512, 10, 5)] + [(512, 3, 2)] * 4 + [(512,2,2)] * 4
         dropout: float = 0.0,
         conv_bias: bool = False,
+        in_d: int = 1,
     ):
         super().__init__()
 
@@ -55,7 +56,6 @@ class ConvFeatureExtractionModel(nn.Module):
                 nn.GELU(),
             )
 
-        in_d = 1
         self.conv_layers = nn.ModuleList()
         for i, cl in enumerate(conv_layers):
             assert len(cl) == 3, "invalid conv definition: " + str(cl)
@@ -132,7 +132,7 @@ class SpeechEncoder(L.LightningModule):
         self.length_shrink = None
         if length_shrink_cfg is not None:
             self.length_shrink_cfg = eval(length_shrink_cfg)
-            self.length_shrink = ConvFeatureExtractionModel(self.length_shrink_cfg)
+            self.length_shrink = ConvFeatureExtractionModel(self.length_shrink_cfg, in_d=n_dim)
 
         self.llm_embedding = llm_embedding
         self.llm_embedding.requires_grad_(False)
@@ -190,7 +190,10 @@ class SpeechEncoder(L.LightningModule):
         def _conv_out_length(input_length, kernel_size, stride):
             return torch.floor((input_length - kernel_size) / stride + 1)
 
-        for cfg in self.feature_extractor_cfg:
+        cfgs = self.feature_extractor_cfg
+        if self.length_shrink:
+            cfgs.extend(self.length_shrink_cfg)
+        for cfg in cfgs:
             input_lengths = _conv_out_length(
                 input_lengths, cfg[1], cfg[2]
             )
@@ -286,7 +289,9 @@ class SpeechEncoder(L.LightningModule):
             updated_caches.append(cache)
 
         if self.length_shrink is not None:
+            x = x.transpose(1, 2)
             x = self.length_shrink(x)
+            x = x.transpose(1, 2)
         
         x = self.proj(x)
         
