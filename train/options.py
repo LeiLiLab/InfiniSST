@@ -10,6 +10,11 @@ def add_speech_encoder_args(parser):
         default=None,
     )
     parser.add_argument(
+        "--feature-extractor-freeze",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
         "--length-shrink-cfg",
         type=str,
         default=None,

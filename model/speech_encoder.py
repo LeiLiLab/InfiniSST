@@ -89,7 +89,7 @@ class SpeechEncoder(L.LightningModule):
     def __init__(
         self, 
         feature_extractor_cfg='[(1024, 10, 5)] + [(1024, 3, 2)] * 4 + [(1024,2,2)] * 4', 
-        feature_extractor_state_dict_path=None,
+        feature_extractor_state_dict_path=None, feature_extractor_freeze=False,
         length_shrink_cfg=None,
         n_attn_layers=12, n_dim=1024, n_heads=16, dropout=0.1, block_size=16, max_cache_size=125,
         llm_embedding=None,
@@ -104,6 +104,10 @@ class SpeechEncoder(L.LightningModule):
         if feature_extractor_state_dict_path is not None:
             state_dict = torch.load(feature_extractor_state_dict_path)
             self.feature_extractor.load_state_dict(state_dict, strict=False)
+            if feature_extractor_freeze:
+                for name, param in self.feature_extractor.named_parameters():
+                    if name in state_dict:
+                        param.requires_grad_(False)
         
         self.post_feature_extractor_proj = None
         if self.feature_extractor_cfg[-1][0] != n_dim:
@@ -190,13 +194,15 @@ class SpeechEncoder(L.LightningModule):
         def _conv_out_length(input_length, kernel_size, stride):
             return torch.floor((input_length - kernel_size) / stride + 1)
 
-        cfgs = self.feature_extractor_cfg
-        if self.length_shrink:
-            cfgs.extend(self.length_shrink_cfg)
-        for cfg in cfgs:
+        for cfg in self.feature_extractor_cfg:
             input_lengths = _conv_out_length(
                 input_lengths, cfg[1], cfg[2]
             )
+        if self.length_shrink:
+            for cfg in self.length_shrink_cfg:
+                input_lengths = _conv_out_length(
+                    input_lengths, cfg[1], cfg[2]
+                )
 
         return input_lengths.to(torch.long)
     
@@ -354,18 +360,12 @@ class SpeechEncoder(L.LightningModule):
         loss = self.forward(batch)
         if not loss.isnan():
             self.log("train_loss", loss, batch_size=batch["src_speech_lengths"].sum() / 16000)
-            self.log("train_nan", 0, batch_size=1)
-        else:
-            self.log("train_nan", 1, batch_size=1)
         return loss
     
     def validation_step(self, batch, batch_idx):
         loss = self.forward(batch)
         if not loss.isnan():
             self.log("val_loss", loss, batch_size=batch["src_speech_lengths"].sum() / 16000)
-            self.log("val_nan", 0, batch_size=1)
-        else:
-            self.log("val_nan", 1, batch_size=1)
     
     def configure_optimizers(self):
         lr = self.optimizer_params["lr"]

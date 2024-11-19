@@ -175,6 +175,7 @@ def train():
     model = SpeechEncoder(
         args.feature_extractor_cfg,
         args.feature_extractor_state_dict_path,
+        args.feature_extractor_freeze,
         args.length_shrink_cfg,
         
         args.n_attn_layers,
@@ -232,7 +233,11 @@ def train():
         fast_dev_run=args.debug_mode,
     )
 
-    trainer.fit(model)
+    if os.path.exists(args.save_dir) and len(os.listdir(args.save_dir)) >= 1:
+        ckpt_path = os.path.join(args.save_dir, os.listdir(args.save_dir)[0])
+        trainer.fit(model, ckpt_path=ckpt_path)
+    else:
+        trainer.fit(model)
 
 
 if __name__ == "__main__":
