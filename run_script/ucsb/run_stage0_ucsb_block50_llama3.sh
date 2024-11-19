@@ -18,11 +18,11 @@
 conda config --append envs_dirs /mnt/taurus/home/siqiouyang/anaconda3/envs/
 source /mnt/taurus/home/siqiouyang/anaconda3/bin/activate /mnt/taurus/home/siqiouyang/anaconda3/envs/sllama_lightning
 
-llm_model=/mnt/taurus/data/xixu/llm/llama-2-7b/hf
+llm_model=/mnt/taurus/data/siqiouyang/download/llama3.1-8b-hf/
 ssl_model=/mnt/taurus/data/xixu/models/wav2_vec_vox_960h_pl.pt
-data_path=/mnt/taurus/data/xixu/datasets/must-c-v1.0/en-de
-name=stage0-block50-mix
-save_path=/mnt/taurus/data/siqiouyang/runs/sllama/en-de/fasst-$name
+data_path=/mnt/aries/data/siqiouyang/datasets/must-c-v1.0
+name=fasst-stage0-block50
+save_path=/mnt/taurus/data/siqiouyang/runs/sllama/en-de/$name
 
 mkdir -p ${save_path}
 
@@ -31,6 +31,8 @@ mkdir -p ${save_path}
 export WANDB_PROJECT=mustc_1.0_de
 export NCCL_DEBUG=INFO
 
+export NCCL_P2P_DISABLE=1
+export NCCL_IB_DISABLE=1
 export PYTHONPATH=/home/siqiouyang/work/projects/sllama
 srun python /home/siqiouyang/work/projects/sllama/train/stage0.py \
     --llm-path ${llm_model} \
@@ -47,7 +49,7 @@ srun python /home/siqiouyang/work/projects/sllama/train/stage0.py \
     --n-device $SLURM_GPUS_ON_NODE \
     --max-steps 500000 \
     --save-dir $save_path \
-    --precision 16-mixed \
+    --precision bf16-mixed \
     --wandb-run-name $name \
     --eval-step 1000 \
     --log-step 100 \
@@ -55,7 +57,7 @@ srun python /home/siqiouyang/work/projects/sllama/train/stage0.py \
     --clip-norm 10.0 \
     \
     --data-path $data_path \
-    --train-split train_mfa_30s_mix_filtered \
-    --dev-split dev_mfa_30s_mix_filtered \
+    --train-split train_st_de_mfa_llama3 \
+    --dev-split dev_st_de_mfa_llama3 \
     --train-batch-size 1000000 \
     --dev-batch-size 1000000
