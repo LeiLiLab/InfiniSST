@@ -2,7 +2,7 @@
 
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
-#SBATCH --cpus-per-task=2
+#SBATCH --cpus-per-task=4
 #SBATCH --mem=256GB
 #SBATCH --gpus=4
 ##SBATCH --constraint=xeon-4116 
@@ -20,7 +20,7 @@ source /mnt/taurus/home/siqiouyang/anaconda3/bin/activate /mnt/taurus/home/siqio
 
 llm_model=/mnt/taurus/data/siqiouyang/download/llama3.1-8b-hf/
 data_path=/mnt/aries/data/siqiouyang/datasets/must-c-v1.0
-name=crtl-stage0-cache125-w2v2cnn-layer24
+name=crtl-stage0-cache125-w2v2cnnfrz-layer24
 save_path=/mnt/taurus/data/siqiouyang/runs/sllama/en-de/$name
 
 mkdir -p ${save_path}
@@ -35,6 +35,7 @@ export PYTHONPATH=/home/siqiouyang/work/projects/sllama
 srun python /home/siqiouyang/work/projects/sllama/train/stage0_new.py \
     --feature-extractor-cfg "[(512, 10, 5)] + [(512, 3, 2)] * 4 + [(512,2,2)] * 4" \
     --feature-extractor-state-dict-path /mnt/taurus/data/siqiouyang/download/w2v2_feature_extractor.pt \
+    --feature-extractor-freeze \
     --block-size 12 \
     --max-cache-size 125 \
     --n-attn-layers 24 \

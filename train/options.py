@@ -1,5 +1,14 @@
 def add_speech_encoder_args(parser):
     parser.add_argument(
+        "--w2v2-path",
+        type=str,
+        default=None
+    )
+    parser.add_argument(
+        "--w2v2-ctc-finetuned",
+        action="store_true"
+    )
+    parser.add_argument(
         "--feature-extractor-cfg", 
         type=str,
         default="[(1024, 10, 5)] + [(1024, 3, 2)] * 4 + [(1024,2,2)] * 4"
