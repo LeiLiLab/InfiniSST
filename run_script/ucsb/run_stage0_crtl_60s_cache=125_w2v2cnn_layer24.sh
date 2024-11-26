@@ -2,7 +2,7 @@
 
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
-#SBATCH --cpus-per-task=2
+#SBATCH --cpus-per-task=4
 #SBATCH --mem=256GB
 #SBATCH --gpus=4
 ##SBATCH --constraint=xeon-4116 
@@ -20,7 +20,7 @@ source /mnt/taurus/home/siqiouyang/anaconda3/bin/activate /mnt/taurus/home/siqio
 
 llm_model=/mnt/taurus/data/siqiouyang/download/llama3.1-8b-hf/
 data_path=/mnt/aries/data/siqiouyang/datasets/must-c-v1.0
-name=crtl-stage0-cache125-w2v2cnn-layer24
+name=crtl-stage0-60s-cache125-w2v2cnn-layer24
 save_path=/mnt/taurus/data/siqiouyang/runs/sllama/en-de/$name
 
 mkdir -p ${save_path}
@@ -56,7 +56,7 @@ srun python /home/siqiouyang/work/projects/sllama/train/stage0_new.py \
     --clip-norm 10.0 \
     \
     --data-path $data_path \
-    --train-split train_st_de_mfa_llama3 \
-    --dev-split dev_st_de_mfa_llama3 \
+    --train-split train_st_de_60s_mfa_llama3_filtered \
+    --dev-split dev_st_de_60s_mfa_llama3_filtered \
     --train-batch-size 1000000 \
     --dev-batch-size 1000000
