@@ -850,3 +850,28 @@ class SpeechEncoderW2V2RoPE(L.LightningModule):
                 "frequency": 1
             }
         }
+    
+class SpeechEncoderHuBERTRope(SpeechEncoderW2V2RoPE):
+    def _load_w2v2(self, speech_tower_path, ssl_finetuned):
+        models, cfg, task = fairseq.checkpoint_utils.load_model_ensemble_and_task(
+            [speech_tower_path], strict=False
+        )
+        model = models[0].w2v_encoder.w2v_model
+        speech_dimension = cfg.model.w2v_args.model.encoder_embed_dim
+        n_layer = cfg.model.w2v_args.model.encoder_layers         
+        return model, speech_dimension, n_layer
+
+    def encode_speech(self, src_tokens, src_lens, cache=None):
+        if cache is None:
+            cache = W2V2RoPECache(
+                max_steps=self.max_cache_size,
+                layers=[LayerCache() for _ in range(self.s_layer)]
+            )
+
+        padding_mask = lengths_to_padding_mask(src_lens)
+        feature, padding_mask = self.speech_encoder.extract_features(src_tokens, padding_mask, cache=cache)
+
+        feature = self.length_shrink(feature.transpose(1, 2)).transpose(1, 2)
+        feature = self.proj(feature)
+        
+        return feature, cache

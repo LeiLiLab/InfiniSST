@@ -34,7 +34,7 @@ from transformers import set_seed
 from torch.utils.data import DataLoader
 from train.dataset import PromptSpeechToTextDatasetCreator, SpeechToTextDatasetItem
 from model.model import SpeechLlamaForCausalLM
-from model.speech_encoder import SpeechEncoderW2V2RoPE
+from model.speech_encoder import SpeechEncoderW2V2RoPE, SpeechEncoderHuBERTRope
 from train.uni_wav2vec_monkey_patch import replace_uni_train
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 
@@ -172,7 +172,7 @@ def train():
         dev_split=args.dev_split,
     )
 
-    model = SpeechEncoderW2V2RoPE(
+    speech_encoder_args = [
         args.w2v2_path,
         args.w2v2_ctc_finetuned,
         args.length_shrink_cfg,
@@ -192,8 +192,13 @@ def train():
         args.min_lr,
         args.temp,
         args.loss_fn,
-    )
+    ]
     del llm
+
+    if args.hubert:
+        model = SpeechEncoderHuBERTRope(*speech_encoder_args)
+    else:
+        model = SpeechEncoderW2V2RoPE(*speech_encoder_args)        
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=args.save_dir,
