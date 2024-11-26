@@ -9,6 +9,10 @@ def add_speech_encoder_args(parser):
         action="store_true"
     )
     parser.add_argument(
+        "--hubert",
+        action="store_true"
+    )
+    parser.add_argument(
         "--feature-extractor-cfg", 
         type=str,
         default="[(1024, 10, 5)] + [(1024, 3, 2)] * 4 + [(1024,2,2)] * 4"

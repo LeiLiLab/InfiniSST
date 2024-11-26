@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from torch import Tensor
 from torch.nn import Parameter
 from fairseq.models.wav2vec.wav2vec2 import Wav2Vec2Model, Wav2Vec2Config
+from fairseq.models.hubert.hubert import HubertModel
 from fairseq.models.wav2vec import (
     TransformerEncoder,
     TransformerSentenceEncoderLayer,
@@ -67,6 +68,148 @@ def get_attn_mask_inference(seq_len, prefix_len, max_cache_size):
         mask[i, : max(0, i + prefix_len - max_cache_size) - max(0, prefix_len - max_cache_size)] = 0
     
     return mask
+
+
+def uni_hubert_extract_features(
+    self,
+    source: torch.Tensor,
+    padding_mask: Optional[torch.Tensor] = None,
+    mask: bool = False,
+    ret_conv: bool = False,
+    output_layer: Optional[int] = None,
+    cache=None,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    res = self.forward(
+        source,
+        padding_mask=padding_mask,
+        mask=mask,
+        features_only=True,
+        output_layer=output_layer,
+        cache=cache,
+    )
+    feature = res["features"] if ret_conv else res["x"]
+    return feature, res["padding_mask"]
+
+
+def uni_hubert_forward(
+    self,
+    source: torch.Tensor,
+    target_list: Optional[List[torch.Tensor]] = None,
+    padding_mask: Optional[torch.Tensor] = None,
+    mask: bool = True,
+    features_only: bool = False,
+    output_layer: Optional[int] = None,
+    cache=None,
+) -> Dict[str, torch.Tensor]:
+    """output layer is 1-based"""
+
+    if cache.src is not None:
+        source = torch.cat([cache.src, source], dim=1)
+    cache.src = source
+
+    features = self.forward_features(source)
+    if target_list is not None:
+        features, target_list = self.forward_targets(features, target_list)
+
+    if cache.src_len > 0:
+        new_src_len = features.size(-1)
+        features = features[..., cache.src_len:]
+        cache.src_len = new_src_len
+
+        max_src_token_len = 79 + 320 + 320 * BLOCKSIZE
+        if cache.src.size(1) > max_src_token_len:
+            cache.src = cache.src[:, -max_src_token_len:]
+            cache.src_len = BLOCKSIZE
+    else:
+        cache.src_len = features.size(-1)
+
+    features_pen = features.float().pow(2).mean()
+
+    features = features.transpose(1, 2)
+    features = self.layer_norm(features)
+    unmasked_features = features.clone()
+
+    if padding_mask is not None:
+        padding_mask = self.forward_padding_mask(features, padding_mask)
+
+    if self.post_extract_proj is not None:
+        features = self.post_extract_proj(features)
+
+    features = self.dropout_input(features)
+    unmasked_features = self.dropout_features(unmasked_features)
+
+    if mask:
+        x, mask_indices = self.apply_mask(features, padding_mask, target_list)
+    else:
+        x = features
+        mask_indices = None
+
+    # feature: (B, T, D), float
+    # target: (B, T), long
+    # x: (B, T, D), float
+    # padding_mask: (B, T), bool
+    # mask_indices: (B, T), bool
+    x, _ = self.encoder(
+        x,
+        padding_mask=padding_mask,
+        layer=None if output_layer is None else output_layer - 1,
+        cache=cache,
+    )
+
+    if features_only:
+        return {"x": x, "padding_mask": padding_mask, "features": features}
+
+    def compute_pred(proj_x, target, label_embs):
+        # compute logits for the i-th label set
+        y = torch.index_select(label_embs, 0, target.long())
+        negs = label_embs.unsqueeze(1).expand(-1, proj_x.size(0), -1)
+        if self.target_glu:
+            y = self.target_glu(y)
+            negs = self.target_glu(negs)
+        # proj_x: (S, D)
+        # y: (S, D)
+        # negs: (Neg, S, D)
+        return self.compute_nce(proj_x, y, negs)
+
+    label_embs_list = self.label_embs_concat.split(self.num_classes, 0)
+
+    if not self.skip_masked:
+        masked_indices = torch.logical_and(~padding_mask, mask_indices)
+        proj_x_m = self.final_proj(x[masked_indices])
+        if self.untie_final_proj:
+            proj_x_m_list = proj_x_m.chunk(len(target_list), dim=-1)
+        else:
+            proj_x_m_list = [proj_x_m for _ in range(len(target_list))]
+        logit_m_list = [
+            compute_pred(proj_x_m, t[masked_indices], label_embs_list[i])
+            for i, (proj_x_m, t) in enumerate(zip(proj_x_m_list, target_list))
+        ]
+    else:
+        logit_m_list = [None for _ in target_list]
+
+    if not self.skip_nomask:
+        nomask_indices = torch.logical_and(~padding_mask, ~mask_indices)
+        proj_x_u = self.final_proj(x[nomask_indices])
+        if self.untie_final_proj:
+            proj_x_u_list = proj_x_u.chunk(len(target_list), dim=-1)
+        else:
+            proj_x_u_list = [proj_x_u for _ in range(len(target_list))]
+
+        logit_u_list = [
+            compute_pred(proj_x_u, t[nomask_indices], label_embs_list[i])
+            for i, (proj_x_u, t) in enumerate(zip(proj_x_u_list, target_list))
+        ]
+    else:
+        logit_u_list = [None for _ in target_list]
+
+    result = {
+        "logit_m_list": logit_m_list,
+        "logit_u_list": logit_u_list,
+        "padding_mask": padding_mask,
+        "features_pen": features_pen,
+    }
+    return result
+
 
 
 def uni_w2v2_extract_features(self, source, padding_mask, mask=False, layer=None, cache=None):
@@ -762,6 +905,8 @@ def patch_w2v2(blocksize=1):
     BLOCKSIZE = blocksize
     Wav2Vec2Model.extract_features = uni_w2v2_extract_features
     Wav2Vec2Model.forward = uni_w2v2_forward
+    HubertModel.extract_features = uni_hubert_extract_features
+    HubertModel.forward = uni_hubert_forward
     TransformerEncoder.forward = uni_transformer_encoder_forward
     TransformerEncoder.extract_features = uni_transformer_encoder_extract_features
     TransformerSentenceEncoderLayer.forward = uni_self_attn_forward
