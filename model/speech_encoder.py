@@ -645,7 +645,7 @@ class SpeechEncoderW2V2RoPE(L.LightningModule):
         w2v2_path, w2v2_ctc_finetuned,
         length_shrink_cfg=None,
         block_size=16, max_cache_size=125,
-        llm_embedding=None,
+        llm_embedding_dim=4096, llm_embedding=None,
         train_ds=None, dev_ds=None, train_bsz=None, dev_bsz=None, collate_fn=None,
         lr=1e-4, warmup_updates=0, min_lr=1e-6, temp=0.5, loss_fn='waco'
     ):
@@ -659,10 +659,11 @@ class SpeechEncoderW2V2RoPE(L.LightningModule):
         if length_shrink_cfg is not None:
             self.length_shrink_cfg = eval(length_shrink_cfg)
             self.length_shrink = ConvFeatureExtractionModel(self.length_shrink_cfg, in_d=s_dim)
-        self.proj = nn.Linear(s_dim, llm_embedding.embedding_dim)
+        self.proj = nn.Linear(s_dim, llm_embedding_dim)
 
         self.llm_embedding = llm_embedding
-        self.llm_embedding.requires_grad_(False)
+        if llm_embedding:
+            self.llm_embedding.requires_grad_(False)
 
         self.datasets = {
             "train_ds": train_ds,

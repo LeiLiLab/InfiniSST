@@ -51,7 +51,7 @@ class Conversation:
             for i, (role, message) in enumerate(self.messages):
                 if role == "USER":
                     ret = message + self.sep2
-        if self.sep_style == SeparatorStyle.MPT:
+        elif self.sep_style == SeparatorStyle.MPT:
             ret = self.system + self.sep
             for role, message in self.messages:
                 if message:
