@@ -1,5 +1,6 @@
 from typing import List, Tuple
 
+import fairseq.tasks
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -14,7 +15,8 @@ import lightning as L
 from train.dataset import SpeechSampler
 
 import fairseq
-from fairseq.models.wav2vec import Wav2VecEncoder
+from fairseq.dataclass.utils import convert_namespace_to_omegaconf
+from fairseq.models.wav2vec import Wav2VecEncoder, Wav2Vec2Model
 from fairseq.models.hubert import HubertEncoder
 from fairseq.models.speech_to_text import (
     lengths_to_padding_mask,
@@ -740,7 +742,7 @@ class SpeechEncoderW2V2RoPE(L.LightningModule):
         def _conv_out_length(input_length, kernel_size, stride):
             return torch.floor((input_length - kernel_size) / stride + 1)
 
-        input_lengths = self.speech_encoder._get_feat_extract_output_lengths(input_lengths)
+        input_lengths = Wav2Vec2Model._get_feat_extract_output_lengths(self.speech_encoder, input_lengths)
         if self.length_shrink:
             for cfg in self.length_shrink_cfg:
                 input_lengths = _conv_out_length(
@@ -858,8 +860,11 @@ class SpeechEncoderHuBERTRope(SpeechEncoderW2V2RoPE):
             [speech_tower_path], strict=False
         )
         model = models[0].w2v_encoder.w2v_model
-        speech_dimension = cfg.model.w2v_args.model.encoder_embed_dim
-        n_layer = cfg.model.w2v_args.model.encoder_layers         
+        model.encoder.layerdrop = 0.0
+        model.remove_pretraining_modules()
+        model.cfg = cfg.model.w2v_args.model
+        speech_dimension = model.cfg.encoder_embed_dim
+        n_layer = model.cfg.encoder_layers         
         return model, speech_dimension, n_layer
 
     def encode_speech(self, src_tokens, src_lens, cache=None):
