@@ -1,4 +1,5 @@
 import os
+import copy
 import random
 import time
 import fairseq
@@ -81,7 +82,7 @@ class SpeechLlamaModel(LlamaModel):
         states: Optional[object] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
     
-        orig_embeds_params = getattr(self, 'orig_embeds_params', None)
+        orig_embeds_params = getattr(self, 'orig_embeds_params', False)
 
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
@@ -94,7 +95,6 @@ class SpeechLlamaModel(LlamaModel):
             self.speech_features_extracted = True
             
         new_input_embeds = []
-        cur_speech_idx = 0
         # inputs_embeds: B*T*d
         # speech_features: B*T1*d
         if speech_features is not None:
@@ -107,10 +107,26 @@ class SpeechLlamaModel(LlamaModel):
                     continue
                 speech_start_pos = torch.where(cur_input_ids == self.config.sp_start_token_id)[0]
                 speech_end_pos = torch.where(cur_input_ids == self.config.sp_end_token_id)[0]
-                if orig_embeds_params is not None:
-                    cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos].detach(), cur_input_embeds[speech_start_pos], cur_speech_features, cur_input_embeds[speech_end_pos], cur_input_embeds[speech_end_pos + 1:].detach()), dim=0)
+                if orig_embeds_params:
+                    cur_new_input_embeds = torch.cat(
+                        (
+                            cur_input_embeds[:speech_start_pos].detach(), 
+                            cur_input_embeds[speech_start_pos], 
+                            cur_speech_features, 
+                            cur_input_embeds[speech_end_pos], 
+                            cur_input_embeds[speech_end_pos + 1:].detach()
+                        ), 
+                        dim=0
+                    )
                 else:
-                    cur_new_input_embeds = torch.cat((cur_input_embeds[:speech_start_pos+1], cur_speech_features, cur_input_embeds[speech_end_pos:]), dim=0)
+                    cur_new_input_embeds = torch.cat(
+                        (
+                            cur_input_embeds[:speech_start_pos+1], 
+                            cur_speech_features, 
+                            cur_input_embeds[speech_end_pos:]
+                        ), 
+                        dim=0
+                    )
                 new_input_embeds.append(cur_new_input_embeds)
 
             inputs_embeds = torch.stack(new_input_embeds, dim=0)  

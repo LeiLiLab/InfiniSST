@@ -66,6 +66,7 @@ class SpeechEncoderArguments:
 class ModelArguments:
     llm_path: Optional[str] = field(default="facebook/opt-125m")
     llm_freeze: bool = field(default=False)
+    orig_embeds_params: bool = field(default=False)
 
 @dataclass
 class DataArguments:
@@ -160,7 +161,7 @@ class DataCollatorForSupervisedDataset(object):
             start_pos = (input_ids[i] == self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_START_TOKEN)).nonzero()
             end_pos = (input_ids[i] == self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_END_TOKEN)).nonzero()
             if len(start_pos) > 0 and len(end_pos) > 0:
-                targets[i, start_pos[0][0]:end_pos[0][0] + 1] = IGNORE_INDEX
+                targets[i, start_pos[0][0] : end_pos[0][0] + 1] = IGNORE_INDEX
             
             # 3. Mask padding tokens
             targets[i, attention_mask[i] == 0] = IGNORE_INDEX
@@ -250,6 +251,7 @@ def train():
     model.model.speech_encoder = speech_encoder
 
     model.preprocess(tokenizer=tokenizer) # only in stage 1
+    model.model.orig_embeds_params = model_args.orig_embeds_params
   
     # load data
     data_module = make_supervised_data_module(
