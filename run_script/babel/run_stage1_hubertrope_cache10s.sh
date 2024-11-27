@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=256GB
-#SBATCH --gres=gpu:A6000:4
+#SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
 #SBATCH --partition=general
 #SBATCH --time=2-00:00:00
@@ -63,9 +63,9 @@ torchrun --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:29503 \
     \
     --output_dir ${save_path} \
     --num_train_epochs  6 \
-    --per_device_train_batch_size 8 \
-    --per_device_eval_batch_size 8 \
-    --gradient_accumulation_steps 4 \
+    --per_device_train_batch_size 4 \
+    --per_device_eval_batch_size 4 \
+    --gradient_accumulation_steps 8 \
     --evaluation_strategy "steps" \
     --eval_steps 200 \
     --save_strategy "steps" \
@@ -81,4 +81,4 @@ torchrun --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:29503 \
     --report_to wandb \
     --run_name $name \
     --bf16 True \
-    --deepspeed ../configs/deepspeed_config_stage3_bf16.json
+    --deepspeed ../configs/deepspeed_config_bf16.json
