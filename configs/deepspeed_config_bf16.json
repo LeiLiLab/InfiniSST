@@ -26,7 +26,7 @@
         "allgather_bucket_size": 2e8,
         "reduce_scatter": true,
         "reduce_bucket_size": "auto",
-        "overlap_comm": true,
+        "overlap_comm": false,
         "contiguous_gradients": true
     },
     "gradient_accumulation_steps": "auto",
