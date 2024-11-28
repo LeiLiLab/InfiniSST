@@ -97,23 +97,12 @@ save_path=/scratch/xixu/runs/$name
 
 python ./zero_to_fp32.py ${llm_model} ${llm_model}/pytorch_model.bin
 
-
-python ./extract_adapter.py \
-  --model_name_or_path ${llm_model} \
-  --extracted_name 'mm_length_adapter' \
-  --output ${llm_model}/length_adapter.bin 
-  
-python ./extract_adapter.py \
-  --model_name_or_path ${llm_model} \
-  --extracted_name 'mm_mlp_adapter' \
-  --output ${llm_model}/mlp_adapter.bin 
-
 python ./extract_adapter.py \
     --model_name_or_path ${llm_model} \
-    --extracted_name 'speech_tower' \
-    --output ${llm_model}/speech_tower.bin
+    --extracted_name 'speech_encoder' \
+    --output ${llm_model}/speech_encoder.bin
 
-speech_encoder_path=${llm_model}/speech_tower.bin
+speech_encoder_path=${llm_model}/speech_encoder.bin
 
 torchrun  --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:29503\
     stage2_large.py \
