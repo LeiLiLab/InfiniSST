@@ -4,10 +4,10 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=256GB
+#SBATCH --mem=512GB
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --partition=general
+#SBATCH --partition=preempt
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
 ##SBATCH --array=1-7
@@ -30,7 +30,7 @@ data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de
 source_lang="English"
 target_lang="German"
 name="3.1-8B-s1-${source_lang,,}-${target_lang,,}-${w2v2_type}-rope"
-save_path=/scratch/siqiouya/runs/$name
+save_path=/compute/babel-5-23/siqiouya/runs/$name
 rm -rf ${save_path}
 mkdir -p ${save_path}
 
@@ -43,7 +43,7 @@ export NCCL_IB_DISABLE=1
 SLURM_GPUS=8
 
 cd /home/siqiouya/work/sllama/train
-torchrun --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:29503 \
+torchrun --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:9105 \
     stage1_new.py \
     --w2v2_path ${w2v2_path} \
     --w2v2_type ${w2v2_type} \
@@ -63,9 +63,9 @@ torchrun --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:29503 \
     \
     --output_dir ${save_path} \
     --num_train_epochs  6 \
-    --per_device_train_batch_size 4 \
-    --per_device_eval_batch_size 4 \
-    --gradient_accumulation_steps 8 \
+    --per_device_train_batch_size 3 \
+    --per_device_eval_batch_size 3 \
+    --gradient_accumulation_steps 11 \
     --evaluation_strategy "steps" \
     --eval_steps 200 \
     --save_strategy "steps" \

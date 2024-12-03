@@ -520,6 +520,8 @@ def convert_zero_checkpoint_to_fp32_state_dict(checkpoint_dir, output_file, tag=
         - ``tag``: checkpoint tag used as a unique identifier for checkpoint. If not provided will attempt to load tag in the file named ``latest`` in the checkpoint folder, e.g., ``global_step14``
     """
 
+    if os.path.exists(output_file):
+        raise FileExistsError()
     state_dict = get_fp32_state_dict_from_zero_checkpoint(checkpoint_dir, tag)
     print(f"Saving fp32 state dict to {output_file}")
     torch.save(state_dict, output_file)

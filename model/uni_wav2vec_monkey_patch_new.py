@@ -596,7 +596,7 @@ def uni_mha_init(
 ):
     super(MultiheadAttention, self).__init__()
     
-    self.rotary_emb = RotaryEmbedding(embed_dim // num_heads, use_xpos=True)
+    self.rotary_emb = RotaryEmbedding(embed_dim // num_heads, use_xpos=XPOS)
 
     xformers_att_config = utils.eval_str_dict(xformers_att_config)
     self.use_xformers = xformers_att_config is not None
@@ -900,9 +900,11 @@ def uni_mha_forward(
     return attn, attn_weights
 
 
-def patch_w2v2(blocksize=1):
-    global BLOCKSIZE
+def patch_w2v2(blocksize=1, xpos=True):
+    global BLOCKSIZE, XPOS
+    print("Patching with block size {} and xpos {}".format(blocksize, xpos))
     BLOCKSIZE = blocksize
+    XPOS = xpos
     Wav2Vec2Model.extract_features = uni_w2v2_extract_features
     Wav2Vec2Model.forward = uni_w2v2_forward
     HubertModel.extract_features = uni_hubert_extract_features

@@ -6,8 +6,8 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=512GB
 #SBATCH --gres=gpu:L40S:8
-##SBATCH --nodelist=babel-3-17
-#SBATCH --partition=preempt
+#SBATCH --exclude=babel-13-13,babel-3-9,babel-13-29
+#SBATCH --partition=general
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
 ##SBATCH --array=1-7
@@ -29,7 +29,7 @@ data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-fr
 source_lang="English"
 target_lang="German"
-name="3.1-8B-s1-${source_lang,,}-${target_lang,,}-${w2v2_type}-rope"
+name="3.1-8B-s1-${source_lang,,}-${target_lang,,}-${w2v2_type}-rope-mt"
 save_path=/compute/babel-5-23/siqiouya/runs/$name
 rm -rf ${save_path}
 mkdir -p ${save_path}
@@ -53,6 +53,7 @@ torchrun --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:9105 \
     --length_shrink_cfg "[(1024,2,2)] * 2" \
     --block_size 48 \
     --max_cache_size 500 \
+    --text_weight 1.0 \
     \
     --llm_path ${llm_path} \
     --llm_freeze True \
@@ -65,9 +66,9 @@ torchrun --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:9105 \
     \
     --output_dir ${save_path} \
     --num_train_epochs  6 \
-    --per_device_train_batch_size 3 \
-    --per_device_eval_batch_size 3 \
-    --gradient_accumulation_steps 11 \
+    --per_device_train_batch_size 2 \
+    --per_device_eval_batch_size 2 \
+    --gradient_accumulation_steps 16 \
     --evaluation_strategy "steps" \
     --eval_steps 200 \
     --save_strategy "steps" \

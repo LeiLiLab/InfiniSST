@@ -7,6 +7,7 @@
 #SBATCH --mem=512GB
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
+#SBATCH --exclude=babel-13-13,babel-13-29,babel-3-9
 #SBATCH --partition=preempt
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
@@ -29,9 +30,9 @@ data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-fr
 source_lang="English"
 target_lang="German"
-name="3.1-8B-s1-${source_lang,,}-${target_lang,,}-${w2v2_type}-rope"
+name="3.1-8B-s1-${source_lang,,}-${target_lang,,}-${w2v2_type}-rope-frz-decay-0.1"
 save_path=/compute/babel-5-23/siqiouya/runs/$name
-rm -rf ${save_path}
+# rm -rf ${save_path}
 mkdir -p ${save_path}
 
 export PYTHONPATH=/home/siqiouya/work/sllama
@@ -56,6 +57,7 @@ torchrun --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:9105 \
     \
     --llm_path ${llm_path} \
     --llm_freeze True \
+    --orig_embeds_params True \
     \
     --data_path ${data_path} \
     --data_split_train 'train' \
@@ -74,7 +76,7 @@ torchrun --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:9105 \
     --save_steps 200 \
     --save_total_limit 4 \
     --learning_rate 2e-4 \
-    --weight_decay 0. \
+    --weight_decay 0.1 \
     --warmup_ratio 0.2 \
     --lr_scheduler_type "cosine" \
     --logging_steps 5 \

@@ -20,6 +20,9 @@ if __name__ == '__main__':
     key_to_match = args.extracted_name
     loaded_weights = {}
 
+    if os.path.exists(args.output):
+        raise FileExistsError()
+
     if args.speech_encoder_only:
         ckpt = torch.load(args.model_name_or_path, map_location='cpu')
         for key, value in ckpt['state_dict'].items():
