@@ -7,6 +7,7 @@
 #SBATCH --mem=512GB
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
+#SBATCH --exclude=babel-13-13,babel-3-9
 #SBATCH --partition=preempt
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
@@ -29,7 +30,7 @@ data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-fr
 source_lang="English"
 target_lang="German"
-name="3.1-8B-s1-${source_lang,,}-${target_lang,,}-${w2v2_type}-rope"
+name="3.1-8B-s1-${source_lang,,}-${target_lang,,}-${w2v2_type}-rope-rdrop"
 save_path=/compute/babel-5-23/siqiouya/runs/$name
 rm -rf ${save_path}
 mkdir -p ${save_path}
@@ -56,6 +57,8 @@ torchrun --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:9105 \
     \
     --llm_path ${llm_path} \
     --llm_freeze True \
+    --orig_embeds_params True \
+    --rdrop 5 \
     \
     --data_path ${data_path} \
     --data_split_train 'train' \
@@ -65,9 +68,9 @@ torchrun --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:9105 \
     \
     --output_dir ${save_path} \
     --num_train_epochs  6 \
-    --per_device_train_batch_size 3 \
-    --per_device_eval_batch_size 3 \
-    --gradient_accumulation_steps 11 \
+    --per_device_train_batch_size 2 \
+    --per_device_eval_batch_size 2 \
+    --gradient_accumulation_steps 16 \
     --evaluation_strategy "steps" \
     --eval_steps 200 \
     --save_strategy "steps" \
@@ -83,4 +86,4 @@ torchrun --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:9105 \
     --report_to wandb \
     --run_name $name \
     --bf16 True \
-    --deepspeed ../configs/deepspeed_config_bf16.json
+    --deepspeed ../configs/deepspeed_config_bf16_offload.json

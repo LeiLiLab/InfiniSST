@@ -29,9 +29,9 @@ data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-fr
 source_lang="English"
 target_lang="German"
-name="3.1-8B-s1-${source_lang,,}-${target_lang,,}-${w2v2_type}-rope"
+name="3.1-8B-s1-${source_lang,,}-${target_lang,,}-${w2v2_type}-rope-cosine"
 save_path=/compute/babel-5-23/siqiouya/runs/$name
-rm -rf ${save_path}
+# rm -rf ${save_path}
 mkdir -p ${save_path}
 
 export PYTHONPATH=/home/siqiouya/work/sllama
@@ -83,4 +83,4 @@ torchrun --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:9105 \
     --report_to wandb \
     --run_name $name \
     --bf16 True \
-    --deepspeed ../configs/deepspeed_config_bf16.json
+    --deepspeed ../configs/deepspeed_config_bf16_bare.json

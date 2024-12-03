@@ -14,18 +14,15 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import os, sys, random
-# os.environ['WANDB_DISABLED'] = 'true'
-# sys.path.append('/home/xixu/sllama')
+import os
 import copy
-from dataclasses import dataclass, field
-from typing import List, Optional, Tuple, Union
 import json
-import logging
 import pathlib
-from typing import Dict, Optional, Sequence
+from dataclasses import dataclass, field
+from typing import List, Optional, Dict
 
 import torch
+import torch.distributed
 import torch.nn as nn
 from torch.utils.data import Dataset
 
@@ -57,10 +54,12 @@ DEFAULT_SPEECH_END_TOKEN = "<sp_end>"
 class SpeechEncoderArguments:
     w2v2_path: Optional[str] = field(default=None)
     w2v2_type: Optional[str] = field(default=None)
+    w2v2_freeze: bool = field(default=False)
     ctc_finetuned: bool = field(default=False)
     length_shrink_cfg: str = field(default=None)
     block_size: int = field(default=48)
     max_cache_size: int = field(default=500)
+    xpos: bool = field(default=True)
 
 @dataclass
 class ModelArguments:
@@ -84,6 +83,9 @@ class DataArguments:
                            
 @dataclass
 class TrainingArguments(transformers.TrainingArguments):
+    stage: int = field(default=1)
+    rdrop: float = field(default=0.)
+    text_weight: float = field(default=0.)
     cache_dir: Optional[str] = field(default=None)
     optim: str = field(default="adamw_torch")
     remove_unused_columns: bool = field(default=False)
@@ -132,9 +134,12 @@ class DataCollatorForSupervisedDataset(object):
         speech_tokens = [int(speech_len)*DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
         speech_tokens = [DEFAULT_SPEECH_START_TOKEN + tokens + DEFAULT_SPEECH_END_TOKEN for tokens in speech_tokens]
 
+        text_tokens = [DEFAULT_SPEECH_START_TOKEN + x.src_text + DEFAULT_SPEECH_END_TOKEN for x in samples]
+
         # Create prompts
         instruction = f"Translate the following speech from {self.source_lang} to {self.target_lang}:"
         prompts = [f"{instruction} {speech_token} {text}<|end_of_text|>" for speech_token, text in zip(speech_tokens, texts)]
+        text_prompts = [f"{instruction} {text_token} {text}<|end_of_text|>" for text_token, text in zip(text_tokens, texts)]
         
         # Get instruction length for masking
         instruction_ids = self.tokenizer(instruction + " ", add_special_tokens=False).input_ids
@@ -165,6 +170,30 @@ class DataCollatorForSupervisedDataset(object):
             
             # 3. Mask padding tokens
             targets[i, attention_mask[i] == 0] = IGNORE_INDEX
+
+        # Tokenize with explicit padding settings
+        text_tokenized = self.tokenizer(
+            text_prompts,
+            return_tensors="pt",
+            padding=True,
+            truncation=False,
+            add_special_tokens=False,
+        )
+        text_input_ids = text_tokenized.input_ids
+        text_attention_mask = text_tokenized.attention_mask
+
+        # Create targets and handle padding properly
+        text_targets = text_input_ids.clone()
+        for i in range(len(samples)):
+            # 1. Mask instruction tokens
+            text_targets[i, :instruction_len] = IGNORE_INDEX
+            # 2. Mask speech tokens
+            start_pos = (text_input_ids[i] == self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_START_TOKEN)).nonzero()
+            end_pos = (text_input_ids[i] == self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_END_TOKEN)).nonzero()
+            if len(start_pos) > 0 and len(end_pos) > 0:
+                text_targets[i, start_pos[0][0] : end_pos[0][0] + 1] = IGNORE_INDEX
+            # 3. Mask padding tokens
+            text_targets[i, text_attention_mask[i] == 0] = IGNORE_INDEX
                 
         batch = dict(
             input_ids=input_ids,
@@ -173,14 +202,20 @@ class DataCollatorForSupervisedDataset(object):
             speech_batch=speech_batch,
             src_lengths=n_frames,
             after_lens=speech_lens,
+
+            text_input_ids=text_input_ids,
+            text_labels=text_targets,
+            text_attention_mask=text_attention_mask,
         )
 
         return batch
 
-def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer,
-                                data_args,
-                                length_shrink_func,
-                                model) -> Dict:
+def make_supervised_data_module(
+        tokenizer: transformers.PreTrainedTokenizer,
+        data_args,
+        length_shrink_func,
+        model
+    ):
     """Make dataset and collator for supervised fine-tuning."""
 
     train_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
@@ -211,12 +246,27 @@ def train():
     # Set seed before initializing model.
     set_seed(training_args.seed) 
 
-    # load LLM
+    update_config = os.path.join(model_args.llm_path, 'config_large.json')
+    if int(os.environ.get("LOCAL_RANK") or 0) == 0 and training_args.stage == 2:
+        with open(os.path.join(model_args.llm_path, 'config.json'), 'r') as r, \
+            open(update_config, 'w') as w:
+            config = json.load(r)
+            config['large_model'] = True
+            json.dump(config, w, indent=2)
+    torch.distributed.barrier()
+
     model = SpeechLlamaForCausalLM.from_pretrained(
         model_args.llm_path,
         cache_dir=training_args.cache_dir,
+        config=update_config,
     )
     model.config.use_cache = False
+    model.rdrop = training_args.rdrop
+    model.text_weight = training_args.text_weight
+
+    if model_args.llm_freeze:
+        model.model.requires_grad_(False)
+        model.lm_head.requires_grad_(False)
 
     tokenizer = transformers.AutoTokenizer.from_pretrained(
         model_args.llm_path,
@@ -224,12 +274,7 @@ def train():
         padding_side="right",
         use_fast=False,
     )
- 
     tokenizer.pad_token = "<|finetune_right_pad_id|>"
-
-    if model_args.llm_freeze:
-        model.model.requires_grad_(False)
-        model.lm_head.requires_grad_(False)
 
     # load speech encoder
     speech_encoder_args = [
@@ -241,17 +286,29 @@ def train():
         speech_args.max_cache_size,
         model.model.embed_tokens.embedding_dim,
         None,
+        speech_args.xpos,
     ]
     if speech_args.w2v2_type == 'hubert':
         speech_encoder = SpeechEncoderHuBERTRope(*speech_encoder_args)
     else:
         speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args) 
 
-    speech_encoder.to(device=model.device, dtype=model.dtype)
+    if training_args.stage == 2:
+        speech_encoder_weights = torch.load(
+            os.path.join(model_args.llm_path, "speech_encoder.bin"),
+            map_location='cpu'
+        )
+        speech_encoder.load_state_dict(speech_encoder_weights)
+
+    speech_encoder.to(dtype=model.dtype, device=model.device)
     model.model.speech_encoder = speech_encoder
 
-    model.preprocess(tokenizer=tokenizer) # only in stage 1
-    model.model.orig_embeds_params = model_args.orig_embeds_params
+    if speech_args.w2v2_freeze:
+        model.model.speech_encoder.requires_grad_(False)
+
+    if training_args.stage == 1:
+        model.preprocess(tokenizer=tokenizer) # only in stage 1
+        model.model.orig_embeds_params = model_args.orig_embeds_params
   
     # load data
     data_module = make_supervised_data_module(
@@ -272,7 +329,6 @@ def train():
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
         trainer.train(resume_from_checkpoint=True)
     else:
-        print("Start training")
         trainer.train()
     trainer.save_state()
     safe_save_model_for_hf_trainer(
@@ -282,5 +338,4 @@ def train():
 
 
 if __name__ == "__main__":
-    
     train()

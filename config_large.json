@@ -79,6 +79,5 @@
   "_name_or_path": "",
   "transformers_version": "4.36.2",
   "model_type": "SpeechLlama",
-  "large_model": true,
-  "is_flash_attn_2_available": false
+  "large_model": true
 }

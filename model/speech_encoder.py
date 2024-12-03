@@ -647,14 +647,16 @@ class SpeechEncoderW2V2RoPE(L.LightningModule):
         w2v2_path, w2v2_ctc_finetuned,
         length_shrink_cfg=None,
         block_size=16, max_cache_size=125,
-        llm_embedding_dim=4096, llm_embedding=None,
+        llm_embedding_dim=4096, llm_embedding=None, xpos=True,
         train_ds=None, dev_ds=None, train_bsz=None, dev_bsz=None, collate_fn=None,
         lr=1e-4, warmup_updates=0, min_lr=1e-6, temp=0.5, loss_fn='waco'
     ):
         super().__init__()
 
-        patch_w2v2(block_size)
-        self.speech_encoder, s_dim, self.s_layer = self._load_w2v2(w2v2_path, w2v2_ctc_finetuned)
+        patch_w2v2(block_size, xpos)
+        self.speech_encoder, s_dim, self.s_layer = self._load_w2v2(
+            w2v2_path, w2v2_ctc_finetuned
+        )
         self.max_cache_size = max_cache_size
         
         self.length_shrink = None
@@ -694,6 +696,11 @@ class SpeechEncoderW2V2RoPE(L.LightningModule):
             n_layer = w2v_args.encoder_layers
         else: # ctc finetune, w2v-ctc
             state = fairseq.checkpoint_utils.load_checkpoint_to_cpu(speech_tower_path)
+
+            cfg = state['cfg']['model']['w2v_args']['model']       
+            speech_dimension = cfg.encoder_embed_dim
+            n_layer = cfg.encoder_layers     
+
             model = Wav2VecEncoder(state['cfg']['model'], None)
             new = {}
             for key in state['model'].keys():
@@ -702,8 +709,7 @@ class SpeechEncoderW2V2RoPE(L.LightningModule):
                     new[new_key] = state['model'][key]
             model.load_state_dict(new, strict=False)
             model = model.w2v_model
-            speech_dimension = state['cfg']['model']['w2v_args']['model'].encoder_embed_dim
-            n_layer = state['cfg']['model']['w2v_args']['model'].encoder_layers            
+                   
         return model, speech_dimension, n_layer
 
     def train_dataloader(self):

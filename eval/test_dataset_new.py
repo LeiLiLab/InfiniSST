@@ -13,7 +13,6 @@ from model.model_new import SpeechLlamaForCausalLM, SpeechLlamaConfig
 from model.speech_encoder import SpeechEncoderHuBERTRope, SpeechEncoderW2V2RoPE
 from model.utils import KeywordsStoppingCriteria
 from train.dataset import PromptSpeechToTextDatasetCreator, SpeechToTextDatasetItem
-from train.options import add_speech_encoder_args
 
 IGNORE_INDEX = -100
 DEFAULT_PAD_TOKEN = "[PAD]"
@@ -59,6 +58,7 @@ def eval_model(args):
         args.max_cache_size,
         model.model.embed_tokens.embedding_dim,
         None,
+        bool(args.xpos)
     ]
     if args.w2v2_type == 'hubert':
         speech_encoder = SpeechEncoderHuBERTRope(*speech_encoder_args)
@@ -122,35 +122,30 @@ def eval_model(args):
         # Generate outputs for batch
         model.model.speech_features_extracted = False
         model.eval()
-        try:
-            with torch.inference_mode():
-                output_ids = model.generate(
-                    attention_mask=attention_mask,
-                    input_ids=input_ids.cuda(),
-                    speech_batch=speech_batch.to(dtype=model.dtype, device=model.device),
-                    src_lengths=n_frames.cuda(),
-                    after_lens=speech_lens.cuda(),
-                    num_beams=args.beam,
-                    max_new_tokens=500,
-                    stopping_criteria=[stopping_criteria],
-                    no_repeat_ngram_size=3,          
-                    repetition_penalty=1.2,          
-                    length_penalty=1.0,
-                    pad_token_id=tokenizer.eos_token_id,
-                )
-                
-            # Process outputs for batch
-            input_token_len = input_ids.shape[1]
-            outputs = tokenizer.batch_decode(output_ids[:, input_token_len:], skip_special_tokens=True)
+        with torch.inference_mode():
+            output_ids = model.generate(
+                attention_mask=attention_mask,
+                input_ids=input_ids.cuda(),
+                speech_batch=speech_batch.to(dtype=model.dtype, device=model.device),
+                src_lengths=n_frames.cuda(),
+                after_lens=speech_lens.cuda(),
+                num_beams=args.beam,
+                max_new_tokens=500,
+                stopping_criteria=[stopping_criteria],
+                no_repeat_ngram_size=3,          
+                repetition_penalty=1.2,          
+                length_penalty=1.0,
+                pad_token_id=tokenizer.eos_token_id,
+            )
             
-            # Clean outputs
-            outputs = [output.strip() for output in outputs]
-            outputs = [output[:-len(stop_str)] if output.endswith(stop_str) else output for output in outputs]
-            outputs = [output.strip() for output in outputs]
-            
-        except Exception as e:
-            outputs = [""] * len(batch)
-            print(e)
+        # Process outputs for batch
+        input_token_len = input_ids.shape[1]
+        outputs = tokenizer.batch_decode(output_ids[:, input_token_len:], skip_special_tokens=True)
+        
+        # Clean outputs
+        outputs = [output.strip() for output in outputs]
+        outputs = [output[:-len(stop_str)] if output.endswith(stop_str) else output for output in outputs]
+        outputs = [output.strip() for output in outputs]
             
         # Write results for batch
         for id, ref, output in zip(ids, refs, outputs):
@@ -189,6 +184,11 @@ if __name__ == "__main__":
         "--max-cache-size",
         type=int, 
         default=125, # 125 * 0.08 = 1 second
+    )
+    parser.add_argument(
+        "--xpos",
+        type=int,
+        default=1, # 1 for True, 0 for False
     )
 
     parser.add_argument("--model-name", type=str, default="facebook/opt-350m")
