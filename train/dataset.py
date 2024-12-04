@@ -185,8 +185,8 @@ class SpeechSampler(DistributedSampler):
         indices, sum_size = [], 0
         n_skipped = 0
         for size, idx in sorted_sizes:
-            if self.dataset.speech_words[idx] is not None and \
-                size <= self.batch_size and size >= min_ms * 16:
+            if size <= self.batch_size and size >= min_ms * 16 and \
+                size / 16000 / len(self.dataset.tgt_texts[idx].split(' ')) >= 0.15:
                 if sum_size + size <= self.batch_size:
                     indices.append(idx)
                     sum_size += size
