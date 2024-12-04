@@ -72,7 +72,7 @@ srun python /home/siqiouyang/work/projects/sllama/train/main_lightning.py \
     --n_device ${SLURM_GPUS} \
     --strategy deepspeed_stage_2 \
     --max_epochs 6 \
-    --grad_acc_steps 4 \
+    --grad_acc_steps 16 \
     --clip_norm 1.0 \
     --save_dir ${save_path} \
     --log_step 5 \
