@@ -6,7 +6,8 @@ from torch.utils.data import DataLoader
 import transformers
 import lightning as L
 from torch.optim import Adam
-from apex.optimizers import FusedAdam
+# from apex.optimizers import FusedAdam
+from deepspeed.ops.adam import FusedAdam
 
 from train.dataset import (
     SpeechSampler, 
