@@ -40,9 +40,13 @@ from model.speech_encoder import (
 )
 
 import lightning as L
-from model.model_lightning import SLlamaLightning
+from lightning.pytorch.strategies import FSDPStrategy
+from lightning.pytorch.plugins.precision import FSDPPrecision
 from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor
 from lightning.pytorch.loggers import WandbLogger
+from lightning.pytorch.strategies import DeepSpeedStrategy, FSDPStrategy
+
+from model.model_lightning import SLlamaLightning
 # TODO: import and use code from ../data/dataset.py
 
 IGNORE_INDEX = -100
@@ -71,6 +75,7 @@ class ModelArguments:
     llm_path: Optional[str] = field(default="facebook/opt-125m")
     llm_freeze: bool = field(default=False)
     orig_embeds_params: bool = field(default=False)
+    sllm_weight_path: Optional[str] = field(default=None)
 
 @dataclass
 class DataArguments:
@@ -108,7 +113,7 @@ class TrainingArguments:
     run_name: str = field(default=None)
 
     n_device: int = field(default=1)
-    strategy: str = field(default="ddp")
+    deepspeed_stage: int = field(default=2)
     precision: str = field(default="bf16-mixed")
     max_epochs: int = field(default=1)
     grad_acc_steps: int = field(default=1)
@@ -262,84 +267,24 @@ def train():
 
     # Set seed before initializing model.
     set_seed(training_args.seed) 
-
-    model = SpeechLlamaForCausalLM.from_pretrained(model_args.llm_path)
-    model.config.use_cache = False
-    model.rdrop = training_args.rdrop
-    model.text_weight = training_args.text_weight
-
-    if model_args.llm_freeze:
-        model.model.requires_grad_(False)
-        model.lm_head.requires_grad_(False)
-
-    tokenizer = transformers.AutoTokenizer.from_pretrained(
-        model_args.llm_path,
-        padding_side="right",
-        use_fast=False,
-    )
-    tokenizer.pad_token = "<|finetune_right_pad_id|>"
-
-    # load speech encoder
-    speech_encoder_args = [
-        speech_args.w2v2_path,
-        speech_args.ctc_finetuned,
-        speech_args.length_shrink_cfg,
-        
-        speech_args.block_size,
-        speech_args.max_cache_size,
-        model.model.embed_tokens.embedding_dim,
-        None,
-        speech_args.xpos,
-    ]
-    if speech_args.w2v2_type == 'hubert':
-        speech_encoder = SpeechEncoderHuBERTRope(*speech_encoder_args)
-    else:
-        speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args) 
-
-    if training_args.stage == 2:
-        speech_encoder_weights = torch.load(
-            os.path.join(model_args.llm_path, "speech_encoder.bin"),
-            map_location='cpu'
-        )
-        speech_encoder.load_state_dict(speech_encoder_weights)
-
-    speech_encoder.to(dtype=model.dtype, device=model.device)
-    model.model.speech_encoder = speech_encoder
-
-    if speech_args.w2v2_freeze:
-        model.model.speech_encoder.requires_grad_(False)
-
-    if training_args.stage == 1:
-        model.preprocess(tokenizer=tokenizer) # only in stage 1
-        model.model.orig_embeds_params = model_args.orig_embeds_params
   
-    # load data
-    train_ds, dev_ds, collate_fn = make_supervised_data_module(
-        tokenizer=tokenizer,
-        data_args=data_args,
-        length_shrink_func=speech_encoder._get_feat_extract_output_lengths,
-        model=model
-    )
-
     model_lightning = SLlamaLightning(
-        model,
-        train_ds=train_ds, 
-        dev_ds=dev_ds, 
-        train_bsz=training_args.train_bsz, 
-        dev_bsz=training_args.eval_bsz, 
-        collate_fn=collate_fn,
+        speech_args=speech_args,
+        model_args=model_args,
+        data_args=data_args,
+        training_args=training_args,
         lr=training_args.learning_rate,
         warmup_updates=training_args.warmup_steps,
         min_lr=0.,
     )
 
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=training_args.save_dir,
-        monitor='eval/loss',
-        save_top_k=1,
-        mode='min',
-        every_n_train_steps=training_args.eval_step
-    )
+    # checkpoint_callback = ModelCheckpoint(
+    #     dirpath=training_args.save_dir,
+    #     monitor='eval/loss',
+    #     save_top_k=1,
+    #     mode='min',
+    #     every_n_train_steps=training_args.eval_step
+    # )
     lr_monitor = LearningRateMonitor(
         logging_interval='step'
     )
@@ -349,10 +294,18 @@ def train():
         # log_model="all"
     )
 
+    strategy = DeepSpeedStrategy(
+        stage=training_args.deepspeed_stage,
+    )
+    # strategy = FSDPStrategy(
+    #     sharding_strategy=training_args.sharding,
+    #     state_dict_type="sharded"
+    # )
+
     trainer = L.Trainer(
         accelerator='gpu',
         devices=training_args.n_device,
-        strategy=training_args.strategy,
+        strategy=strategy,
         precision=training_args.precision,
         max_steps=-1,
         max_epochs=training_args.max_epochs,
@@ -363,8 +316,9 @@ def train():
         log_every_n_steps=training_args.log_step,
         val_check_interval=training_args.eval_step,
         logger=wandb_logger,
-        callbacks=[checkpoint_callback, lr_monitor],
+        callbacks=[lr_monitor],
         fast_dev_run=training_args.debug_mode,
+        enable_checkpointing=False,
     )
 
     # start training
@@ -373,6 +327,8 @@ def train():
         trainer.fit(model_lightning, ckpt_path=ckpt_path)
     else:
         trainer.fit(model_lightning)
+
+    trainer.save_checkpoint(training_args.save_dir, weights_only=True)
 
 
 if __name__ == "__main__":

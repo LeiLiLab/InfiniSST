@@ -29,12 +29,6 @@ from transformers import AutoConfig, AutoModelForCausalLM, \
 
 from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
 
-import lightning as L
-from train.dataset import SpeechSampler
-from model.speech_encoder import (
-    SpeechEncoder, SpeechEncoderW2V2, SpeechEncoderW2V2RoPE, SpeechEncoderHuBERTRope
-)
-
 DEFAULT_SPEECH_PATCH_TOKEN = "<sp_patch>"
 DEFAULT_SPEECH_START_TOKEN = "<sp_start>"
 DEFAULT_SPEECH_END_TOKEN = "<sp_end>"
@@ -91,7 +85,7 @@ class SpeechLlamaModel(LlamaModel):
 
         if speech_batch is not None:
             speech_features = None
-            if not self.speech_features_extracted:
+            if self.training or not self.speech_features_extracted:
                 speech_features, _ = self.speech_encoder.encode_speech(speech_batch, src_lengths)
 
             if self.config.inference:
@@ -169,17 +163,17 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
     
     def preprocess(self, tokenizer):      
         num_new_tokens = tokenizer.add_tokens([DEFAULT_SPEECH_PATCH_TOKEN, DEFAULT_SPEECH_START_TOKEN, DEFAULT_SPEECH_END_TOKEN], special_tokens=True)
-        self.resize_token_embeddings(len(tokenizer))        
-        input_embeddings = self.get_input_embeddings().weight.data
-        output_embeddings = self.get_output_embeddings().weight.data
+        self.resize_token_embeddings(len(tokenizer), mean_resizing=True)
+        # input_embeddings = self.get_input_embeddings().weight.data
+        # output_embeddings = self.get_output_embeddings().weight.data
 
-        input_embeddings_avg = input_embeddings[:-num_new_tokens].mean(
-                dim=0, keepdim=True)
-        output_embeddings_avg = output_embeddings[:-num_new_tokens].mean(
-                dim=0, keepdim=True)
+        # input_embeddings_avg = input_embeddings[:-num_new_tokens].mean(
+        #         dim=0, keepdim=True)
+        # output_embeddings_avg = output_embeddings[:-num_new_tokens].mean(
+        #         dim=0, keepdim=True)
 
-        input_embeddings[-num_new_tokens:] = input_embeddings_avg
-        output_embeddings[-num_new_tokens:] = output_embeddings_avg
+        # input_embeddings[-num_new_tokens:] = input_embeddings_avg
+        # output_embeddings[-num_new_tokens:] = output_embeddings_avg
 
         sp_patch_token_id, sp_start_token_id, sp_end_token_id = tokenizer.convert_tokens_to_ids([DEFAULT_SPEECH_PATCH_TOKEN, DEFAULT_SPEECH_START_TOKEN, DEFAULT_SPEECH_END_TOKEN])                
         self.config.sp_patch_token_id = sp_patch_token_id

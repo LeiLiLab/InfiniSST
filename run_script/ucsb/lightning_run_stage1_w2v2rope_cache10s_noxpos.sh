@@ -15,7 +15,7 @@
 #SBATCH --mail-user=siqiouya@andrew.cmu.edu
 #SBATCH --output=slurm_logs/slurm-%j.out
 
-source /mnt/taurus/home/siqiouyang/anaconda3/bin/activate /mnt/taurus/home/siqiouyang/anaconda3/envs/sllama_lightning
+source /mnt/taurus/home/siqiouyang/anaconda3/bin/activate /mnt/taurus/home/siqiouyang/anaconda3/envs/speechllama
 
 llm_path=/mnt/taurus/data/siqiouyang/download/llama3.1-8b-hf/
 w2v2_path=/mnt/taurus/data/xixu/models/wav2_vec_vox_960h_pl.pt
@@ -38,8 +38,10 @@ export PYTHONPATH=/home/siqiouyang/work/projects/sllama
 export WANDB_PROJECT="mustc_1.0_de"
 export WANDB_ENTITY="streamllama"
 
-export NCCL_P2P_DISABLE=1
-export NCCL_IB_DISABLE=1
+export TOKENIZERS_PARALLELISM=false
+
+export NCCL_P2P_DISABLE=0
+export NCCL_IB_DISABLE=0
 SLURM_GPUS=8
 
 srun python /home/siqiouyang/work/projects/sllama/train/main_lightning.py \
@@ -63,16 +65,16 @@ srun python /home/siqiouyang/work/projects/sllama/train/main_lightning.py \
     \
     --seed 998244353 \
     --stage 1 \
-    --train_bsz 1000000 \
-    --eval_bsz 1000000 \
+    --train_bsz 800000 \
+    --eval_bsz 800000 \
     --learning_rate 2e-4 \
     --warmup_steps 1000 \
     --run_name $name \
     \
     --n_device ${SLURM_GPUS} \
-    --strategy deepspeed_stage_2 \
+    --deepspeed_stage 2 \
     --max_epochs 6 \
-    --grad_acc_steps 16 \
+    --grad_acc_steps 4 \
     --clip_norm 1.0 \
     --save_dir ${save_path} \
     --log_step 5 \
