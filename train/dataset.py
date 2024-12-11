@@ -182,12 +182,12 @@ class PromptSpeechToTextDatasetCreator(object):
 
 
 class SpeechSampler(DistributedSampler):
-    def __init__(self, dataset, shuffle, batch_size, min_ms=0, multiplier=1):
+    def __init__(self, dataset, shuffle, batch_size, min_ms=0, multiplier=1, filter=True):
         super().__init__(dataset=dataset, shuffle=shuffle)
         self.batch_size = batch_size
-        self._obtain_batches(min_ms, multiplier)
+        self._obtain_batches(min_ms, multiplier, filter)
 
-    def _obtain_batches(self, min_ms, multiplier):
+    def _obtain_batches(self, min_ms, multiplier, filter):
         sizes = list(zip(self.dataset.n_frames, range(len(self.dataset))))
         sorted_sizes = sorted(sizes)
 
@@ -195,8 +195,7 @@ class SpeechSampler(DistributedSampler):
         indices, sum_size = [], 0
         n_skipped = 0
         for size, idx in sorted_sizes:
-            if size <= self.batch_size and size >= min_ms * 16 and \
-                size / 16000 / len(self.dataset.tgt_texts[idx].split(' ')) >= 0.1:
+            if not filter or (size <= self.batch_size and size >= min_ms * 16 and size / 16000 / len(self.dataset.tgt_texts[idx].split(' ')) >= 0.15):
                 if sum_size + size <= self.batch_size:
                     indices.append(idx)
                     sum_size += size
@@ -321,6 +320,8 @@ class DataCollatorForSupervisedDataset(object):
             speech_batch=speech_batch,
             src_lengths=n_frames,
             after_lens=speech_lens,
+            target_text=texts,
+            ids=indices,
 
             text_input_ids=text_input_ids,
             text_labels=text_targets,
