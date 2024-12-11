@@ -4,6 +4,7 @@ import torch
 from torch.utils.data import DataLoader
 
 import transformers
+from transformers.optimization import get_cosine_schedule_with_warmup
 import lightning as L
 from torch.optim import Adam
 # from apex.optimizers import FusedAdam
@@ -130,7 +131,8 @@ class SLlamaLightning(L.LightningModule):
             shuffle=True, 
             batch_size=self.training_args.train_bsz, 
             min_ms=320,
-            multiplier=self.training_args.n_device * self.training_args.grad_acc_steps
+            multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
+            filter=True
         )
         train_dataloader = DataLoader(
             train_dataset, 
@@ -155,7 +157,8 @@ class SLlamaLightning(L.LightningModule):
             shuffle=False, 
             batch_size=self.training_args.eval_bsz, 
             min_ms=320,
-            multiplier=self.training_args.n_device * self.training_args.grad_acc_steps
+            multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
+            filter=False
         )
         eval_dataloader = DataLoader(
             eval_dataset, 
@@ -175,20 +178,24 @@ class SLlamaLightning(L.LightningModule):
         if not loss.isnan():
             self.log("eval/loss", loss, batch_size=batch["src_lengths"].sum() / 16000)
 
+    def setup(self, stage):
+        if stage == 'fit':
+            train_batches = len(self.train_dataloader()) // (self.training_args.n_device * self.training_args.grad_acc_steps)
+            self.max_train_steps = self.training_args.max_epochs * train_batches
+            print("Max number of training steps", self.max_train_steps)
+
     def configure_optimizers(self):
         lr = self.optimizer_params["lr"]
-        min_lr = self.optimizer_params["min_lr"]
         warmup_updates = self.optimizer_params["warmup_updates"]
 
-        optimizer = FusedAdam(self.parameters(), lr=lr)        
-        warmup_init_lr = 0 if warmup_updates > 0 else lr
-        lr_step = (lr - warmup_init_lr) / warmup_updates
-        decay_factor = lr * warmup_updates**0.5
-        scheduler = torch.optim.lr_scheduler.LambdaLR(
+        optimizer = FusedAdam(self.parameters(), lr=lr)  
+
+        scheduler = get_cosine_schedule_with_warmup(
             optimizer, 
-            lambda x: max(decay_factor * x**-0.5 if x >= warmup_updates \
-                else warmup_init_lr + x * lr_step, min_lr) / lr
+            num_warmup_steps=warmup_updates,
+            num_training_steps=self.max_train_steps,
         )
+
         return {
             "optimizer": optimizer,
             "lr_scheduler": {

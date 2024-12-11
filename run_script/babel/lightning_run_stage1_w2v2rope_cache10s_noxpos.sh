@@ -32,7 +32,7 @@ data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de
 
 source_lang="English"
 target_lang="German"
-name="3.1-8B-s1-lightning-${target_lang,,}-${w2v2_type}-rope-noxpos"
+name="3.1-8B-s1-lightning-${target_lang,,}-${w2v2_type}-rope-noxpos-cosine"
 save_path=/compute/babel-5-23/siqiouya/runs/$name
 rm -rf ${save_path}
 mkdir -p ${save_path}
