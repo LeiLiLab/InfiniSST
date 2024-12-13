@@ -76,6 +76,7 @@ class SpeechLlamaModel(LlamaModel):
         after_lens: Optional[List[torch.FloatTensor]] = None,
         return_dict: Optional[bool] = None,
         states: Optional[object] = None,
+        **kwargs,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
     
         orig_embeds_params = getattr(self, 'orig_embeds_params', False)
@@ -91,42 +92,33 @@ class SpeechLlamaModel(LlamaModel):
             if self.config.inference:
                 self.speech_features_extracted = True
                 
-            new_input_embeds = []
             # inputs_embeds: B*T*d
             # speech_features: B*T1*d
             if speech_features is not None:
-                for i in range(inputs_embeds.size(0)):
-                    cur_speech_features = speech_features[i][:after_lens[i]]
-                    cur_input_embeds = inputs_embeds[i]
-                    cur_input_ids = input_ids[i]                
-                    if (cur_input_ids == self.config.sp_start_token_id).sum() == 0:
-                        new_input_embeds.append(cur_input_embeds)
-                        continue
-                    speech_start_pos = torch.where(cur_input_ids == self.config.sp_start_token_id)[0]
-                    speech_end_pos = torch.where(cur_input_ids == self.config.sp_end_token_id)[0]
-                    if orig_embeds_params:
-                        cur_new_input_embeds = torch.cat(
-                            (
-                                cur_input_embeds[:speech_start_pos].detach(), 
-                                cur_input_embeds[speech_start_pos], 
-                                cur_speech_features, 
-                                cur_input_embeds[speech_end_pos], 
-                                cur_input_embeds[speech_end_pos + 1:].detach()
-                            ), 
-                            dim=0
-                        )
-                    else:
-                        cur_new_input_embeds = torch.cat(
-                            (
-                                cur_input_embeds[:speech_start_pos+1], 
-                                cur_speech_features, 
-                                cur_input_embeds[speech_end_pos:]
-                            ), 
-                            dim=0
-                        )
-                    new_input_embeds.append(cur_new_input_embeds)
 
-                inputs_embeds = torch.stack(new_input_embeds, dim=0)  
+                speech_start_pos = torch.where(input_ids[0] == self.config.sp_start_token_id)[0]
+                speech_end_pos = torch.where(input_ids[0] == self.config.sp_end_token_id)[0]
+
+                if orig_embeds_params:
+                    inputs_embeds = torch.cat(
+                        (
+                            inputs_embeds[:, :speech_start_pos].detach(), 
+                            inputs_embeds[:, speech_start_pos], 
+                            speech_features, 
+                            inputs_embeds[:, speech_end_pos], 
+                            inputs_embeds[: speech_end_pos + 1:].detach()
+                        ), 
+                        dim=1
+                    )
+                else:
+                    inputs_embeds = torch.cat(
+                        (
+                            inputs_embeds[:, :speech_start_pos+1], 
+                            speech_features, 
+                            inputs_embeds[:, speech_end_pos:]
+                        ), 
+                        dim=1
+                    )
 
         return super(SpeechLlamaModel, self).forward(
             input_ids=None, 
@@ -198,6 +190,7 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
         after_lens: Optional[List[torch.FloatTensor]] = None,
         return_dict: Optional[bool] = None,
         states: Optional[object] = None,
+        **kwargs,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
