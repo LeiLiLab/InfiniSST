@@ -3,7 +3,6 @@ from fairseq import checkpoint_utils, options, scoring, tasks, utils
 
 with open(os.path.join(sys.argv[1], 'hyp'), 'r') as f:
     hyps = f.readlines()
-    hyps = [hyp for hyp in hyps if hyp.startswith('ted_')]
 with open(os.path.join(sys.argv[1], 'ref'), 'r') as f:
     refs = f.readlines()
 

@@ -109,11 +109,15 @@ class TrainingArguments:
     train_bsz: int = field(default=8) # in terms of number of frames
     eval_bsz: int = field(default=8) # in terms of number of frames
     learning_rate: float = field(default=2e-4)
+    scheduler: str = field(default="cosine")
+    min_learning_rate: float = field(default=0.)
+    weight_decay: float = field(default=0.)
     warmup_steps: int = field(default=400)
     run_name: str = field(default=None)
 
     n_device: int = field(default=1)
     deepspeed_stage: int = field(default=2)
+    deepspeed_offload: bool = field(default=False)
     precision: str = field(default="bf16-mixed")
     max_epochs: int = field(default=1)
     grad_acc_steps: int = field(default=1)
@@ -296,6 +300,8 @@ def train():
 
     strategy = DeepSpeedStrategy(
         stage=training_args.deepspeed_stage,
+        offload_optimizer=training_args.deepspeed_offload,
+        offload_parameters=training_args.deepspeed_offload,
     )
     # strategy = FSDPStrategy(
     #     sharding_strategy=training_args.sharding,

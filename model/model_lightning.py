@@ -4,11 +4,16 @@ import torch
 from torch.utils.data import DataLoader
 
 import transformers
-from transformers.optimization import get_cosine_schedule_with_warmup
+from transformers.optimization import (
+    get_cosine_schedule_with_warmup,
+    get_cosine_with_min_lr_schedule_with_warmup,
+    get_constant_schedule_with_warmup
+)
 import lightning as L
+from lightning.pytorch.utilities import grad_norm
 from torch.optim import Adam
 # from apex.optimizers import FusedAdam
-from deepspeed.ops.adam import FusedAdam
+from deepspeed.ops.adam import FusedAdam, DeepSpeedCPUAdam
 
 from train.dataset import (
     SpeechSampler, 
@@ -73,7 +78,6 @@ class SLlamaLightning(L.LightningModule):
         model = SpeechLlamaForCausalLM.from_pretrained(
             self.model_args.llm_path,
             torch_dtype=torch.bfloat16,
-            device_map='cuda'
         )
         model.config.use_cache = False
         model.rdrop = self.training_args.rdrop
@@ -130,6 +134,7 @@ class SLlamaLightning(L.LightningModule):
             train_dataset, 
             shuffle=True, 
             batch_size=self.training_args.train_bsz, 
+            batch_size_sent=20,
             min_ms=320,
             multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
             filter=True
@@ -156,6 +161,7 @@ class SLlamaLightning(L.LightningModule):
             eval_dataset, 
             shuffle=False, 
             batch_size=self.training_args.eval_bsz, 
+            batch_size_sent=20,
             min_ms=320,
             multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
             filter=False
@@ -183,18 +189,40 @@ class SLlamaLightning(L.LightningModule):
             train_batches = len(self.train_dataloader()) // (self.training_args.n_device * self.training_args.grad_acc_steps)
             self.max_train_steps = self.training_args.max_epochs * train_batches
             print("Max number of training steps", self.max_train_steps)
+    
+    # def on_before_optimizer_step(self, optimizer):
+    #     # Compute the 2-norm for each layer
+    #     # If using mixed precision, the gradients are already unscaled here
+    #     norms = grad_norm(self.model, norm_type=2)
+    #     self.log_dict(norms)
 
     def configure_optimizers(self):
         lr = self.optimizer_params["lr"]
         warmup_updates = self.optimizer_params["warmup_updates"]
 
-        optimizer = FusedAdam(self.parameters(), lr=lr)  
+        optimizer_cls = DeepSpeedCPUAdam if self.training_args.deepspeed_offload else FusedAdam
+        optimizer = optimizer_cls(self.parameters(), lr=lr, weight_decay=self.training_args.weight_decay)  
 
-        scheduler = get_cosine_schedule_with_warmup(
-            optimizer, 
-            num_warmup_steps=warmup_updates,
-            num_training_steps=self.max_train_steps,
-        )
+        if self.training_args.scheduler == "cosine":
+            scheduler = get_cosine_schedule_with_warmup(
+                optimizer, 
+                num_warmup_steps=warmup_updates,
+                num_training_steps=self.max_train_steps,
+            )
+        elif self.training_args.scheduler == "cosine_minlr":
+            scheduler = get_cosine_with_min_lr_schedule_with_warmup(
+                optimizer, 
+                num_warmup_steps=warmup_updates,
+                num_training_steps=self.max_train_steps,
+                min_lr=self.training_args.min_learning_rate
+            )
+        elif self.training_args.scheduler == "constant":
+            scheduler = get_constant_schedule_with_warmup(
+                optimizer, 
+                num_warmup_steps=warmup_updates,
+            )
+        else:
+            raise NotImplementedError
 
         return {
             "optimizer": optimizer,
