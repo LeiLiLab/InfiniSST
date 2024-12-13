@@ -182,9 +182,10 @@ class PromptSpeechToTextDatasetCreator(object):
 
 
 class SpeechSampler(DistributedSampler):
-    def __init__(self, dataset, shuffle, batch_size, min_ms=0, multiplier=1, filter=True):
+    def __init__(self, dataset, shuffle, batch_size, batch_size_sent=30, min_ms=0, multiplier=1, filter=True):
         super().__init__(dataset=dataset, shuffle=shuffle)
         self.batch_size = batch_size
+        self.batch_size_sent = batch_size_sent
         self._obtain_batches(min_ms, multiplier, filter)
 
     def _obtain_batches(self, min_ms, multiplier, filter):
@@ -196,7 +197,7 @@ class SpeechSampler(DistributedSampler):
         n_skipped = 0
         for size, idx in sorted_sizes:
             if not filter or (size <= self.batch_size and size >= min_ms * 16 and size / 16000 / len(self.dataset.tgt_texts[idx].split(' ')) >= 0.15):
-                if sum_size + size <= self.batch_size:
+                if sum_size + size <= self.batch_size and len(indices) < self.batch_size_sent:
                     indices.append(idx)
                     sum_size += size
                 else:
@@ -225,6 +226,11 @@ class SpeechSampler(DistributedSampler):
         indices_batch_ind = indices_batch_ind[self.rank:len(self):self.num_replicas]
 
         for i in indices_batch_ind:
+            # max_n_frames = max(self.dataset.n_frames[idx] for idx in self.batch_indices[i])
+            # max_n_words = max(len(self.dataset.tgt_texts[idx].split(' ')) for idx in self.batch_indices[i])
+            # logger.info("rank {}: speech {:.2f} s, text {} words, n sentence {}".format(
+            #     self.rank, max_n_frames / 16000, max_n_words, len(self.batch_indices[i])
+            # ))
             yield self.batch_indices[i]
         
     def __len__(self):
@@ -249,7 +255,7 @@ class DataCollatorForSupervisedDataset(object):
         texts = [x.target for x in samples]
      
         # Create speech tokens based on length
-        speech_tokens = [int(speech_len)*DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
+        speech_tokens = [speech_lens.max() * DEFAULT_SPEECH_PATCH_TOKEN for _ in speech_lens]
         speech_tokens = [DEFAULT_SPEECH_START_TOKEN + tokens + DEFAULT_SPEECH_END_TOKEN for tokens in speech_tokens]
 
         text_tokens = [DEFAULT_SPEECH_START_TOKEN + x.src_text + DEFAULT_SPEECH_END_TOKEN for x in samples]
@@ -281,10 +287,9 @@ class DataCollatorForSupervisedDataset(object):
             targets[i, :instruction_len] = IGNORE_INDEX
             
             # 2. Mask speech tokens
-            start_pos = (input_ids[i] == self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_START_TOKEN)).nonzero()
-            end_pos = (input_ids[i] == self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_END_TOKEN)).nonzero()
-            if len(start_pos) > 0 and len(end_pos) > 0:
-                targets[i, start_pos[0][0] : end_pos[0][0] + 1] = IGNORE_INDEX
+            start_pos = (input_ids[i] == self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_START_TOKEN)).nonzero()[0][0]
+            end_pos = (input_ids[i] == self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_END_TOKEN)).nonzero()[0][0]
+            targets[i, start_pos : end_pos + 1] = IGNORE_INDEX
             
             # 3. Mask padding tokens
             targets[i, attention_mask[i] == 0] = IGNORE_INDEX
@@ -306,10 +311,9 @@ class DataCollatorForSupervisedDataset(object):
             # 1. Mask instruction tokens
             text_targets[i, :instruction_len] = IGNORE_INDEX
             # 2. Mask speech tokens
-            start_pos = (text_input_ids[i] == self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_START_TOKEN)).nonzero()
-            end_pos = (text_input_ids[i] == self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_END_TOKEN)).nonzero()
-            if len(start_pos) > 0 and len(end_pos) > 0:
-                text_targets[i, start_pos[0][0] : end_pos[0][0] + 1] = IGNORE_INDEX
+            start_pos = (text_input_ids[i] == self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_START_TOKEN)).nonzero()[0][0]
+            end_pos = (text_input_ids[i] == self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_END_TOKEN)).nonzero()[0][0]
+            text_targets[i, start_pos : end_pos + 1] = IGNORE_INDEX
             # 3. Mask padding tokens
             text_targets[i, text_attention_mask[i] == 0] = IGNORE_INDEX
                 

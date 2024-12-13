@@ -5,6 +5,7 @@ import argparse
 from tqdm import tqdm
 
 import torch
+from torch.utils.data import DataLoader
 import transformers
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 
@@ -12,7 +13,11 @@ from eval.utils import disable_torch_init
 from model.model_new import SpeechLlamaForCausalLM, SpeechLlamaConfig
 from model.speech_encoder import SpeechEncoderHuBERTRope, SpeechEncoderW2V2RoPE
 from model.utils import KeywordsStoppingCriteria
-from train.dataset import PromptSpeechToTextDatasetCreator, SpeechToTextDatasetItem
+from train.dataset import (
+    PromptSpeechToTextDatasetCreator, 
+    DataCollatorForSupervisedDataset,
+    SpeechSampler,
+)
 
 IGNORE_INDEX = -100
 DEFAULT_PAD_TOKEN = "[PAD]"
@@ -29,9 +34,15 @@ def eval_model(args):
     # Model
     disable_torch_init()
 
+    os.environ["MASTER_ADDR"] = "0.0.0.0"
+    os.environ["MASTER_PORT"] = "9105"
+    torch.distributed.init_process_group(
+        rank=0, world_size=1, 
+    )
+
     tokenizer = transformers.AutoTokenizer.from_pretrained(
         args.model_name,
-        padding_side="left",
+        padding_side="right",
         use_fast=False,
     )
     tokenizer.pad_token = "<|finetune_right_pad_id|>"
@@ -75,20 +86,34 @@ def eval_model(args):
 
     model.preprocess(tokenizer=tokenizer)
 
-    # state_dict = torch.load(args.state_dict_path, map_location='cpu', weights_only=True)
-    # new_state_dict = {}
-    # for k, v in state_dict.items():
-    #     assert k.startswith("model.")
-    #     new_state_dict[k[6:]] = v
-    # model.load_state_dict(new_state_dict)
+    state_dict = torch.load(args.state_dict_path, map_location='cpu', weights_only=True)
+    model.load_state_dict(state_dict)
 
     model.model.config.inference = True
-        
-    test_dataset = PromptSpeechToTextDatasetCreator.from_tsv(args.data_path, args.data_split)
-    
-    # Simple batching
-    batch_size = args.batch_size
-    num_samples = len(test_dataset)
+
+    test_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
+        args.data_path, args.data_split
+    )
+    data_collator = DataCollatorForSupervisedDataset(
+        tokenizer, 
+        speech_encoder._get_feat_extract_output_lengths,
+        args.source_lang,
+        args.target_lang
+    )
+
+    test_sampler = SpeechSampler(
+        test_dataset, 
+        shuffle=False, 
+        batch_size=args.batch_size, 
+        min_ms=0,
+        multiplier=1,
+        filter=False
+    )
+    test_dataloader = DataLoader(
+        test_dataset, 
+        batch_sampler=test_sampler, 
+        collate_fn=data_collator
+    )
     
     if not os.path.exists(os.path.join(args.result, args.data_split)):
         os.makedirs(os.path.join(args.result, args.data_split))
@@ -96,33 +121,19 @@ def eval_model(args):
     ref_file = open(os.path.join(args.result, args.data_split, "ref"), "w")
     hyp_file = open(os.path.join(args.result, args.data_split, "hyp"), "w")
 
-    for i in tqdm(range(0, num_samples, batch_size)):
-        # Get batch items
-        batch = [test_dataset[j] for j in range(i, min(i + batch_size, num_samples))]
-        
-        # Prepare batch data
-        sources = [item.source for item in batch]
-        refs = [item.target for item in batch]
-        ids = [item.id for item in batch]
-        
-        # Process speech input in batch
-        speech_batch = _collate_frames(sources, is_audio_input=True)
-        n_frames = torch.tensor([source.size(0) for source in sources], dtype=torch.long)
-        speech_lens = model.model._get_feat_extract_output_lengths(n_frames)
-    
-        # Create speech tokens for batch
-        speech_tokens = [int(speech_len)*DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
-        speech_tokens = [DEFAULT_SPEECH_START_TOKEN + tokens + DEFAULT_SPEECH_END_TOKEN for tokens in speech_tokens]
-        
-        # Create instruction prompts for batch
-        instruction = f"Translate the following speech from {args.source_lang} to {args.target_lang}:"
-        prompts = [f"{instruction} {tokens}" for tokens in speech_tokens]
-    
-        # Tokenize input batch
-        inputs = tokenizer(prompts, padding=True, return_tensors="pt")
-        input_ids = inputs.input_ids.cuda()
-        attention_mask = inputs.attention_mask.cuda()
+    for batch in tqdm(test_dataloader):        
+        refs = batch["target_text"]
+        ids = batch["ids"]
 
+        input_ids = batch["input_ids"]
+        end_pos = (input_ids[0] == tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_END_TOKEN)).nonzero()[0][0]
+        input_ids = input_ids[:, : end_pos + 1]
+
+        attention_mask = batch["attention_mask"][:, : end_pos + 1]
+        speech_batch = batch["speech_batch"]
+        n_frames = batch["src_lengths"]
+        speech_lens = batch["after_lens"]
+        
         # Set up stopping criteria
         stop_str = "<|end_of_text|>"
         keywords = [stop_str]
@@ -133,7 +144,7 @@ def eval_model(args):
         model.eval()
         with torch.inference_mode():
             output_ids = model.generate(
-                attention_mask=attention_mask,
+                attention_mask=attention_mask.cuda(),
                 input_ids=input_ids.cuda(),
                 speech_batch=speech_batch.to(dtype=model.dtype, device=model.device),
                 src_lengths=n_frames.cuda(),
