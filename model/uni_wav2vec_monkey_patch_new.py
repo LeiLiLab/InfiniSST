@@ -42,8 +42,11 @@ def get_attn_mask_training(seq_len, max_cache_size=None):
     if max_cache_size is not None:
         for i in range(seq_len):
             mask[i, : max(0, i - max_cache_size)] = 0
+
+    mask_num = torch.zeros_like(mask, dtype=torch.float)
+    mask_num.masked_fill_(~mask, float('-inf'))
     
-    return mask
+    return mask_num
 
 def get_attn_mask_inference(seq_len, prefix_len, max_cache_size):
     max_len = seq_len + min(prefix_len, max_cache_size)
@@ -66,8 +69,11 @@ def get_attn_mask_inference(seq_len, prefix_len, max_cache_size):
     
     for i in range(seq_len):
         mask[i, : max(0, i + prefix_len - max_cache_size) - max(0, prefix_len - max_cache_size)] = 0
+
+    mask_num = torch.zeros_like(mask, dtype=torch.float)
+    mask_num.masked_fill_(~mask, float('-inf'))
     
-    return mask
+    return mask_num
 
 
 def uni_hubert_extract_features(
