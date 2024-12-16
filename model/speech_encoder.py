@@ -23,8 +23,15 @@ from fairseq.models.speech_to_text import (
     Conv1dSubsampler,
 )
 
+from transformers import (
+    AutoFeatureExtractor, 
+    Wav2Vec2BertModel, 
+    Wav2Vec2BertConfig
+)
+
 from rotary_embedding_torch import RotaryEmbedding
 from model.uni_wav2vec_monkey_patch_new import patch_w2v2
+from model.w2v_bert_causal_patch import patch_w2vbert2
 
 class TransposeLast(nn.Module):
     def __init__(self, deconstruct_idx=None):
@@ -887,3 +894,101 @@ class SpeechEncoderHuBERTRope(SpeechEncoderW2V2RoPE):
         feature = self.proj(feature)
         
         return feature, cache
+
+class W2VBERT2LayerCache:
+    hidden_states_conv: torch.Tensor = None
+    hidden_states_attn: torch.Tensor = None
+
+class W2VBERT2Cache:
+    src: torch.Tensor = None
+    n_steps: int = 0
+    max_steps: int = 0
+    layers: List[LayerCache] = None
+
+    def __init__(self, max_steps=0, layers=None):
+        self.max_steps = max_steps
+        self.layers = layers
+
+class SpeechEncoderW2VBERT2(nn.Module):
+    def __init__(
+        self, 
+        w2v_bert_path,
+        length_shrink_cfg=None,
+        block_size=16, max_cache_size=125,
+        llm_embedding_dim=4096,
+        **kwargs,
+    ):
+        super().__init__()
+
+        patch_w2vbert2(block_size)
+        self._load_w2vbert2(w2v_bert_path)
+        self.max_cache_size = max_cache_size
+        
+        self.length_shrink = None
+        if length_shrink_cfg is not None:
+            self.length_shrink_cfg = eval(length_shrink_cfg)
+            self.length_shrink = ConvFeatureExtractionModel(
+                self.length_shrink_cfg, 
+                in_d=self.model_config.hidden_size
+            )
+        self.proj = nn.Linear(self.model_config.hidden_size, llm_embedding_dim)
+
+
+    def _load_w2vbert2(self, speech_tower_path):
+        self.feature_extractor = AutoFeatureExtractor.from_pretrained(speech_tower_path)
+        self.model_config = Wav2Vec2BertConfig.from_pretrained(speech_tower_path)
+        self.model_config.layerdrop = 0.0
+        self.model = Wav2Vec2BertModel.from_pretrained(
+            speech_tower_path,
+            config=self.model_config
+        )
+    
+    def _get_feat_extract_output_lengths(self, input_lengths: torch.LongTensor):
+        """
+        Computes the output length of the convolutional layers
+        """
+
+        def _conv_out_length(input_length, kernel_size, stride):
+            return torch.floor((input_length - kernel_size) / stride + 1)
+
+        input_lengths = self.model._get_feat_extract_output_lengths(input_lengths)
+        if self.length_shrink:
+            for cfg in self.length_shrink_cfg:
+                input_lengths = _conv_out_length(
+                    input_lengths, cfg[1], cfg[2]
+                )
+
+        return input_lengths.to(torch.long)
+    
+    def forward(self, src_tokens, src_lens, cache=None):
+        if cache is None:
+            cache = W2VBERT2Cache(
+                max_steps=self.max_cache_size,
+                layers=[
+                    W2VBERT2LayerCache() 
+                    for _ in range(self.model_config.num_hidden_layers)
+                ]
+            )
+
+        use_cache = False
+        if cache.src is not None:
+            use_cache = True
+            src_tokens = torch.cat([cache.src, src_tokens], dim=1)
+        cache.src = src_tokens
+
+        features = self.feature_extractor(
+            src_tokens, 
+            sampling_rate=16000, 
+            do_normalize_per_mel_bins=False
+        )
+        if use_cache:
+            features = features[:, 1:]
+        cache.src = cache.src[:, -79-320:]
+
+        model_output = self.model(features, cache=cache)
+        features = model_output.last_hidden_state
+
+        features = self.length_shrink(features.transpose(1, 2)).transpose(1, 2)
+        features = self.proj(features)
+        
+        return features, cache
