@@ -28,7 +28,7 @@ ctc_finetuned=True
 # data_path=/scratch/xixu/dataset/must-c-v1.0/en-es
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-fr
-data_path=/compute/babel-6-17/xixu/datasets/must-c-v2.0
+data_path=/compute/babel-6-17/xixu/datasets/must-c-v2.0/en-zh
 
 source_lang="English"
 target_lang="Chinese"

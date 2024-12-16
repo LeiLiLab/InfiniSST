@@ -24,7 +24,8 @@ from train.dataset import (
 from model.model_new import SpeechLlamaForCausalLM
 from model.speech_encoder import (
     SpeechEncoderHuBERTRope,
-    SpeechEncoderW2V2RoPE
+    SpeechEncoderW2V2RoPE,
+    SpeechEncoderW2VBERT2
 )
 
 class SLlamaLightning(L.LightningModule):
@@ -101,8 +102,16 @@ class SLlamaLightning(L.LightningModule):
         ]
         if self.speech_args.w2v2_type == 'hubert':
             speech_encoder = SpeechEncoderHuBERTRope(*speech_encoder_args)
-        else:
+        elif self.speech_args.w2v2_type == 'w2v2':
             speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args) 
+        elif self.speech_args.w2v2_type == 'w2v-bert':
+            speech_encoder = SpeechEncoderW2VBERT2(
+                self.speech_args.w2v2_path,
+                self.speech_args.length_shrink_cfg,
+                self.speech_args.block_size,
+                self.speech_args.max_cache_size,
+                model.model.embed_tokens.embedding_dim,
+            )
 
         speech_encoder.to(dtype=model.dtype, device=model.device)
         model.model.speech_encoder = speech_encoder
