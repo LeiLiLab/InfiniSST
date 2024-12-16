@@ -7,7 +7,7 @@
 #SBATCH --mem=512GB
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --exclude=babel-13-13,babel-13-29
+#SBATCH --exclude=babel-13-13,babel-13-29,babel-4-9
 #SBATCH --partition=preempt
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
@@ -30,12 +30,12 @@ ctc_finetuned=True
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-fr
 
 mkdir -p /scratch/siqiouya/
-rsync -r /compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de /scratch/siqiouya/
+rsync -r /compute/babel-6-17/xixu/datasets/must-c-v1.0/backup/en-de /scratch/siqiouya/
 data_path=/scratch/siqiouya/en-de
 
 source_lang="English"
 target_lang="German"
-name="3.1-8B-s1-lightning-${target_lang,,}-${w2v2_type}-rope-noxpos-cosine"
+name="3.1-8B-s1-lightning-${target_lang,,}-${w2v2_type}-rope-noxpos-cosine-bi"
 save_path=/compute/babel-5-23/siqiouya/runs/$name
 rm -rf ${save_path}
 mkdir -p ${save_path}
@@ -56,8 +56,8 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     --w2v2_type ${w2v2_type} \
     --ctc_finetuned ${ctc_finetuned} \
     --length_shrink_cfg "[(1024,2,2)] * 2" \
-    --block_size 48 \
-    --max_cache_size 500 \
+    --block_size 10000000 \
+    --max_cache_size 10000000 \
     --xpos False \
     \
     --llm_path ${llm_path} \
