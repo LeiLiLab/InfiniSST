@@ -62,8 +62,16 @@ class SLlamaLightning(L.LightningModule):
         ]
         if self.speech_args.w2v2_type == 'hubert':
             speech_encoder = SpeechEncoderHuBERTRope(*speech_encoder_args)
-        else:
-            speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args)
+        elif self.speech_args.w2v2_type == 'w2v2':
+            speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args) 
+        elif self.speech_args.w2v2_type == 'w2v-bert':
+            speech_encoder = SpeechEncoderW2VBERT2(
+                self.speech_args.w2v2_path,
+                self.speech_args.length_shrink_cfg,
+                self.speech_args.block_size,
+                self.speech_args.max_cache_size,
+                1
+            )
         self.length_shrink_func = speech_encoder._get_feat_extract_output_lengths
 
         self.optimizer_params = {

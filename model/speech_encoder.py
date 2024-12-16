@@ -938,6 +938,7 @@ class SpeechEncoderW2VBERT2(nn.Module):
         self.feature_extractor = AutoFeatureExtractor.from_pretrained(speech_tower_path)
         self.model_config = Wav2Vec2BertConfig.from_pretrained(speech_tower_path)
         self.model_config.layerdrop = 0.0
+        self.model_config.position_embeddings_type = "rotary"
         self.model = Wav2Vec2BertModel.from_pretrained(
             speech_tower_path,
             config=self.model_config
@@ -950,8 +951,8 @@ class SpeechEncoderW2VBERT2(nn.Module):
 
         def _conv_out_length(input_length, kernel_size, stride):
             return torch.floor((input_length - kernel_size) / stride + 1)
-
-        input_lengths = self.model._get_feat_extract_output_lengths(input_lengths)
+        
+        input_lengths = (input_lengths - 320 - 79 + 319) // 320
         if self.length_shrink:
             for cfg in self.length_shrink_cfg:
                 input_lengths = _conv_out_length(
@@ -960,7 +961,7 @@ class SpeechEncoderW2VBERT2(nn.Module):
 
         return input_lengths.to(torch.long)
     
-    def forward(self, src_tokens, src_lens, cache=None):
+    def encode_speech(self, src_tokens, src_lens=None, cache=None):
         if cache is None:
             cache = W2VBERT2Cache(
                 max_steps=self.max_cache_size,
@@ -970,20 +971,16 @@ class SpeechEncoderW2VBERT2(nn.Module):
                 ]
             )
 
-        use_cache = False
         if cache.src is not None:
-            use_cache = True
             src_tokens = torch.cat([cache.src, src_tokens], dim=1)
-        cache.src = src_tokens
+        cache.src = src_tokens[:, -79-320:]
 
         features = self.feature_extractor(
-            src_tokens, 
+            src_tokens.float().cpu().numpy(), 
             sampling_rate=16000, 
+            return_tensors='pt',
             do_normalize_per_mel_bins=False
-        )
-        if use_cache:
-            features = features[:, 1:]
-        cache.src = cache.src[:, -79-320:]
+        )['input_features'].to(src_tokens)
 
         model_output = self.model(features, cache=cache)
         features = model_output.last_hidden_state
