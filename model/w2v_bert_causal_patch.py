@@ -28,7 +28,7 @@ def get_attn_mask_training(seq_len, max_cache_size=None):
         for i in range((seq_len + BLOCKSIZE - 1) // BLOCKSIZE)
     ]
 
-    mask = torch.zeros(seq_len, seq_len, device='cuda', dtype=torch.bool)
+    mask = torch.zeros(seq_len, seq_len, dtype=torch.bool)
     start_idx = 0
     for block_size in blocksizes:
         end_idx = start_idx + block_size
@@ -39,7 +39,7 @@ def get_attn_mask_training(seq_len, max_cache_size=None):
         for i in range(seq_len):
             mask[i, : max(0, i - max_cache_size)] = 0
 
-    mask_num = torch.zeros_like(mask, dtype=torch.float)
+    mask_num = torch.zeros_like(mask, dtype=torch.float32)
     mask_num.masked_fill_(~mask, float('-inf'))
     
     return mask_num
@@ -52,7 +52,7 @@ def get_attn_mask_inference(seq_len, prefix_len, max_cache_size):
         for i in range((seq_len + prefix_len + BLOCKSIZE - 1) // BLOCKSIZE)
     ]
 
-    mask = torch.zeros(seq_len, max_len, device='cuda', dtype=torch.bool)
+    mask = torch.zeros(seq_len, max_len, dtype=torch.bool)
     start_idx = 0
     for block_size in blocksizes:
         end_idx = start_idx + block_size
@@ -66,7 +66,7 @@ def get_attn_mask_inference(seq_len, prefix_len, max_cache_size):
     for i in range(seq_len):
         mask[i, : max(0, i + prefix_len - max_cache_size) - max(0, prefix_len - max_cache_size)] = 0
 
-    mask_num = torch.zeros_like(mask, dtype=torch.float)
+    mask_num = torch.zeros_like(mask, dtype=torch.float32)
     mask_num.masked_fill_(~mask, float('-inf'))
     
     return mask_num
@@ -92,7 +92,7 @@ def conv_forward(
 
     _, _, seq_len = hidden_states.size()
     if cache.hidden_states_conv is not None:
-        hidden_states = torch.cat([cache.hidden_states_conv, hidden_states], dim=1)
+        hidden_states = torch.cat([cache.hidden_states_conv, hidden_states], dim=2)
     cache.hidden_states_conv = hidden_states
 
     # Pad the sequence entirely on the left because of causal convolution.
@@ -133,20 +133,23 @@ def attention_forward(
     query_key_states = hidden_states
     value_states = hidden_states
 
+    # project query_key_states and value_states
+    query = self.linear_q(query_key_states)
+    key = self.linear_k(query_key_states)
+    value = self.linear_v(value_states)
+
     if self.position_embeddings_type == "rotary":
         if relative_position_embeddings is None:
             raise ValueError(
                 "`relative_position_embeddings` has to be defined when `self.position_embeddings_type == 'rotary'"
             )
-        query_key_states = self._apply_rotary_embedding(query_key_states, relative_position_embeddings)
+        query = self._apply_rotary_embedding(query, relative_position_embeddings)
+        key = self._apply_rotary_embedding(key, relative_position_embeddings)
 
-    # project query_key_states and value_states
-    query = self.linear_q(query_key_states).view(batch_size, -1, self.num_heads, self.head_size)
-    key = self.linear_k(query_key_states).view(batch_size, -1, self.num_heads, self.head_size)
-    value = self.linear_v(value_states).view(batch_size, -1, self.num_heads, self.head_size)
-
-    query = query[:, -sequence_length:]
-
+    query = query.view(batch_size, -1, self.num_heads, self.head_size)[:, -sequence_length:]
+    key = key.view(batch_size, -1, self.num_heads, self.head_size)
+    value = value.view(batch_size, -1, self.num_heads, self.head_size)
+    
     # => (batch, head, time1, d_k)
     query = query.transpose(1, 2)
     key = key.transpose(1, 2)
@@ -279,7 +282,13 @@ def encoder_forward(
     hidden_states = self.dropout(hidden_states)
 
     if self.embed_positions is not None:
-        relative_position_embeddings = self.embed_positions(hidden_states)
+        hidden_states_rope = hidden_states
+        if cache.layers[0].hidden_states_attn is not None:
+            hidden_states_rope = torch.cat(
+                [cache.layers[0].hidden_states_attn, hidden_states], 
+                dim=1
+            )
+        relative_position_embeddings = self.embed_positions(hidden_states_rope)
     else:
         relative_position_embeddings = None
 
@@ -290,6 +299,7 @@ def encoder_forward(
         block_causal_mask = get_attn_mask_inference(seq_len, cache.n_steps, cache.max_steps)
     else:
         block_causal_mask = get_attn_mask_training(seq_len, cache.max_steps)
+    block_causal_mask = block_causal_mask.to(hidden_states)
 
     for i, layer in enumerate(self.layers):
         if output_hidden_states:
@@ -298,8 +308,8 @@ def encoder_forward(
         # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
         dropout_probability = torch.rand([])
 
-        if cache.layers[i].hidden_states is not None:
-            cache.layers[i].hidden_states = cache.layers[i].hidden_states[:, -cache.max_steps:]
+        if cache.layers[i].hidden_states_attn is not None:
+            cache.layers[i].hidden_states_attn = cache.layers[i].hidden_states_attn[:, -cache.max_steps:]
 
         skip_the_layer = True if self.training and (dropout_probability < self.config.layerdrop) else False
         if not skip_the_layer or synced_gpus:
