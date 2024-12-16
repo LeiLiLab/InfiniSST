@@ -74,6 +74,7 @@ class SpeechEncoderArguments:
 class ModelArguments:
     llm_path: Optional[str] = field(default="facebook/opt-125m")
     llm_freeze: bool = field(default=False)
+    llm_emb_freeze: bool = field(default=False)
     orig_embeds_params: bool = field(default=False)
     sllm_weight_path: Optional[str] = field(default=None)
 

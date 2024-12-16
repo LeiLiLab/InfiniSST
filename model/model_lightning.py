@@ -94,6 +94,8 @@ class SLlamaLightning(L.LightningModule):
 
         if self.model_args.llm_freeze:
             model.model.requires_grad_(False)
+            if not self.model_args.llm_emb_freeze:
+                model.model.embed_tokens.requires_grad_(True)
             model.lm_head.requires_grad_(False)       
 
         # load speech encoder
