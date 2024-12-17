@@ -11,7 +11,11 @@ from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 
 from eval.utils import disable_torch_init
 from model.model_new import SpeechLlamaForCausalLM, SpeechLlamaConfig
-from model.speech_encoder import SpeechEncoderHuBERTRope, SpeechEncoderW2V2RoPE
+from model.speech_encoder import (
+    SpeechEncoderHuBERTRope, 
+    SpeechEncoderW2V2RoPE, 
+    SpeechEncoderW2VBERT2
+)
 from model.utils import KeywordsStoppingCriteria
 from train.dataset import (
     PromptSpeechToTextDatasetCreator, 
@@ -73,6 +77,14 @@ def eval_model(args):
     ]
     if args.w2v2_type == 'hubert':
         speech_encoder = SpeechEncoderHuBERTRope(*speech_encoder_args)
+    elif args.w2v2_type == 'w2v-bert':
+        speech_encoder = SpeechEncoderW2VBERT2(
+            args.w2v2_path,
+            args.length_shrink_cfg,
+            args.block_size,
+            args.max_cache_size,
+            model.model.embed_tokens.embedding_dim,
+        )
     else:
         speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args)
     
