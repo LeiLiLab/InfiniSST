@@ -14,6 +14,7 @@ from lightning.pytorch.utilities import grad_norm
 from torch.optim import Adam
 # from apex.optimizers import FusedAdam
 from deepspeed.ops.adam import FusedAdam, DeepSpeedCPUAdam
+from schedulefree import RAdamScheduleFree
 
 from train.dataset import (
     SpeechSampler, 
@@ -24,7 +25,8 @@ from train.dataset import (
 from model.model_new import SpeechLlamaForCausalLM
 from model.speech_encoder import (
     SpeechEncoderHuBERTRope,
-    SpeechEncoderW2V2RoPE
+    SpeechEncoderW2V2RoPE,
+    SpeechEncoderW2VBERT2
 )
 
 class SLlamaLightning(L.LightningModule):
@@ -61,8 +63,16 @@ class SLlamaLightning(L.LightningModule):
         ]
         if self.speech_args.w2v2_type == 'hubert':
             speech_encoder = SpeechEncoderHuBERTRope(*speech_encoder_args)
-        else:
-            speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args)
+        elif self.speech_args.w2v2_type == 'w2v2':
+            speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args) 
+        elif self.speech_args.w2v2_type == 'w2v-bert':
+            speech_encoder = SpeechEncoderW2VBERT2(
+                self.speech_args.w2v2_path,
+                self.speech_args.length_shrink_cfg,
+                self.speech_args.block_size,
+                self.speech_args.max_cache_size,
+                1
+            )
         self.length_shrink_func = speech_encoder._get_feat_extract_output_lengths
 
         self.optimizer_params = {
@@ -85,6 +95,8 @@ class SLlamaLightning(L.LightningModule):
 
         if self.model_args.llm_freeze:
             model.model.requires_grad_(False)
+            if not self.model_args.llm_emb_freeze:
+                model.model.embed_tokens.requires_grad_(True)
             model.lm_head.requires_grad_(False)       
 
         # load speech encoder
@@ -101,8 +113,16 @@ class SLlamaLightning(L.LightningModule):
         ]
         if self.speech_args.w2v2_type == 'hubert':
             speech_encoder = SpeechEncoderHuBERTRope(*speech_encoder_args)
-        else:
+        elif self.speech_args.w2v2_type == 'w2v2':
             speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args) 
+        elif self.speech_args.w2v2_type == 'w2v-bert':
+            speech_encoder = SpeechEncoderW2VBERT2(
+                self.speech_args.w2v2_path,
+                self.speech_args.length_shrink_cfg,
+                self.speech_args.block_size,
+                self.speech_args.max_cache_size,
+                model.model.embed_tokens.embedding_dim,
+            )
 
         speech_encoder.to(dtype=model.dtype, device=model.device)
         model.model.speech_encoder = speech_encoder
@@ -200,6 +220,10 @@ class SLlamaLightning(L.LightningModule):
         lr = self.optimizer_params["lr"]
         warmup_updates = self.optimizer_params["warmup_updates"]
 
+        if self.training_args.scheduler == "free":
+            optimizer = RAdamScheduleFree(self.model.parameters(), lr=lr, weight_decay=self.training_args.weight_decay)
+            return optimizer
+
         optimizer_cls = DeepSpeedCPUAdam if self.training_args.deepspeed_offload else FusedAdam
         optimizer = optimizer_cls(self.parameters(), lr=lr, weight_decay=self.training_args.weight_decay)  
 
@@ -232,6 +256,22 @@ class SLlamaLightning(L.LightningModule):
                 "frequency": 1
             }
         }
+    
+    def on_train_start(self):
+        if self.training_args.scheduler == "free":
+            self.trainer.optimizers[0].optimizer.train()
+    
+    def on_save_checkpoint(self, checkpoint):
+        if self.training_args.scheduler == "free":
+            self.trainer.optimizers[0].optimizer.eval()
+    
+    def on_validation_start(self):
+        if self.training_args.scheduler == "free":
+            self.trainer.optimizers[0].optimizer.eval()
+    
+    def on_validation_end(self):
+        if self.training_args.scheduler == "free":
+            self.trainer.optimizers[0].optimizer.train()
     
     def forward(self, batch):
         output = self.model(

@@ -7,7 +7,7 @@
 #SBATCH --mem=512GB
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --exclude=babel-13-13,babel-13-29,babel-4-9
+#SBATCH --exclude=babel-13-13,babel-13-29,babel-4-9,babel-3-5,babel-3-17,babel-3-9,babel-6-29,babel-11-25
 #SBATCH --partition=preempt
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
@@ -28,7 +28,7 @@ ctc_finetuned=True
 # data_path=/scratch/xixu/dataset/must-c-v1.0/en-es
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-fr
-data_path=/compute/babel-6-17/xixu/datasets/must-c-v2.0
+data_path=/compute/babel-6-17/xixu/datasets/must-c-v2.0/en-zh
 
 source_lang="English"
 target_lang="Chinese"

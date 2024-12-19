@@ -106,7 +106,7 @@ class SpeechLlamaModel(LlamaModel):
                             inputs_embeds[:, speech_start_pos], 
                             speech_features, 
                             inputs_embeds[:, speech_end_pos], 
-                            inputs_embeds[: speech_end_pos + 1:].detach()
+                            inputs_embeds[:, speech_end_pos + 1:].detach()
                         ), 
                         dim=1
                     )

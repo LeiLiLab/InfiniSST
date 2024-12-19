@@ -62,6 +62,7 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     \
     --llm_path ${llm_path} \
     --llm_freeze True \
+    --llm_emb_freeze True \
     \
     --data_path ${data_path} \
     --data_split_train 'train' \
