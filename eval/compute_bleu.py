@@ -1,16 +1,17 @@
 import os, sys
-from fairseq import checkpoint_utils, options, scoring, tasks, utils
+from sacrebleu import BLEU
 
 with open(os.path.join(sys.argv[1], 'hyp'), 'r') as f:
-    hyps = f.readlines()
+    hyps = [l for l in f.readlines() if len(l.split('\t')) > 1]
 with open(os.path.join(sys.argv[1], 'ref'), 'r') as f:
-    refs = f.readlines()
+    refs = [l for l in f.readlines() if len(l.split('\t')) > 1]
 
-scorer = scoring.build_scorer('sacrebleu', None)
+scorer = BLEU(tokenize='13a')
 
+hs = []
+rs = []
 for hyp, ref in zip(hyps, refs):
-    hyp = hyp.split('\t')[1].strip()#.strip('"')
-    ref = ref.split('\t')[1].strip()#.strip('"')
-    scorer.add_string(ref, hyp)
+    hs.append(hyp.split('\t')[1].strip())
+    rs.append(ref.split('\t')[1].strip())
 
-print(scorer.result_string())
+print(scorer.corpus_score(hs, [rs]))
