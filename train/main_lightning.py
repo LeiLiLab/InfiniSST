@@ -283,13 +283,13 @@ def train():
         min_lr=0.,
     )
 
-    # checkpoint_callback = ModelCheckpoint(
-    #     dirpath=training_args.save_dir,
-    #     monitor='eval/loss',
-    #     save_top_k=1,
-    #     mode='min',
-    #     every_n_train_steps=training_args.eval_step
-    # )
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=training_args.save_dir,
+        monitor='eval/loss',
+        save_top_k=1,
+        mode='min',
+        every_n_epochs=1
+    )
     lr_monitor = LearningRateMonitor(
         logging_interval='step'
     )
@@ -323,9 +323,9 @@ def train():
         log_every_n_steps=training_args.log_step,
         val_check_interval=training_args.eval_step,
         logger=wandb_logger,
-        callbacks=[lr_monitor],
+        callbacks=[lr_monitor, checkpoint_callback],
         fast_dev_run=training_args.debug_mode,
-        enable_checkpointing=False,
+        # enable_checkpointing=False,
     )
 
     # start training
@@ -335,7 +335,7 @@ def train():
     else:
         trainer.fit(model_lightning)
 
-    trainer.save_checkpoint(training_args.save_dir, weights_only=True)
+    # trainer.save_checkpoint(training_args.save_dir, weights_only=True)
 
 
 if __name__ == "__main__":

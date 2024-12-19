@@ -7,7 +7,7 @@
 #SBATCH --mem=512GB
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --exclude=babel-13-13,babel-13-29,babel-4-9
+#SBATCH --exclude=babel-13-13,babel-13-29,babel-4-9,babel-3-5,babel-6-29
 #SBATCH --partition=preempt
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
@@ -35,7 +35,7 @@ data_path=/scratch/siqiouya/en-de
 
 source_lang="English"
 target_lang="German"
-name="3.1-8B-s1-lightning-${target_lang,,}-${w2v2_type}-rope-noxpos-cosine"
+name="3.1-8B-s1-lightning-${target_lang,,}-${w2v2_type}-rope-noxpos-cosine-unfrz-ori"
 save_path=/compute/babel-5-23/siqiouya/runs/$name
 rm -rf ${save_path}
 mkdir -p ${save_path}
@@ -62,7 +62,8 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     \
     --llm_path ${llm_path} \
     --llm_freeze True \
-    --llm_emb_freeze True \
+    --llm_emb_freeze False \
+    --orig_embeds_params True \
     \
     --data_path ${data_path} \
     --data_split_train 'train' \

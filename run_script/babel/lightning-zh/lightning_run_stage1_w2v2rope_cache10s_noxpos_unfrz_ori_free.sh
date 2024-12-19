@@ -7,16 +7,18 @@
 #SBATCH --mem=512GB
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --exclude=babel-13-13,babel-13-29,babel-4-9
+#SBATCH --exclude=babel-13-13,babel-13-29,babel-4-9,babel-3-5,babel-3-17,babel-3-9,babel-6-29,babel-11-25
 #SBATCH --partition=preempt
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
-##SBATCH --array=1-7
+##SBATCH --array=0
 ##SBATCH --account=siqiouya
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=siqiouya@andrew.cmu.edu
 #SBATCH -e slurm_logs/%j.err
 #SBATCH -o slurm_logs/%j.out
+
+lr=1e-4
 
 source /home/siqiouya/anaconda3/bin/activate speechllama
 
@@ -28,20 +30,17 @@ ctc_finetuned=True
 # data_path=/scratch/xixu/dataset/must-c-v1.0/en-es
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-fr
-
-mkdir -p /scratch/siqiouya/
-rsync -r /compute/babel-6-17/xixu/datasets/must-c-v1.0/backup/en-de /scratch/siqiouya/
-data_path=/scratch/siqiouya/en-de
+data_path=/compute/babel-6-17/xixu/datasets/must-c-v2.0/en-zh
 
 source_lang="English"
-target_lang="German"
-name="3.1-8B-s1-lightning-${target_lang,,}-${w2v2_type}-rope-noxpos-cosine"
+target_lang="Chinese"
+name="3.1-8B-s1-lightning-${target_lang,,}-${w2v2_type}-rope-noxpos-unfrz-ori-free"
 save_path=/compute/babel-5-23/siqiouya/runs/$name
 rm -rf ${save_path}
 mkdir -p ${save_path}
 
 export PYTHONPATH=/home/siqiouya/work/sllama
-export WANDB_PROJECT="mustc_1.0_de"
+export WANDB_PROJECT="mustc_1.0_zh"
 export WANDB_ENTITY="streamllama"
 
 export NCCL_P2P_DISABLE=1
@@ -62,10 +61,11 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     \
     --llm_path ${llm_path} \
     --llm_freeze True \
-    --llm_emb_freeze True \
+    --llm_emb_freeze False \
+    --orig_embeds_params True \
     \
     --data_path ${data_path} \
-    --data_split_train 'train' \
+    --data_split_train 'comet_0.50' \
     --data_split_eval 'dev' \
     --source_lang "${source_lang}" \
     --target_lang "${target_lang}" \
@@ -74,7 +74,7 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     --stage 1 \
     --train_bsz 800000 \
     --eval_bsz 800000 \
-    --learning_rate 2e-4 \
+    --learning_rate ${lr} \
     --warmup_steps 1000 \
     --run_name $name \
     \

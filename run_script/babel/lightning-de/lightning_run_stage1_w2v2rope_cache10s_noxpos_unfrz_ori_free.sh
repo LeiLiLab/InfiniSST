@@ -6,17 +6,20 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=512GB
 #SBATCH --gres=gpu:L40S:8
-##SBATCH --nodelist=babel-3-17
-#SBATCH --exclude=babel-13-13,babel-13-29,babel-4-9
+##SBATCH --nodelist=babel-12-[0-100]
+#SBATCH --exclude=babel-13-13,babel-13-29,babel-4-9,babel-3-5,babel-3-17,babel-3-9,babel-6-29,babel-11-25,babel-7-9
 #SBATCH --partition=preempt
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
-##SBATCH --array=1-7
+#SBATCH --array=0-3
 ##SBATCH --account=siqiouya
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=siqiouya@andrew.cmu.edu
 #SBATCH -e slurm_logs/%j.err
 #SBATCH -o slurm_logs/%j.out
+
+lrs=(2e-4 1e-4 5e-5 2e-5)
+lr=${lrs[$SLURM_ARRAY_TASK_ID]}
 
 source /home/siqiouya/anaconda3/bin/activate speechllama
 
@@ -35,7 +38,7 @@ data_path=/scratch/siqiouya/en-de
 
 source_lang="English"
 target_lang="German"
-name="3.1-8B-s1-lightning-${target_lang,,}-${w2v2_type}-rope-noxpos-cosine"
+name="3.1-8B-s1-lightning-${target_lang,,}-${w2v2_type}-free-lr${lr}"
 save_path=/compute/babel-5-23/siqiouya/runs/$name
 rm -rf ${save_path}
 mkdir -p ${save_path}
@@ -62,7 +65,8 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     \
     --llm_path ${llm_path} \
     --llm_freeze True \
-    --llm_emb_freeze True \
+    --llm_emb_freeze False \
+    --orig_embeds_params True \
     \
     --data_path ${data_path} \
     --data_split_train 'train' \
@@ -74,13 +78,13 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     --stage 1 \
     --train_bsz 800000 \
     --eval_bsz 800000 \
-    --learning_rate 2e-4 \
-    --warmup_steps 1000 \
+    --learning_rate ${lr} \
+    --scheduler free \
     --run_name $name \
     \
     --n_device ${SLURM_GPUS} \
     --deepspeed_stage 2 \
-    --max_epochs 6 \
+    --max_epochs 12 \
     --grad_acc_steps 4 \
     --clip_norm 1.0 \
     --save_dir ${save_path} \

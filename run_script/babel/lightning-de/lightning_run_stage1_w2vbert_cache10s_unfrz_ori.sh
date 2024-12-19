@@ -7,8 +7,8 @@
 #SBATCH --mem=512GB
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --exclude=babel-13-13,babel-13-29,babel-4-9
-#SBATCH --partition=preempt
+#SBATCH --exclude=babel-13-13,babel-13-29,babel-4-9,babel-3-5,babel-6-29
+#SBATCH --partition=general
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
 ##SBATCH --array=1-7
@@ -21,9 +21,10 @@
 source /home/siqiouya/anaconda3/bin/activate speechllama
 
 llm_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-hf
-w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
+# w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
 # w2v2_path=/data/user_data/siqiouya/runs/pretrained/hubert_large_ll60k_finetune_ls960.pt
-w2v2_type=w2v2
+w2v2_path=/data/user_data/siqiouya/runs/pretrained/w2v-bert-2.0
+w2v2_type=w2v-bert
 ctc_finetuned=True
 # data_path=/scratch/xixu/dataset/must-c-v1.0/en-es
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de
@@ -35,7 +36,7 @@ data_path=/scratch/siqiouya/en-de
 
 source_lang="English"
 target_lang="German"
-name="3.1-8B-s1-lightning-${target_lang,,}-${w2v2_type}-rope-noxpos-cosine"
+name="3.1-8B-s1-lightning-${target_lang,,}-${w2v2_type}-rope-noxpos-cosine-unfrz-ori"
 save_path=/compute/babel-5-23/siqiouya/runs/$name
 rm -rf ${save_path}
 mkdir -p ${save_path}
@@ -62,7 +63,8 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     \
     --llm_path ${llm_path} \
     --llm_freeze True \
-    --llm_emb_freeze True \
+    --llm_emb_freeze False \
+    --orig_embeds_params True \
     \
     --data_path ${data_path} \
     --data_split_train 'train' \
