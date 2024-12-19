@@ -50,17 +50,6 @@ class SpeechLlamaModel(LlamaModel):
         """
 
         return self.speech_encoder._get_feat_extract_output_lengths(input_lengths)                
-       
-    def get_hubert_features(self, src_tokens, src_lengths):
-        padding_mask = lengths_to_padding_mask(src_lengths)
-        hubert_args = {
-            "source": src_tokens,
-            "padding_mask": padding_mask,
-            "mask": False,
-        }
-        x, padding_mask = self.hubert_model.extract_features(**hubert_args)
-        output_length = (1 - padding_mask.int()).sum(dim=1)
-        return x, padding_mask, output_length
               
     def forward(
         self,
@@ -78,11 +67,8 @@ class SpeechLlamaModel(LlamaModel):
         states: Optional[object] = None,
         **kwargs,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-    
-        orig_embeds_params = getattr(self, 'orig_embeds_params', False)
 
-        if inputs_embeds is None:
-            inputs_embeds = self.embed_tokens(input_ids)
+        inputs_embeds = self.embed_tokens(input_ids)
 
         if speech_batch is not None:
             speech_features = None
@@ -92,37 +78,29 @@ class SpeechLlamaModel(LlamaModel):
             if self.config.inference:
                 self.speech_features_extracted = True
                 
-            # inputs_embeds: B*T*d
-            # speech_features: B*T1*d
             if speech_features is not None:
 
-                speech_start_pos = torch.where(input_ids[0] == self.config.sp_start_token_id)[0]
-                speech_end_pos = torch.where(input_ids[0] == self.config.sp_end_token_id)[0]
-
-                if orig_embeds_params:
-                    inputs_embeds = torch.cat(
-                        (
-                            inputs_embeds[:, :speech_start_pos].detach(), 
-                            inputs_embeds[:, speech_start_pos], 
-                            speech_features, 
-                            inputs_embeds[:, speech_end_pos], 
-                            inputs_embeds[:, speech_end_pos + 1:].detach()
-                        ), 
-                        dim=1
-                    )
-                else:
-                    inputs_embeds = torch.cat(
-                        (
-                            inputs_embeds[:, :speech_start_pos+1], 
-                            speech_features, 
-                            inputs_embeds[:, speech_end_pos:]
-                        ), 
-                        dim=1
-                    )
+                filled_inputs_embeds = []
+                for i in range(input_ids.size(0)):
+                    sp_start_pos = (input_ids[i] == self.config.sp_start_token_id).nonzero()
+                    sp_end_pos = (input_ids[i] == self.config.sp_end_token_id).nonzero()
+                    filled_inputs_embed = inputs_embeds[i]
+                    index = 0
+                    for st, ed in zip(sp_start_pos, sp_end_pos):
+                        filled_inputs_embed = torch.cat(
+                            [
+                                filled_inputs_embed[: st + 1],
+                                speech_features[i, index : index + ed - st - 1],
+                                filled_inputs_embed[ed :]
+                            ],
+                            dim=0                            
+                        )
+                        index += ed - st - 1
+                    filled_inputs_embeds.append(filled_inputs_embed)
+                inputs_embeds = torch.stack(filled_inputs_embeds)
 
         return super(SpeechLlamaModel, self).forward(
             input_ids=None, 
-            # position_ids=position_ids[:, -inputs_embeds.size(1):], # only ignore for sid's model
             attention_mask=attention_mask,
             past_key_values=past_key_values,
             inputs_embeds=inputs_embeds, 

@@ -74,8 +74,6 @@ class SpeechEncoderArguments:
 class ModelArguments:
     llm_path: Optional[str] = field(default="facebook/opt-125m")
     llm_freeze: bool = field(default=False)
-    llm_emb_freeze: bool = field(default=False)
-    orig_embeds_params: bool = field(default=False)
     sllm_weight_path: Optional[str] = field(default=None)
 
 @dataclass
@@ -99,6 +97,9 @@ class DataArguments:
     target_lang: str = field(
         default="Spanish",
         metadata={"help": "Target language name"}
+    )
+    trajectory: bool = field(
+        default=False,
     )
                             
 @dataclass
@@ -140,130 +141,6 @@ def safe_save_model_for_hf_trainer(trainer: transformers.Trainer,
         del state_dict
         trainer._save(output_dir, state_dict=cpu_state_dict)  # noqa
 
-@dataclass
-class DataCollatorForSupervisedDataset(object):
-    """Collate examples for supervised fine-tuning."""
-
-    def __init__(self, tokenizer, length_shrink_func, model, source_lang, target_lang):
-        self.tokenizer = tokenizer
-        self.length_shrink_func = length_shrink_func
-        self.model = model
-        self.source_lang = source_lang
-        self.target_lang = target_lang
-     
-    def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
-        self.model.model.speech_features_extracted = False
-        indices = torch.tensor([x.index for x in samples], dtype=torch.long)
-        speech_batch = _collate_frames([x.source for x in samples], is_audio_input=True)
-        n_frames = torch.tensor([x.source.size(0) for x in samples], dtype=torch.long)
-        speech_lens = self.length_shrink_func(n_frames)
-
-        texts = [x.target for x in samples]
-     
-        # Create speech tokens based on length
-        speech_tokens = [int(speech_len)*DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
-        speech_tokens = [DEFAULT_SPEECH_START_TOKEN + tokens + DEFAULT_SPEECH_END_TOKEN for tokens in speech_tokens]
-
-        text_tokens = [DEFAULT_SPEECH_START_TOKEN + x.src_text + DEFAULT_SPEECH_END_TOKEN for x in samples]
-
-        # Create prompts
-        instruction = f"Translate the following speech from {self.source_lang} to {self.target_lang}:"
-        prompts = [f"{instruction} {speech_token} {text}<|end_of_text|>" for speech_token, text in zip(speech_tokens, texts)]
-        text_prompts = [f"{instruction} {text_token} {text}<|end_of_text|>" for text_token, text in zip(text_tokens, texts)]
-        
-        # Get instruction length for masking
-        instruction_ids = self.tokenizer(instruction + " ", add_special_tokens=False).input_ids
-        instruction_len = len(instruction_ids)
-
-        # Tokenize with explicit padding settings
-        tokenized = self.tokenizer(
-            prompts,
-            return_tensors="pt",
-            padding=True,
-            truncation=False,
-            add_special_tokens=False,
-        )
-        input_ids = tokenized.input_ids
-        attention_mask = tokenized.attention_mask
-
-        # Create targets and handle padding properly
-        targets = input_ids.clone()
-        for i in range(len(samples)):
-            # 1. Mask instruction tokens
-            targets[i, :instruction_len] = IGNORE_INDEX
-            
-            # 2. Mask speech tokens
-            start_pos = (input_ids[i] == self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_START_TOKEN)).nonzero()
-            end_pos = (input_ids[i] == self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_END_TOKEN)).nonzero()
-            if len(start_pos) > 0 and len(end_pos) > 0:
-                targets[i, start_pos[0][0] : end_pos[0][0] + 1] = IGNORE_INDEX
-            
-            # 3. Mask padding tokens
-            targets[i, attention_mask[i] == 0] = IGNORE_INDEX
-
-        # Tokenize with explicit padding settings
-        text_tokenized = self.tokenizer(
-            text_prompts,
-            return_tensors="pt",
-            padding=True,
-            truncation=False,
-            add_special_tokens=False,
-        )
-        text_input_ids = text_tokenized.input_ids
-        text_attention_mask = text_tokenized.attention_mask
-
-        # Create targets and handle padding properly
-        text_targets = text_input_ids.clone()
-        for i in range(len(samples)):
-            # 1. Mask instruction tokens
-            text_targets[i, :instruction_len] = IGNORE_INDEX
-            # 2. Mask speech tokens
-            start_pos = (text_input_ids[i] == self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_START_TOKEN)).nonzero()
-            end_pos = (text_input_ids[i] == self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_END_TOKEN)).nonzero()
-            if len(start_pos) > 0 and len(end_pos) > 0:
-                text_targets[i, start_pos[0][0] : end_pos[0][0] + 1] = IGNORE_INDEX
-            # 3. Mask padding tokens
-            text_targets[i, text_attention_mask[i] == 0] = IGNORE_INDEX
-                
-        batch = dict(
-            input_ids=input_ids,
-            labels=targets,
-            attention_mask=attention_mask,
-            speech_batch=speech_batch,
-            src_lengths=n_frames,
-            after_lens=speech_lens,
-
-            text_input_ids=text_input_ids,
-            text_labels=text_targets,
-            text_attention_mask=text_attention_mask,
-        )
-
-        return batch
-
-def make_supervised_data_module(
-        tokenizer: transformers.PreTrainedTokenizer,
-        data_args,
-        length_shrink_func,
-        model
-    ):
-    """Make dataset and collator for supervised fine-tuning."""
-
-    train_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
-        data_args.data_path, data_args.data_split_train
-    )
-    eval_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
-        data_args.data_path, data_args.data_split_eval
-    ) if data_args.data_split_eval is not None else None
-
-    data_collator = DataCollatorForSupervisedDataset(
-        tokenizer, 
-        length_shrink_func, 
-        model,
-        data_args.source_lang,
-        data_args.target_lang
-    )
-
-    return train_dataset, eval_dataset, data_collator
 
 def train():
     parser = transformers.HfArgumentParser(

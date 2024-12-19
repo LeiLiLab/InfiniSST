@@ -20,7 +20,8 @@ from train.dataset import (
     SpeechSampler, 
     PromptSpeechToTextDatasetCreator, 
     SpeechToTextDatasetItem,
-    DataCollatorForSupervisedDataset
+    DataCollatorForSupervisedDataset,
+    DataCollatorForTrajectoryDataset
 )
 from model.model_new import SpeechLlamaForCausalLM
 from model.speech_encoder import (
@@ -95,8 +96,6 @@ class SLlamaLightning(L.LightningModule):
 
         if self.model_args.llm_freeze:
             model.model.requires_grad_(False)
-            if not self.model_args.llm_emb_freeze:
-                model.model.embed_tokens.requires_grad_(True)
             model.lm_head.requires_grad_(False)       
 
         # load speech encoder
@@ -131,7 +130,6 @@ class SLlamaLightning(L.LightningModule):
             model.model.speech_encoder.requires_grad_(False)
 
         model.preprocess(tokenizer=self.tokenizer)
-        model.model.orig_embeds_params = self.model_args.orig_embeds_params
 
         if self.model_args.sllm_weight_path is not None:
             state_dict = torch.load(self.model_args.sllm_weight_path, map_location='cpu', weights_only=True)
@@ -143,11 +141,14 @@ class SLlamaLightning(L.LightningModule):
         train_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
             self.data_args.data_path, self.data_args.data_split_train
         )
-        data_collator = DataCollatorForSupervisedDataset(
+        collator_cls = DataCollatorForTrajectoryDataset if self.data_args.trajectory \
+            else DataCollatorForSupervisedDataset
+        data_collator = collator_cls(
             self.tokenizer, 
             self.length_shrink_func, 
             self.data_args.source_lang,
-            self.data_args.target_lang
+            self.data_args.target_lang,
+            block_size=self.speech_args.block_size,
         )
 
         train_sampler = SpeechSampler(
@@ -170,11 +171,14 @@ class SLlamaLightning(L.LightningModule):
         eval_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
             self.data_args.data_path, self.data_args.data_split_eval
         )
-        data_collator = DataCollatorForSupervisedDataset(
+        collator_cls = DataCollatorForTrajectoryDataset if self.data_args.trajectory \
+            else DataCollatorForSupervisedDataset
+        data_collator = collator_cls(
             self.tokenizer, 
             self.length_shrink_func,
             self.data_args.source_lang,
-            self.data_args.target_lang
+            self.data_args.target_lang,
+            block_size=self.speech_args.block_size,
         )
 
         eval_sampler = SpeechSampler(
