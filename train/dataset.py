@@ -74,6 +74,7 @@ class SpeechToTextDatasetItem(object):
     target: Optional[torch.Tensor] = None
     speech_word: Optional[List] = None
     text_word: Optional[List] = None
+    trajectory: Optional[List] = None
     
 class PromptSpeechToTextDataset(SpeechToTextDataset):
 
@@ -86,7 +87,8 @@ class PromptSpeechToTextDataset(SpeechToTextDataset):
         ids: Optional[List[str]] = None,
         tasks: Optional[List[str]] = None,
         speech_words: Optional[List] = None,
-        text_words: Optional[List] = None
+        text_words: Optional[List] = None,
+        trajectories: Optional[List[List[str]]] = None,
     ):
         self.audio_paths = audio_paths
         self.n_frames = n_frames
@@ -96,6 +98,7 @@ class PromptSpeechToTextDataset(SpeechToTextDataset):
         self.tasks = tasks
         self.speech_words = speech_words
         self.text_words = text_words
+        self.trajectories = trajectories
 
     def __getitem__(
         self, index: int
@@ -112,10 +115,11 @@ class PromptSpeechToTextDataset(SpeechToTextDataset):
         src_text = self.src_texts[index]
         speech_word = self.speech_words[index] if self.speech_words is not None else None
         text_word = self.text_words[index] if self.text_words is not None else None
+        trajectory = self.trajectories[index] if self.trajectories is not None else None
         
         return SpeechToTextDatasetItem(
             index=index, source=source, target=text, src_text=src_text, id=id, task=task,
-            speech_word=speech_word, text_word=text_word
+            speech_word=speech_word, text_word=text_word, trajectory=trajectory
         )
     def __len__(self):
         return len(self.audio_paths)
@@ -127,6 +131,7 @@ class PromptSpeechToTextDatasetCreator(object):
     # optional columns
     KEY_SPEAKER, KEY_SRC_TEXT = "speaker", "src_text"
     KEY_SRC_LANG, KEY_TGT_LANG = "src_lang", "tgt_lang"
+    KEY_TRAJECTORY = "trajectory"
     # default values
     DEFAULT_SPEAKER = DEFAULT_SRC_TEXT = DEFAULT_TGT_TEXT = DEFAULT_LANG = DEFAULT_LANG_N_FRAMES = DEFAULT_TASK = ""
     TASK = "task"
@@ -167,7 +172,10 @@ class PromptSpeechToTextDatasetCreator(object):
         speech_words_str = [s.get('speech_word', '') for s in samples]
         text_words_str = [s.get('text_word', '') for s in samples]
         speech_words = [eval(s) if s != '' else None for s in speech_words_str]
-        text_words = [eval(s) if s != '' else None for s in text_words_str]        
+        text_words = [eval(s) if s != '' else None for s in text_words_str]          
+
+        trajectories_str = [s.get(cls.KEY_TRAJECTORY, '') for s in samples]
+        trajectories = [eval(s) if s != '' else None for s in trajectories_str]
 
         return PromptSpeechToTextDataset(
             audio_paths,
@@ -177,7 +185,8 @@ class PromptSpeechToTextDatasetCreator(object):
             ids=ids,
             tasks=tasks,
             speech_words=speech_words,
-            text_words=text_words
+            text_words=text_words,
+            trajectories=trajectories,
         )
 
 
@@ -240,7 +249,7 @@ class SpeechSampler(DistributedSampler):
 class DataCollatorForSupervisedDataset(object):
     """Collate examples for supervised fine-tuning."""
 
-    def __init__(self, tokenizer, length_shrink_func, source_lang, target_lang):
+    def __init__(self, tokenizer, length_shrink_func, source_lang, target_lang, **kwargs):
         self.tokenizer = tokenizer
         self.length_shrink_func = length_shrink_func
         self.source_lang = source_lang
@@ -333,6 +342,102 @@ class DataCollatorForSupervisedDataset(object):
         )
 
         return batch
+
+@dataclass
+class DataCollatorForTrajectoryDataset(object):
+    def __init__(self, 
+            tokenizer, length_shrink_func, source_lang, target_lang, 
+            block_size=48
+        ):
+        self.tokenizer = tokenizer
+        self.length_shrink_func = length_shrink_func
+        self.source_lang = source_lang
+        self.target_lang = target_lang
+        self.speech_segment_size = block_size // 4
+     
+    def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
+        indices = torch.tensor([x.index for x in samples], dtype=torch.long)
+
+        # pad to multiple
+        sp_seg_frame = int(self.speech_segment_size * 0.08 * 16000)
+        for x in samples:
+            if x.source.shape[0] % sp_seg_frame != 0:
+                n_pad = sp_seg_frame - x.source.shape[0] % sp_seg_frame
+                x.source = torch.cat([x.source, torch.zeros(n_pad).to(x.source)], dim=0)
+
+        speech_batch = _collate_frames([x.source for x in samples], is_audio_input=True)
+        offset = torch.zeros(len(samples), 79 + 320).to(speech_batch)
+        speech_batch = torch.cat([offset, speech_batch], dim=1)
+
+        n_frames = torch.tensor([x.source.size(0) + 79 + 320 for x in samples], dtype=torch.long)        
+        speech_lens = self.length_shrink_func(n_frames)
+
+        trajectory_lens = [len(x.trajectory) for x in samples]
+        assert all([t_l == s_l // self.speech_segment_size for t_l, s_l in zip(trajectory_lens, speech_lens)])
+
+        prompts = []
+        instruction = f"Translate the following speech from {self.source_lang} to {self.target_lang}: "
+        for i, x in enumerate(samples):
+            prompt = instruction
+            for j, text in enumerate(x.trajectory):
+                n_sp_token = min(
+                    self.speech_segment_size, 
+                    speech_lens[i] - j * self.speech_segment_size
+                )
+                assert n_sp_token > 0
+
+                sp_tokens = DEFAULT_SPEECH_START_TOKEN + \
+                    n_sp_token * DEFAULT_SPEECH_PATCH_TOKEN + \
+                    DEFAULT_SPEECH_END_TOKEN
+
+                prompt += sp_tokens + text + "<|end_of_text|>"
+            prompts.append(prompt)
+     
+        # Get instruction length for masking
+        instruction_ids = self.tokenizer(instruction, add_special_tokens=False).input_ids
+        instruction_len = len(instruction_ids)
+
+        # Tokenize with explicit padding settings
+        tokenized = self.tokenizer(
+            prompts,
+            return_tensors="pt",
+            padding=True,
+            truncation=False,
+            add_special_tokens=False,
+        )
+        input_ids = tokenized.input_ids
+        attention_mask = tokenized.attention_mask
+
+        # Create targets and handle padding properly
+        targets = input_ids.clone()
+        sp_start_id = self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_START_TOKEN)
+        sp_end_id = self.tokenizer.convert_tokens_to_ids(DEFAULT_SPEECH_END_TOKEN)
+        for i in range(len(samples)):
+            # 1. Mask instruction tokens
+            targets[i, :instruction_len] = IGNORE_INDEX
+            
+            # 2. Mask speech tokens
+            start_positions = (input_ids[i] == sp_start_id).nonzero()
+            end_positions = (input_ids[i] == sp_end_id).nonzero()
+            for start, end in zip(start_positions, end_positions):
+                targets[i, start[0] : end[0] + 1] = IGNORE_INDEX
+            
+            # 3. Mask padding tokens
+            targets[i, attention_mask[i] == 0] = IGNORE_INDEX
+
+
+        batch = dict(
+            input_ids=input_ids,
+            labels=targets,
+            attention_mask=attention_mask,
+            speech_batch=speech_batch,
+            src_lengths=n_frames,
+            after_lens=speech_lens,
+            ids=indices,
+        )
+
+        return batch
+    
 
 def make_supervised_data_module(
         tokenizer: transformers.PreTrainedTokenizer,

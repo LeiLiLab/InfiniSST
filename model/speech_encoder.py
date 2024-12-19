@@ -664,6 +664,7 @@ class SpeechEncoderW2V2RoPE(L.LightningModule):
         self.speech_encoder, s_dim, self.s_layer = self._load_w2v2(
             w2v2_path, w2v2_ctc_finetuned
         )
+        self.block_size = block_size
         self.max_cache_size = max_cache_size
         
         self.length_shrink = None
