@@ -62,6 +62,6 @@ class AlignAttStreamAttFW(AlignAtt):
         print(len(states.target_ids), len(states.source) / 16000)
 
         action = super().policy(states)
-        # print(' '.join(states.target) + ' ' + ('' if action.is_read() else action.content))
+        print(' '.join(states.target) + ' ' + ('' if action.is_read() else action.content))
 
         return action

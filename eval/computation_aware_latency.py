@@ -14,11 +14,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--dirname", type=str, required=True)
 args = parser.parse_args()
 
-if '30s' in args.dirname:
-    df = load_df_from_tsv('/data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON_30s.tsv')
-else:
-    df = load_df_from_tsv('/data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON.tsv')
-src_texts = df['src_text'].tolist()
+# if '30s' in args.dirname:
+#     df = load_df_from_tsv('/data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON_30s.tsv')
+# else:
+#     df = load_df_from_tsv('/data/user_data/siqiouya/dataset/must-c-v1.0/en-es/tst-COMMON.tsv')
+# src_texts = df['src_text'].tolist()
 
 scorer_c = LAALScorer(computation_aware=True)
 scorer = LAALScorer()

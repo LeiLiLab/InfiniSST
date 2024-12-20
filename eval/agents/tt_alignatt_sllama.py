@@ -59,6 +59,7 @@ class AlignAtt(SpeechToTextAgent):
         super().__init__(args)
         transformers.set_seed(998244353)
         self.frame_num = args.frame_num
+        self.attn_layer = args.attn_layer
         self.min_start_sec = args.min_start_sec
         self.source_segment_size = args.source_segment_size
         # self.continuous_write = args.continuous_write
@@ -69,6 +70,7 @@ class AlignAtt(SpeechToTextAgent):
         if getattr(args, "force_target", False):
             self.load_benchmark_data(args.target)
         self.batch_size = args.batch_size
+        self.no_repeat_ngram_size = args.no_repeat_ngram_size
         self.test_instance_id = 0
 
     def build_states(self):
@@ -129,9 +131,24 @@ class AlignAtt(SpeechToTextAgent):
     @staticmethod
     def add_args(parser):
         parser.add_argument(
+            "--source-lang", 
+            type=str,
+            default='English',
+        )
+        parser.add_argument(
+            "--target-lang", 
+            type=str,
+            default='German',
+        )
+        parser.add_argument(
             "--frame-num",
             default=1, 
             type=int,
+        )
+        parser.add_argument(
+            "--attn-layer",
+            type=int,
+            default=-1
         )
         parser.add_argument(
             "--min-start-sec",
@@ -169,6 +186,11 @@ class AlignAtt(SpeechToTextAgent):
             type=int,
             default=1
         )
+        parser.add_argument(
+            "--no-repeat-ngram-size",
+            type=int,
+            default=3,
+        )
 
     @torch.inference_mode()
     def policy(self, states: Optional[S2TAgentStates] = None):
@@ -199,86 +221,69 @@ class AlignAtt(SpeechToTextAgent):
         n_frames = torch.tensor([source.size(0)], dtype=torch.long)
         speech_lens = self.length_after_adp(self.length_after_ssl(n_frames))
 
-        to_adds = [int(speech_len)*self.DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
-        to_adds = [self.DEFAULT_SPEECH_START_TOKEN + to_add + self.DEFAULT_SPEECH_END_TOKEN for to_add in to_adds]
+        speech_tokens = [int(speech_len)*self.DEFAULT_SPEECH_PATCH_TOKEN for speech_len in speech_lens]
+        speech_tokens = [self.DEFAULT_SPEECH_START_TOKEN + tokens + self.DEFAULT_SPEECH_END_TOKEN for tokens in speech_tokens]
 
-        # qs = self.prompt
-        # before, after = qs.split('<speech_here>')
-        # mm_prompts = [before + to_add + after for to_add in to_adds]
-
-        conv = conversation_lib.default_conversation.copy()
-        conv.messages = []
-        conv.append_message(conv.roles[0], to_adds[0])
-        conv.append_message(conv.roles[1], None)
-        prompt_inputs = conv.get_prompt()
+        instruction = f"Translate the following speech from {self.args.source_lang} to {self.args.target_lang}:"
+        prompts = [f"{instruction} {tokens}" for tokens in speech_tokens]
 
         max_number_of_tokens = int(length_in_seconds * self.max_len_a + self.max_len_b)
 
         self.model.model.speech_features_extracted = False
-        inputs = self.tokenizer([prompt_inputs])
+        inputs = self.tokenizer(prompts)
+
+        stop_str = "<|end_of_text|>"
+        keywords = [stop_str]
+        stopping_criteria = KeywordsStoppingCriteria(
+            keywords, self.tokenizer, torch.tensor(inputs.input_ids)
+        )
+                
+        input_ids = inputs.input_ids[0] + states.target_ids
+        input_ids_tensor = torch.as_tensor([input_ids]).cuda()
+
+
+        output = self.model.generate(
+            attention_mask=input_ids_tensor.ne(self.tokenizer.pad_token_id).repeat(self.batch_size, 1),
+            input_ids=input_ids_tensor.repeat(self.batch_size, 1),
+            speech_batch=speech_batch.repeat(self.batch_size, 1),
+            src_lengths=n_frames.to(device=self.model.device).repeat(self.batch_size),
+            after_lens=speech_lens.to(device=self.model.device).repeat(self.batch_size),
+            do_sample=False,
+            num_beams=1,
+            max_new_tokens=max(1, max_number_of_tokens - len(states.target_ids)),
+            no_repeat_ngram_size=self.no_repeat_ngram_size,
+            stopping_criteria=[stopping_criteria],
+            pad_token_id=self.tokenizer.eos_token_id,
+            output_attentions=True,
+            return_dict_in_generate=True,
+            states=states,
+        )
         
-        prediction_ids = []
-        past_key_values = None
-        while True:
-            input_ids = inputs.input_ids[0] + states.target_ids + prediction_ids
-            input_ids_tensor = torch.as_tensor([input_ids]).cuda()
+        output_ids = output.sequences[0, input_ids_tensor.size(1):]
+
+        if not states.source_finished:
+            attentions = output.attentions
 
             speech_start_pos = torch.where(input_ids_tensor[0] == self.model.config.sp_start_token_id)[0] + 1
             speech_end_pos = torch.where(input_ids_tensor[0] == self.model.config.sp_end_token_id)[0]
 
-            if past_key_values is None:
-                output = self.model(
-                    input_ids=input_ids_tensor.repeat(self.batch_size, 1),
-                    attention_mask=input_ids_tensor.ne(self.tokenizer.pad_token_id).repeat(self.batch_size, 1),
-                    use_cache=True,
-                    speech_batch=speech_batch.repeat(self.batch_size, 1),
-                    src_lengths=n_frames.to(device=self.model.device).repeat(self.batch_size),
-                    after_lens=speech_lens.to(device=self.model.device).repeat(self.batch_size),
-                    past_key_values=None,
-                    output_attentions=True,
-                    return_dict=True,
-                    states=states,
-                )
-            else:
-                output = self.model(
-                    input_ids=input_ids_tensor.repeat(self.batch_size, 1)[:, -1:],
-                    attention_mask=input_ids_tensor.ne(self.tokenizer.pad_token_id).repeat(self.batch_size, 1),
-                    use_cache=True,
-                    speech_batch=None,
-                    src_lengths=None,
-                    after_lens=None,
-                    past_key_values=past_key_values,
-                    output_attentions=True,
-                    return_dict=True,
-                    states=states,
-                )
-            past_key_values = output.past_key_values
-            logits = output.logits[0, -1]
-            token_id = logits.argmax().item()
-
-            if token_id == self.tokenizer.eos_token_id:
-                break
-
-            if not states.source_finished:
-                attentions = output.attentions
-                sum_att = attentions[0][0].mean(dim=0)[-1, speech_start_pos : speech_end_pos]
-                for j in range(1, len(attentions)):
-                    sum_att += attentions[j][0].mean(dim=0)[-1, speech_start_pos : speech_end_pos]
+            states.most_attended_indices = []
+            for i in range(len(output_ids)):
+                if self.attn_layer == -1:
+                    sum_att = attentions[i][0][0].mean(dim=0)[-1, speech_start_pos : speech_end_pos]
+                    for j in range(1, len(attentions[i])):
+                        sum_att += attentions[i][j][0].mean(dim=0)[-1, speech_start_pos : speech_end_pos]
+                else:
+                    sum_att = attentions[i][self.attn_layer][0].mean(dim=0)[-1, speech_start_pos : speech_end_pos]
                 most_attended_idx = sum_att.argmax()
                 if speech_start_pos + most_attended_idx >= speech_end_pos - self.frame_num:
                     break
+                states.most_attended_indices.append(most_attended_idx * 1280)
+            states.most_attended_indices = torch.LongTensor(states.most_attended_indices)
 
-                states.most_attended_indices = torch.cat(
-                    [
-                        states.most_attended_indices, 
-                        torch.LongTensor([most_attended_idx * 1280])
-                    ]
-                )
-            
-            prediction_ids.append(token_id)
-
-            if len(states.target_ids + prediction_ids) >= max_number_of_tokens:
-                break
+            prediction_ids = output_ids[:states.most_attended_indices.size(0)]
+        else:
+            prediction_ids = output_ids
 
         if not states.source_finished:
             if len(prediction_ids) > 0:
