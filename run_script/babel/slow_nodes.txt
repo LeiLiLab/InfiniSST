@@ -1,0 +1,1 @@
+babel-3-[5,9,17],babel-4-9,babel-6-29,babel-7-[1,5,9],babel-10-13,babel-11-25,babel-13-[13,29]
