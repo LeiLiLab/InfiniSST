@@ -1,4 +1,5 @@
 import os
+import logging
 
 import torch
 from torch.utils.data import DataLoader
@@ -29,6 +30,8 @@ from model.speech_encoder import (
     SpeechEncoderW2V2RoPE,
     SpeechEncoderW2VBERT2
 )
+
+logger = logging.getLogger(__name__)
 
 class SLlamaLightning(L.LightningModule):
     def __init__(
@@ -96,7 +99,11 @@ class SLlamaLightning(L.LightningModule):
 
         if self.model_args.llm_freeze:
             model.model.requires_grad_(False)
-            model.lm_head.requires_grad_(False)       
+            model.model.embed_tokens.requires_grad_(True)
+        if self.model_args.llm_emb_freeze:
+            model.model.embed_tokens.requires_grad_(False)
+        if self.model_args.llm_head_freeze:
+            model.lm_head.requires_grad_(False)
 
         # load speech encoder
         speech_encoder_args = [
@@ -158,7 +165,8 @@ class SLlamaLightning(L.LightningModule):
             batch_size_sent=20,
             min_ms=320,
             multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
-            filter=True
+            filter=True,
+            target_lang=self.data_args.target_lang
         )
         train_dataloader = DataLoader(
             train_dataset, 
@@ -188,7 +196,8 @@ class SLlamaLightning(L.LightningModule):
             batch_size_sent=20,
             min_ms=320,
             multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
-            filter=False
+            filter=False,
+            target_lang=self.data_args.target_lang
         )
         eval_dataloader = DataLoader(
             eval_dataset, 
@@ -278,6 +287,7 @@ class SLlamaLightning(L.LightningModule):
             self.trainer.optimizers[0].optimizer.train()
     
     def forward(self, batch):
+        # logger.info("{} {}".format(batch['after_lens'].max(), batch['labels'].size()))
         output = self.model(
             **batch,
             return_dict=True

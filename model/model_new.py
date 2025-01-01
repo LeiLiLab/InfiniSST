@@ -29,9 +29,12 @@ from transformers import AutoConfig, AutoModelForCausalLM, \
 
 from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
 
-DEFAULT_SPEECH_PATCH_TOKEN = "<sp_patch>"
-DEFAULT_SPEECH_START_TOKEN = "<sp_start>"
-DEFAULT_SPEECH_END_TOKEN = "<sp_end>"
+from train.dataset import (
+    DEFAULT_SPEECH_PATCH_TOKEN,
+    DEFAULT_SPEECH_START_TOKEN,
+    DEFAULT_SPEECH_END_TOKEN,
+    DEFAULT_TEXT_END_TOKEN
+)
 
 class SpeechLlamaConfig(LlamaConfig):
     model_type = "SpeechLlama"
@@ -43,6 +46,7 @@ class SpeechLlamaModel(LlamaModel):
     def __init__(self, config: LlamaConfig):
         super(SpeechLlamaModel, self).__init__(config)
         self.speech_features_extracted = False
+        self.inference = False
 
     def _get_feat_extract_output_lengths(self, input_lengths: torch.LongTensor):
         """
@@ -68,40 +72,47 @@ class SpeechLlamaModel(LlamaModel):
         **kwargs,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
 
-        inputs_embeds = self.embed_tokens(input_ids)
+        if speech_batch is not None and not self.speech_features_extracted:
+            if states is None:
+                speech_features, _ = self.speech_encoder.encode_speech(
+                    speech_batch, 
+                    src_lengths,
+                )
+            else:
+                speech_features, states.speech_cache = self.speech_encoder.encode_speech(
+                    speech_batch, 
+                    src_lengths,
+                    cache=states.speech_cache
+                )
 
-        if speech_batch is not None:
-            speech_features = None
-            if self.training or not self.speech_features_extracted:
-                speech_features, _ = self.speech_encoder.encode_speech(speech_batch, src_lengths)
-
-            if self.config.inference:
+            if self.inference:
                 self.speech_features_extracted = True
-                
-            if speech_features is not None:
 
-                filled_inputs_embeds = []
-                for i in range(input_ids.size(0)):
-                    sp_start_pos = (input_ids[i] == self.config.sp_start_token_id).nonzero()
-                    sp_end_pos = (input_ids[i] == self.config.sp_end_token_id).nonzero()
-                    filled_inputs_embed = inputs_embeds[i]
-                    index = 0
-                    for st, ed in zip(sp_start_pos, sp_end_pos):
-                        filled_inputs_embed = torch.cat(
-                            [
-                                filled_inputs_embed[: st + 1],
-                                speech_features[i, index : index + ed - st - 1],
-                                filled_inputs_embed[ed :]
-                            ],
-                            dim=0                            
-                        )
-                        index += ed - st - 1
-                    filled_inputs_embeds.append(filled_inputs_embed)
-                inputs_embeds = torch.stack(filled_inputs_embeds)
+            inputs_embeds = self.embed_tokens(input_ids)
+            filled_inputs_embeds = []
+            for i in range(input_ids.size(0)):
+                sp_start_pos = (input_ids[i] == self.config.sp_start_token_id).nonzero()
+                sp_end_pos = (input_ids[i] == self.config.sp_end_token_id).nonzero()
+                filled_inputs_embed = inputs_embeds[i]
+                index = 0
+                for st, ed in zip(sp_start_pos, sp_end_pos):
+                    filled_inputs_embed = torch.cat(
+                        [
+                            filled_inputs_embed[: st + 1],
+                            speech_features[i, index : index + ed - st - 1],
+                            filled_inputs_embed[ed :]
+                        ],
+                        dim=0                            
+                    )
+                    index += ed - st - 1
+                filled_inputs_embeds.append(filled_inputs_embed)
+            inputs_embeds = torch.stack(filled_inputs_embeds)
+        else:
+            inputs_embeds = self.embed_tokens(input_ids[:, -1:])
 
         return super(SpeechLlamaModel, self).forward(
             input_ids=None, 
-            attention_mask=attention_mask,
+            attention_mask=None,
             past_key_values=past_key_values,
             inputs_embeds=inputs_embeds, 
             use_cache=use_cache,
@@ -132,13 +143,29 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
         return self.lm_head
     
     def preprocess(self, tokenizer):      
-        num_new_tokens = tokenizer.add_tokens([DEFAULT_SPEECH_PATCH_TOKEN, DEFAULT_SPEECH_START_TOKEN, DEFAULT_SPEECH_END_TOKEN], special_tokens=True)
+        tokenizer.add_tokens(
+            [
+                DEFAULT_SPEECH_PATCH_TOKEN, 
+                DEFAULT_SPEECH_START_TOKEN, 
+                DEFAULT_SPEECH_END_TOKEN,
+                DEFAULT_TEXT_END_TOKEN
+            ], 
+        special_tokens=True)
         self.resize_token_embeddings(len(tokenizer), mean_resizing=True)
 
-        sp_patch_token_id, sp_start_token_id, sp_end_token_id = tokenizer.convert_tokens_to_ids([DEFAULT_SPEECH_PATCH_TOKEN, DEFAULT_SPEECH_START_TOKEN, DEFAULT_SPEECH_END_TOKEN])                
+        sp_patch_token_id, sp_start_token_id, sp_end_token_id, text_end_token_id = \
+            tokenizer.convert_tokens_to_ids(
+                [
+                    DEFAULT_SPEECH_PATCH_TOKEN, 
+                    DEFAULT_SPEECH_START_TOKEN, 
+                    DEFAULT_SPEECH_END_TOKEN,
+                    DEFAULT_TEXT_END_TOKEN
+                ]
+            )                
         self.config.sp_patch_token_id = sp_patch_token_id
         self.config.sp_start_token_id = sp_start_token_id
         self.config.sp_end_token_id = sp_end_token_id 
+        self.config.text_end_token_id = text_end_token_id
 
     def forward(
         self,
@@ -279,8 +306,8 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
     def prepare_inputs_for_generation(
         self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
-        if past_key_values:
-            input_ids = input_ids[:, -1:]
+        # if past_key_values:
+        #     input_ids = input_ids[:, -1:]
 
         # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
         if inputs_embeds is not None and past_key_values is None:

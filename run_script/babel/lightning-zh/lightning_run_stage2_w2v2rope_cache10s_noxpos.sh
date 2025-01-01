@@ -7,7 +7,7 @@
 #SBATCH --mem=512GB
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --exclude=babel-13-13,babel-13-29,babel-4-9,babel-3-5,babel-3-17,babel-3-9,babel-6-29,babel-11-25,babel-10-13,babel-7-1,babel-7-5
+#SBATCH --exclude=babel-3-[5,9,17],babel-4-9,babel-6-29,babel-7-[1,5,9],babel-10-13,babel-11-25,babel-13-[13,29]
 #SBATCH --partition=preempt
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
@@ -74,8 +74,8 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     \
     --seed 998244353 \
     --stage 2 \
-    --train_bsz 640000 \
-    --eval_bsz 640000 \
+    --train_bsz 800000 \
+    --eval_bsz 800000 \
     --learning_rate 7e-6 \
     --warmup_steps 100 \
     --run_name $name \
@@ -83,7 +83,7 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     --n_device ${SLURM_GPUS} \
     --deepspeed_stage 2 \
     --max_epochs 1 \
-    --grad_acc_steps 5 \
+    --grad_acc_steps 4 \
     --clip_norm 1.0 \
     --save_dir ${save_path} \
     --log_step 5 \
