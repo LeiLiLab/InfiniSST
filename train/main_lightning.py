@@ -49,16 +49,6 @@ from lightning.pytorch.strategies import DeepSpeedStrategy, FSDPStrategy
 from model.model_lightning import SLlamaLightning
 # TODO: import and use code from ../data/dataset.py
 
-IGNORE_INDEX = -100
-DEFAULT_PAD_TOKEN = "[PAD]"
-DEFAULT_EOS_TOKEN = "</s>"
-DEFAULT_BOS_TOKEN = "<s>"
-DEFAULT_UNK_TOKEN = "<unk>"
-DEFAULT_SPEECH_TOKEN = "<speech>"
-DEFAULT_SPEECH_PATCH_TOKEN = "<sp_patch>"
-DEFAULT_SPEECH_START_TOKEN = "<sp_start>"
-DEFAULT_SPEECH_END_TOKEN = "<sp_end>"
-
 @dataclass
 class SpeechEncoderArguments:
     w2v2_path: Optional[str] = field(default=None)
@@ -73,7 +63,9 @@ class SpeechEncoderArguments:
 @dataclass
 class ModelArguments:
     llm_path: Optional[str] = field(default="facebook/opt-125m")
-    llm_freeze: bool = field(default=False)
+    llm_freeze: bool = field(default=False) # freeze LLM except embedding layer
+    llm_emb_freeze: bool = field(default=False)
+    llm_head_freeze: bool = field(default=False)
     sllm_weight_path: Optional[str] = field(default=None)
 
 @dataclass
@@ -162,10 +154,7 @@ def train():
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=training_args.save_dir,
-        monitor='eval/loss',
-        save_top_k=1,
-        mode='min',
-        every_n_epochs=1
+        save_on_train_epoch_end=True,
     )
     lr_monitor = LearningRateMonitor(
         logging_interval='step'

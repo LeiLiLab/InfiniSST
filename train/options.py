@@ -5,53 +5,19 @@ def add_speech_encoder_args(parser):
         default=None
     )
     parser.add_argument(
-        "--w2v2-ctc-finetuned",
-        action="store_true"
-    )
-    parser.add_argument(
-        "--hubert",
-        action="store_true"
-    )
-    parser.add_argument(
-        "--feature-extractor-cfg", 
+        "--w2v2-type",
         type=str,
-        default="[(1024, 10, 5)] + [(1024, 3, 2)] * 4 + [(1024,2,2)] * 4"
+        default=None
     )
     parser.add_argument(
-        "--feature-extractor-state-dict-path",
-        type=str,
-        default=None,
-    )
-    parser.add_argument(
-        "--feature-extractor-freeze",
-        action="store_true",
-        default=False,
+        "--ctc-finetuned",
+        action="store_true"
     )
     parser.add_argument(
         "--length-shrink-cfg",
         type=str,
         default=None,
     )
-    parser.add_argument(
-        "--n-attn-layers", 
-        type=int,
-        default=12,
-    )
-    parser.add_argument(
-        "--n-dim",
-        type=int,
-        default=1024
-    )
-    parser.add_argument(
-        "--n-heads",
-        type=int,
-        default=16,
-    )
-    parser.add_argument(
-        "--dropout",
-        type=float,
-        default=0.1,
-    )    
     parser.add_argument(
         "--block-size", 
         type=int, 
@@ -63,32 +29,53 @@ def add_speech_encoder_args(parser):
         default=125, # 125 * 0.08 = 1 second
     )
     parser.add_argument(
-        "--llm-path", 
-        type=str,
-        required=True,
-    )
-    parser.add_argument(
-        "--lr", 
-        type=float,
-        default=1e-4,
-    )
-    parser.add_argument(
-        "--warmup-updates", 
+        "--xpos",
         type=int,
-        default=0,
+        default=1, # 1 for True, 0 for False
+    )
+
+def add_gen_args(parser):                 
+    parser.add_argument(
+        "--max-len-a",
+        type=int,
+        default=5,
+        help="Max number of tokens generated per second"
     )
     parser.add_argument(
-        "--min-lr", 
+        "--max-len-b",
+        type=int,
+        default=20,
+        help="Max number of tokens generated additionally"
+    )
+    parser.add_argument(
+        "--beam",
+        type=int,
+        default=1
+    )
+    parser.add_argument(
+        "--no-repeat-ngram-size",
+        type=int,
+        default=3
+    )
+    parser.add_argument(
+        "--repetition-penalty",
         type=float,
-        default=1e-6,
+        default=1.2
+    )
+
+def add_simuleval_args(parser):
+    parser.add_argument(
+        "--source-lang", 
+        type=str,
+        default='English',
     )
     parser.add_argument(
-        "--temp", 
+        "--target-lang", 
+        type=str,
+        default='German',
+    )
+    parser.add_argument(
+        "--min-start-sec",
+        default=0.32,
         type=float,
-        default=0.5,
-    )
-    parser.add_argument(
-        "--loss-fn", 
-        type=str, 
-        default='waco'
     )

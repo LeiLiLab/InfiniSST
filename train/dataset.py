@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 
+import jieba
 import transformers
 import numpy as np
 import torch
@@ -47,6 +48,7 @@ DEFAULT_SPEECH_TOKEN = "<speech>"
 DEFAULT_SPEECH_PATCH_TOKEN = "<sp_patch>"
 DEFAULT_SPEECH_START_TOKEN = "<sp_start>"
 DEFAULT_SPEECH_END_TOKEN = "<sp_end>"
+DEFAULT_TEXT_END_TOKEN = "<text_end>"
 
 logger = logging.getLogger(__name__)
 
@@ -191,13 +193,13 @@ class PromptSpeechToTextDatasetCreator(object):
 
 
 class SpeechSampler(DistributedSampler):
-    def __init__(self, dataset, shuffle, batch_size, batch_size_sent=30, min_ms=0, multiplier=1, filter=True):
+    def __init__(self, dataset, shuffle, batch_size, batch_size_sent=30, min_ms=0, multiplier=1, filter=True, target_lang=None):
         super().__init__(dataset=dataset, shuffle=shuffle)
         self.batch_size = batch_size
         self.batch_size_sent = batch_size_sent
-        self._obtain_batches(min_ms, multiplier, filter)
+        self._obtain_batches(min_ms, multiplier, filter, target_lang)
 
-    def _obtain_batches(self, min_ms, multiplier, filter):
+    def _obtain_batches(self, min_ms, multiplier, filter, target_lang):
         sizes = list(zip(self.dataset.n_frames, range(len(self.dataset))))
         sorted_sizes = sorted(sizes)
 
@@ -205,7 +207,9 @@ class SpeechSampler(DistributedSampler):
         indices, sum_size = [], 0
         n_skipped = 0
         for size, idx in sorted_sizes:
-            if not filter or (size <= self.batch_size and size >= min_ms * 16 and size / 16000 / len(self.dataset.tgt_texts[idx].split(' ')) >= 0.15):
+            n_word = len(self.dataset.tgt_texts[idx].split(' ')) if target_lang != 'Chinese' else \
+                len(list(jieba.cut(self.dataset.tgt_texts[idx])))
+            if not filter or (size <= self.batch_size and size >= min_ms * 16 and size / 16000 / n_word >= 0.15):
                 if sum_size + size <= self.batch_size and len(indices) < self.batch_size_sent:
                     indices.append(idx)
                     sum_size += size
@@ -390,7 +394,7 @@ class DataCollatorForTrajectoryDataset(object):
                     n_sp_token * DEFAULT_SPEECH_PATCH_TOKEN + \
                     DEFAULT_SPEECH_END_TOKEN
 
-                prompt += sp_tokens + text + "<|end_of_text|>"
+                prompt += sp_tokens + text + DEFAULT_TEXT_END_TOKEN
             prompts.append(prompt)
      
         # Get instruction length for masking
@@ -424,7 +428,6 @@ class DataCollatorForTrajectoryDataset(object):
             
             # 3. Mask padding tokens
             targets[i, attention_mask[i] == 0] = IGNORE_INDEX
-
 
         batch = dict(
             input_ids=input_ids,

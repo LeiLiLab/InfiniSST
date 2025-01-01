@@ -28,7 +28,7 @@ from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutpu
 
 import lightning as L
 from train.dataset import SpeechSampler
-from model.speech_encoder import SpeechEncoder, SpeechEncoderW2V2, SpeechEncoderW2V2RoPE
+from model.speech_encoder import SpeechEncoderW2V2, SpeechEncoderW2V2RoPE
 
 DEFAULT_SPEECH_PATCH_TOKEN = "<sp_patch>"
 DEFAULT_SPEECH_START_TOKEN = "<sp_start>"
