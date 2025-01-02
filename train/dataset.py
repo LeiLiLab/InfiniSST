@@ -357,7 +357,22 @@ class DataCollatorForTrajectoryDataset(object):
         self.length_shrink_func = length_shrink_func
         self.source_lang = source_lang
         self.target_lang = target_lang
-        self.speech_segment_size = block_size // 4
+        self.speech_segment_size = block_size // 4    
+
+    def validate(self, dataset):
+        if dataset.trajectories is not None:
+            sp_seg_frame = int(12 * 0.08 * 16000)
+            for i in range(len(dataset.audio_paths)):
+                if dataset.trajectories[i] is not None:
+                    n_frame = dataset.n_frames[i]
+                    if n_frame % sp_seg_frame != 0:
+                        n_pad = sp_seg_frame - n_frame % sp_seg_frame
+                        n_frame += n_pad
+                    n_frame += 79 + 320
+                    speech_len = self.length_shrink_func(torch.tensor(n_frame))
+                    trajectory_len = len(dataset.trajectories[i])
+
+                    assert trajectory_len == speech_len // self.speech_segment_size
      
     def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
         indices = torch.tensor([x.index for x in samples], dtype=torch.long)
@@ -394,7 +409,7 @@ class DataCollatorForTrajectoryDataset(object):
                     n_sp_token * DEFAULT_SPEECH_PATCH_TOKEN + \
                     DEFAULT_SPEECH_END_TOKEN
 
-                prompt += sp_tokens + text + DEFAULT_TEXT_END_TOKEN
+                prompt += sp_tokens + text + "<|end_of_text|>"
             prompts.append(prompt)
      
         # Get instruction length for masking
