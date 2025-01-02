@@ -1,3 +1,4 @@
+jieba.cache
 .nfs*
 slurm-*.out
 results
