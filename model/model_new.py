@@ -32,8 +32,7 @@ from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutpu
 from train.dataset import (
     DEFAULT_SPEECH_PATCH_TOKEN,
     DEFAULT_SPEECH_START_TOKEN,
-    DEFAULT_SPEECH_END_TOKEN,
-    DEFAULT_TEXT_END_TOKEN
+    DEFAULT_SPEECH_END_TOKEN,    
 )
 
 class SpeechLlamaConfig(LlamaConfig):
@@ -147,25 +146,22 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
             [
                 DEFAULT_SPEECH_PATCH_TOKEN, 
                 DEFAULT_SPEECH_START_TOKEN, 
-                DEFAULT_SPEECH_END_TOKEN,
-                DEFAULT_TEXT_END_TOKEN
+                DEFAULT_SPEECH_END_TOKEN
             ], 
         special_tokens=True)
         self.resize_token_embeddings(len(tokenizer), mean_resizing=True)
 
-        sp_patch_token_id, sp_start_token_id, sp_end_token_id, text_end_token_id = \
+        sp_patch_token_id, sp_start_token_id, sp_end_token_id = \
             tokenizer.convert_tokens_to_ids(
                 [
                     DEFAULT_SPEECH_PATCH_TOKEN, 
                     DEFAULT_SPEECH_START_TOKEN, 
-                    DEFAULT_SPEECH_END_TOKEN,
-                    DEFAULT_TEXT_END_TOKEN
+                    DEFAULT_SPEECH_END_TOKEN
                 ]
             )                
         self.config.sp_patch_token_id = sp_patch_token_id
         self.config.sp_start_token_id = sp_start_token_id
-        self.config.sp_end_token_id = sp_end_token_id 
-        self.config.text_end_token_id = text_end_token_id
+        self.config.sp_end_token_id = sp_end_token_id
 
     def forward(
         self,

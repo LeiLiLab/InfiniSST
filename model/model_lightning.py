@@ -158,6 +158,8 @@ class SLlamaLightning(L.LightningModule):
             block_size=self.speech_args.block_size,
         )
 
+        data_collator.validate(train_dataset)
+
         train_sampler = SpeechSampler(
             train_dataset, 
             shuffle=True, 
@@ -188,6 +190,8 @@ class SLlamaLightning(L.LightningModule):
             self.data_args.target_lang,
             block_size=self.speech_args.block_size,
         )
+
+        data_collator.validate(eval_dataset)
 
         eval_sampler = SpeechSampler(
             eval_dataset, 
