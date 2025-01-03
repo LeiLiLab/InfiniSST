@@ -108,6 +108,14 @@ class SpeechLlamaModel(LlamaModel):
 
                 user_pos = (input_ids[i] == self.config.user_token_id).nonzero()
                 assist_pos = (input_ids[i] == self.config.assist_token_id).nonzero()
+
+                user_pos = [
+                    pos for pos in user_pos if input_ids[i, pos[0] - 1] == self.config.start_header_id
+                ]
+                assist_pos = [
+                    pos for pos in assist_pos if input_ids[i, pos[0] - 1] == self.config.start_header_id
+                ]
+
                 filled_inputs_embed = inputs_embeds[i]
                 index = 0
                 for u_p, a_p in zip(user_pos, assist_pos):
@@ -182,6 +190,7 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
 
         self.config.user_token_id = tokenizer.convert_tokens_to_ids('user')
         self.config.assist_token_id = tokenizer.convert_tokens_to_ids('assistant')
+        self.config.start_header_id = tokenizer.convert_tokens_to_ids('<|start_header_id|>')
 
     def forward(
         self,

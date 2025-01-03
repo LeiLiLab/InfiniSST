@@ -164,8 +164,8 @@ class SLlamaLightning(L.LightningModule):
             block_size=self.speech_args.block_size,
         )
 
-        if self.data_args.trajectory >= 1:
-            data_collator.validate(train_dataset)
+        # if self.data_args.trajectory >= 1:
+        #     data_collator.validate(train_dataset)
 
         train_sampler = SpeechSampler(
             train_dataset, 
@@ -175,7 +175,7 @@ class SLlamaLightning(L.LightningModule):
             min_ms=320,
             multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
             filter=True,
-            target_lang=self.data_args.target_lang
+            tokenizer=self.tokenizer,
         )
         train_dataloader = DataLoader(
             train_dataset, 
@@ -197,8 +197,8 @@ class SLlamaLightning(L.LightningModule):
             block_size=self.speech_args.block_size,
         )
 
-        if self.data_args.trajectory >= 1:
-            data_collator.validate(eval_dataset)
+        # if self.data_args.trajectory >= 1:
+        #     data_collator.validate(eval_dataset)
 
         eval_sampler = SpeechSampler(
             eval_dataset, 
@@ -208,7 +208,7 @@ class SLlamaLightning(L.LightningModule):
             min_ms=320,
             multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
             filter=False,
-            target_lang=self.data_args.target_lang
+            tokenizer=self.tokenizer,
         )
         eval_dataloader = DataLoader(
             eval_dataset, 
@@ -298,7 +298,7 @@ class SLlamaLightning(L.LightningModule):
             self.trainer.optimizers[0].optimizer.train()
     
     def forward(self, batch):
-        # logger.info("{} {}".format(batch['after_lens'].max(), batch['labels'].size()))
+        logger.info("{} {}".format(batch['after_lens'].max(), batch['labels'].size()))
         output = self.model(
             **batch,
             return_dict=True

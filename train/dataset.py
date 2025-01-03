@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 
+from tqdm import tqdm
+
 import jieba
 import transformers
 import numpy as np
@@ -193,13 +195,13 @@ class PromptSpeechToTextDatasetCreator(object):
 
 
 class SpeechSampler(DistributedSampler):
-    def __init__(self, dataset, shuffle, batch_size, batch_size_sent=30, min_ms=0, multiplier=1, filter=True, target_lang=None):
+    def __init__(self, dataset, shuffle, batch_size, batch_size_sent=30, min_ms=0, multiplier=1, filter=True, tokenizer=None):
         super().__init__(dataset=dataset, shuffle=shuffle)
         self.batch_size = batch_size
         self.batch_size_sent = batch_size_sent
-        self._obtain_batches(min_ms, multiplier, filter, target_lang)
+        self._obtain_batches(min_ms, multiplier, filter, tokenizer)
 
-    def _obtain_batches(self, min_ms, multiplier, filter, target_lang):
+    def _obtain_batches(self, min_ms, multiplier, filter, tokenizer):
         sizes = list(zip(self.dataset.n_frames, range(len(self.dataset))))
         sorted_sizes = sorted(sizes)
 
@@ -207,16 +209,22 @@ class SpeechSampler(DistributedSampler):
         indices, sum_size = [], 0
         n_skipped = 0
         for size, idx in sorted_sizes:
-            n_word = len(self.dataset.tgt_texts[idx].split(' ')) if target_lang != 'Chinese' else \
-                len(list(jieba.cut(self.dataset.tgt_texts[idx])))
-            if not filter or (size <= self.batch_size and size >= min_ms * 16 and size / 16000 / n_word >= 0.15):
-                if sum_size + size <= self.batch_size and len(indices) < self.batch_size_sent:
+
+            sp_seg_frame = int(12 * 0.08 * 16000)
+            n_seg = (size - sp_seg_frame + 1) // sp_seg_frame + 1
+            size_overhead = n_seg * 5 # text headers
+            size_overhead += n_seg * 12 # speech features
+            size_overhead += len(tokenizer(self.dataset.tgt_texts[idx], add_special_tokens=False)) # text tokens
+            size_overhead += 35 # beginning prompt
+
+            if not filter or size_overhead <= self.batch_size:
+                if sum_size + size_overhead <= self.batch_size and len(indices) < self.batch_size_sent:
                     indices.append(idx)
-                    sum_size += size
+                    sum_size += size_overhead
                 else:
                     batch_indices.append(indices)
                     indices = [idx]
-                    sum_size = size
+                    sum_size = size_overhead
             else:
                 n_skipped += 1
         print('{} out of {} samples skipped'.format(n_skipped, len(sorted_sizes)))
@@ -457,6 +465,75 @@ class DataCollatorForTrajectoryDataset(object):
         return batch
 
 class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset):
+    def validate(self, dataset):
+        if dataset.trajectories is not None:
+            sp_seg_frame = int(12 * 0.08 * 16000)
+            instruction = f"Translate the following speech from {self.source_lang} to {self.target_lang}."
+            for i in tqdm(range(len(dataset.audio_paths))):
+                if dataset.trajectories[i] is not None:
+                    n_frame = dataset.n_frames[i]
+                    if n_frame % sp_seg_frame != 0:
+                        n_pad = sp_seg_frame - n_frame % sp_seg_frame
+                        n_frame += n_pad
+                    n_frame += 79 + 320
+                    speech_len = self.length_shrink_func(torch.tensor(n_frame))
+                    trajectory_len = len(dataset.trajectories[i])
+
+                    assert trajectory_len == speech_len // self.speech_segment_size
+
+                    messages = [{
+                        "role": "system",
+                        "content": instruction
+                    }]
+                    for j, text in enumerate(dataset.trajectories[i]):
+                        n_sp_token = min(
+                            self.speech_segment_size, 
+                            speech_len - j * self.speech_segment_size
+                        )
+                        assert n_sp_token > 0
+
+                        messages.append(
+                            {
+                                "role": "user",
+                                "content": n_sp_token * DEFAULT_SPEECH_PATCH_TOKEN
+                            }
+                        )
+                        messages.append(
+                            {
+                                "role": "assistant",
+                                "content": text
+                            }
+                        )
+
+                    tokenized = self.tokenizer.apply_chat_template(
+                        [messages],
+                        return_tensors='pt',
+                        padding=True, 
+                        truncation=False, 
+                        add_special_tokens=False
+                    )
+                    attention_mask = (tokenized != self.tokenizer.pad_token_id).long()
+                    targets = tokenized.clone()
+                    targets[attention_mask == 0] = IGNORE_INDEX
+
+                    user_id = self.tokenizer.convert_tokens_to_ids('user')
+                    assist_id = self.tokenizer.convert_tokens_to_ids('assistant')
+                    start_header_id = self.tokenizer.convert_tokens_to_ids('<|start_header_id|>')
+
+                    user_pos = (targets[0] == user_id).nonzero()
+                    assist_pos = (targets[0] == assist_id).nonzero()
+
+                    # print(user_pos, targets)
+
+                    user_pos = [
+                        pos for pos in user_pos if targets[0, pos[0] - 1] == start_header_id
+                    ]
+                    assist_pos = [
+                        pos for pos in assist_pos if targets[0, pos[0] - 1] == start_header_id
+                    ]
+
+                    assert len(user_pos) == len(assist_pos), (user_id, assist_id, targets)
+
     def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
         indices = torch.tensor([x.index for x in samples], dtype=torch.long)
 
@@ -521,10 +598,18 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
         targets[attention_mask == 0] = IGNORE_INDEX
         user_id = self.tokenizer.convert_tokens_to_ids('user')
         assist_id = self.tokenizer.convert_tokens_to_ids('assistant')
+        start_header_id = self.tokenizer.convert_tokens_to_ids('<|start_header_id|>')
         label_mask = torch.zeros_like(targets, dtype=torch.bool)
         for i in range(len(samples)):
             user_pos = (targets[i] == user_id).nonzero()
             assist_pos = (targets[i] == assist_id).nonzero()
+
+            user_pos = [
+                pos for pos in user_pos if targets[i, pos[0] - 1] == start_header_id
+            ]
+            assist_pos = [
+                pos for pos in assist_pos if targets[i, pos[0] - 1] == start_header_id
+            ]
 
             assert len(user_pos) == len(assist_pos)
 
