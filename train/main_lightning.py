@@ -90,9 +90,8 @@ class DataArguments:
         default="Spanish",
         metadata={"help": "Target language name"}
     )
-    trajectory: bool = field(
+    trajectory: int = field(
         default=0,
-        type=int,
         metadata={"help": "0: offline, 1: trajectory, 2: trajectory with instruct format"}
     )
                             
