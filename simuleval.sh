@@ -3,7 +3,7 @@ PYTHONPATH=/home/siqiouya/work/sllama simuleval \
     --source-segment-size 960 \
     --source-lang English \
     --target-lang Chinese \
-    --min-start-sec 1.92 \
+    --min-start-sec 0.0 \
     --source /compute/babel-6-17/xixu/datasets/must-c-v2.0/en-zh/tst-COMMON.source \
     --target /compute/babel-6-17/xixu/datasets/must-c-v2.0/en-zh/tst-COMMON.target \
     --output debug-streamllama \
