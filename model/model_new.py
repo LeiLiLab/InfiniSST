@@ -113,13 +113,13 @@ class SpeechLlamaModel(LlamaModel):
                 for u_p, a_p in zip(user_pos, assist_pos):
                     filled_inputs_embed = torch.cat(
                         [
-                            filled_inputs_embed[: u_p + 2],
-                            speech_features[i, index : index + a_p - u_p - 3],
-                            filled_inputs_embed[a_p - 1 :]
+                            filled_inputs_embed[: u_p + 3],
+                            speech_features[i, index : index + a_p - u_p - 5],
+                            filled_inputs_embed[a_p - 2 :]
                         ],
                         dim=0                            
                     )
-                    index += a_p - u_p - 3
+                    index += a_p - u_p - 5
                 filled_inputs_embeds.append(filled_inputs_embed)
 
             inputs_embeds = torch.stack(filled_inputs_embeds)

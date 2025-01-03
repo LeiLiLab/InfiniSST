@@ -456,7 +456,6 @@ class DataCollatorForTrajectoryDataset(object):
 
         return batch
 
-@dataclass
 class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset):
     def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
         indices = torch.tensor([x.index for x in samples], dtype=torch.long)
@@ -514,11 +513,12 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
             truncation=False, 
             add_special_tokens=False
         )
-        input_ids = tokenized.input_ids
-        attention_mask = tokenized.attention_mask
+        input_ids = tokenized
+        attention_mask = (input_ids != self.tokenizer.pad_token_id).long()
 
         # Create targets and handle padding properly
         targets = input_ids.clone()
+        targets[attention_mask == 0] = IGNORE_INDEX
         user_id = self.tokenizer.convert_tokens_to_ids('user')
         assist_id = self.tokenizer.convert_tokens_to_ids('assistant')
         label_mask = torch.zeros_like(targets, dtype=torch.bool)
@@ -530,6 +530,7 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
 
             for j in range(len(user_pos) - 1):
                 label_mask[i, assist_pos[j][0] + 2 : user_pos[j + 1][0] - 1] = True
+            label_mask[i, assist_pos[-1][0] + 2:] = True
         targets[~label_mask] = IGNORE_INDEX
 
         batch = dict(
