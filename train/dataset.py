@@ -205,7 +205,7 @@ class SpeechSampler(DistributedSampler):
         eff_sizes = []
         for idx in range(len(self.dataset)):
             sp_seg_frame = int(12 * 0.08 * 16000)
-            n_seg = max(self.dataset.n_frames[idx] - sp_seg_frame + 1, 0) // sp_seg_frame + 1
+            n_seg = (self.dataset.n_frames[idx] + sp_seg_frame - 1) // sp_seg_frame
             eff_size = n_seg * 5 * 2 # text headers
             eff_size += n_seg * 12 # speech features
             eff_size += len(tokenizer(self.dataset.tgt_texts[idx], add_special_tokens=False).input_ids) # text tokens
