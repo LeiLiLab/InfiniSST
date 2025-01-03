@@ -90,21 +90,38 @@ class SpeechLlamaModel(LlamaModel):
             inputs_embeds = self.embed_tokens(input_ids)
             filled_inputs_embeds = []
             for i in range(input_ids.size(0)):
-                sp_start_pos = (input_ids[i] == self.config.sp_start_token_id).nonzero()
-                sp_end_pos = (input_ids[i] == self.config.sp_end_token_id).nonzero()
+                # sp_start_pos = (input_ids[i] == self.config.sp_start_token_id).nonzero()
+                # sp_end_pos = (input_ids[i] == self.config.sp_end_token_id).nonzero()
+                # filled_inputs_embed = inputs_embeds[i]
+                # index = 0
+                # for st, ed in zip(sp_start_pos, sp_end_pos):
+                #     filled_inputs_embed = torch.cat(
+                #         [
+                #             filled_inputs_embed[: st + 1],
+                #             speech_features[i, index : index + ed - st - 1],
+                #             filled_inputs_embed[ed :]
+                #         ],
+                #         dim=0                            
+                #     )
+                #     index += ed - st - 1
+                # filled_inputs_embeds.append(filled_inputs_embed)
+
+                user_pos = (input_ids[i] == self.config.user_token_id).nonzero()
+                assist_pos = (input_ids[i] == self.config.assist_token_id).nonzero()
                 filled_inputs_embed = inputs_embeds[i]
                 index = 0
-                for st, ed in zip(sp_start_pos, sp_end_pos):
+                for u_p, a_p in zip(user_pos, assist_pos):
                     filled_inputs_embed = torch.cat(
                         [
-                            filled_inputs_embed[: st + 1],
-                            speech_features[i, index : index + ed - st - 1],
-                            filled_inputs_embed[ed :]
+                            filled_inputs_embed[: u_p + 2],
+                            speech_features[i, index : index + a_p - u_p - 3],
+                            filled_inputs_embed[a_p - 1 :]
                         ],
                         dim=0                            
                     )
-                    index += ed - st - 1
+                    index += a_p - u_p - 3
                 filled_inputs_embeds.append(filled_inputs_embed)
+
             inputs_embeds = torch.stack(filled_inputs_embeds)
         else:
             inputs_embeds = self.embed_tokens(input_ids[:, -1:])
@@ -162,6 +179,9 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
         self.config.sp_patch_token_id = sp_patch_token_id
         self.config.sp_start_token_id = sp_start_token_id
         self.config.sp_end_token_id = sp_end_token_id
+
+        self.config.user_token_id = tokenizer.convert_tokens_to_ids('user')
+        self.config.assist_token_id = tokenizer.convert_tokens_to_ids('assistant')
 
     def forward(
         self,

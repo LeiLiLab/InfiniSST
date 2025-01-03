@@ -22,7 +22,8 @@ from train.dataset import (
     PromptSpeechToTextDatasetCreator, 
     SpeechToTextDatasetItem,
     DataCollatorForSupervisedDataset,
-    DataCollatorForTrajectoryDataset
+    DataCollatorForTrajectoryDataset,
+    DataCollatorForTrajectoryInstructDataset
 )
 from model.model_new import SpeechLlamaForCausalLM
 from model.speech_encoder import (
@@ -32,6 +33,12 @@ from model.speech_encoder import (
 )
 
 logger = logging.getLogger(__name__)
+
+collator_classes = {
+    0: DataCollatorForSupervisedDataset,
+    1: DataCollatorForTrajectoryDataset,
+    2: DataCollatorForTrajectoryInstructDataset
+}
 
 class SLlamaLightning(L.LightningModule):
     def __init__(
@@ -148,8 +155,7 @@ class SLlamaLightning(L.LightningModule):
         train_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
             self.data_args.data_path, self.data_args.data_split_train
         )
-        collator_cls = DataCollatorForTrajectoryDataset if self.data_args.trajectory \
-            else DataCollatorForSupervisedDataset
+        collator_cls = collator_classes[self.data_args.trajectory]
         data_collator = collator_cls(
             self.tokenizer, 
             self.length_shrink_func, 
@@ -158,7 +164,8 @@ class SLlamaLightning(L.LightningModule):
             block_size=self.speech_args.block_size,
         )
 
-        data_collator.validate(train_dataset)
+        if self.data_args.trajectory >= 1:
+            data_collator.validate(train_dataset)
 
         train_sampler = SpeechSampler(
             train_dataset, 
@@ -181,8 +188,7 @@ class SLlamaLightning(L.LightningModule):
         eval_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
             self.data_args.data_path, self.data_args.data_split_eval
         )
-        collator_cls = DataCollatorForTrajectoryDataset if self.data_args.trajectory \
-            else DataCollatorForSupervisedDataset
+        collator_cls = collator_classes[self.data_args.trajectory]
         data_collator = collator_cls(
             self.tokenizer, 
             self.length_shrink_func,
@@ -191,7 +197,8 @@ class SLlamaLightning(L.LightningModule):
             block_size=self.speech_args.block_size,
         )
 
-        data_collator.validate(eval_dataset)
+        if self.data_args.trajectory >= 1:
+            data_collator.validate(eval_dataset)
 
         eval_sampler = SpeechSampler(
             eval_dataset, 
