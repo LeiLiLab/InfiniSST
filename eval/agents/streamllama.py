@@ -143,9 +143,10 @@ class StreamLlama(SpeechToTextAgent):
             n_pad = sp_seg_frame - source.size(0) % sp_seg_frame
             source = torch.cat([source, torch.zeros(n_pad).to(source)], dim=0)
         offset = torch.zeros(79 + 320).to(source)
-        source = torch.cat([offset, source], dim=0)
-        source = source[states.src_len:]
+        source = torch.cat([offset, source], dim=0)        
+        old_src_len = states.src_len
         states.src_len = source.size(0)
+        source = source[old_src_len:]
 
         speech_batch = source.unsqueeze(0).to(device=self.model.device, dtype=self.model.dtype)
         n_frames = torch.tensor([source.size(0)], dtype=torch.long).to(self.model.device)
@@ -169,7 +170,7 @@ class StreamLlama(SpeechToTextAgent):
             add_special_tokens=False,
         )
         input_ids = inputs.input_ids.cuda()
-        return input_ids        
+        return input_ids
 
     @torch.inference_mode()
     def policy(self, states: Optional[S2TAgentStates] = None):
@@ -190,14 +191,14 @@ class StreamLlama(SpeechToTextAgent):
         
         speech_batch, n_frames, speech_lens = self._prepare_speech(states)
         input_ids = self._prepare_inputs(states, speech_lens)
-
+        
         max_number_of_tokens = int(length_in_seconds * self.max_len_a + self.max_len_b)
 
         stop_str = "<|end_of_text|>"
         keywords = [stop_str]
         stopping_criteria = KeywordsStoppingCriteria(
             keywords, self.tokenizer, torch.tensor(input_ids)
-        )                
+        )
 
         self.model.model.speech_features_extracted = False
         outputs = self.model.generate(
