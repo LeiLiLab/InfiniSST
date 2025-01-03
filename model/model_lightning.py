@@ -298,7 +298,7 @@ class SLlamaLightning(L.LightningModule):
             self.trainer.optimizers[0].optimizer.train()
     
     def forward(self, batch):
-        logger.info("{} {}".format(batch['after_lens'].max(), batch['labels'].size()))
+        # logger.info("{} {}".format(batch['after_lens'].max(), batch['labels'].size()))
         output = self.model(
             **batch,
             return_dict=True

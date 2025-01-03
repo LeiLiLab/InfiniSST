@@ -202,32 +202,31 @@ class SpeechSampler(DistributedSampler):
         self._obtain_batches(min_ms, multiplier, filter, tokenizer)
 
     def _obtain_batches(self, min_ms, multiplier, filter, tokenizer):
-        sizes = list(zip(self.dataset.n_frames, range(len(self.dataset))))
-        sorted_sizes = sorted(sizes)
+        eff_sizes = []
+        for idx in range(len(self.dataset)):
+            sp_seg_frame = int(12 * 0.08 * 16000)
+            n_seg = max(self.dataset.n_frames[idx] - sp_seg_frame + 1, 0) // sp_seg_frame + 1
+            eff_size = n_seg * 5 * 2 # text headers
+            eff_size += n_seg * 12 # speech features
+            eff_size += len(tokenizer(self.dataset.tgt_texts[idx], add_special_tokens=False).input_ids) # text tokens
+            eff_size += 35 # beginning prompt
+            eff_sizes.append((eff_size, idx))
+
+        sorted_eff_sizes = sorted(eff_sizes)
 
         batch_indices = []
-        indices, sum_size = [], 0
+        indices = []
         n_skipped = 0
-        for size, idx in sorted_sizes:
-
-            sp_seg_frame = int(12 * 0.08 * 16000)
-            n_seg = (size - sp_seg_frame + 1) // sp_seg_frame + 1
-            size_overhead = n_seg * 5 # text headers
-            size_overhead += n_seg * 12 # speech features
-            size_overhead += len(tokenizer(self.dataset.tgt_texts[idx], add_special_tokens=False)) # text tokens
-            size_overhead += 35 # beginning prompt
-
-            if not filter or size_overhead <= self.batch_size:
-                if sum_size + size_overhead <= self.batch_size and len(indices) < self.batch_size_sent:
+        for eff_size, idx in sorted_eff_sizes:
+            if not filter or (eff_size <= self.batch_size and self.dataset.n_frames[idx] >= min_ms * 16):
+                if eff_size * (len(indices) + 1) <= self.batch_size and len(indices) < self.batch_size_sent:
                     indices.append(idx)
-                    sum_size += size_overhead
                 else:
                     batch_indices.append(indices)
                     indices = [idx]
-                    sum_size = size_overhead
             else:
                 n_skipped += 1
-        print('{} out of {} samples skipped'.format(n_skipped, len(sorted_sizes)))
+        print('{} out of {} samples skipped'.format(n_skipped, len(sorted_eff_sizes)))
         assert len(indices) > 0
         batch_indices.append(indices)
         
