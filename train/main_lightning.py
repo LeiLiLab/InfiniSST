@@ -91,7 +91,9 @@ class DataArguments:
         metadata={"help": "Target language name"}
     )
     trajectory: bool = field(
-        default=False,
+        default=0,
+        type=int,
+        metadata={"help": "0: offline, 1: trajectory, 2: trajectory with instruct format"}
     )
                             
 @dataclass
