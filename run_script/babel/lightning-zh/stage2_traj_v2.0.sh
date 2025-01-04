@@ -75,8 +75,8 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     \
     --seed 998244353 \
     --stage 2 \
-    --train_bsz 1300 \
-    --eval_bsz 1300 \
+    --train_bsz 1200 \
+    --eval_bsz 1200 \
     --learning_rate 7e-6 \
     --warmup_steps 100 \
     --run_name $name \
@@ -84,7 +84,7 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     --n_device ${SLURM_GPUS} \
     --deepspeed_stage 2 \
     --max_epochs 1 \
-    --grad_acc_steps 4 \
+    --grad_acc_steps 6 \
     --clip_norm 1.0 \
     --save_dir ${save_path} \
     --log_step 5 \
