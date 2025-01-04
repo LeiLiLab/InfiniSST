@@ -50,7 +50,7 @@ class S2TAgentStates(AgentStates):
         super().reset()
         self.src_len = 0
         self.speech_cache = None
-        self.past_key_values: None
+        self.past_key_values = None
         self.target_ids = []
 
 @entrypoint
@@ -154,22 +154,34 @@ class StreamLlama(SpeechToTextAgent):
         return speech_batch, n_frames, speech_lens
     
     def _prepare_inputs(self, states, speech_lens):
-        prompt = ""
+        messages = []
         if states.speech_cache is None:
-            prompt += f"Translate the following speech from {self.source_lang} to {self.target_lang}: "
-        sp_tokens = DEFAULT_SPEECH_START_TOKEN + \
-            speech_lens[0] * DEFAULT_SPEECH_PATCH_TOKEN + \
-            DEFAULT_SPEECH_END_TOKEN
-        prompt += sp_tokens
-
-        inputs = self.tokenizer(
-            [prompt],
-            return_tensors="pt",
-            padding=True,
-            truncation=False,
-            add_special_tokens=False,
+            messages.append(
+                {
+                    "role": "system",
+                    "content": f"Translate the following speech from {self.source_lang} to {self.target_lang}."
+                }
+            )
+        messages.append(
+            {
+                "role": "user",
+                "content": speech_lens[0] * DEFAULT_SPEECH_PATCH_TOKEN
+            }
         )
-        input_ids = inputs.input_ids.cuda()
+        messages.append(
+            {
+                "role": "assistant",
+                "content": "",
+            }
+        )
+        input_ids = self.tokenizer.apply_chat_template(
+            [messages],
+            return_tensors='pt',
+            padding=True, 
+            truncation=False, 
+            add_special_tokens=False
+        )[:, :-1]
+        input_ids = input_ids.cuda()
         return input_ids
 
     @torch.inference_mode()
@@ -194,10 +206,10 @@ class StreamLlama(SpeechToTextAgent):
         
         max_number_of_tokens = int(length_in_seconds * self.max_len_a + self.max_len_b)
 
-        stop_str = "<|end_of_text|>"
+        stop_str = "<|eot_id|>"
         keywords = [stop_str]
         stopping_criteria = KeywordsStoppingCriteria(
-            keywords, self.tokenizer, torch.tensor(input_ids)
+            keywords, self.tokenizer, input_ids
         )
 
         self.model.model.speech_features_extracted = False
@@ -221,7 +233,7 @@ class StreamLlama(SpeechToTextAgent):
         )
 
         states.past_key_values = outputs.past_key_values
-        output_ids = outputs.sequences[0, input_ids.size(1):]
+        output_ids = outputs.sequences[0, input_ids.size(1):-1]
         
         states.target_ids.extend(output_ids)
         translation = self.tokenizer.decode(output_ids, skip_special_tokens=True).strip()

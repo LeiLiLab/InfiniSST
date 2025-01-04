@@ -63,6 +63,7 @@ srun python /home/siqiouyang/work/projects/sllama/train/main_lightning.py \
     --data_split_eval 'fake_dev_traj' \
     --source_lang "${source_lang}" \
     --target_lang "${target_lang}" \
+    --trajectory True \
     \
     --seed 998244353 \
     --stage 1 \
