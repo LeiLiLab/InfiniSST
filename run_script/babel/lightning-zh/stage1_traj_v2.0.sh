@@ -67,7 +67,7 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     --data_split_eval 'dev_traj' \
     --source_lang "${source_lang}" \
     --target_lang "${target_lang}" \
-    --trajectory 2 \
+    --trajectory 3 \
     \
     --seed 998244353 \
     --stage 1 \

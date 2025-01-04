@@ -22,6 +22,7 @@ from train.dataset import (
     PromptSpeechToTextDatasetCreator, 
     SpeechToTextDatasetItem,
     DataCollatorForSupervisedDataset,
+    DataCollatorForSupervisedInstructDataset,
     DataCollatorForTrajectoryDataset,
     DataCollatorForTrajectoryInstructDataset
 )
@@ -36,8 +37,9 @@ logger = logging.getLogger(__name__)
 
 collator_classes = {
     0: DataCollatorForSupervisedDataset,
-    1: DataCollatorForTrajectoryDataset,
-    2: DataCollatorForTrajectoryInstructDataset
+    1: DataCollatorForSupervisedInstructDataset,
+    2: DataCollatorForTrajectoryDataset,
+    3: DataCollatorForTrajectoryInstructDataset
 }
 
 class SLlamaLightning(L.LightningModule):
