@@ -92,7 +92,7 @@ class DataArguments:
     )
     trajectory: int = field(
         default=0,
-        metadata={"help": "0: offline, 1: trajectory, 2: trajectory with instruct format"}
+        metadata={"help": "0: offline, 1: offline instruct, 2: trajectory, 3: trajectory with instruct format"}
     )
                             
 @dataclass
@@ -175,7 +175,6 @@ def train():
     #     sharding_strategy=training_args.sharding,
     #     state_dict_type="sharded"
     # )
-
     trainer = L.Trainer(
         accelerator='gpu',
         devices=training_args.n_device,
