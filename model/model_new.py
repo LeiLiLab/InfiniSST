@@ -37,7 +37,6 @@ from train.dataset import (
 
 class SpeechLlamaConfig(LlamaConfig):
     model_type = "SpeechLlama"
-    inference = False
 
 class SpeechLlamaModel(LlamaModel):
     config_class = SpeechLlamaConfig

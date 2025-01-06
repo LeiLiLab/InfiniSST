@@ -361,6 +361,8 @@ class DataCollatorForSupervisedInstructDataset(DataCollatorForSupervisedDataset)
         n_frames = torch.tensor([x.source.size(0) for x in samples], dtype=torch.long)
         speech_lens = self.length_shrink_func(n_frames)
 
+        texts = [x.target for x in samples]
+
         prompts = []
         instruction = f"Translate the following speech from {self.source_lang} to {self.target_lang}."
         for i, x in enumerate(samples):
@@ -371,7 +373,7 @@ class DataCollatorForSupervisedInstructDataset(DataCollatorForSupervisedDataset)
             messages.append(
                 {
                     "role": "user",
-                    "content": speech_lens[i] * DEFAULT_SPEECH_PATCH_TOKEN
+                    "content": speech_lens.max() * DEFAULT_SPEECH_PATCH_TOKEN
                 }
             )
             messages.append(
@@ -423,6 +425,7 @@ class DataCollatorForSupervisedInstructDataset(DataCollatorForSupervisedDataset)
             speech_batch=speech_batch,
             src_lengths=n_frames,
             after_lens=speech_lens,
+            target_text=texts,
             ids=indices,
         )
 

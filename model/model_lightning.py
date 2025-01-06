@@ -158,6 +158,9 @@ class SLlamaLightning(L.LightningModule):
             self.data_args.data_path, self.data_args.data_split_train
         )
         collator_cls = collator_classes[self.data_args.trajectory]
+
+        logger.info("collator class: {}".format(collator_cls))
+
         data_collator = collator_cls(
             self.tokenizer, 
             self.length_shrink_func, 

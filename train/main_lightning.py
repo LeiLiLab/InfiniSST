@@ -156,6 +156,7 @@ def train():
     checkpoint_callback = ModelCheckpoint(
         dirpath=training_args.save_dir,
         save_on_train_epoch_end=True,
+        save_last=True,
     )
     lr_monitor = LearningRateMonitor(
         logging_interval='step'
