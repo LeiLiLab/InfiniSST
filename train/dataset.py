@@ -627,6 +627,10 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
         n_frames = torch.tensor([x.source.size(0) + 79 + 320 for x in samples], dtype=torch.long)        
         speech_lens = self.length_shrink_func(n_frames)
 
+        for x in samples:
+            if len(x.trajectory[0]) == 1:
+                x.trajectory = [[seg, True] for seg in x.trajectory]
+
         trajectory_lens = [len(x.trajectory) for x in samples]
         assert all([t_l == s_l // self.speech_segment_size for t_l, s_l in zip(trajectory_lens, speech_lens)])
 
@@ -637,7 +641,7 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
                 "role": "system",
                 "content": instruction
             }]
-            for j, text in enumerate(x.trajectory):
+            for j, (text, _) in enumerate(x.trajectory):
                 n_sp_token = min(
                     self.speech_segment_size, 
                     speech_lens[i] - j * self.speech_segment_size
@@ -690,7 +694,9 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
             assert len(user_pos) == len(assist_pos)
 
             for j in range(len(user_pos) - 1):
-                label_mask[i, assist_pos[j][0] + 2 : user_pos[j + 1][0] - 1] = True
+                label_mask[i, assist_pos[j][0] + 2 : user_pos[j + 1][0] - 2] = True # except eot_id
+                if samples[i].trajectory[j][1]:
+                    label_mask[i, user_pos[j + 1][0] - 2] = True
             label_mask[i, assist_pos[-1][0] + 2:] = True
         targets[~label_mask] = IGNORE_INDEX
 
