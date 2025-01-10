@@ -49,9 +49,6 @@ export TORCH_DISTRIBUTED_DEBUG=INFO
 export NCCL_DEBUG=INFO
 SLURM_GPUS=8
 
-python /home/siqiouya/work/sllama/train/zero_to_fp32.py ${sllm_weight_path} ${sllm_weight_path}/pytorch_model.bin
-python /home/siqiouya/work/sllama/train/prune_bin.py ${sllm_weight_path}/pytorch_model.bin
-
 srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     \
     --w2v2_path ${w2v2_path} \
