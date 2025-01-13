@@ -7,7 +7,7 @@
 #SBATCH --mem=500GB
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
-##SBATCH --exclude=babel-3-[5,9,17],babel-4-[9,29],babel-6-29,babel-7-[1,5,9],babel-8-13,babel-10-13,babel-11-25,babel-13-[13,29]
+#SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-13,babel-10-[5,13],babel-11-25,babel-12-[5,29],babel-13-[1,9,13,21,29]
 #SBATCH --partition=general
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
@@ -32,7 +32,7 @@ data_path=/compute/babel-6-17/xixu/datasets/must-c-v2.0/en-zh
 
 source_lang="English"
 target_lang="Chinese"
-name="8B-traj-s1-v2.0"
+name="8B-traj-s1-v2.1"
 save_path=/compute/babel-5-23/siqiouya/runs/$name
 rm -rf ${save_path}
 mkdir -p ${save_path}
@@ -63,7 +63,7 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     --llm_head_freeze True \
     \
     --data_path ${data_path} \
-    --data_split_train 'comet_0.50_traj' \
+    --data_split_train 'comet_0.50_traj_augmented_mixed' \
     --data_split_eval 'dev_traj' \
     --source_lang "${source_lang}" \
     --target_lang "${target_lang}" \
@@ -79,9 +79,12 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     \
     --n_device ${SLURM_GPUS} \
     --deepspeed_stage 2 \
-    --max_epochs 6 \
+    --max_epochs 3 \
     --grad_acc_steps 4 \
     --clip_norm 1.0 \
     --save_dir ${save_path} \
     --log_step 5 \
     --eval_step 200
+
+python /home/siqiouya/work/sllama/train/zero_to_fp32.py ${save_path}/last.ckpt ${save_path}/last.ckpt/pytorch_model.bin
+python /home/siqiouya/work/sllama/train/prune_bin.py ${save_path}/last.ckpt/pytorch_model.bin
