@@ -94,6 +94,10 @@ class DataArguments:
         default=0,
         metadata={"help": "0: offline, 1: offline instruct, 2: trajectory, 3: trajectory with instruct format"}
     )
+    trajectory_perturb: list[float] = field(
+        default_factory=lambda: [1.0, 0.0, 0.0],
+        metadata={"help": "Perturbation for trajectory"}
+    )
                             
 @dataclass
 class TrainingArguments:
