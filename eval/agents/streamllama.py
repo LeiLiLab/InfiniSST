@@ -45,6 +45,7 @@ class S2TAgentStates(AgentStates):
     speech_cache: None
     past_key_values: None
     target_ids: list
+    segment_idx: int
 
     def reset(self):
         super().reset()
@@ -52,6 +53,7 @@ class S2TAgentStates(AgentStates):
         self.speech_cache = None
         self.past_key_values = None
         self.target_ids = []
+        self.segment_idx = 0
 
 @entrypoint
 class StreamLlama(SpeechToTextAgent):
@@ -63,6 +65,7 @@ class StreamLlama(SpeechToTextAgent):
         # simuleval
         self.min_start_sec = args.min_start_sec
         self.source_segment_size = args.source_segment_size
+        self.source_segment_multiplier = args.source_segment_multiplier
         self.source_lang = args.source_lang
         self.target_lang = args.target_lang
         
@@ -78,7 +81,7 @@ class StreamLlama(SpeechToTextAgent):
         self.load_model(args)
 
     def build_states(self):
-        return S2TAgentStates(0, None, None, [])
+        return S2TAgentStates(0, None, None, [], 0)
 
     def load_model(self, args):
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
@@ -135,6 +138,7 @@ class StreamLlama(SpeechToTextAgent):
         add_gen_args(parser)
         parser.add_argument("--model-name", type=str, default="facebook/opt-350m")
         parser.add_argument("--state-dict-path", type=str, default=None)
+        parser.add_argument("--source-segment-multiplier", type=int, default=1)
 
     def _prepare_speech(self, states):
         source = torch.tensor(states.source)
@@ -206,11 +210,10 @@ class StreamLlama(SpeechToTextAgent):
         
         max_number_of_tokens = int(length_in_seconds * self.max_len_a + self.max_len_b)
 
-        stop_str = "<|eot_id|>"
-        keywords = [stop_str]
-        stopping_criteria = KeywordsStoppingCriteria(
-            keywords, self.tokenizer, input_ids
-        )
+        if states.source_finished:
+            states.segment_idx = -1
+        elif (states.segment_idx + 1) % self.source_segment_multiplier != 0:
+            max_number_of_tokens = 1
 
         self.model.model.speech_features_extracted = False
         outputs = self.model.generate(
@@ -224,7 +227,6 @@ class StreamLlama(SpeechToTextAgent):
             max_new_tokens=max(1, max_number_of_tokens - len(states.target_ids)),
             no_repeat_ngram_size=self.no_repeat_ngram_size,
             repetition_penalty=self.repetition_penalty,
-            stopping_criteria=[stopping_criteria],
             pad_token_id=self.tokenizer.pad_token_id,
             return_dict_in_generate=True,
             use_cache=True,
@@ -233,12 +235,14 @@ class StreamLlama(SpeechToTextAgent):
         )
 
         states.past_key_values = outputs.past_key_values
-        output_ids = outputs.sequences[0, input_ids.size(1):-1]
+        output_ids = outputs.sequences[0, input_ids.size(1):-1].tolist()
         
         states.target_ids.extend(output_ids)
         translation = self.tokenizer.decode(output_ids, skip_special_tokens=True).strip()
 
-        print(self.tokenizer.decode(states.target_ids))
+        print(states.segment_idx, ':', self.tokenizer.decode(states.target_ids))
+
+        states.segment_idx += 1
 
         if translation != '' or states.source_finished:
             return WriteAction(
