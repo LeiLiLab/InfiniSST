@@ -15,6 +15,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Argument parser
 parser = argparse.ArgumentParser(description="Evaluate latency and BLEU for original and corrected logs.")
 parser.add_argument("--log_path", type=str, required=True, help="Path to the original instances.log file.")
+parser.add_argument("--lang", type=str, default="zh", help="Language for scoring.")
 args = parser.parse_args()
 
 def load_instances_log(log_path):
@@ -39,7 +40,10 @@ def load_instances_log(log_path):
                     d = json.loads(line)
                     d['prediction'] = re.sub(r' \s*</s>\s*$', '', d['prediction'])  # Remove </s> at the end
                     instance = types.SimpleNamespace(**d)
-                    instance.reference_length = len(instance.reference.split(" "))
+                    if args.lang == 'zh':
+                        instance.reference_length = len(instance.reference)
+                    else:
+                        instance.reference_length = len(instance.reference.split(" "))
                     instances.append(instance)
                     hyps.append(instance.prediction)
                     refs.append(instance.reference)
@@ -70,7 +74,11 @@ def evaluate_latency_and_bleu(instances, hyps, refs):
     scorer_al = ALScorer()
     scorer_al_c = ALScorer(computation_aware=True)
 
-    bleu = sacrebleu.corpus_bleu(hyps, [refs]).score
+    bleu = sacrebleu.corpus_bleu(
+        hyps, 
+        [refs], 
+        tokenize='zh' if args.lang == 'zh' else '13a',
+    ).score
 
     laal_c_acc, laal_acc, n = 0, 0, 0
     al_c_acc, al_acc = 0, 0
