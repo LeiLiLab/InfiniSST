@@ -628,7 +628,7 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
         speech_lens = self.length_shrink_func(n_frames)
 
         for x in samples:
-            if len(x.trajectory[0]) == 1:
+            if type(x.trajectory[0]) == str:
                 x.trajectory = [[seg, True] for seg in x.trajectory]
 
         trajectory_lens = [len(x.trajectory) for x in samples]
