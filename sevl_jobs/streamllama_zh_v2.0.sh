@@ -8,7 +8,7 @@
 #SBATCH --gres=gpu:L40S:1
 ##SBATCH --nodelist=babel-3-17
 #SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[9,29],babel-6-29,babel-7-[1,5,9],babel-8-[9,13],babel-10-13,babel-11-25,babel-13-[13,29]
-#SBATCH --partition=general
+#SBATCH --partition=preempt
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
 ##SBATCH --array=1-7
@@ -20,18 +20,19 @@
 
 source /home/siqiouya/anaconda3/bin/activate speechllama
 
-ckpt_dir=/compute/babel-5-23/siqiouya/runs/8B-traj-s2-v2.0/epoch\=0-step\=1161.ckpt
+ckpt_dir=/compute/babel-5-23/siqiouya/runs/8B-traj-s2-v2.0/epoch\=0-step\=1161.ckpt/
 
 export PYTHONPATH=/home/siqiouya/work/sllama
 simuleval \
     --agent eval/agents/streamllama.py \
     --source-segment-size 960 \
+    --source-segment-multiplier 2 \
     --source-lang English \
     --target-lang Chinese \
     --min-start-sec 0 \
     --source /compute/babel-6-17/xixu/datasets/must-c-v2.0/en-zh/tst-COMMON.source \
     --target /compute/babel-6-17/xixu/datasets/must-c-v2.0/en-zh/tst-COMMON.target \
-    --output ${ckpt_dir}/simul-results \
+    --output ${ckpt_dir}/simul-results-mult2 \
     --w2v2-path /data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt \
     --w2v2-type w2v2 \
     --ctc-finetuned \
