@@ -167,6 +167,7 @@ class SLlamaLightning(L.LightningModule):
             self.data_args.source_lang,
             self.data_args.target_lang,
             block_size=self.speech_args.block_size,
+            perturb=self.data_args.trajectory_perturb,
         )
 
         # if self.data_args.trajectory >= 1:

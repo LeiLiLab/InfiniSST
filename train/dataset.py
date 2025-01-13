@@ -8,6 +8,7 @@ import csv
 import io
 import logging
 import re
+import copy
 import torch.nn.functional as F
 from collections import defaultdict
 from pathlib import Path
@@ -233,7 +234,7 @@ class SpeechSampler(DistributedSampler):
         n_batches = len(batch_indices)
         n_batches = n_batches // multiplier * multiplier
 
-        self.batch_indices = batch_indices[:n_batches]
+        self.batch_indices = batch_indices[:n_batches][::-1]
     
     def __iter__(self):
         if self.shuffle:
@@ -541,6 +542,14 @@ class DataCollatorForTrajectoryDataset(object):
         return batch
 
 class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset):
+    def __init__(self, 
+            tokenizer, length_shrink_func, source_lang, target_lang, 
+            block_size=48, perturb=(0.3, 0.3, 0.4)
+        ):
+        super().__init__(tokenizer, length_shrink_func, source_lang, target_lang, block_size)
+        assert sum(perturb) == 1
+        self.perturb = perturb
+
     def validate(self, dataset):
         if dataset.trajectories is not None:
             sp_seg_frame = int(12 * 0.08 * 16000)
@@ -630,6 +639,46 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
         for x in samples:
             if type(x.trajectory[0]) == str:
                 x.trajectory = [[seg, True] for seg in x.trajectory]
+
+        for x in samples:
+            rand = np.random.rand()
+            if rand < self.perturb[0]:
+                # with prob self.perturb[0], use the optimal trajectory
+                continue
+            elif rand < self.perturb[0] + self.perturb[1]:
+                # with prob self.perturb[1], use the delayed trajectory
+                traj = x.trajectory
+
+                # shift
+                shift_traj = []
+                for i in range(len(traj)):
+                    seg = traj[len(traj) - i - 1][0]
+                    if seg == "" or np.random.rand() < 0.5 or i == 0:
+                        shift_traj.append([seg, True])
+                        continue
+                    words = list(jieba.cut(seg))
+                    shift_idx = np.random.randint(len(words))
+                    shift_traj[-1][0] = ''.join(words[shift_idx:]) + shift_traj[-1][0]
+                    shift_traj.append([''.join(words[:shift_idx]), False])
+
+                shift_traj = shift_traj[::-1]
+
+                # merge
+                merge_traj = copy.deepcopy(shift_traj)
+                for i in range(len(merge_traj) - 1):
+                    seg, _ = merge_traj[i]
+                    if seg == "" or np.random.rand() < 0.5:
+                        continue
+                    
+                    merge_traj[i] = ["", False]
+                    merge_traj[i + 1][0] = seg + merge_traj[i + 1][0]
+                
+                x.trajectory = merge_traj
+            else:
+                # with prob self.perturb[2], use the offline trajectory
+                x.trajectory = [['', False]] * len(x.trajectory)
+                x.trajectory[-1] = [x.target, True]
+
 
         trajectory_lens = [len(x.trajectory) for x in samples]
         assert all([t_l == s_l // self.speech_segment_size for t_l, s_l in zip(trajectory_lens, speech_lens)])
