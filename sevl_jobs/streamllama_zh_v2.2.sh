@@ -20,7 +20,7 @@
 
 source /home/siqiouya/anaconda3/bin/activate speechllama
 
-ckpt_dir=/compute/babel-5-23/siqiouya/runs/8B-traj-s2-v2.1/last.ckpt/
+ckpt_dir=/compute/babel-5-23/siqiouya/runs/8B-traj-s2-v2.2/last.ckpt/
 
 export PYTHONPATH=/home/siqiouya/work/sllama
 # simuleval \
