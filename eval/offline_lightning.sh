@@ -1,16 +1,16 @@
-llm_model=/compute/babel-5-23/siqiouya/runs/3.1-8B-s2-lightning-german-w2v2-rope-noxpos-cosine-warm50
+llm_model=/compute/babel-5-23/siqiouya/runs/8B-s2-v2.0-bi/last.ckpt/
 w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
 # w2v2_path=/data/user_data/siqiouya/runs/pretrained/hubert_large_ll60k_finetune_ls960.pt
+# w2v2_path=/data/user_data/siqiouya/runs/pretrained/w2v-bert-2.0
 w2v2_type=w2v2
-data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de
+# data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de
+data_path=/compute/babel-6-17/xixu/datasets/must-c-v2.0/en-zh
 source_lang=English
-target_lang=German
+# target_lang=German
+target_lang=Chinese
 xpos=0
 
 beam=4
-
-python /home/siqiouya/work/sllama/train/zero_to_fp32.py ${llm_model} ${llm_model}/pytorch_model.bin
-python /home/siqiouya/work/sllama/train/prune_bin.py ${llm_model}/pytorch_model.bin
 
 export TOKENIZERS_PARALLELISM=false
 export PYTHONPATH=/home/siqiouya/work/sllama
@@ -24,7 +24,7 @@ python /home/siqiouya/work/sllama/eval/test_dataset_lightning.py \
     --max-cache-size 500 \
     --xpos ${xpos} \
     \
-    --model-name /compute/babel-4-1/siqiouya/llama-3.1-8b-hf \
+    --model-name /compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf \
     --state-dict-path ${llm_model}/pytorch_model.bin \
     --data-path ${data_path} \
     --data-split tst-COMMON \
