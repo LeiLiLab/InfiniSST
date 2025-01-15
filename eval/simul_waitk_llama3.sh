@@ -63,6 +63,7 @@ run_simuleval() {
       --max-len-a 1 \
       --max-len-b 256 \
       --repetition-penalty 1.2 \
+       --eval-latency-unit char \
       --beam 4 \
       --no-repeat-ngram-size 3 
 }
