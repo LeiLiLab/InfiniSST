@@ -45,9 +45,9 @@ simuleval \
   --state-dict-path ${checkpoint_dir}/pytorch_model.bin \
   --source-lang "English" \
   --target-lang "Chinese" \
-  --source /compute/babel-6-17/xixu/datasets/must-c-v2.0/en-zh/tst-COMMON.source \
-  --target /compute/babel-6-17/xixu/datasets/must-c-v2.0/en-zh/tst-COMMON.target \
-  --output result/alignatt_bi_2/${frame_num} \
+  --source /compute/babel-14-5/siqiouya/en-zh//tst-COMMON.source \
+  --target /compute/babel-14-5/siqiouya/en-zh/tst-COMMON.target \
+  --output result/alignatt_bi_b1/${frame_num} \
   --quality-metrics BLEU \
   --sacrebleu-tokenizer zh \
   --min-start-sec 0.96 \
@@ -60,5 +60,6 @@ simuleval \
   --max-len-a 1 \
   --max-len-b 256 \
   --repetition-penalty 1.2 \
-  --beam 4 \
+  --beam 1 \
+  --eval-latency-unit char \
   --no-repeat-ngram-size 3
