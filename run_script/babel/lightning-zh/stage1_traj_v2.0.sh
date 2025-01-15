@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node=8
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=500GB
-#SBATCH --gres=gpu:6000Ada:8
+#SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
 ##SBATCH --exclude=babel-3-[5,9,17],babel-4-[9,29],babel-6-29,babel-7-[1,5,9],babel-8-13,babel-10-13,babel-11-25,babel-13-[13,29]
 #SBATCH --partition=general
