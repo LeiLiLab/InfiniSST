@@ -52,7 +52,6 @@ class S2TAgentStates(AgentStates):
         self.speech_cache = None
         self.past_key_values = None
         self.target_ids = []
-
 @entrypoint
 class StreamLlama(SpeechToTextAgent):
 
@@ -68,7 +67,7 @@ class StreamLlama(SpeechToTextAgent):
         
         # gen
         self.beam = args.beam
-        assert self.beam == 1 # only support beam=1 for now
+        # assert self.beam == 1 # only support beam=1 for now
         self.no_repeat_ngram_size = args.no_repeat_ngram_size
         self.repetition_penalty = args.repetition_penalty
         self.max_len_a = args.max_len_a
