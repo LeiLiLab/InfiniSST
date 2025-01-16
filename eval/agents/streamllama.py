@@ -71,7 +71,7 @@ class StreamLlama(SpeechToTextAgent):
         
         # gen
         self.beam = args.beam
-        # assert self.beam == 1 # only support beam=1 for now
+        assert self.beam == 1 # only support beam=1 for now due to the implementation of HF beam search
         self.no_repeat_ngram_size = args.no_repeat_ngram_size
         self.repetition_penalty = args.repetition_penalty
         self.max_len_a = args.max_len_a
@@ -119,7 +119,8 @@ class StreamLlama(SpeechToTextAgent):
                 self.model.model.embed_tokens.embedding_dim,
             )
         else:
-            speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args)        
+            speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args)
+        speech_encoder.eval()
         speech_encoder.to(dtype=self.model.dtype, device=self.model.device)
         self.length_shrink_func = speech_encoder._get_feat_extract_output_lengths
         
@@ -185,6 +186,8 @@ class StreamLlama(SpeechToTextAgent):
             truncation=False, 
             add_special_tokens=False
         )[:, :-1]
+        if states.speech_cache is not None:
+            input_ids = input_ids[:, 25:] # to remove system prompt
         input_ids = input_ids.cuda()
         return input_ids
 
@@ -223,12 +226,15 @@ class StreamLlama(SpeechToTextAgent):
             src_lengths=n_frames,
             after_lens=speech_lens,
             do_sample=False,
+            top_p=1.0,
+            temperature=1.0,
             num_beams=self.beam,
             max_new_tokens=max(1, max_number_of_tokens - len(states.target_ids)),
             no_repeat_ngram_size=self.no_repeat_ngram_size,
             repetition_penalty=self.repetition_penalty,
             pad_token_id=self.tokenizer.pad_token_id,
             return_dict_in_generate=True,
+            return_legacy_cache=False,
             use_cache=True,
             past_key_values=states.past_key_values,
             states=states,

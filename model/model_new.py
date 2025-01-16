@@ -349,7 +349,7 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
                 "states": kwargs.get("states", None),
             }
         )
-        return model_inputs        
+        return model_inputs
     
                    
 AutoConfig.register("SpeechLlama", SpeechLlamaConfig)
