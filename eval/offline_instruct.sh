@@ -1,16 +1,18 @@
-llm_model=/compute/babel-5-23/siqiouya/runs/8B-s2-v2.0-bi/last.ckpt/
+# llm_model=/compute/babel-5-23/siqiouya/runs/8B-s2-v2.0-bi/last.ckpt/
+llm_model=/compute/babel-5-23/siqiouya/runs/8B-traj-s2-v2.2/last.ckpt/
 w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
 # w2v2_path=/data/user_data/siqiouya/runs/pretrained/hubert_large_ll60k_finetune_ls960.pt
 # w2v2_path=/data/user_data/siqiouya/runs/pretrained/w2v-bert-2.0
 w2v2_type=w2v2
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de
-data_path=/compute/babel-6-17/xixu/datasets/must-c-v2.0/en-zh
+# data_path=/compute/babel-6-17/xixu/datasets/must-c-v2.0/en-zh
+data_path=/compute/babel-14-5/siqiouya/en-zh
 source_lang=English
 # target_lang=German
 target_lang=Chinese
 xpos=0
 
-beam=4
+beam=1
 
 # python /home/siqiouya/work/sllama/train/zero_to_fp32.py ${llm_model} ${llm_model}/pytorch_model.bin
 # python /home/siqiouya/work/sllama/train/prune_bin.py ${llm_model}/pytorch_model.bin
