@@ -234,7 +234,7 @@ class SpeechSampler(DistributedSampler):
         n_batches = len(batch_indices)
         n_batches = n_batches // multiplier * multiplier
 
-        self.batch_indices = batch_indices[:n_batches][::-1]
+        self.batch_indices = batch_indices[:n_batches]
     
     def __iter__(self):
         if self.shuffle:
@@ -736,9 +736,8 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
                 assert len(user_pos) == len(assist_pos)
 
                 for j in range(len(user_pos) - 1):
-                    label_mask[i, assist_pos[j][0] + 2 : user_pos[j + 1][0] - 2] = True # except eot_id
                     if samples[i].trajectory[j][1]:
-                        label_mask[i, user_pos[j + 1][0] - 2] = True
+                        label_mask[i, assist_pos[j][0] + 2 : user_pos[j + 1][0] - 1] = True
                 label_mask[i, assist_pos[-1][0] + 2:] = True
             targets[~label_mask] = IGNORE_INDEX
 

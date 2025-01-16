@@ -227,15 +227,23 @@ class SLlamaLightning(L.LightningModule):
         return eval_dataloader
 
     def training_step(self, batch, batch_idx):
-        loss = self.forward(batch)
+        loss, (loss_opt, loss_aug, loss_off) = self.forward(batch)
         if not loss.isnan():
-            self.log("train/loss", loss, batch_size=batch["src_lengths"].sum() / 16000)
+            bsz = batch["off"]["src_lengths"].sum() / 16000
+            self.log("train/loss", loss, batch_size=bsz)
+            self.log("train/loss_opt", loss_opt, batch_size=bsz)
+            self.log("train/loss_aug", loss_aug, batch_size=bsz)
+            self.log("train/loss_off", loss_off, batch_size=bsz)
         return loss
     
     def validation_step(self, batch, batch_idx):
-        loss = self.forward(batch)
+        loss, (loss_opt, loss_aug, loss_off) = self.forward(batch)
         if not loss.isnan():
-            self.log("eval/loss", loss, batch_size=batch["src_lengths"].sum() / 16000)
+            bsz = batch["off"]["src_lengths"].sum() / 16000
+            self.log("eval/loss", loss, batch_size=bsz)
+            self.log("eval/loss_opt", loss_opt, batch_size=bsz)
+            self.log("eval/loss_aug", loss_aug, batch_size=bsz)
+            self.log("eval/loss_off", loss_off, batch_size=bsz)
 
     def setup(self, stage):
         if stage == 'fit':
@@ -334,4 +342,4 @@ class SLlamaLightning(L.LightningModule):
             + loss_aug * self.aug_weight \
             + loss_off * self.off_weight
 
-        return loss
+        return loss, (loss_opt, loss_aug, loss_off)
