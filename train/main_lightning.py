@@ -94,10 +94,6 @@ class DataArguments:
         default=0,
         metadata={"help": "0: offline, 1: offline instruct, 2: trajectory, 3: trajectory with instruct format"}
     )
-    trajectory_perturb: list[float] = field(
-        default_factory=lambda: [1.0, 0.0, 0.0],
-        metadata={"help": "Perturbation for trajectory"}
-    )
                             
 @dataclass
 class TrainingArguments:
@@ -107,6 +103,7 @@ class TrainingArguments:
     text_weight: float = field(default=0.)
     train_bsz: int = field(default=8) # in terms of number of frames
     eval_bsz: int = field(default=8) # in terms of number of frames
+    loss_weights: list[float] = field(default_factory=lambda: [1., 1., 1.])
     learning_rate: float = field(default=2e-4)
     scheduler: str = field(default="cosine")
     min_learning_rate: float = field(default=0.)

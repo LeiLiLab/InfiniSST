@@ -94,6 +94,10 @@ class SLlamaLightning(L.LightningModule):
             "min_lr": min_lr,
         }
 
+        self.opt_weight = self.training_args.loss_weights[0]
+        self.aug_weight = self.training_args.loss_weights[1]
+        self.off_weight = self.training_args.loss_weights[2]
+
     def configure_model(self):
         if self.model is not None:
             return
@@ -167,7 +171,6 @@ class SLlamaLightning(L.LightningModule):
             self.data_args.source_lang,
             self.data_args.target_lang,
             block_size=self.speech_args.block_size,
-            perturb=self.data_args.trajectory_perturb,
         )
 
         # if self.data_args.trajectory >= 1:
@@ -305,8 +308,30 @@ class SLlamaLightning(L.LightningModule):
     
     def forward(self, batch):
         # logger.info("{} {}".format(batch['after_lens'].max(), batch['labels'].size()))
-        output = self.model(
-            **batch,
-            return_dict=True
-        )
-        return output.loss
+        loss_aug = loss_opt = loss_off = 0.0
+        if self.opt_weight != 0:
+            output_opt = self.model(
+                **batch["opt"],
+                return_dict=True
+            )
+            loss_opt = output_opt.loss
+
+        if self.aug_weight != 0:
+            output_aug = self.model(
+                **batch["aug"],
+                return_dict=True
+            )
+            loss_aug = output_aug.loss
+
+        if self.off_weight != 0:
+            output_off = self.model(
+                **batch["off"],
+                return_dict=True
+            )
+            loss_off = output_off.loss
+
+        loss = loss_opt * self.opt_weight \
+            + loss_aug * self.aug_weight \
+            + loss_off * self.off_weight
+
+        return loss

@@ -191,6 +191,8 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
         self.config.assist_token_id = tokenizer.convert_tokens_to_ids('assistant')
         self.config.start_header_id = tokenizer.convert_tokens_to_ids('<|start_header_id|>')
 
+    
+
     def forward(
         self,
         input_ids: torch.LongTensor = None,
@@ -248,70 +250,6 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
             # Enable model/pipeline parallelism
             shift_labels = shift_labels.to(shift_logits.device)
             loss = loss_fct(shift_logits, shift_labels)
-
-        if getattr(self, "rdrop", 0.) != 0:
-            with torch.no_grad():
-                outputs_2 = self.model(
-                    input_ids=input_ids,
-                    attention_mask=attention_mask,
-                    past_key_values=past_key_values,
-                    inputs_embeds=inputs_embeds,
-                    use_cache=use_cache,
-                    output_attentions=output_attentions,
-                    output_hidden_states=output_hidden_states,
-                    return_dict=return_dict,
-                    speech_batch=speech_batch,
-                    src_lengths=src_lengths,
-                    after_lens=after_lens,
-                    states=states,
-                )
-
-                hidden_states_2 = outputs_2[0]
-                logits_2 = self.lm_head(hidden_states_2)
-
-            log_probs = F.log_softmax(logits, dim=-1)
-            log_probs_2 = F.log_softmax(logits_2, dim=-1)
-
-            rdrop_loss_fct = nn.KLDivLoss(log_target=True)
-            rdrop_loss = rdrop_loss_fct(log_probs, log_probs_2) + \
-                rdrop_loss_fct(log_probs_2, log_probs)
-            # print(loss, rdrop_loss)
-            loss = loss + self.rdrop * rdrop_loss
-
-        if getattr(self, "text_weight", 0.) != 0:
-            outputs_3 = self.model(
-                input_ids=text_input_ids,
-                attention_mask=text_attention_mask,
-                past_key_values=past_key_values,
-                inputs_embeds=inputs_embeds,
-                use_cache=use_cache,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-                states=states,
-            )
-
-            hidden_states_3 = outputs_3[0]
-            logits_3 = self.lm_head(hidden_states_3)
-
-            loss_3 = None
-            if text_labels is not None:
-                # Shift so that tokens < n predict n
-                shift_logits_3 = logits_3[..., :-1, :].contiguous()
-                shift_labels_3 = text_labels[..., 1:].contiguous()
-                # Flatten the tokens
-                loss_fct = CrossEntropyLoss()
-                shift_logits_3 = shift_logits_3.view(-1, self.config.vocab_size)
-                shift_labels_3 = shift_labels_3.view(-1)
-                # Enable model/pipeline parallelism
-                shift_labels_3 = shift_labels_3.to(shift_logits_3.device)
-                loss_3 = loss_fct(shift_logits_3, shift_labels_3)
-
-            if wandb.run is not None:
-                log_key = "mt_train_loss" if self.training else "mt_eval_loss"
-                wandb.log({log_key: loss_3.item()})
-
-            loss = loss + self.text_weight * loss_3
 
         # print(loss, self.training)
 

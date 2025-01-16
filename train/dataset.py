@@ -542,14 +542,6 @@ class DataCollatorForTrajectoryDataset(object):
         return batch
 
 class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset):
-    def __init__(self, 
-            tokenizer, length_shrink_func, source_lang, target_lang, 
-            block_size=48, perturb=(0.3, 0.3, 0.4)
-        ):
-        super().__init__(tokenizer, length_shrink_func, source_lang, target_lang, block_size)
-        assert sum(perturb) == 1
-        self.perturb = perturb
-
     def validate(self, dataset):
         if dataset.trajectories is not None:
             sp_seg_frame = int(12 * 0.08 * 16000)
@@ -640,126 +632,247 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
             if type(x.trajectory[0]) == str:
                 x.trajectory = [[seg, True] for seg in x.trajectory]
 
-        for x in samples:
-            rand = np.random.rand()
-            if rand < self.perturb[0]:
-                # with prob self.perturb[0], use the optimal trajectory
-                continue
-            elif rand < self.perturb[0] + self.perturb[1]:
-                # with prob self.perturb[1], use the delayed trajectory
-                traj = x.trajectory
+        batches = {}
+        for mode in ['opt', 'aug', 'off']:
 
-                # shift
-                shift_traj = []
-                for i in range(len(traj)):
-                    seg = traj[len(traj) - i - 1][0]
-                    if seg == "" or np.random.rand() < 0.5 or i == 0:
-                        shift_traj.append([seg, True])
-                        continue
-                    words = list(jieba.cut(seg))
-                    shift_idx = np.random.randint(len(words))
-                    shift_traj[-1][0] = ''.join(words[shift_idx:]) + shift_traj[-1][0]
-                    shift_traj.append([''.join(words[:shift_idx]), False])
+            trajs = []
+            for x in samples:
+                if mode == 'opt':
+                    trajs.append(x.trajectory)
+                    continue
+                elif mode == 'aug':
+                    # with prob self.perturb[1], use the delayed trajectory
+                    traj = x.trajectory
 
-                shift_traj = shift_traj[::-1]
+                    # shift
+                    shift_traj = []
+                    for i in range(len(traj)):
+                        seg = traj[len(traj) - i - 1][0]
+                        if seg == "" or np.random.rand() < 0.5 or i == 0:
+                            shift_traj.append([seg, True])
+                            continue
+                        words = list(jieba.cut(seg))
+                        shift_idx = np.random.randint(len(words))
+                        shift_traj[-1][0] = ''.join(words[shift_idx:]) + shift_traj[-1][0]
+                        shift_traj.append([''.join(words[:shift_idx]), False])
 
-                # merge
-                merge_traj = copy.deepcopy(shift_traj)
-                for i in range(len(merge_traj) - 1):
-                    seg, _ = merge_traj[i]
-                    if seg == "" or np.random.rand() < 0.5:
-                        continue
+                    shift_traj = shift_traj[::-1]
+
+                    # merge
+                    merge_traj = copy.deepcopy(shift_traj)
+                    for i in range(len(merge_traj) - 1):
+                        seg, _ = merge_traj[i]
+                        if seg == "" or np.random.rand() < 0.5:
+                            continue
+                        
+                        merge_traj[i] = ["", False]
+                        merge_traj[i + 1][0] = seg + merge_traj[i + 1][0]
                     
-                    merge_traj[i] = ["", False]
-                    merge_traj[i + 1][0] = seg + merge_traj[i + 1][0]
+                    trajs.append(merge_traj)
+                else:
+                    # with prob self.perturb[2], use the offline trajectory
+                    traj = [['', False]] * len(x.trajectory)
+                    traj[-1] = [x.target, True]
+                    trajs.append(traj)
+            
+            trajectory_lens = [len(t) for t in trajs]
+            assert all([t_l == s_l // self.speech_segment_size for t_l, s_l in zip(trajectory_lens, speech_lens)])
+
+            prompts = []
+            instruction = f"Translate the following speech from {self.source_lang} to {self.target_lang}."
+            for i, traj in enumerate(trajs):
+                messages = [{
+                    "role": "system",
+                    "content": instruction
+                }]
+                for j, (text, _) in enumerate(traj):
+                    n_sp_token = min(
+                        self.speech_segment_size, 
+                        speech_lens[i] - j * self.speech_segment_size
+                    )
+                    assert n_sp_token > 0
+
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": n_sp_token * DEFAULT_SPEECH_PATCH_TOKEN
+                        }
+                    )
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": text
+                        }
+                    )
+                prompts.append(messages)
+
+            tokenized = self.tokenizer.apply_chat_template(
+                prompts,
+                return_tensors='pt',
+                padding=True, 
+                truncation=False, 
+                add_special_tokens=False
+            )
+            input_ids = tokenized
+            attention_mask = (input_ids != self.tokenizer.pad_token_id).long()
+
+            targets = input_ids.clone()
+            targets[attention_mask == 0] = IGNORE_INDEX
+            user_id = self.tokenizer.convert_tokens_to_ids('user')
+            assist_id = self.tokenizer.convert_tokens_to_ids('assistant')
+            start_header_id = self.tokenizer.convert_tokens_to_ids('<|start_header_id|>')
+            label_mask = torch.zeros_like(targets, dtype=torch.bool)
+            for i in range(len(samples)):
+                user_pos = (targets[i] == user_id).nonzero()
+                assist_pos = (targets[i] == assist_id).nonzero()
+
+                user_pos = [
+                    pos for pos in user_pos if targets[i, pos[0] - 1] == start_header_id
+                ]
+                assist_pos = [
+                    pos for pos in assist_pos if targets[i, pos[0] - 1] == start_header_id
+                ]
+
+                assert len(user_pos) == len(assist_pos)
+
+                for j in range(len(user_pos) - 1):
+                    label_mask[i, assist_pos[j][0] + 2 : user_pos[j + 1][0] - 2] = True # except eot_id
+                    if samples[i].trajectory[j][1]:
+                        label_mask[i, user_pos[j + 1][0] - 2] = True
+                label_mask[i, assist_pos[-1][0] + 2:] = True
+            targets[~label_mask] = IGNORE_INDEX
+
+            batch = dict(
+                input_ids=input_ids,
+                labels=targets,
+                attention_mask=attention_mask,
+                speech_batch=speech_batch,
+                src_lengths=n_frames,
+                after_lens=speech_lens,
+                ids=indices,
+            )
+            batches[mode] = batch
+
+        # for x in samples:
+        #     rand = np.random.rand()
+        #     if rand < self.perturb[0]:
+        #         # with prob self.perturb[0], use the optimal trajectory
+        #         continue
+        #     elif rand < self.perturb[0] + self.perturb[1]:
+        #         # with prob self.perturb[1], use the delayed trajectory
+        #         traj = x.trajectory
+
+        #         # shift
+        #         shift_traj = []
+        #         for i in range(len(traj)):
+        #             seg = traj[len(traj) - i - 1][0]
+        #             if seg == "" or np.random.rand() < 0.5 or i == 0:
+        #                 shift_traj.append([seg, True])
+        #                 continue
+        #             words = list(jieba.cut(seg))
+        #             shift_idx = np.random.randint(len(words))
+        #             shift_traj[-1][0] = ''.join(words[shift_idx:]) + shift_traj[-1][0]
+        #             shift_traj.append([''.join(words[:shift_idx]), False])
+
+        #         shift_traj = shift_traj[::-1]
+
+        #         # merge
+        #         merge_traj = copy.deepcopy(shift_traj)
+        #         for i in range(len(merge_traj) - 1):
+        #             seg, _ = merge_traj[i]
+        #             if seg == "" or np.random.rand() < 0.5:
+        #                 continue
+                    
+        #             merge_traj[i] = ["", False]
+        #             merge_traj[i + 1][0] = seg + merge_traj[i + 1][0]
                 
-                x.trajectory = merge_traj
-            else:
-                # with prob self.perturb[2], use the offline trajectory
-                x.trajectory = [['', False]] * len(x.trajectory)
-                x.trajectory[-1] = [x.target, True]
+        #         x.trajectory = merge_traj
+        #     else:
+        #         # with prob self.perturb[2], use the offline trajectory
+        #         x.trajectory = [['', False]] * len(x.trajectory)
+        #         x.trajectory[-1] = [x.target, True]
 
 
-        trajectory_lens = [len(x.trajectory) for x in samples]
-        assert all([t_l == s_l // self.speech_segment_size for t_l, s_l in zip(trajectory_lens, speech_lens)])
+        # trajectory_lens = [len(x.trajectory) for x in samples]
+        # assert all([t_l == s_l // self.speech_segment_size for t_l, s_l in zip(trajectory_lens, speech_lens)])
 
-        prompts = []
-        instruction = f"Translate the following speech from {self.source_lang} to {self.target_lang}."
-        for i, x in enumerate(samples):
-            messages = [{
-                "role": "system",
-                "content": instruction
-            }]
-            for j, (text, _) in enumerate(x.trajectory):
-                n_sp_token = min(
-                    self.speech_segment_size, 
-                    speech_lens[i] - j * self.speech_segment_size
-                )
-                assert n_sp_token > 0
+        # prompts = []
+        # instruction = f"Translate the following speech from {self.source_lang} to {self.target_lang}."
+        # for i, x in enumerate(samples):
+        #     messages = [{
+        #         "role": "system",
+        #         "content": instruction
+        #     }]
+        #     for j, (text, _) in enumerate(x.trajectory):
+        #         n_sp_token = min(
+        #             self.speech_segment_size, 
+        #             speech_lens[i] - j * self.speech_segment_size
+        #         )
+        #         assert n_sp_token > 0
 
-                messages.append(
-                    {
-                        "role": "user",
-                        "content": n_sp_token * DEFAULT_SPEECH_PATCH_TOKEN
-                    }
-                )
-                messages.append(
-                    {
-                        "role": "assistant",
-                        "content": text
-                    }
-                )
-            prompts.append(messages)
+        #         messages.append(
+        #             {
+        #                 "role": "user",
+        #                 "content": n_sp_token * DEFAULT_SPEECH_PATCH_TOKEN
+        #             }
+        #         )
+        #         messages.append(
+        #             {
+        #                 "role": "assistant",
+        #                 "content": text
+        #             }
+        #         )
+        #     prompts.append(messages)
      
-        # Tokenize with explicit padding settings
-        tokenized = self.tokenizer.apply_chat_template(
-            prompts,
-            return_tensors='pt',
-            padding=True, 
-            truncation=False, 
-            add_special_tokens=False
-        )
-        input_ids = tokenized
-        attention_mask = (input_ids != self.tokenizer.pad_token_id).long()
+        # # Tokenize with explicit padding settings
+        # tokenized = self.tokenizer.apply_chat_template(
+        #     prompts,
+        #     return_tensors='pt',
+        #     padding=True, 
+        #     truncation=False, 
+        #     add_special_tokens=False
+        # )
+        # input_ids = tokenized
+        # attention_mask = (input_ids != self.tokenizer.pad_token_id).long()
 
-        # Create targets and handle padding properly
-        targets = input_ids.clone()
-        targets[attention_mask == 0] = IGNORE_INDEX
-        user_id = self.tokenizer.convert_tokens_to_ids('user')
-        assist_id = self.tokenizer.convert_tokens_to_ids('assistant')
-        start_header_id = self.tokenizer.convert_tokens_to_ids('<|start_header_id|>')
-        label_mask = torch.zeros_like(targets, dtype=torch.bool)
-        for i in range(len(samples)):
-            user_pos = (targets[i] == user_id).nonzero()
-            assist_pos = (targets[i] == assist_id).nonzero()
+        # # Create targets and handle padding properly
+        # targets = input_ids.clone()
+        # targets[attention_mask == 0] = IGNORE_INDEX
+        # user_id = self.tokenizer.convert_tokens_to_ids('user')
+        # assist_id = self.tokenizer.convert_tokens_to_ids('assistant')
+        # start_header_id = self.tokenizer.convert_tokens_to_ids('<|start_header_id|>')
+        # label_mask = torch.zeros_like(targets, dtype=torch.bool)
+        # for i in range(len(samples)):
+        #     user_pos = (targets[i] == user_id).nonzero()
+        #     assist_pos = (targets[i] == assist_id).nonzero()
 
-            user_pos = [
-                pos for pos in user_pos if targets[i, pos[0] - 1] == start_header_id
-            ]
-            assist_pos = [
-                pos for pos in assist_pos if targets[i, pos[0] - 1] == start_header_id
-            ]
+        #     user_pos = [
+        #         pos for pos in user_pos if targets[i, pos[0] - 1] == start_header_id
+        #     ]
+        #     assist_pos = [
+        #         pos for pos in assist_pos if targets[i, pos[0] - 1] == start_header_id
+        #     ]
 
-            assert len(user_pos) == len(assist_pos)
+        #     assert len(user_pos) == len(assist_pos)
 
-            for j in range(len(user_pos) - 1):
-                label_mask[i, assist_pos[j][0] + 2 : user_pos[j + 1][0] - 2] = True # except eot_id
-                if samples[i].trajectory[j][1]:
-                    label_mask[i, user_pos[j + 1][0] - 2] = True
-            label_mask[i, assist_pos[-1][0] + 2:] = True
-        targets[~label_mask] = IGNORE_INDEX
+        #     for j in range(len(user_pos) - 1):
+        #         label_mask[i, assist_pos[j][0] + 2 : user_pos[j + 1][0] - 2] = True # except eot_id
+        #         if samples[i].trajectory[j][1]:
+        #             label_mask[i, user_pos[j + 1][0] - 2] = True
+        #     label_mask[i, assist_pos[-1][0] + 2:] = True
+        # targets[~label_mask] = IGNORE_INDEX
 
-        batch = dict(
-            input_ids=input_ids,
-            labels=targets,
-            attention_mask=attention_mask,
-            speech_batch=speech_batch,
-            src_lengths=n_frames,
-            after_lens=speech_lens,
-            ids=indices,
-        )
+        # batch = dict(
+        #     input_ids=input_ids,
+        #     labels=targets,
+        #     attention_mask=attention_mask,
+        #     speech_batch=speech_batch,
+        #     src_lengths=n_frames,
+        #     after_lens=speech_lens,
+        #     ids=indices,
+        # )
 
-        return batch
+        return batches
 
 def make_supervised_data_module(
         tokenizer: transformers.PreTrainedTokenizer,
