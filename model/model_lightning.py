@@ -24,7 +24,8 @@ from train.dataset import (
     DataCollatorForSupervisedDataset,
     DataCollatorForSupervisedInstructDataset,
     DataCollatorForTrajectoryDataset,
-    DataCollatorForTrajectoryInstructDataset
+    DataCollatorForTrajectoryInstructDataset,
+    DataCollatorForTrajectoryInstructMultiLatencyDataset
 )
 from model.model_new import SpeechLlamaForCausalLM
 from model.speech_encoder import (
@@ -39,7 +40,8 @@ collator_classes = {
     0: DataCollatorForSupervisedDataset,
     1: DataCollatorForSupervisedInstructDataset,
     2: DataCollatorForTrajectoryDataset,
-    3: DataCollatorForTrajectoryInstructDataset
+    3: DataCollatorForTrajectoryInstructDataset,
+    4: DataCollatorForTrajectoryInstructMultiLatencyDataset
 }
 
 class SLlamaLightning(L.LightningModule):
@@ -168,6 +170,7 @@ class SLlamaLightning(L.LightningModule):
             self.data_args.target_lang,
             block_size=self.speech_args.block_size,
             perturb=self.data_args.trajectory_perturb,
+            max_multiplier=self.data_args.trajectory_max_multiplier
         )
 
         # if self.data_args.trajectory >= 1:
@@ -201,6 +204,7 @@ class SLlamaLightning(L.LightningModule):
             self.data_args.source_lang,
             self.data_args.target_lang,
             block_size=self.speech_args.block_size,
+            max_multiplier=self.data_args.trajectory_max_multiplier
         )
 
         # if self.data_args.trajectory >= 1:
@@ -227,12 +231,14 @@ class SLlamaLightning(L.LightningModule):
         loss = self.forward(batch)
         if not loss.isnan():
             self.log("train/loss", loss, batch_size=batch["src_lengths"].sum() / 16000)
+            self.log("train/loss_mult{}".format(batch["multiplier"]), loss, batch_size=batch["src_lengths"].sum() / 16000)
         return loss
     
     def validation_step(self, batch, batch_idx):
         loss = self.forward(batch)
         if not loss.isnan():
             self.log("eval/loss", loss, batch_size=batch["src_lengths"].sum() / 16000)
+            self.log("eval/loss_mult{}".format(batch["multiplier"]), loss, batch_size=batch["src_lengths"].sum() / 16000)
 
     def setup(self, stage):
         if stage == 'fit':
