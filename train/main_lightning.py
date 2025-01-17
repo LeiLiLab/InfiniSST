@@ -102,6 +102,10 @@ class DataArguments:
         default=1,
         metadata={"help": "Maximum multiplier for trajectory"}
     )
+    trajectory_prob_aug: float = field(
+        default=0.0,
+        metadata={"help": "Probability of augmentation for trajectory"}
+    )
                             
 @dataclass
 class TrainingArguments:

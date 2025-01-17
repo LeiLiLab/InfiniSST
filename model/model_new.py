@@ -33,6 +33,7 @@ from train.dataset import (
     DEFAULT_SPEECH_PATCH_TOKEN,
     DEFAULT_SPEECH_START_TOKEN,
     DEFAULT_SPEECH_END_TOKEN,    
+    DEFAULT_LATENCY_TOKEN
 )
 
 class SpeechLlamaConfig(LlamaConfig):
@@ -165,14 +166,18 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
     def get_output_embeddings(self):
         return self.lm_head
     
-    def preprocess(self, tokenizer):      
+    def preprocess(self, tokenizer, max_multiplier=4):      
         tokenizer.add_tokens(
             [
                 DEFAULT_SPEECH_PATCH_TOKEN, 
                 DEFAULT_SPEECH_START_TOKEN, 
-                DEFAULT_SPEECH_END_TOKEN
+                DEFAULT_SPEECH_END_TOKEN,                
+            ] + [
+                DEFAULT_LATENCY_TOKEN.format(i)
+                for i in range(1, max_multiplier + 1)
             ], 
-        special_tokens=True)
+            special_tokens=True
+        )
         self.resize_token_embeddings(len(tokenizer), mean_resizing=True)
 
         sp_patch_token_id, sp_start_token_id, sp_end_token_id = \
@@ -190,6 +195,13 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
         self.config.user_token_id = tokenizer.convert_tokens_to_ids('user')
         self.config.assist_token_id = tokenizer.convert_tokens_to_ids('assistant')
         self.config.start_header_id = tokenizer.convert_tokens_to_ids('<|start_header_id|>')
+
+        self.config.latency_token_ids = tokenizer.convert_tokens_to_ids(
+            [
+                DEFAULT_LATENCY_TOKEN.format(i)
+                for i in range(1, max_multiplier + 1)
+            ]
+        )
 
     def forward(
         self,
