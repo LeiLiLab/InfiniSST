@@ -147,7 +147,7 @@ class SLlamaLightning(L.LightningModule):
         if self.speech_args.w2v2_freeze:
             model.model.speech_encoder.requires_grad_(False)
 
-        model.preprocess(tokenizer=self.tokenizer)
+        model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.data_args.trajectory_max_multiplier)
 
         if self.model_args.sllm_weight_path is not None:
             state_dict = torch.load(self.model_args.sllm_weight_path, map_location='cpu', weights_only=True)
