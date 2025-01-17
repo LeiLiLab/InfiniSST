@@ -640,12 +640,12 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
             if type(x.trajectory[0]) == str:
                 x.trajectory = [[seg, True] for seg in x.trajectory]
 
+        mode = np.random.choice(['opt', 'aug', 'off'], p=self.perturb)
         for x in samples:
-            rand = np.random.rand()
-            if rand < self.perturb[0]:
+            if mode == 'opt':
                 # with prob self.perturb[0], use the optimal trajectory
                 continue
-            elif rand < self.perturb[0] + self.perturb[1]:
+            elif mode == 'aug':
                 # with prob self.perturb[1], use the delayed trajectory
                 traj = x.trajectory
 
@@ -743,9 +743,8 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
             assert len(user_pos) == len(assist_pos)
 
             for j in range(len(user_pos) - 1):
-                label_mask[i, assist_pos[j][0] + 2 : user_pos[j + 1][0] - 2] = True # except eot_id
                 if samples[i].trajectory[j][1]:
-                    label_mask[i, user_pos[j + 1][0] - 2] = True
+                    label_mask[i, assist_pos[j][0] + 2 : user_pos[j + 1][0] - 1] = True
             label_mask[i, assist_pos[-1][0] + 2:] = True
         targets[~label_mask] = IGNORE_INDEX
 
@@ -757,6 +756,7 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
             src_lengths=n_frames,
             after_lens=speech_lens,
             ids=indices,
+            mode=mode,
         )
 
         return batch

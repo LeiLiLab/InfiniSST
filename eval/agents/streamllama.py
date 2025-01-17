@@ -76,6 +76,10 @@ class StreamLlama(SpeechToTextAgent):
         self.repetition_penalty = args.repetition_penalty
         self.max_len_a = args.max_len_a
         self.max_len_b = args.max_len_b
+
+        # cache
+        self.max_cache_size = args.max_cache_size
+        self.always_cache_system_prompt = args.always_cache_system_prompt
         
         # model
         self.load_model(args)
@@ -140,6 +144,8 @@ class StreamLlama(SpeechToTextAgent):
         parser.add_argument("--model-name", type=str, default="facebook/opt-350m")
         parser.add_argument("--state-dict-path", type=str, default=None)
         parser.add_argument("--source-segment-multiplier", type=int, default=1)
+        parser.add_argument("--max-cache-size", type=int, default=1000)
+        parser.add_argument("--always-cache-system-prompt", action='store_true') # LLM-Inf
 
     def _prepare_speech(self, states):
         source = torch.tensor(states.source)
@@ -167,6 +173,13 @@ class StreamLlama(SpeechToTextAgent):
                     "content": f"Translate the following speech from {self.source_lang} to {self.target_lang}."
                 }
             )
+            self.system_prompt_size = self.tokenizer.apply_chat_template(
+                [messages],
+                return_tensors='pt',
+                padding=True, 
+                truncation=False, 
+                add_special_tokens=False
+            ).size(1)
         messages.append(
             {
                 "role": "user",
@@ -241,6 +254,21 @@ class StreamLlama(SpeechToTextAgent):
         )
 
         states.past_key_values = outputs.past_key_values
+
+        # cut cache
+        max_total_cache_size = self.max_cache_size
+        if self.always_cache_system_prompt:
+            max_total_cache_size += self.system_prompt_size
+        if states.past_key_values[0][0].size(2) > max_total_cache_size:
+            for i, (k, v) in enumerate(states.past_key_values):
+                k_cache = k[:, :, -self.max_cache_size:]
+                v_cache = v[:, :, -self.max_cache_size:]
+                if self.always_cache_system_prompt:
+                    k_cache = torch.cat([k[:, :, :self.system_prompt_size], k_cache], dim=2)
+                    v_cache = torch.cat([v[:, :, :self.system_prompt_size], v_cache], dim=2)
+                states.past_key_values.key_cache[i] = k_cache
+                states.past_key_values.value_cache[i] = v_cache
+
         output_ids = outputs.sequences[0, input_ids.size(1):-1].tolist()
         
         states.target_ids.extend(output_ids)
