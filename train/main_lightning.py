@@ -98,6 +98,10 @@ class DataArguments:
         default_factory=lambda: [1.0, 0.0, 0.0],
         metadata={"help": "Perturbation for trajectory"}
     )
+    trajectory_max_multiplier: int = field(
+        default=1,
+        metadata={"help": "Maximum multiplier for trajectory"}
+    )
                             
 @dataclass
 class TrainingArguments:
