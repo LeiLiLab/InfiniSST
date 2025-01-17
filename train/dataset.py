@@ -52,6 +52,7 @@ DEFAULT_SPEECH_PATCH_TOKEN = "<sp_patch>"
 DEFAULT_SPEECH_START_TOKEN = "<sp_start>"
 DEFAULT_SPEECH_END_TOKEN = "<sp_end>"
 DEFAULT_TEXT_END_TOKEN = "<text_end>"
+DEFAULT_LATENCY_TOKEN = "<latency_{}>"
 
 logger = logging.getLogger(__name__)
 
@@ -764,16 +765,18 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
 class DataCollatorForTrajectoryInstructMultiLatencyDataset(DataCollatorForTrajectoryDataset):
     def __init__(self, 
             tokenizer, length_shrink_func, source_lang, target_lang, 
-            block_size=48, max_multiplier=1, **kwargs
+            block_size=48, max_multiplier=1, prob_aug=0., **kwargs
         ):
         super().__init__(tokenizer, length_shrink_func, source_lang, target_lang, block_size, **kwargs)
-        assert max_multiplier >= 1
+        assert max_multiplier >= 1 and prob_aug >= 0 and prob_aug <= 1
         self.max_multiplier = max_multiplier
+        self.prob_aug = prob_aug
     
     def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
         indices = torch.tensor([x.index for x in samples], dtype=torch.long)
 
         multiplier = np.random.randint(1, self.max_multiplier + 1)
+        latency_token = DEFAULT_LATENCY_TOKEN.format(multiplier)
 
         # pad to multiple
         sp_seg_frame = int(self.speech_segment_size * 0.08 * 16000) * multiplier
@@ -806,9 +809,38 @@ class DataCollatorForTrajectoryInstructMultiLatencyDataset(DataCollatorForTrajec
                 new_traj.append([partial_translation, True])
             x.trajectory = new_traj
 
+        if np.random.rand() < self.prob_aug:
+            for x in samples:
+                traj = x.trajectory
+
+                # shift
+                shift_traj = []
+                for i in range(len(traj)):
+                    seg = traj[len(traj) - i - 1][0]
+                    if seg == "" or np.random.rand() < 0.5 or i == 0:
+                        shift_traj.append([seg, True])
+                        continue
+                    words = list(jieba.cut(seg))
+                    shift_idx = np.random.randint(len(words))
+                    shift_traj[-1][0] = ''.join(words[shift_idx:]) + shift_traj[-1][0]
+                    shift_traj.append([''.join(words[:shift_idx]), False])
+
+                shift_traj = shift_traj[::-1]
+
+                # merge
+                merge_traj = copy.deepcopy(shift_traj)
+                for i in range(len(merge_traj) - 1):
+                    seg, _ = merge_traj[i]
+                    if seg == "" or np.random.rand() < 0.5:
+                        continue
+                    
+                    merge_traj[i] = ["", False]
+                    merge_traj[i + 1][0] = seg + merge_traj[i + 1][0]
+                
+                x.trajectory = merge_traj
 
         prompts = []
-        instruction = f"Translate the following speech from {self.source_lang} to {self.target_lang}."
+        instruction = f"Translate the following speech from {self.source_lang} to {self.target_lang} with latency {latency_token}."
         for i, x in enumerate(samples):
             messages = [{
                 "role": "system",

@@ -170,7 +170,8 @@ class SLlamaLightning(L.LightningModule):
             self.data_args.target_lang,
             block_size=self.speech_args.block_size,
             perturb=self.data_args.trajectory_perturb,
-            max_multiplier=self.data_args.trajectory_max_multiplier
+            max_multiplier=self.data_args.trajectory_max_multiplier,
+            prob_aug=self.data_args.trajectory_prob_aug
         )
 
         # if self.data_args.trajectory >= 1:
