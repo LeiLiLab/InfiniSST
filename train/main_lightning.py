@@ -209,7 +209,7 @@ def train():
 
     # start training
     if os.path.exists(training_args.save_dir) and len(os.listdir(training_args.save_dir)) >= 1:
-        ckpt_path = os.path.join(training_args.save_dir, os.listdir(training_args.save_dir)[0])
+        ckpt_path = os.path.join(training_args.save_dir, 'last.ckpt')
         trainer.fit(model_lightning, ckpt_path=ckpt_path)
     else:
         trainer.fit(model_lightning)
