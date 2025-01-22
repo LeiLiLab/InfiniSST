@@ -220,7 +220,7 @@ class SpeechSampler(DistributedSampler):
         indices = []
         n_skipped = 0
         for eff_size, idx in sorted_eff_sizes:
-            if not filter or (eff_size <= self.batch_size and self.dataset.n_frames[idx] >= min_ms * 16):
+            if not filter or self.dataset.n_frames[idx] >= min_ms * 16:
                 if eff_size * (len(indices) + 1) <= self.batch_size and len(indices) < self.batch_size_sent:
                     indices.append(idx)
                 else:
