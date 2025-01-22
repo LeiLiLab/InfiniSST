@@ -232,14 +232,16 @@ class SLlamaLightning(L.LightningModule):
         loss = self.forward(batch)
         if not loss.isnan():
             self.log("train/loss", loss, batch_size=batch["src_lengths"].sum() / 16000)
-            self.log("train/loss_mult{}".format(batch["multiplier"]), loss, batch_size=batch["src_lengths"].sum() / 16000)
+            if "multiplier" in batch:
+                self.log("train/loss_mult{}".format(batch["multiplier"]), loss, batch_size=batch["src_lengths"].sum() / 16000)
         return loss
     
     def validation_step(self, batch, batch_idx):
         loss = self.forward(batch)
         if not loss.isnan():
             self.log("eval/loss", loss, batch_size=batch["src_lengths"].sum() / 16000)
-            self.log("eval/loss_mult{}".format(batch["multiplier"]), loss, batch_size=batch["src_lengths"].sum() / 16000)
+            if "multiplier" in batch:
+                self.log("eval/loss_mult{}".format(batch["multiplier"]), loss, batch_size=batch["src_lengths"].sum() / 16000)
 
     def setup(self, stage):
         if stage == 'fit':
@@ -311,7 +313,7 @@ class SLlamaLightning(L.LightningModule):
             self.trainer.optimizers[0].optimizer.train()
     
     def forward(self, batch):
-        # logger.info("{} {}".format(batch['after_lens'].max(), batch['labels'].size()))
+        # logger.info("{} {} {}".format(self.model.device, batch['after_lens'].max(), batch['labels'].size()))
         output = self.model(
             **batch,
             return_dict=True
