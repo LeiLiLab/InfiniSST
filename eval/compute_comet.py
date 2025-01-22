@@ -20,8 +20,12 @@ def read_tsv(tsv_path):
 
 comet_model = load_from_checkpoint("/compute/babel-7-5/siqiouya/xcomet_xxl/snapshots/bad20b47daa64c41a8b29f3d3016be75baf0d7b4/checkpoints/model.ckpt")
 data_root = "/compute/babel-14-5/siqiouya/en-zh/"
-samples = read_tsv(os.path.join(data_root, "tst-COMMON.tsv"))
-srcs = [s["src_text"] for s in samples]
+
+# samples = read_tsv(os.path.join(data_root, "tst-COMMON.tsv")) # TODO: tsv file of the full ted data
+# srcs = [s["src_text"] for s in samples]
+
+with open("/compute/babel-14-5/siqiouya/en-zh/tst-COMMON_full.source.txt", "r") as r:
+    srcs = r.read().strip().split("\n")
 
 with open(sys.argv[1], "r") as r:
     instances = [json.loads(line) for line in r.readlines()]
@@ -33,5 +37,6 @@ comet_data = [
     }
     for i in range(len(srcs))
 ]
-comet_output = comet_model.predict(comet_data, batch_size=4, gpus=1)
+
+comet_output = comet_model.predict(comet_data, batch_size=1, gpus=1)
 print(comet_output.system_score)
