@@ -765,15 +765,18 @@ class SpeechEncoderW2V2RoPE(L.LightningModule):
 
         return input_lengths.to(torch.long)
     
-    def encode_speech(self, src_tokens, src_lens, cache=None):
+    def encode_speech(self, src_tokens, src_lens=None, cache=None):
         if cache is None:
             cache = W2V2RoPECache(
                 max_steps=self.max_cache_size,
                 layers=[LayerCache() for _ in range(self.s_layer)]
             )
 
-        padding_mask = lengths_to_padding_mask(src_lens)
-        res = self.speech_encoder.extract_features(src_tokens, padding_mask, cache=cache)
+        if src_lens is None:
+            res = self.speech_encoder.extract_features(src_tokens, cache=cache)
+        else:
+            padding_mask = lengths_to_padding_mask(src_lens)
+            res = self.speech_encoder.extract_features(src_tokens, padding_mask, cache=cache)
         feature, padding_mask = res["x"], res["padding_mask"]
 
         feature = self.length_shrink(feature.transpose(1, 2)).transpose(1, 2)

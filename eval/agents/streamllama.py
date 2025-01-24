@@ -1,4 +1,6 @@
 import argparse, os, sys, time, json
+import contextlib
+from time import perf_counter
 from collections import Counter
 
 from typing import Optional
@@ -36,8 +38,22 @@ from model.speech_encoder import (
 from train.dataset import (
     DEFAULT_SPEECH_PATCH_TOKEN,
     DEFAULT_SPEECH_START_TOKEN,
-    DEFAULT_SPEECH_END_TOKEN
+    DEFAULT_SPEECH_END_TOKEN,
+    DEFAULT_LATENCY_TOKEN
 )
+
+def synchronized_timer(description: str):
+    @contextlib.contextmanager
+    def timer_with_sync():
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        start = perf_counter()
+        yield
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        elapsed_time = perf_counter() - start
+        print(f"{description}: {elapsed_time:.4f} seconds")
+    return timer_with_sync()
 
 @dataclass
 class S2TAgentStates(AgentStates):
@@ -65,7 +81,7 @@ class StreamLlama(SpeechToTextAgent):
         # simuleval
         self.min_start_sec = args.min_start_sec
         self.source_segment_size = args.source_segment_size
-        self.source_segment_multiplier = args.source_segment_multiplier
+        self.latency_multiplier = args.latency_multiplier
         self.source_lang = args.source_lang
         self.target_lang = args.target_lang
         
@@ -78,7 +94,7 @@ class StreamLlama(SpeechToTextAgent):
         self.max_len_b = args.max_len_b
 
         # cache
-        self.max_cache_size = args.max_cache_size
+        self.max_llm_cache_size = args.max_llm_cache_size
         self.always_cache_system_prompt = args.always_cache_system_prompt
         
         # model
@@ -143,34 +159,39 @@ class StreamLlama(SpeechToTextAgent):
         add_gen_args(parser)
         parser.add_argument("--model-name", type=str, default="facebook/opt-350m")
         parser.add_argument("--state-dict-path", type=str, default=None)
-        parser.add_argument("--source-segment-multiplier", type=int, default=1)
-        parser.add_argument("--max-cache-size", type=int, default=1000)
+        parser.add_argument("--latency-multiplier", type=int, default=1)
+        parser.add_argument("--max-llm-cache-size", type=int, default=10000)
         parser.add_argument("--always-cache-system-prompt", action='store_true') # LLM-Inf
 
     def _prepare_speech(self, states):
-        source = torch.tensor(states.source)
         sp_seg_frame = int(self.args.block_size // 4 * 0.08 * 16000)
+        
+        # Only tensorize the new part
+        source = torch.tensor(states.source[states.src_len:])
+        
+        # Pad if needed
         if source.size(0) % sp_seg_frame != 0:
             n_pad = sp_seg_frame - source.size(0) % sp_seg_frame
             source = torch.cat([source, torch.zeros(n_pad).to(source)], dim=0)
-        offset = torch.zeros(79 + 320).to(source)
-        source = torch.cat([offset, source], dim=0)        
-        old_src_len = states.src_len
-        states.src_len = source.size(0)
-        source = source[old_src_len:]
+            
+        # Add offset only for first chunk
+        if states.src_len == 0:
+            offset = torch.zeros(79 + 320).to(source)
+            source = torch.cat([offset, source], dim=0)
+            
+        states.src_len = len(states.source)
 
         speech_batch = source.unsqueeze(0).to(device=self.model.device, dtype=self.model.dtype)
-        n_frames = torch.tensor([source.size(0)], dtype=torch.long).to(self.model.device)
-        speech_lens = self.length_shrink_func(n_frames)
-        return speech_batch, n_frames, speech_lens
-    
-    def _prepare_inputs(self, states, speech_lens):
+        return speech_batch
+
+    def _prepare_inputs(self, states):
         messages = []
         if states.speech_cache is None:
+            latency_token = DEFAULT_LATENCY_TOKEN.format(self.latency_multiplier)
             messages.append(
                 {
                     "role": "system",
-                    "content": f"Translate the following speech from {self.source_lang} to {self.target_lang}."
+                    "content": f"Translate the following speech from {self.source_lang} to {self.target_lang} with latency {latency_token}."
                 }
             )
             self.system_prompt_size = self.tokenizer.apply_chat_template(
@@ -183,7 +204,7 @@ class StreamLlama(SpeechToTextAgent):
         messages.append(
             {
                 "role": "user",
-                "content": speech_lens[0] * DEFAULT_SPEECH_PATCH_TOKEN
+                "content": self.args.block_size // 4 * self.latency_multiplier * DEFAULT_SPEECH_PATCH_TOKEN
             }
         )
         messages.append(
@@ -219,62 +240,60 @@ class StreamLlama(SpeechToTextAgent):
             return ReadAction()
         
         if states.source_finished and length_in_seconds < 0.32:
-            return WriteAction(content="", finished=True)
+            return WriteAction(content="", finished=True)        
         
-        speech_batch, n_frames, speech_lens = self._prepare_speech(states)
-        input_ids = self._prepare_inputs(states, speech_lens)
-        
-        max_number_of_tokens = int(length_in_seconds * self.max_len_a + self.max_len_b)
+        with synchronized_timer('generate'):
+            speech_batch = self._prepare_speech(states)
+            input_ids = self._prepare_inputs(states)
+            
+            max_number_of_tokens = int(length_in_seconds * self.max_len_a + self.max_len_b)
 
-        if states.source_finished:
-            states.segment_idx = -1
-        elif (states.segment_idx + 1) % self.source_segment_multiplier != 0:
-            max_number_of_tokens = 1
+            if states.source_finished:
+                states.segment_idx = -1
 
-        self.model.model.speech_features_extracted = False
-        outputs = self.model.generate(
-            attention_mask=None,
-            input_ids=input_ids,
-            speech_batch=speech_batch,
-            src_lengths=n_frames,
-            after_lens=speech_lens,
-            do_sample=False,
-            top_p=1.0,
-            temperature=1.0,
-            num_beams=self.beam,
-            max_new_tokens=max(1, max_number_of_tokens - len(states.target_ids)),
-            no_repeat_ngram_size=self.no_repeat_ngram_size,
-            repetition_penalty=self.repetition_penalty,
-            pad_token_id=self.tokenizer.pad_token_id,
-            return_dict_in_generate=True,
-            return_legacy_cache=False,
-            use_cache=True,
-            past_key_values=states.past_key_values,
-            states=states,
-        )
+            self.model.model.speech_features_extracted = False
+            outputs = self.model.generate(
+                attention_mask=None,
+                input_ids=input_ids,
+                speech_batch=speech_batch,
+                do_sample=False,
+                top_p=1.0,
+                temperature=1.0,
+                num_beams=self.beam,
+                max_new_tokens=max(1, max_number_of_tokens - len(states.target_ids)),
+                no_repeat_ngram_size=self.no_repeat_ngram_size,
+                repetition_penalty=self.repetition_penalty,
+                pad_token_id=self.tokenizer.pad_token_id,
+                return_dict_in_generate=True,
+                return_legacy_cache=False,
+                use_cache=True,
+                past_key_values=states.past_key_values,
+                states=states,
+            )
 
-        states.past_key_values = outputs.past_key_values
+            states.past_key_values = outputs.past_key_values
 
-        # cut cache
-        max_total_cache_size = self.max_cache_size
-        if self.always_cache_system_prompt:
-            max_total_cache_size += self.system_prompt_size
-        if states.past_key_values[0][0].size(2) > max_total_cache_size:
-            for i, (k, v) in enumerate(states.past_key_values):
-                k_cache = k[:, :, -self.max_cache_size:]
-                v_cache = v[:, :, -self.max_cache_size:]
-                if self.always_cache_system_prompt:
-                    k_cache = torch.cat([k[:, :, :self.system_prompt_size], k_cache], dim=2)
-                    v_cache = torch.cat([v[:, :, :self.system_prompt_size], v_cache], dim=2)
-                states.past_key_values.key_cache[i] = k_cache
-                states.past_key_values.value_cache[i] = v_cache
+            # cut cache
+            max_total_cache_size = self.max_llm_cache_size
+            if self.always_cache_system_prompt:
+                max_total_cache_size += self.system_prompt_size
+            if states.past_key_values[0][0].size(2) > max_total_cache_size:
+                for i, (k, v) in enumerate(states.past_key_values):
+                    k_cache = k[:, :, -self.max_llm_cache_size:]
+                    v_cache = v[:, :, -self.max_llm_cache_size:]
+                    if self.always_cache_system_prompt:
+                        k_cache = torch.cat([k[:, :, :self.system_prompt_size], k_cache], dim=2)
+                        v_cache = torch.cat([v[:, :, :self.system_prompt_size], v_cache], dim=2)
+                    states.past_key_values.key_cache[i] = k_cache
+                    states.past_key_values.value_cache[i] = v_cache
 
         output_ids = outputs.sequences[0, input_ids.size(1):-1].tolist()
         
         states.target_ids.extend(output_ids)
         translation = self.tokenizer.decode(output_ids, skip_special_tokens=True).strip()
 
-        print(states.segment_idx, ':', self.tokenizer.decode(states.target_ids))
+        # print(f"{length_in_seconds / 60:.2f}", ':', self.tokenizer.decode(states.target_ids))
+        print(f"Speech length in minutes: {length_in_seconds / 60:.2f}")
 
         states.segment_idx += 1
 
