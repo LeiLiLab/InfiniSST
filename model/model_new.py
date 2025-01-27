@@ -187,7 +187,7 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
                     DEFAULT_SPEECH_START_TOKEN, 
                     DEFAULT_SPEECH_END_TOKEN
                 ]
-            )                
+            )
         self.config.sp_patch_token_id = sp_patch_token_id
         self.config.sp_start_token_id = sp_start_token_id
         self.config.sp_end_token_id = sp_end_token_id
