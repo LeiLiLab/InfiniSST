@@ -149,6 +149,14 @@ class SLlamaLightning(L.LightningModule):
 
         model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.data_args.trajectory_max_multiplier)
 
+        added_token_ids = [
+            model.config.sp_patch_token_id,
+            model.config.sp_start_token_id,
+            model.config.sp_end_token_id,
+        ] + model.config.latency_token_ids
+        for i in added_token_ids:
+            model.model.embed_tokens.weight[i].requires_grad_(True)
+
         if self.model_args.sllm_weight_path is not None:
             state_dict = torch.load(self.model_args.sllm_weight_path, map_location='cpu', weights_only=True)
             model.load_state_dict(state_dict, strict=True)
