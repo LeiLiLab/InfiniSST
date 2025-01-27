@@ -111,8 +111,6 @@ class SLlamaLightning(L.LightningModule):
         if self.model_args.llm_freeze:
             model.model.requires_grad_(False)
             model.model.embed_tokens.requires_grad_(True)
-        if self.model_args.llm_emb_freeze:
-            model.model.embed_tokens.requires_grad_(False)
         if self.model_args.llm_head_freeze:
             model.lm_head.requires_grad_(False)
 
@@ -149,13 +147,19 @@ class SLlamaLightning(L.LightningModule):
 
         model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.data_args.trajectory_max_multiplier)
 
-        added_token_ids = [
-            model.config.sp_patch_token_id,
-            model.config.sp_start_token_id,
-            model.config.sp_end_token_id,
-        ] + model.config.latency_token_ids
-        for i in added_token_ids:
-            model.model.embed_tokens.weight[i].requires_grad_(True)
+        if self.model_args.llm_emb_freeze:
+            # model.model.embed_tokens.requires_grad_(False)
+            added_token_ids = [
+                model.config.sp_patch_token_id,
+                model.config.sp_start_token_id,
+                model.config.sp_end_token_id,
+            ] + model.config.latency_token_ids
+            indices_mask = torch.zeros_like(model.model.embed_tokens.weight, dtype=torch.bool)
+            indices_mask[added_token_ids, :] = True
+            def freeze_grad(grad):
+                grad[~indices_mask] = 0.0
+                return grad
+            model.model.embed_tokens.weight.register_hook(freeze_grad)
 
         if self.model_args.sllm_weight_path is not None:
             state_dict = torch.load(self.model_args.sllm_weight_path, map_location='cpu', weights_only=True)
@@ -322,6 +326,8 @@ class SLlamaLightning(L.LightningModule):
     
     def forward(self, batch):
         # logger.info("{} {} {}".format(self.model.device, batch['after_lens'].max(), batch['labels'].size()))
+        logger.info("{}".format(self.model.model.embed_tokens.weight[:10].max()))
+        logger.info("{}".format(self.model.model.embed_tokens.weight[-10:].max()))
         output = self.model(
             **batch,
             return_dict=True
