@@ -23,6 +23,7 @@ source /home/siqiouya/anaconda3/bin/activate speechllama
 ckpt_dir=/compute/babel-5-23/siqiouya/runs/8B-traj-s2-v3.0/last.ckpt/
 src_segment_size=$(($SLURM_ARRAY_TASK_ID * 960))
 latency_multiplier=$SLURM_ARRAY_TASK_ID
+max_llm_cache_size=4000
 beam=1
 ms=0
 
@@ -36,7 +37,7 @@ simuleval \
     --min-start-sec ${ms} \
     --source /compute/babel-14-5/siqiouya/en-zh/tst-COMMON_full.source \
     --target /compute/babel-14-5/siqiouya/en-zh/tst-COMMON_full.target \
-    --output ${ckpt_dir}/simul-results-full/seg${src_segment_size}_beam${beam}_ms${ms} \
+    --output ${ckpt_dir}/simul-results-full/cache${max_llm_cache_size}_seg${src_segment_size}_beam${beam}_ms${ms} \
     --w2v2-path /data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt \
     --w2v2-type w2v2 \
     --ctc-finetuned \
@@ -46,7 +47,7 @@ simuleval \
     --max-cache-size 500 \
     --xpos 0 \
     \
-    --max-llm-cache-size 50000000 \
+    --max-llm-cache-size ${max_llm_cache_size} \
     --always-cache-system-prompt \
     \
     --max-len-a 10 \
