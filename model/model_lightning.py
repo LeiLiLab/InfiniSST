@@ -326,8 +326,6 @@ class SLlamaLightning(L.LightningModule):
     
     def forward(self, batch):
         # logger.info("{} {} {}".format(self.model.device, batch['after_lens'].max(), batch['labels'].size()))
-        logger.info("{}".format(self.model.model.embed_tokens.weight[:10].max()))
-        logger.info("{}".format(self.model.model.embed_tokens.weight[-10:].max()))
         output = self.model(
             **batch,
             return_dict=True
