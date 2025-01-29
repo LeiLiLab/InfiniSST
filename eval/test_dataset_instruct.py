@@ -89,7 +89,7 @@ def eval_model(args):
     speech_encoder.to(dtype=model.dtype, device=model.device)
     model.model.speech_encoder = speech_encoder
 
-    model.preprocess(tokenizer=tokenizer)
+    model.preprocess(tokenizer=tokenizer, max_multiplier=1)
 
     state_dict = torch.load(args.state_dict_path, map_location='cpu', weights_only=True)
     model.load_state_dict(state_dict)
