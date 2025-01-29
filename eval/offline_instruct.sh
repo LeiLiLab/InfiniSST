@@ -1,5 +1,5 @@
-# llm_model=/compute/babel-5-23/siqiouya/runs/8B-s2-v2.0-bi/last.ckpt/
-llm_model=/compute/babel-5-23/siqiouya/runs/8B-traj-s2-v2.2/last.ckpt/
+llm_model=/compute/babel-5-23/siqiouya/runs/8B-s2-v3.1-bi/last.ckpt/
+# llm_model=/compute/babel-5-23/siqiouya/runs/8B-traj-s2-v2.2/last.ckpt/
 w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
 # w2v2_path=/data/user_data/siqiouya/runs/pretrained/hubert_large_ll60k_finetune_ls960.pt
 # w2v2_path=/data/user_data/siqiouya/runs/pretrained/w2v-bert-2.0

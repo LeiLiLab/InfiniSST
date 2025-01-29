@@ -6,6 +6,7 @@ from elapsed import update_log_file
 parser = argparse.ArgumentParser(description="Correct the log")
 parser.add_argument("--dir", type=str, required=True, help="directory to the original instances.log file.")
 parser.add_argument("--segmented-refs", type=str, required=True, help="Path to the segmented references.")
+parser.add_argument("--unit", type=str, default='word')
 args = parser.parse_args()
 
 input_path = os.path.join(args.dir, "instances.log")
@@ -26,5 +27,9 @@ os.makedirs(tmp_dir, exist_ok=True)
 
 for i, (log, refs) in enumerate(zip(logs, refs_per_doc)):
     with open(os.path.join(tmp_dir, "hyp.{}".format(i)), "w") as w_hyp, open(os.path.join(tmp_dir, "ref.{}".format(i)), "w") as w_ref:
-        w_hyp.write(log["prediction"])
-        w_ref.write(refs)
+        if args.unit == 'word':
+            w_hyp.write(log["prediction"])
+            w_ref.write(refs)
+        else:
+            w_hyp.write(" ".join(log["prediction"]))
+            w_ref.write(" ".join(refs))
