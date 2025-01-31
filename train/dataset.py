@@ -81,6 +81,7 @@ class SpeechToTextDatasetItem(object):
     speech_word: Optional[List] = None
     text_word: Optional[List] = None
     trajectory: Optional[List] = None
+    sampled_trajectory: Optional[List] = None
     
 class PromptSpeechToTextDataset(SpeechToTextDataset):
 
@@ -95,6 +96,7 @@ class PromptSpeechToTextDataset(SpeechToTextDataset):
         speech_words: Optional[List] = None,
         text_words: Optional[List] = None,
         trajectories: Optional[List[List[str]]] = None,
+        sampled_trajectories: Optional[List[List[str]]] = None,
     ):
         self.audio_paths = audio_paths
         self.n_frames = n_frames
@@ -105,7 +107,8 @@ class PromptSpeechToTextDataset(SpeechToTextDataset):
         self.speech_words = speech_words
         self.text_words = text_words
         self.trajectories = trajectories
-
+        self.sampled_trajectories = sampled_trajectories       
+    
     def __getitem__(
         self, index: int
     ) -> Tuple[int, torch.Tensor, Optional[torch.Tensor]]:
@@ -122,11 +125,13 @@ class PromptSpeechToTextDataset(SpeechToTextDataset):
         speech_word = self.speech_words[index] if self.speech_words is not None else None
         text_word = self.text_words[index] if self.text_words is not None else None
         trajectory = self.trajectories[index] if self.trajectories is not None else None
-        
+        sampled_trajectory = self.sampled_trajectories[index] if self.sampled_trajectories is not None else None
         return SpeechToTextDatasetItem(
             index=index, source=source, target=text, src_text=src_text, id=id, task=task,
-            speech_word=speech_word, text_word=text_word, trajectory=trajectory
+            speech_word=speech_word, text_word=text_word, 
+            trajectory=trajectory, sampled_trajectory=sampled_trajectory
         )
+    
     def __len__(self):
         return len(self.audio_paths)
         
@@ -183,6 +188,23 @@ class PromptSpeechToTextDatasetCreator(object):
         trajectories_str = [s.get(cls.KEY_TRAJECTORY, '') for s in samples]
         trajectories = [eval(s) if s != '' else None for s in trajectories_str]
 
+        sampled_trajectories_str = [s.get('sampling', '') for s in samples]
+        sampled_trajectories = [eval(s) if s != '' else None for s in sampled_trajectories_str]
+        
+        cnt = 0
+        for i, (traj, s_traj) in enumerate(zip(trajectories, sampled_trajectories)):
+            if len(traj) < len(s_traj):
+                print(ids[i], len(traj), len(s_traj), traj, s_traj)
+                sampled_trajectories[i] = s_traj[:len(traj)]
+                cnt += 1
+            elif len(traj) > len(s_traj):
+                raise ValueError(f"Sampled trajectory length is smaller than trajectory length: {ids[i]}")
+        
+        if cnt > 0:
+            logger.warning(
+                f"There are {cnt} samples with different trajectory and sampled trajectory length"
+            )
+
         return PromptSpeechToTextDataset(
             audio_paths,
             n_frames=n_frames,
@@ -193,6 +215,7 @@ class PromptSpeechToTextDatasetCreator(object):
             speech_words=speech_words,
             text_words=text_words,
             trajectories=trajectories,
+            sampled_trajectories=sampled_trajectories
         )
 
 
@@ -915,6 +938,26 @@ class DataCollatorForTrajectoryInstructMultiLatencyDataset(DataCollatorForTrajec
             multiplier=multiplier
         )
 
+        return batch
+
+
+class DataCollatorForPreferenceOptimizationDataset(DataCollatorForTrajectoryInstructMultiLatencyDataset):
+    def __init__(self, 
+            tokenizer, length_shrink_func, source_lang, target_lang, 
+            block_size=48, max_multiplier=1, prob_aug=0., po_max_multiplier=1, **kwargs
+        ):
+        super().__init__(tokenizer, length_shrink_func, source_lang, target_lang, block_size, 
+                         max_multiplier=po_max_multiplier, prob_aug=prob_aug, **kwargs)
+    
+    def __call__(self, samples: List[SpeechToTextDatasetItem]):
+        bad_samples = []
+        # bad example
+        for x in samples:
+            x_ = copy.deepcopy(x)
+            x_.trajectory = x_.sampled_trajectory
+            bad_samples.append(x_)
+
+        batch = super().__call__(samples + bad_samples)
         return batch
 
 
