@@ -25,7 +25,8 @@ from train.dataset import (
     DataCollatorForSupervisedInstructDataset,
     DataCollatorForTrajectoryDataset,
     DataCollatorForTrajectoryInstructDataset,
-    DataCollatorForTrajectoryInstructMultiLatencyDataset
+    DataCollatorForTrajectoryInstructMultiLatencyDataset,
+    DataCollatorForPreferenceOptimizationDataset
 )
 from model.model_new import SpeechLlamaForCausalLM
 from model.speech_encoder import (
@@ -41,7 +42,8 @@ collator_classes = {
     1: DataCollatorForSupervisedInstructDataset,
     2: DataCollatorForTrajectoryDataset,
     3: DataCollatorForTrajectoryInstructDataset,
-    4: DataCollatorForTrajectoryInstructMultiLatencyDataset
+    4: DataCollatorForTrajectoryInstructMultiLatencyDataset,
+    5: DataCollatorForPreferenceOptimizationDataset
 }
 
 class SLlamaLightning(L.LightningModule):
@@ -144,6 +146,8 @@ class SLlamaLightning(L.LightningModule):
         speech_encoder.to(dtype=model.dtype, device=model.device)
         model.model.speech_encoder = speech_encoder
 
+        model.cpo_beta = self.training_args.cpo_beta
+
         if self.speech_args.w2v2_freeze:
             model.model.speech_encoder.requires_grad_(False)
 
@@ -171,6 +175,7 @@ class SLlamaLightning(L.LightningModule):
             block_size=self.speech_args.block_size,
             perturb=self.data_args.trajectory_perturb,
             max_multiplier=self.data_args.trajectory_max_multiplier,
+            po_max_multiplier=self.data_args.preference_optimization_max_multiplier,
             prob_aug=self.data_args.trajectory_prob_aug
         )
 
@@ -196,7 +201,7 @@ class SLlamaLightning(L.LightningModule):
     
     def val_dataloader(self):
         eval_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
-            self.data_args.data_path, self.data_args.data_split_eval
+        self.data_args.data_path, self.data_args.data_split_eval
         )
         collator_cls = collator_classes[self.data_args.trajectory]
         data_collator = collator_cls(
@@ -205,7 +210,9 @@ class SLlamaLightning(L.LightningModule):
             self.data_args.source_lang,
             self.data_args.target_lang,
             block_size=self.speech_args.block_size,
-            max_multiplier=self.data_args.trajectory_max_multiplier
+            max_multiplier=self.data_args.trajectory_max_multiplier,
+            po_max_multiplier=self.data_args.preference_optimization_max_multiplier,
+            prob_aug=self.data_args.trajectory_prob_aug
         )
 
         # if self.data_args.trajectory >= 1:
@@ -313,7 +320,7 @@ class SLlamaLightning(L.LightningModule):
             self.trainer.optimizers[0].optimizer.train()
     
     def forward(self, batch):
-        # logger.info("{} {} {}".format(self.model.device, batch['after_lens'].max(), batch['labels'].size()))
+        logger.info("batch size: {}".format(batch['input_ids'].size()))
         output = self.model(
             **batch,
             return_dict=True

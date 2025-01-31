@@ -102,6 +102,10 @@ class DataArguments:
         default=1,
         metadata={"help": "Maximum multiplier for trajectory"}
     )
+    preference_optimization_max_multiplier: int = field(
+        default=1,
+        metadata={"help": "Maximum multiplier for preference optimization"}
+    )
     trajectory_prob_aug: float = field(
         default=0.0,
         metadata={"help": "Probability of augmentation for trajectory"}
@@ -121,6 +125,8 @@ class TrainingArguments:
     weight_decay: float = field(default=0.)
     warmup_steps: int = field(default=400)
     run_name: str = field(default=None)
+
+    cpo_beta: float = field(default=0.0)
 
     n_device: int = field(default=1)
     deepspeed_stage: int = field(default=2)
