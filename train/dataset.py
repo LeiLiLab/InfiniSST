@@ -774,18 +774,22 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
 class DataCollatorForTrajectoryInstructMultiLatencyDataset(DataCollatorForTrajectoryDataset):
     def __init__(self, 
             tokenizer, length_shrink_func, source_lang, target_lang, 
-            block_size=48, max_multiplier=1, prob_aug=0., model=None, **kwargs
+            block_size=48, max_multiplier=1, prob_aug=0., trainer=None, **kwargs
         ):
         super().__init__(tokenizer, length_shrink_func, source_lang, target_lang, block_size, **kwargs)
         assert max_multiplier >= 1 and prob_aug >= 0 and prob_aug <= 1
         self.max_multiplier = max_multiplier
         self.prob_aug = prob_aug
-        self.model = model
+        self.trainer = trainer
 
     def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
         indices = torch.tensor([x.index for x in samples], dtype=torch.long)
 
-        multiplier = self.model.global_step % self.max_multiplier + 1
+        if self.trainer is not None:
+            multiplier = self.trainer.global_step % self.max_multiplier + 1
+            logger.info(f"multiplier: {multiplier}")
+        else:
+            multiplier = np.random.randint(1, self.max_multiplier + 1)
         latency_token = DEFAULT_LATENCY_TOKEN.format(multiplier)
 
         # pad to multiple

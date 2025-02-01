@@ -176,7 +176,7 @@ class SLlamaLightning(L.LightningModule):
             max_multiplier=self.data_args.trajectory_max_multiplier,
             po_max_multiplier=self.data_args.preference_optimization_max_multiplier,
             prob_aug=self.data_args.trajectory_prob_aug,
-            trainer=self
+            trainer=self.trainer
         )
 
         # if self.data_args.trajectory >= 1:
@@ -300,7 +300,7 @@ class SLlamaLightning(L.LightningModule):
         }
     
     def forward(self, batch):
-        logger.info("batch size: {}".format(batch['input_ids'].size()))
+        # logger.info("batch size: {}".format(batch['input_ids'].size()))
         output = self.model(
             **batch,
             return_dict=True
