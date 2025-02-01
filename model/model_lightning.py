@@ -15,7 +15,6 @@ from lightning.pytorch.utilities import grad_norm
 from torch.optim import Adam
 # from apex.optimizers import FusedAdam
 from deepspeed.ops.adam import FusedAdam, DeepSpeedCPUAdam
-from schedulefree import RAdamScheduleFree
 
 from train.dataset import (
     SpeechSampler, 
@@ -177,6 +176,7 @@ class SLlamaLightning(L.LightningModule):
             max_multiplier=self.data_args.trajectory_max_multiplier,
             po_max_multiplier=self.data_args.preference_optimization_max_multiplier,
             prob_aug=self.data_args.trajectory_prob_aug
+            # todo: add global step
         )
 
         # if self.data_args.trajectory >= 1:
@@ -266,10 +266,6 @@ class SLlamaLightning(L.LightningModule):
         lr = self.optimizer_params["lr"]
         warmup_updates = self.optimizer_params["warmup_updates"]
 
-        if self.training_args.scheduler == "free":
-            optimizer = RAdamScheduleFree(self.model.parameters(), lr=lr, weight_decay=self.training_args.weight_decay)
-            return optimizer
-
         optimizer_cls = DeepSpeedCPUAdam if self.training_args.deepspeed_offload else FusedAdam
         optimizer = optimizer_cls(self.parameters(), lr=lr, weight_decay=self.training_args.weight_decay)  
 
@@ -302,22 +298,6 @@ class SLlamaLightning(L.LightningModule):
                 "frequency": 1
             }
         }
-    
-    def on_train_start(self):
-        if self.training_args.scheduler == "free":
-            self.trainer.optimizers[0].optimizer.train()
-    
-    def on_save_checkpoint(self, checkpoint):
-        if self.training_args.scheduler == "free":
-            self.trainer.optimizers[0].optimizer.eval()
-    
-    def on_validation_start(self):
-        if self.training_args.scheduler == "free":
-            self.trainer.optimizers[0].optimizer.eval()
-    
-    def on_validation_end(self):
-        if self.training_args.scheduler == "free":
-            self.trainer.optimizers[0].optimizer.train()
     
     def forward(self, batch):
         logger.info("batch size: {}".format(batch['input_ids'].size()))

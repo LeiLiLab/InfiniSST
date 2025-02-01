@@ -76,7 +76,7 @@ class StreamLlama(SpeechToTextAgent):
 
     def __init__(self, args):
         super().__init__(args)
-        transformers.set_seed(998244353)
+        # transformers.set_seed(998244353)
 
         # simuleval
         self.min_start_sec = args.min_start_sec
@@ -92,6 +92,10 @@ class StreamLlama(SpeechToTextAgent):
         self.repetition_penalty = args.repetition_penalty
         self.max_len_a = args.max_len_a
         self.max_len_b = args.max_len_b
+        self.do_sample = args.do_sample
+        self.top_p = args.top_p
+        self.top_k = args.top_k
+        self.temperature = args.temperature
 
         # cache
         self.max_llm_cache_size = args.max_llm_cache_size
@@ -145,7 +149,7 @@ class StreamLlama(SpeechToTextAgent):
         self.length_shrink_func = speech_encoder._get_feat_extract_output_lengths
         
         self.model.model.speech_encoder = speech_encoder
-        self.model.preprocess(tokenizer=self.tokenizer)
+        self.model.preprocess(tokenizer=self.tokenizer) 
 
         state_dict = torch.load(args.state_dict_path, map_location='cpu', weights_only=True)
         self.model.load_state_dict(state_dict)
@@ -256,9 +260,10 @@ class StreamLlama(SpeechToTextAgent):
                 attention_mask=None,
                 input_ids=input_ids,
                 speech_batch=speech_batch,
-                do_sample=False,
-                top_p=1.0,
-                temperature=1.0,
+                do_sample=self.do_sample,
+                top_p=self.top_p,
+                top_k=self.top_k,
+                temperature=self.temperature,
                 num_beams=self.beam,
                 max_new_tokens=max(1, max_number_of_tokens - len(states.target_ids)),
                 no_repeat_ngram_size=self.no_repeat_ngram_size,
@@ -293,7 +298,8 @@ class StreamLlama(SpeechToTextAgent):
         translation = self.tokenizer.decode(output_ids, skip_special_tokens=True).strip()
 
         # print(f"{length_in_seconds / 60:.2f}", ':', self.tokenizer.decode(states.target_ids))
-        print(f"Speech length in minutes: {length_in_seconds / 60:.2f}")
+        # print(f"Speech length in minutes: {length_in_seconds / 60:.2f}")
+        print(self.tokenizer.decode(states.target_ids, skip_special_tokens=True).strip())
 
         states.segment_idx += 1
 

@@ -190,20 +190,6 @@ class PromptSpeechToTextDatasetCreator(object):
 
         sampled_trajectories_str = [s.get('sampling', '') for s in samples]
         sampled_trajectories = [eval(s) if s != '' else None for s in sampled_trajectories_str]
-        
-        cnt = 0
-        for i, (traj, s_traj) in enumerate(zip(trajectories, sampled_trajectories)):
-            if len(traj) < len(s_traj):
-                print(ids[i], len(traj), len(s_traj), traj, s_traj)
-                sampled_trajectories[i] = s_traj[:len(traj)]
-                cnt += 1
-            elif len(traj) > len(s_traj):
-                raise ValueError(f"Sampled trajectory length is smaller than trajectory length: {ids[i]}")
-        
-        if cnt > 0:
-            logger.warning(
-                f"There are {cnt} samples with different trajectory and sampled trajectory length"
-            )
 
         return PromptSpeechToTextDataset(
             audio_paths,

@@ -7,36 +7,39 @@
 #SBATCH --mem=64GB
 #SBATCH --gres=gpu:L40S:1
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[9,29],babel-6-29,babel-7-[1,5,9],babel-8-[9,13],babel-10-13,babel-11-25,babel-13-[13,29]
 #SBATCH --partition=preempt
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
-#SBATCH --array=1-4
+#SBATCH --array=0-7
 ##SBATCH --account=siqiouya
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=siqiouya@andrew.cmu.edu
-#SBATCH -e slurm_logs/%j.err
-#SBATCH -o slurm_logs/%j.out
+#SBATCH -e slurm_logs/%A-%a.err
+#SBATCH -o slurm_logs/%A-%a.out
 
 source /home/siqiouya/anaconda3/bin/activate speechllama2
 
-ckpt_dir=/compute/babel-5-23/siqiouya/runs/8B-traj-s2-v2.5/last.ckpt/
-src_segment_size=$(($SLURM_ARRAY_TASK_ID * 960))
+ckpt_dir=/compute/babel-5-23/siqiouya/runs/8B-traj-s2-v3.0/last.ckpt/
+src_segment_size=960
+latency_multiplier=1
+max_llm_cache_size=4000
 beam=1
-mult=1
+top_p=0.9
+top_k=0
+temperature=0.7
 ms=0
 
 export PYTHONPATH=/home/siqiouya/work/sllama
 simuleval \
     --agent eval/agents/streamllama.py \
     --source-segment-size ${src_segment_size} \
-    --source-segment-multiplier ${mult} \
+    --latency-multiplier ${latency_multiplier} \
     --source-lang English \
     --target-lang Chinese \
     --min-start-sec ${ms} \
-    --source /compute/babel-14-5/siqiouya/en-zh/tst-COMMON.source \
-    --target /compute/babel-14-5/siqiouya/en-zh/tst-COMMON.target \
-    --output ${ckpt_dir}/simul-results/seg${src_segment_size}_beam${beam}_mult${mult}_ms${ms} \
+    --source /compute/babel-14-5/siqiouya/en-zh/dev_fa_traj_45.source \
+    --target /compute/babel-14-5/siqiouya/en-zh/dev_fa_traj_45.target \
+    --output ${ckpt_dir}/sampling_dev_for_qe/cache${max_llm_cache_size}_seg${src_segment_size}_beam${beam}_ms${ms}_topp${top_p}_topk${top_k}_temp${temperature}/${SLURM_ARRAY_TASK_ID} \
     --w2v2-path /data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt \
     --w2v2-type w2v2 \
     --ctc-finetuned \
@@ -46,11 +49,18 @@ simuleval \
     --max-cache-size 500 \
     --xpos 0 \
     \
+    --max-llm-cache-size ${max_llm_cache_size} \
+    --always-cache-system-prompt \
+    \
     --max-len-a 10 \
     --max-len-b 20 \
     --beam ${beam} \
     --no-repeat-ngram-size 3 \
     --repetition-penalty 1.2 \
+    --do-sample \
+    --top-p ${top_p} \
+    --top-k ${top_k} \
+    --temperature ${temperature} \
     \
     --model-name /compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf \
     --state-dict-path ${ckpt_dir}/pytorch_model.bin \

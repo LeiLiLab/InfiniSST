@@ -18,7 +18,7 @@
 #SBATCH -e slurm_logs/%j.err
 #SBATCH -o slurm_logs/%j.out
 
-source /home/siqiouya/anaconda3/bin/activate speechllama
+source /home/siqiouya/anaconda3/bin/activate speechllama2
 
 llm_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf
 w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
@@ -63,8 +63,8 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     --llm_head_freeze True \
     \
     --data_path ${data_path} \
-    --data_split_train 'train_ft_traj_45' \
-    --data_split_eval 'dev_traj_45' \
+    --data_split_train 'train_fa_traj_45' \
+    --data_split_eval 'dev_fa_traj_45' \
     --source_lang "${source_lang}" \
     --target_lang "${target_lang}" \
     --trajectory 4 \
