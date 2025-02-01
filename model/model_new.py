@@ -37,6 +37,9 @@ from train.dataset import (
     IGNORE_INDEX
 )
 
+import logging
+logger = logging.getLogger(__name__)
+
 class SpeechLlamaConfig(LlamaConfig):
     model_type = "SpeechLlama"
 
@@ -263,11 +266,12 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
                 loss = loss.sum(dim=-1)
                 logp_w = -loss[:bsz]
                 logp_l = -loss[bsz:]
-                cpo_loss = -F.logsigmoid(self.cpo_beta * (logp_w - logp_l))
-                nll_loss = -logp_w / (shift_labels[:bsz] != IGNORE_INDEX).sum()
+                cpo_loss = -F.logsigmoid(self.cpo_beta * (logp_w - logp_l)).mean()
+                nll_loss = -logp_w.sum() / (shift_labels[:bsz] != IGNORE_INDEX).sum()
                 loss = nll_loss + cpo_loss
-
-            loss = loss.sum() / (shift_labels != IGNORE_INDEX).sum()
+                logger.info("nll_loss {:.2f} cpo_loss {:.2f}".format(nll_loss.item(), cpo_loss.item()))
+            else:
+                loss = loss.sum() / (shift_labels != IGNORE_INDEX).sum()
             
         if not return_dict:
             output = (logits,) + outputs[1:]

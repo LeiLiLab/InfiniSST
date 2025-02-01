@@ -20,7 +20,7 @@
 lr_list=(1e-5 7e-6 4e-6 2e-6 1e-6)
 lr=${lr_list[$SLURM_ARRAY_TASK_ID]}
 
-source /home/siqiouya/anaconda3/bin/activate speechllama
+source /home/siqiouya/anaconda3/bin/activate speechllama2
 
 llm_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-hf
 sllm_weight_path=/compute/babel-5-23/siqiouya/runs/3.1-8B-s1-lightning-german-w2v2-rope-noxpos-unfrz-ori-free-lr1e-4/

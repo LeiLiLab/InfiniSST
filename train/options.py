@@ -62,6 +62,25 @@ def add_gen_args(parser):
         type=float,
         default=1.2
     )
+    parser.add_argument(
+        "--do-sample",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--top-p",
+        type=float,
+        default=1.0,
+    )
+    parser.add_argument(
+        "--top-k",
+        type=int,
+        default=0,
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=1.0,
+    )
 
 def add_simuleval_args(parser):
     parser.add_argument(
