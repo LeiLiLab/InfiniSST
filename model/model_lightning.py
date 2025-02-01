@@ -175,8 +175,8 @@ class SLlamaLightning(L.LightningModule):
             perturb=self.data_args.trajectory_perturb,
             max_multiplier=self.data_args.trajectory_max_multiplier,
             po_max_multiplier=self.data_args.preference_optimization_max_multiplier,
-            prob_aug=self.data_args.trajectory_prob_aug
-            # todo: add global step
+            prob_aug=self.data_args.trajectory_prob_aug,
+            trainer=self
         )
 
         # if self.data_args.trajectory >= 1:
