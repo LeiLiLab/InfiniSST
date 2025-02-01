@@ -64,7 +64,7 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     --sllm_weight_path ${sllm_weight_path}/pytorch_model.bin \
     \
     --data_path ${data_path} \
-    --data_split_train 'train_fa_traj_45' \
+    --data_split_train 'train_ft_fa_traj_45' \
     --data_split_eval 'dev_fa_traj_45' \
     --source_lang "${source_lang}" \
     --target_lang "${target_lang}" \

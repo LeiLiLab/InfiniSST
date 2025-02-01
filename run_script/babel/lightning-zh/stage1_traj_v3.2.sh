@@ -7,7 +7,7 @@
 #SBATCH --mem=500GB
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-13,babel-10-[5,13],babel-11-25,babel-12-29,babel-13-[13,29]
+#SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,13],babel-11-25,babel-12-29,babel-13-[13,21,29],babel-14-25
 #SBATCH --partition=general
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
@@ -63,7 +63,7 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     --llm_head_freeze True \
     \
     --data_path ${data_path} \
-    --data_split_train 'train_fa_traj_45' \
+    --data_split_train 'train_ft_fa_traj_45' \
     --data_split_eval 'dev_fa_traj_45' \
     --source_lang "${source_lang}" \
     --target_lang "${target_lang}" \
