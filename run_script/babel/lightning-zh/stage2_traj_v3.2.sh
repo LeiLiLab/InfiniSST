@@ -18,7 +18,7 @@
 #SBATCH -e slurm_logs/%j.err
 #SBATCH -o slurm_logs/%j.out
 
-source /home/siqiouya/anaconda3/bin/activate speechllama2
+source /home/siqiouya/anaconda3/bin/activate speechllama
 
 llm_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf
 sllm_weight_path=/compute/babel-5-23/siqiouya/runs/8B-traj-s1-v3.2/last.ckpt/
@@ -72,7 +72,7 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     --trajectory_max_multiplier 4 \
     --trajectory_prob_aug 0.0 \
     \
-    --seed 998244353 \
+    --seed 42 \
     --stage 2 \
     --train_bsz 1000 \
     --eval_bsz 1000 \

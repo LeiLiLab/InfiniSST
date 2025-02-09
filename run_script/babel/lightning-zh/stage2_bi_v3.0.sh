@@ -18,7 +18,7 @@
 #SBATCH -e slurm_logs/%j.err
 #SBATCH -o slurm_logs/%j.out
 
-source /home/siqiouya/anaconda3/bin/activate speechllama2
+source /home/siqiouya/anaconda3/bin/activate speechllama
 
 llm_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf
 sllm_weight_path=/compute/babel-5-23/siqiouya/runs/8B-bi-s1-v3.0/last.ckpt/

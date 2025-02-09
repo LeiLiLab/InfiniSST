@@ -17,12 +17,12 @@
 #SBATCH -e slurm_logs/%A-%a.err
 #SBATCH -o slurm_logs/%A-%a.out
 
-source /home/siqiouya/anaconda3/bin/activate speechllama2
+source /home/siqiouya/anaconda3/bin/activate speechllama
 
 ckpt_dir=/compute/babel-5-23/siqiouya/runs/8B-traj-s2-v3.2/last.ckpt/
 src_segment_size=$(($SLURM_ARRAY_TASK_ID * 960))
 latency_multiplier=$SLURM_ARRAY_TASK_ID
-max_llm_cache_size=4000
+max_llm_cache_size=$1 # 1000, 2000, 4000, 8000
 beam=1
 ms=0
 

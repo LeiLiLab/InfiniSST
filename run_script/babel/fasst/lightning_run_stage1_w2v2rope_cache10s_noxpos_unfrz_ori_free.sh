@@ -6,22 +6,24 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=512GB
 #SBATCH --gres=gpu:L40S:8
-##SBATCH --nodelist=babel-3-17
-#SBATCH --exclude=babel-13-13,babel-13-29,babel-4-9,babel-3-5,babel-6-29
+##SBATCH --nodelist=babel-12-[0-100]
+#SBATCH --exclude=babel-13-13,babel-13-29,babel-4-9,babel-3-5,babel-3-17,babel-3-9,babel-6-29,babel-11-25,babel-7-9
 #SBATCH --partition=preempt
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
-##SBATCH --array=1-7
+#SBATCH --array=0-3
 ##SBATCH --account=siqiouya
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=siqiouya@andrew.cmu.edu
 #SBATCH -e slurm_logs/%j.err
 #SBATCH -o slurm_logs/%j.out
 
-source /home/siqiouya/anaconda3/bin/activate speechllama2
+lrs=(2e-4 1e-4 5e-5 2e-5)
+lr=${lrs[$SLURM_ARRAY_TASK_ID]}
+
+source /home/siqiouya/anaconda3/bin/activate speechllama
 
 llm_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-hf
-sllm_weight_path=/compute/babel-5-23/siqiouya/runs/3.1-8B-s1-lightning-german-w2v2-rope-noxpos-cosine-bi-unfrz-ori/
 w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
 # w2v2_path=/data/user_data/siqiouya/runs/pretrained/hubert_large_ll60k_finetune_ls960.pt
 w2v2_type=w2v2
@@ -36,13 +38,12 @@ data_path=/scratch/siqiouya/en-de
 
 source_lang="English"
 target_lang="German"
-name="3.1-8B-s2-lightning-${target_lang,,}-${w2v2_type}-rope-noxpos-cosine-bi-1"
+name="3.1-8B-s1-lightning-${target_lang,,}-${w2v2_type}-free-lr${lr}"
 save_path=/compute/babel-5-23/siqiouya/runs/$name
 rm -rf ${save_path}
 mkdir -p ${save_path}
 
 export PYTHONPATH=/home/siqiouya/work/sllama
-export TOKENIZERS_PARALLELISM=false
 export WANDB_PROJECT="mustc_1.0_de"
 export WANDB_ENTITY="streamllama"
 
@@ -52,22 +53,20 @@ export TORCH_DISTRIBUTED_DEBUG=INFO
 export NCCL_DEBUG=INFO
 SLURM_GPUS=8
 
-python /home/siqiouya/work/sllama/train/zero_to_fp32.py ${sllm_weight_path} ${sllm_weight_path}/pytorch_model.bin
-python /home/siqiouya/work/sllama/train/prune_bin.py ${sllm_weight_path}/pytorch_model.bin
-
 srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     \
     --w2v2_path ${w2v2_path} \
     --w2v2_type ${w2v2_type} \
-    --w2v2_freeze True \
     --ctc_finetuned ${ctc_finetuned} \
     --length_shrink_cfg "[(1024,2,2)] * 2" \
-    --block_size 10000000 \
-    --max_cache_size 10000000 \
+    --block_size 48 \
+    --max_cache_size 500 \
     --xpos False \
     \
     --llm_path ${llm_path} \
-    --sllm_weight_path ${sllm_weight_path}/pytorch_model.bin \
+    --llm_freeze True \
+    --llm_emb_freeze False \
+    --orig_embeds_params True \
     \
     --data_path ${data_path} \
     --data_split_train 'train' \
@@ -76,16 +75,16 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     --target_lang "${target_lang}" \
     \
     --seed 998244353 \
-    --stage 2 \
+    --stage 1 \
     --train_bsz 800000 \
     --eval_bsz 800000 \
-    --learning_rate 7e-6 \
-    --warmup_steps 100 \
+    --learning_rate ${lr} \
+    --scheduler free \
     --run_name $name \
     \
     --n_device ${SLURM_GPUS} \
     --deepspeed_stage 2 \
-    --max_epochs 1 \
+    --max_epochs 12 \
     --grad_acc_steps 4 \
     --clip_norm 1.0 \
     --save_dir ${save_path} \

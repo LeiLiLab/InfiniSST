@@ -18,7 +18,7 @@
 #SBATCH -e slurm_logs/%j.err
 #SBATCH -o slurm_logs/%j.out
 
-source /home/siqiouya/anaconda3/bin/activate speechllama2
+source /home/siqiouya/anaconda3/bin/activate speechllama
 
 ckpt_dir=/compute/babel-5-23/siqiouya/runs/8B-traj-s2-v2.2/last.ckpt/
 beam=1
