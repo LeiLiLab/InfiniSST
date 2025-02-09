@@ -7,7 +7,7 @@
 #SBATCH --mem=64GB
 #SBATCH --gres=gpu:L40S:1
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --partition=preempt
+#SBATCH --partition=array
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
 #SBATCH --array=0
@@ -17,7 +17,7 @@
 #SBATCH -e slurm_logs/%A-%a.err
 #SBATCH -o slurm_logs/%A-%a.out
 
-source /home/siqiouya/anaconda3/bin/activate speechllama2
+source /home/siqiouya/anaconda3/bin/activate speechllama
 
 ckpt_dir=/compute/babel-5-23/siqiouya/runs/8B-traj-s2-v3.0/last.ckpt/
 src_segment_size=960

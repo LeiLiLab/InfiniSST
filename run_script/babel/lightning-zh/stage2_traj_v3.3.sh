@@ -4,11 +4,11 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=8
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=512GB
+#SBATCH --mem=500GB
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --exclude=babel-13-13,babel-13-29,babel-4-9,babel-3-5,babel-3-17,babel-3-9,babel-6-29,babel-11-25
-#SBATCH --partition=preempt
+#SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,13],babel-11-25,babel-12-29,babel-13-[13,21,29],babel-14-25
+#SBATCH --partition=general
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
 ##SBATCH --array=1-7
@@ -18,10 +18,10 @@
 #SBATCH -e slurm_logs/%j.err
 #SBATCH -o slurm_logs/%j.out
 
-source /home/siqiouya/anaconda3/bin/activate speechllama2
+source /home/siqiouya/anaconda3/bin/activate speechllama
 
-llm_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-hf
-sllm_weight_path=/compute/babel-5-23/siqiouya/runs/3.1-8B-s1-lightning-german-w2v2-rope-noxpos-cosine-unfrz-ori/
+llm_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf
+sllm_weight_path=/compute/babel-5-23/siqiouya/runs/8B-traj-s1-v3.3/last.ckpt/
 w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
 # w2v2_path=/data/user_data/siqiouya/runs/pretrained/hubert_large_ll60k_finetune_ls960.pt
 w2v2_type=w2v2
@@ -29,21 +29,18 @@ ctc_finetuned=True
 # data_path=/scratch/xixu/dataset/must-c-v1.0/en-es
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-fr
-
-mkdir -p /scratch/siqiouya/
-rsync -r /compute/babel-6-17/xixu/datasets/must-c-v1.0/backup/en-de /scratch/siqiouya/
-data_path=/scratch/siqiouya/en-de
+data_path=/compute/babel-14-5/siqiouya/en-zh/
 
 source_lang="English"
-target_lang="German"
-name="3.1-8B-s2-lightning-${target_lang,,}-${w2v2_type}-rope-noxpos-cosine-1"
+target_lang="Chinese"
+name="8B-traj-s2-v3.3"
 save_path=/compute/babel-5-23/siqiouya/runs/$name
 rm -rf ${save_path}
 mkdir -p ${save_path}
 
 export PYTHONPATH=/home/siqiouya/work/sllama
 export TOKENIZERS_PARALLELISM=false
-export WANDB_PROJECT="mustc_1.0_de"
+export WANDB_PROJECT="mustc_1.0_zh"
 export WANDB_ENTITY="streamllama"
 
 export NCCL_P2P_DISABLE=1
@@ -51,9 +48,6 @@ export NCCL_IB_DISABLE=1
 export TORCH_DISTRIBUTED_DEBUG=INFO
 export NCCL_DEBUG=INFO
 SLURM_GPUS=8
-
-python /home/siqiouya/work/sllama/train/zero_to_fp32.py ${sllm_weight_path} ${sllm_weight_path}/pytorch_model.bin
-python /home/siqiouya/work/sllama/train/prune_bin.py ${sllm_weight_path}/pytorch_model.bin
 
 srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     \
@@ -70,24 +64,32 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     --sllm_weight_path ${sllm_weight_path}/pytorch_model.bin \
     \
     --data_path ${data_path} \
-    --data_split_train 'train' \
-    --data_split_eval 'dev' \
+    --data_split_train 'train_st_zh_ft_traj_30_filtered' \
+    --data_split_eval 'dev_st_zh_traj_30' \
     --source_lang "${source_lang}" \
     --target_lang "${target_lang}" \
+    --trajectory 4 \
+    --trajectory_max_multiplier 4 \
+    --trajectory_prob_aug 0.0 \
     \
-    --seed 998244353 \
+    --seed 42 \
     --stage 2 \
-    --train_bsz 800000 \
-    --eval_bsz 800000 \
+    --train_bsz 2400 \
+    --eval_bsz 2400 \
+    --bsz_sent 3 \
     --learning_rate 7e-6 \
     --warmup_steps 100 \
     --run_name $name \
     \
     --n_device ${SLURM_GPUS} \
     --deepspeed_stage 2 \
+    --deepspeed_offload True \
     --max_epochs 1 \
     --grad_acc_steps 4 \
     --clip_norm 1.0 \
     --save_dir ${save_path} \
     --log_step 5 \
     --eval_step 200
+
+python /home/siqiouya/work/sllama/train/zero_to_fp32.py ${save_path}/last.ckpt ${save_path}/last.ckpt/pytorch_model.bin
+python /home/siqiouya/work/sllama/train/prune_bin.py ${save_path}/last.ckpt/pytorch_model.bin

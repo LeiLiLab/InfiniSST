@@ -8,7 +8,7 @@
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
 #SBATCH --exclude=babel-13-13,babel-13-29,babel-4-9
-#SBATCH --partition=general
+#SBATCH --partition=preempt
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
 ##SBATCH --array=1-7
@@ -18,7 +18,7 @@
 #SBATCH -e slurm_logs/%j.err
 #SBATCH -o slurm_logs/%j.out
 
-source /home/siqiouya/anaconda3/bin/activate speechllama2
+source /home/siqiouya/anaconda3/bin/activate speechllama
 
 llm_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-hf
 w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
@@ -35,7 +35,7 @@ data_path=/scratch/siqiouya/en-de
 
 source_lang="English"
 target_lang="German"
-name="3.1-8B-s1-lightning-${target_lang,,}-${w2v2_type}-rope-noxpos-cosine-bi"
+name="3.1-8B-s1-lightning-${target_lang,,}-${w2v2_type}-rope-noxpos-cosine"
 save_path=/compute/babel-5-23/siqiouya/runs/$name
 rm -rf ${save_path}
 mkdir -p ${save_path}
@@ -56,12 +56,13 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     --w2v2_type ${w2v2_type} \
     --ctc_finetuned ${ctc_finetuned} \
     --length_shrink_cfg "[(1024,2,2)] * 2" \
-    --block_size 10000000 \
-    --max_cache_size 10000000 \
+    --block_size 48 \
+    --max_cache_size 500 \
     --xpos False \
     \
     --llm_path ${llm_path} \
     --llm_freeze True \
+    --llm_emb_freeze True \
     \
     --data_path ${data_path} \
     --data_split_train 'train' \

@@ -7,26 +7,23 @@
 #SBATCH --mem=64GB
 #SBATCH --gres=gpu:L40S:1
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --partition=general
+#SBATCH --partition=preempt
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
-#SBATCH --array=0-7
+##SBATCH --array=8-15
 ##SBATCH --account=siqiouya
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=siqiouya@andrew.cmu.edu
 #SBATCH -e slurm_logs/%A-%a.err
 #SBATCH -o slurm_logs/%A-%a.out
 
-source /home/siqiouya/anaconda3/bin/activate speechllama2
+source /home/siqiouya/anaconda3/bin/activate speechllama
 
-ckpt_dir=/compute/babel-5-23/siqiouya/runs/8B-traj-s2-v3.2/last.ckpt/
+ckpt_dir=/compute/babel-5-23/siqiouya/runs/8B-traj-s2-v3.0/last.ckpt/
 src_segment_size=960
 latency_multiplier=1
 max_llm_cache_size=4000
 beam=1
-top_p=0.9
-top_k=0
-temperature=0.7
 ms=0
 
 export PYTHONPATH=/home/siqiouya/work/sllama
@@ -39,7 +36,7 @@ simuleval \
     --min-start-sec ${ms} \
     --source /compute/babel-14-5/siqiouya/en-zh/dev_fa_traj_45.source \
     --target /compute/babel-14-5/siqiouya/en-zh/dev_fa_traj_45.target \
-    --output ${ckpt_dir}/sampling_dev_for_qe/cache${max_llm_cache_size}_seg${src_segment_size}_beam${beam}_ms${ms}_topp${top_p}_topk${top_k}_temp${temperature}/${SLURM_ARRAY_TASK_ID} \
+    --output ${ckpt_dir}/greedy_dev_for_qe/cache${max_llm_cache_size}_seg${src_segment_size}_beam${beam}_ms${ms}/ \
     --w2v2-path /data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt \
     --w2v2-type w2v2 \
     --ctc-finetuned \
@@ -57,10 +54,6 @@ simuleval \
     --beam ${beam} \
     --no-repeat-ngram-size 3 \
     --repetition-penalty 1.2 \
-    --do-sample \
-    --top-p ${top_p} \
-    --top-k ${top_k} \
-    --temperature ${temperature} \
     \
     --model-name /compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf \
     --state-dict-path ${ckpt_dir}/pytorch_model.bin \

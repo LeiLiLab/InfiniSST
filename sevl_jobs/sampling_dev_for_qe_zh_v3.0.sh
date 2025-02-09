@@ -17,7 +17,7 @@
 #SBATCH -e slurm_logs/%A-%a.err
 #SBATCH -o slurm_logs/%A-%a.out
 
-source /home/siqiouya/anaconda3/bin/activate speechllama2
+source /home/siqiouya/anaconda3/bin/activate speechllama
 
 ckpt_dir=/compute/babel-5-23/siqiouya/runs/8B-traj-s2-v3.0/last.ckpt/
 src_segment_size=960
@@ -26,6 +26,7 @@ max_llm_cache_size=4000
 beam=1
 top_p=0.9
 top_k=0
+epsilon_cutoff=0.0
 temperature=0.7
 ms=0
 
@@ -60,6 +61,7 @@ simuleval \
     --do-sample \
     --top-p ${top_p} \
     --top-k ${top_k} \
+    --epsilon-cutoff ${epsilon_cutoff} \
     --temperature ${temperature} \
     \
     --model-name /compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf \
