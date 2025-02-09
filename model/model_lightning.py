@@ -182,11 +182,13 @@ class SLlamaLightning(L.LightningModule):
         # if self.data_args.trajectory >= 1:
         #     data_collator.validate(train_dataset)
 
+        logger.info("train_bsz: {}, bsz_sent: {}".format(self.training_args.train_bsz, self.training_args.bsz_sent))
+
         train_sampler = SpeechSampler(
             train_dataset, 
             shuffle=True, 
             batch_size=self.training_args.train_bsz, 
-            batch_size_sent=20,
+            batch_size_sent=self.training_args.bsz_sent,
             min_ms=320,
             multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
             filter=True,
@@ -222,10 +224,10 @@ class SLlamaLightning(L.LightningModule):
             eval_dataset, 
             shuffle=False, 
             batch_size=self.training_args.eval_bsz, 
-            batch_size_sent=20,
+            batch_size_sent=self.training_args.bsz_sent,
             min_ms=320,
             multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
-            filter=False,
+            filter=True,
             tokenizer=self.tokenizer,
         )
         eval_dataloader = DataLoader(
@@ -300,7 +302,7 @@ class SLlamaLightning(L.LightningModule):
         }
     
     def forward(self, batch):
-        # logger.info("batch size: {}".format(batch['input_ids'].size()))
+        logger.info("device: {}, batch size: {}".format(self.device, batch['input_ids'].size()))
         output = self.model(
             **batch,
             return_dict=True
