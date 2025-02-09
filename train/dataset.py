@@ -8,6 +8,8 @@ import csv
 import io
 import logging
 import re
+import time
+import random
 import copy
 import torch.nn.functional as F
 from collections import defaultdict
@@ -112,9 +114,15 @@ class PromptSpeechToTextDataset(SpeechToTextDataset):
     def __getitem__(
         self, index: int
     ) -> Tuple[int, torch.Tensor, Optional[torch.Tensor]]:
-        source, sr = get_features_or_waveform(
-            self.audio_paths[index],
-        )
+        while True:
+            try:
+                source, sr = get_features_or_waveform(
+                    self.audio_paths[index],
+                )
+                break  # Exit the loop if successful
+            except Exception as e:
+                time.sleep(random.uniform(0, 1))  # Sleep for a random time <= 1 second
+
         source = torch.from_numpy(source).float()
         # with torch.no_grad():
         #     source = F.layer_norm(source, source.shape)
@@ -217,10 +225,10 @@ class SpeechSampler(DistributedSampler):
         for idx in range(len(self.dataset)):
             sp_seg_frame = int(12 * 0.08 * 16000)
             n_seg = (self.dataset.n_frames[idx] + sp_seg_frame - 1) // sp_seg_frame
-            eff_size = n_seg * 5 * 2 # text headers
+            eff_size = n_seg * 5 * 2 # headers
             eff_size += n_seg * 12 # speech features
             eff_size += len(tokenizer(self.dataset.tgt_texts[idx], add_special_tokens=False).input_ids) # text tokens
-            eff_size += 35 # beginning prompt
+            eff_size += 39 # beginning prompt
             eff_sizes.append((eff_size, idx))
 
         sorted_eff_sizes = sorted(eff_sizes)
@@ -647,8 +655,12 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
         speech_lens = self.length_shrink_func(n_frames)
 
         for x in samples:
-            if type(x.trajectory[0]) == str:
-                x.trajectory = [[seg, True] for seg in x.trajectory]
+            try:
+                if type(x.trajectory[0]) == str:
+                    x.trajectory = [[seg, True] for seg in x.trajectory]
+            except:
+                print(x)
+                raise KeyError
 
         mode = np.random.choice(['opt', 'aug', 'off'], p=self.perturb)
         for x in samples:
@@ -785,11 +797,7 @@ class DataCollatorForTrajectoryInstructMultiLatencyDataset(DataCollatorForTrajec
     def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
         indices = torch.tensor([x.index for x in samples], dtype=torch.long)
 
-        if self.trainer is not None:
-            multiplier = self.trainer.global_step % self.max_multiplier + 1
-            logger.info(f"multiplier: {multiplier}")
-        else:
-            multiplier = np.random.randint(1, self.max_multiplier + 1)
+        multiplier = np.random.randint(1, self.max_multiplier + 1)
         latency_token = DEFAULT_LATENCY_TOKEN.format(multiplier)
 
         # pad to multiple
@@ -823,7 +831,7 @@ class DataCollatorForTrajectoryInstructMultiLatencyDataset(DataCollatorForTrajec
                 new_traj.append([partial_translation, True])
             x.trajectory = new_traj
 
-        if np.random.rand() < self.prob_aug:
+        if np.random.rand() < self.prob_aug: # only zh
             for x in samples:
                 traj = x.trajectory
 
