@@ -21,7 +21,6 @@
 source /home/siqiouya/anaconda3/bin/activate speechllama
 
 llm_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf
-sllm_weight_path=/compute/babel-5-23/siqiouya/runs/8B-bi-s1-v3.0/last.ckpt/
 w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
 # w2v2_path=/data/user_data/siqiouya/runs/pretrained/hubert_large_ll60k_finetune_ls960.pt
 w2v2_type=w2v2
@@ -29,18 +28,18 @@ ctc_finetuned=True
 # data_path=/scratch/xixu/dataset/must-c-v1.0/en-es
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-fr
-data_path=/compute/babel-14-5/siqiouya/en-zh/
+data_path=/compute/babel-14-5/siqiouya/en-de/
 
 source_lang="English"
-target_lang="Chinese"
-name="8B-bi-s2-v3.0"
-save_path=/compute/babel-5-23/siqiouya/runs/$name
+target_lang="German"
+name="8B-traj-s1-v3.5"
+save_path=/compute/babel-5-23/siqiouya/runs/en-de/$name
 rm -rf ${save_path}
 mkdir -p ${save_path}
 
 export PYTHONPATH=/home/siqiouya/work/sllama
 export TOKENIZERS_PARALLELISM=false
-export WANDB_PROJECT="mustc_1.0_zh"
+export WANDB_PROJECT="mustc_1.0_de"
 export WANDB_ENTITY="streamllama"
 
 export NCCL_P2P_DISABLE=1
@@ -53,35 +52,39 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     \
     --w2v2_path ${w2v2_path} \
     --w2v2_type ${w2v2_type} \
-    --w2v2_freeze True \
     --ctc_finetuned ${ctc_finetuned} \
     --length_shrink_cfg "[(1024,2,2)] * 2" \
-    --block_size 10000000 \
-    --max_cache_size 10000000 \
+    --block_size 48 \
+    --max_cache_size 480 \
     --xpos False \
     \
     --llm_path ${llm_path} \
-    --sllm_weight_path ${sllm_weight_path}/pytorch_model.bin \
+    --llm_freeze True \
+    --llm_emb_freeze True \
+    --llm_head_freeze True \
     \
     --data_path ${data_path} \
-    --data_split_train 'comet_0.50_traj_45' \
-    --data_split_eval 'dev_traj_45' \
+    --data_split_train 'train_st_de_nospeaker_traj_30_filtered' \
+    --data_split_eval 'dev_st_de_nospeaker_traj_30_filtered' \
     --source_lang "${source_lang}" \
     --target_lang "${target_lang}" \
-    --trajectory 1 \
+    --trajectory 4 \
+    --trajectory_max_multiplier 4 \
+    --trajectory_prob_aug 0.0 \
     \
     --seed 998244353 \
-    --stage 2 \
-    --train_bsz 1000 \
-    --eval_bsz 1000 \
-    --learning_rate 7e-6 \
-    --warmup_steps 100 \
+    --stage 1 \
+    --train_bsz 1700 \
+    --eval_bsz 1700 \
+    --bsz_sent 2 \
+    --learning_rate 2e-4 \
+    --warmup_steps 1000 \
     --run_name $name \
     \
     --n_device ${SLURM_GPUS} \
     --deepspeed_stage 2 \
-    --max_epochs 1 \
-    --grad_acc_steps 6 \
+    --max_epochs 6 \
+    --grad_acc_steps 4 \
     --clip_norm 1.0 \
     --save_dir ${save_path} \
     --log_step 5 \
