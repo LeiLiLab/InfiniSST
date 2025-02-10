@@ -1,4 +1,4 @@
-llm_model=/compute/babel-5-23/siqiouya/runs/8B-s2-v3.1-bi/last.ckpt/
+llm_model=/compute/babel-5-23/siqiouya/runs/en-zh/8B-s2-bi-v3.5/last.ckpt/
 # llm_model=/compute/babel-5-23/siqiouya/runs/8B-traj-s2-v2.2/last.ckpt/
 w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
 # w2v2_path=/data/user_data/siqiouya/runs/pretrained/hubert_large_ll60k_finetune_ls960.pt
@@ -12,7 +12,7 @@ source_lang=English
 target_lang=Chinese
 xpos=0
 
-beam=1
+beam=4
 
 # python /home/siqiouya/work/sllama/train/zero_to_fp32.py ${llm_model} ${llm_model}/pytorch_model.bin
 # python /home/siqiouya/work/sllama/train/prune_bin.py ${llm_model}/pytorch_model.bin
@@ -60,7 +60,7 @@ python /home/siqiouya/work/sllama/eval/test_dataset_instruct.py \
     \
     --beam ${beam} \
     --result ${llm_model}/offline_beam${beam} \
-    --batch-size 3000 \
+    --batch-size 2500 \
     \
     --source-lang ${source_lang} \
     --target-lang ${target_lang}
