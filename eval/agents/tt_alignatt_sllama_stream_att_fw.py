@@ -23,7 +23,7 @@ from model.utils import SpaceStoppingCriteria, KeywordsStoppingCriteria
 # from train.uni_wav2vec_monkey_patch import replace_uni_train
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 
-from eval.agents.tt_alignatt_sllama import AlignAtt, S2TAgentStates
+from eval.agents.tt_alignatt_sllama3 import AlignAttSpeechLlama3 as AlignAtt, AlignAttStates as S2TAgentStates
 
 @entrypoint
 class AlignAttStreamAttFW(AlignAtt):
@@ -44,18 +44,20 @@ class AlignAttStreamAttFW(AlignAtt):
             if len(states.target_ids) > self.preserve_t or len(states.source) > self.preserve_s:
                 states.target_ids = states.target_ids[-self.preserve_t:]
                 states.most_attended_indices = states.most_attended_indices[-self.preserve_t:]
-
+                # bug for n pop
                 n_pop = 0
+                # print("most attended indices:", len(states.most_attended_indices))
                 for i, idx in enumerate(states.most_attended_indices):
                     if len(states.source) - idx >= self.preserve_s:
                         n_pop = i + 1
                 states.most_attended_indices = states.most_attended_indices[n_pop:]
                 states.target_ids = states.target_ids[n_pop:]
-
+                # print("n_pop:", n_pop)
+                # print("most attended history indices:", len(states.most_attended_indices))
                 if len(states.most_attended_indices) > 0:
-                    index = states.most_attended_indices.min()
+                    index = states.most_attended_indices.min() # earliest index; discard eos
                     states.source = states.source[index:]
-                    states.most_attended_indices -= index
+                    # states.most_attended_indices -= index
                 else:
                     states.source = states.source[-self.preserve_s:]
 
