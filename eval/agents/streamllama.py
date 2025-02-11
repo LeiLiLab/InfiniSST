@@ -12,11 +12,11 @@ from simuleval.agents.actions import WriteAction, ReadAction
 from simuleval.agents.states import AgentStates
 from dataclasses import dataclass
 
-import numpy
+import numpy as np
 import torch
 import torch.nn.functional as F
 import transformers
-
+from tqdm import tqdm
 import conversation as conversation_lib
 from conversation import SeparatorStyle
 from eval.utils import disable_torch_init
@@ -41,6 +41,9 @@ from train.dataset import (
     DEFAULT_SPEECH_END_TOKEN,
     DEFAULT_LATENCY_TOKEN
 )
+
+import logging
+logger = logging.getLogger(__name__)
 
 def synchronized_timer(description: str):
     @contextlib.contextmanager
@@ -78,7 +81,7 @@ class StreamLlama(SpeechToTextAgent):
 
     def __init__(self, args):
         super().__init__(args)
-        transformers.set_seed(998244353)
+        # transformers.set_seed(998244353)
 
         # simuleval
         self.min_start_sec = args.min_start_sec
@@ -89,15 +92,25 @@ class StreamLlama(SpeechToTextAgent):
         
         # gen
         self.beam = args.beam
-        assert self.beam == 1 # only support beam=1 for now due to the implementation of HF beam search
+        # assert self.beam == 1 # only support beam=1 for now due to the implementation of HF beam search
+        self.no_repeat_ngram_lookback = args.no_repeat_ngram_lookback
         self.no_repeat_ngram_size = args.no_repeat_ngram_size
         self.repetition_penalty = args.repetition_penalty
         self.max_len_a = args.max_len_a
         self.max_len_b = args.max_len_b
+        self.max_new_tokens = args.max_new_tokens
+        self.do_sample = args.do_sample
+        self.top_p = args.top_p
+        self.top_k = args.top_k
+        self.epsilon_cutoff = args.epsilon_cutoff
+        self.temperature = args.temperature
+
+        logger.info(f"max_new_tokens: {self.max_new_tokens}")
 
         # cache
         self.max_llm_cache_size = args.max_llm_cache_size
         self.always_cache_system_prompt = args.always_cache_system_prompt
+        self.cache_checkpoints = []
         
         # Add DPO sampling flag
         self.dpo_sampling = args.dpo_sampling
@@ -123,6 +136,13 @@ class StreamLlama(SpeechToTextAgent):
             use_fast=False,
         )
         self.tokenizer.pad_token = "<|finetune_right_pad_id|>"
+
+        self.bad_words_ids = []
+        # bad_words = ['(', '（']
+        # for idx in tqdm(range(len(self.tokenizer)), desc="Obtaining bad words ids"):
+        #     decoded_token = self.tokenizer.decode(idx, skip_special_tokens=True)
+        #     if any(bad_word in decoded_token for bad_word in bad_words):
+        #         self.bad_words_ids.append(idx)
 
         self.model = SpeechLlamaForCausalLM.from_pretrained(
             args.model_name,
@@ -235,8 +255,10 @@ class StreamLlama(SpeechToTextAgent):
             truncation=False, 
             add_special_tokens=False
         )[:, :-1]
+        # to remove system prompt and preserve last EOT
+        # TODO: modify for llama-3-8B-instruct
         if states.speech_cache is not None:
-            input_ids = input_ids[:, 25:] # to remove system prompt
+            input_ids = input_ids[:, 25:] 
         input_ids = input_ids.cuda()
         return input_ids
 
@@ -261,32 +283,50 @@ class StreamLlama(SpeechToTextAgent):
             speech_batch = self._prepare_speech(states)
             input_ids = self._prepare_inputs(states)
             
+            
+            max_number_of_tokens = int(length_in_seconds * self.max_len_a + self.max_len_b)
+
+
             max_number_of_tokens = int(length_in_seconds * self.max_len_a + self.max_len_b)
 
             if states.source_finished:
-                states.segment_idx = -1
+                states.segment_idx = -1            
 
             self.model.model.speech_features_extracted = False
             outputs = self.model.generate(
                 attention_mask=None,
                 input_ids=input_ids,
                 speech_batch=speech_batch,
-                do_sample=False,
-                top_p=1.0,
-                temperature=1.0,
+                do_sample=self.do_sample,
+                top_p=self.top_p,
+                top_k=self.top_k,
+                epsilon_cutoff=self.epsilon_cutoff,
+                temperature=self.temperature,
                 num_beams=self.beam,
-                max_new_tokens=max(1, max_number_of_tokens - len(states.target_ids)),
+                # /home/siqiouya/anaconda3/envs/speechllama/lib/python3.9/site-packages/transformers/generation/beam_search.py
+                max_new_tokens=self.max_new_tokens,
+                num_return_sequences=1,
+                # this needs modifying the code of HF greedy search
+                # /home/siqiouya/anaconda3/envs/speechllama/lib/python3.9/site-packages/transformers/generation/utils.py
+                encoder_input_ids=torch.tensor(states.target_ids[-self.no_repeat_ngram_lookback:]).unsqueeze(0).to(self.model.device),
+                encoder_no_repeat_ngram_size=self.no_repeat_ngram_size,
                 no_repeat_ngram_size=self.no_repeat_ngram_size,
+                # encoder_repetition_penalty=self.repetition_penalty,
                 repetition_penalty=self.repetition_penalty,
                 pad_token_id=self.tokenizer.pad_token_id,
                 return_dict_in_generate=True,
                 return_legacy_cache=False,
                 use_cache=True,
                 past_key_values=states.past_key_values,
+                suppress_tokens=self.bad_words_ids,
                 states=states,
             )
 
             states.past_key_values = outputs.past_key_values
+            if self.beam > 1:
+                states.past_key_values = states.past_key_values[0]
+            cur_llm_cache_size = states.past_key_values[0][0].size(2)
+            self.cache_checkpoints.append(cur_llm_cache_size)
 
             # cut cache
             # max_total_cache_size = self.max_llm_cache_size
@@ -301,6 +341,28 @@ class StreamLlama(SpeechToTextAgent):
             #             v_cache = torch.cat([v[:, :, :self.system_prompt_size], v_cache], dim=2)
             #         states.past_key_values.key_cache[i] = k_cache
             #         states.past_key_values.value_cache[i] = v_cache
+            if cur_llm_cache_size > self.max_llm_cache_size:
+                new_llm_cache_size = 0
+                for i, ckpt in enumerate(self.cache_checkpoints):
+                    new_llm_cache_size = cur_llm_cache_size - ckpt
+                    if new_llm_cache_size <= self.max_llm_cache_size:
+                        self.cache_checkpoints = self.cache_checkpoints[i + 1:]
+                        n_cache_trimmed = ckpt
+                        if self.always_cache_system_prompt:
+                            n_cache_trimmed -= self.system_prompt_size
+                        self.cache_checkpoints = [
+                            ckpt - n_cache_trimmed for ckpt in self.cache_checkpoints
+                        ]
+                        break
+
+                for i, (k, v) in enumerate(states.past_key_values):
+                    k_cache = k[:, :, -new_llm_cache_size:]
+                    v_cache = v[:, :, -new_llm_cache_size:]
+                    if self.always_cache_system_prompt:
+                        k_cache = torch.cat([k[:, :, :self.system_prompt_size], k_cache], dim=2)
+                        v_cache = torch.cat([v[:, :, :self.system_prompt_size], v_cache], dim=2)
+                    states.past_key_values.key_cache[i] = k_cache
+                    states.past_key_values.value_cache[i] = v_cache
 
         output_ids = outputs.sequences[0, input_ids.size(1):-1].tolist()
         
@@ -320,6 +382,9 @@ class StreamLlama(SpeechToTextAgent):
                     states.translations_list = []
                 except Exception as e:
                     print(f"Error writing translations to file: {e}")
+        # print(f"{length_in_seconds / 60:.2f}", ':', self.tokenizer.decode(states.target_ids))
+        # print(f"Speech length in minutes: {length_in_seconds / 60:.2f}")
+        print(states.past_key_values[0][0].size(2), ' '.join(states.target))
 
         # print(states.segment_idx, ":", translation)
         states.segment_idx += 1
