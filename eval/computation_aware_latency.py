@@ -7,7 +7,6 @@ from natsort import natsorted
 import sacrebleu
 from simuleval.evaluator.instance import Instance
 from simuleval.evaluator.scorers.latency_scorer import LAALScorer
-from fairseq.examples.speech_to_text.data_utils import load_df_from_tsv
 from comet import download_model, load_from_checkpoint
 
 parser = argparse.ArgumentParser()
