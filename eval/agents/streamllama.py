@@ -52,7 +52,7 @@ def synchronized_timer(description: str):
         if torch.cuda.is_available():
             torch.cuda.synchronize()
         elapsed_time = perf_counter() - start
-        print(f"{description}: {elapsed_time:.4f} seconds")
+        # print(f"{description}: {elapsed_time:.4f} seconds")
     return timer_with_sync()
 
 @dataclass
@@ -62,6 +62,7 @@ class S2TAgentStates(AgentStates):
     past_key_values: None
     target_ids: list
     segment_idx: int
+    translations_list: list
 
     def reset(self):
         super().reset()
@@ -70,6 +71,7 @@ class S2TAgentStates(AgentStates):
         self.past_key_values = None
         self.target_ids = []
         self.segment_idx = 0
+        self.translations_list = []
 
 @entrypoint
 class StreamLlama(SpeechToTextAgent):
@@ -97,11 +99,22 @@ class StreamLlama(SpeechToTextAgent):
         self.max_llm_cache_size = args.max_llm_cache_size
         self.always_cache_system_prompt = args.always_cache_system_prompt
         
+        # Add DPO sampling flag
+        self.dpo_sampling = args.dpo_sampling
+        self.output_file = args.output_file if hasattr(args, 'output_file') else 'translations.json'
+        
         # model
         self.load_model(args)
 
     def build_states(self):
-        return S2TAgentStates(0, None, None, [], 0)
+        return S2TAgentStates(
+            src_len=0,
+            speech_cache=None,
+            past_key_values=None,
+            target_ids=[],
+            segment_idx=0,
+            translations_list=[]
+        )
 
     def load_model(self, args):
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
@@ -145,7 +158,7 @@ class StreamLlama(SpeechToTextAgent):
         self.length_shrink_func = speech_encoder._get_feat_extract_output_lengths
         
         self.model.model.speech_encoder = speech_encoder
-        self.model.preprocess(tokenizer=self.tokenizer)
+        self.model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.latency_multiplier)
 
         state_dict = torch.load(args.state_dict_path, map_location='cpu', weights_only=True)
         self.model.load_state_dict(state_dict)
@@ -159,9 +172,11 @@ class StreamLlama(SpeechToTextAgent):
         add_gen_args(parser)
         parser.add_argument("--model-name", type=str, default="facebook/opt-350m")
         parser.add_argument("--state-dict-path", type=str, default=None)
-        parser.add_argument("--latency-multiplier", type=int, default=1)
+        parser.add_argument("--latency-multiplier", type=int, default=4)
         parser.add_argument("--max-llm-cache-size", type=int, default=10000)
         parser.add_argument("--always-cache-system-prompt", action='store_true') # LLM-Inf
+        parser.add_argument("--dpo-sampling", action='store_true', help="Enable storing sampling for DPO")
+        parser.add_argument("--output-file", type=str, default="translations.json", help="Output file for sampling")
 
     def _prepare_speech(self, states):
         sp_seg_frame = int(self.args.block_size // 4 * 0.08 * 16000)
@@ -274,27 +289,39 @@ class StreamLlama(SpeechToTextAgent):
             states.past_key_values = outputs.past_key_values
 
             # cut cache
-            max_total_cache_size = self.max_llm_cache_size
-            if self.always_cache_system_prompt:
-                max_total_cache_size += self.system_prompt_size
-            if states.past_key_values[0][0].size(2) > max_total_cache_size:
-                for i, (k, v) in enumerate(states.past_key_values):
-                    k_cache = k[:, :, -self.max_llm_cache_size:]
-                    v_cache = v[:, :, -self.max_llm_cache_size:]
-                    if self.always_cache_system_prompt:
-                        k_cache = torch.cat([k[:, :, :self.system_prompt_size], k_cache], dim=2)
-                        v_cache = torch.cat([v[:, :, :self.system_prompt_size], v_cache], dim=2)
-                    states.past_key_values.key_cache[i] = k_cache
-                    states.past_key_values.value_cache[i] = v_cache
+            # max_total_cache_size = self.max_llm_cache_size
+            # if self.always_cache_system_prompt:
+            #     max_total_cache_size += self.system_prompt_size
+            # if states.past_key_values[0][0].size(2) > max_total_cache_size:
+            #     for i, (k, v) in enumerate(states.past_key_values):
+            #         k_cache = k[:, :, -self.max_llm_cache_size:]
+            #         v_cache = v[:, :, -self.max_llm_cache_size:]
+            #         if self.always_cache_system_prompt:
+            #             k_cache = torch.cat([k[:, :, :self.system_prompt_size], k_cache], dim=2)
+            #             v_cache = torch.cat([v[:, :, :self.system_prompt_size], v_cache], dim=2)
+            #         states.past_key_values.key_cache[i] = k_cache
+            #         states.past_key_values.value_cache[i] = v_cache
 
         output_ids = outputs.sequences[0, input_ids.size(1):-1].tolist()
         
         states.target_ids.extend(output_ids)
         translation = self.tokenizer.decode(output_ids, skip_special_tokens=True).strip()
 
-        # print(f"{length_in_seconds / 60:.2f}", ':', self.tokenizer.decode(states.target_ids))
-        print(f"Speech length in minutes: {length_in_seconds / 60:.2f}")
+        if self.dpo_sampling:
+            # Format translation with single quotes and proper UTF-8
+            formatted_translation = f"'{translation}'" if translation else "''"
+            states.translations_list.append(formatted_translation)
+            
+            if states.source_finished:
+                try:
+                    with open(self.output_file, 'a', encoding='utf-8') as f:
+                        formatted_list = f"[{', '.join(states.translations_list)}]"
+                        f.write(formatted_list + '\n')
+                    states.translations_list = []
+                except Exception as e:
+                    print(f"Error writing translations to file: {e}")
 
+        # print(states.segment_idx, ":", translation)
         states.segment_idx += 1
 
         if translation != '' or states.source_finished:
