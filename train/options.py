@@ -53,6 +53,11 @@ def add_gen_args(parser):
         default=1
     )
     parser.add_argument(
+        "--no-repeat-ngram-lookback",
+        type=int,
+        default=100
+    )
+    parser.add_argument(
         "--no-repeat-ngram-size",
         type=int,
         default=3
@@ -61,6 +66,35 @@ def add_gen_args(parser):
         "--repetition-penalty",
         type=float,
         default=1.2
+    )
+    parser.add_argument(
+        "--max-new-tokens",
+        type=int,
+        default=1000
+    )
+    parser.add_argument(
+        "--do-sample",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--top-p",
+        type=float,
+        default=1.0,
+    )
+    parser.add_argument(
+        "--top-k",
+        type=int,
+        default=0,
+    )
+    parser.add_argument(
+        "--epsilon-cutoff",
+        type=float,
+        default=0.0,
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=1.0,
     )
 
 def add_simuleval_args(parser):

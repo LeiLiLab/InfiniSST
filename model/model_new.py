@@ -33,8 +33,12 @@ from train.dataset import (
     DEFAULT_SPEECH_PATCH_TOKEN,
     DEFAULT_SPEECH_START_TOKEN,
     DEFAULT_SPEECH_END_TOKEN,    
-    DEFAULT_LATENCY_TOKEN
+    DEFAULT_LATENCY_TOKEN,
+    IGNORE_INDEX
 )
+
+import logging
+logger = logging.getLogger(__name__)
 
 class SpeechLlamaConfig(LlamaConfig):
     model_type = "SpeechLlama"
@@ -178,6 +182,12 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
             ], 
             special_tokens=True
         )
+        if tokenizer.pad_token_id is None:
+            logger.info("No pad token found, adding it")
+            tokenizer.add_tokens(
+                [tokenizer.pad_token],
+                special_tokens=True
+            )
         self.resize_token_embeddings(len(tokenizer), mean_resizing=True)
 
         sp_patch_token_id, sp_start_token_id, sp_end_token_id = \
@@ -254,79 +264,21 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
             shift_logits = logits[..., :-1, :].contiguous()
             shift_labels = labels[..., 1:].contiguous()
             # Flatten the tokens
-            loss_fct = CrossEntropyLoss()
-            shift_logits = shift_logits.view(-1, self.config.vocab_size)
-            shift_labels = shift_labels.view(-1)
-            # Enable model/pipeline parallelism
-            shift_labels = shift_labels.to(shift_logits.device)
-            loss = loss_fct(shift_logits, shift_labels)
+            loss_fct = CrossEntropyLoss(reduction='none')
+            loss = loss_fct(shift_logits.transpose(-1, -2), shift_labels)
 
-        if getattr(self, "rdrop", 0.) != 0:
-            with torch.no_grad():
-                outputs_2 = self.model(
-                    input_ids=input_ids,
-                    attention_mask=attention_mask,
-                    past_key_values=past_key_values,
-                    inputs_embeds=inputs_embeds,
-                    use_cache=use_cache,
-                    output_attentions=output_attentions,
-                    output_hidden_states=output_hidden_states,
-                    return_dict=return_dict,
-                    speech_batch=speech_batch,
-                    src_lengths=src_lengths,
-                    after_lens=after_lens,
-                    states=states,
-                )
-
-                hidden_states_2 = outputs_2[0]
-                logits_2 = self.lm_head(hidden_states_2)
-
-            log_probs = F.log_softmax(logits, dim=-1)
-            log_probs_2 = F.log_softmax(logits_2, dim=-1)
-
-            rdrop_loss_fct = nn.KLDivLoss(log_target=True)
-            rdrop_loss = rdrop_loss_fct(log_probs, log_probs_2) + \
-                rdrop_loss_fct(log_probs_2, log_probs)
-            # print(loss, rdrop_loss)
-            loss = loss + self.rdrop * rdrop_loss
-
-        if getattr(self, "text_weight", 0.) != 0:
-            outputs_3 = self.model(
-                input_ids=text_input_ids,
-                attention_mask=text_attention_mask,
-                past_key_values=past_key_values,
-                inputs_embeds=inputs_embeds,
-                use_cache=use_cache,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-                states=states,
-            )
-
-            hidden_states_3 = outputs_3[0]
-            logits_3 = self.lm_head(hidden_states_3)
-
-            loss_3 = None
-            if text_labels is not None:
-                # Shift so that tokens < n predict n
-                shift_logits_3 = logits_3[..., :-1, :].contiguous()
-                shift_labels_3 = text_labels[..., 1:].contiguous()
-                # Flatten the tokens
-                loss_fct = CrossEntropyLoss()
-                shift_logits_3 = shift_logits_3.view(-1, self.config.vocab_size)
-                shift_labels_3 = shift_labels_3.view(-1)
-                # Enable model/pipeline parallelism
-                shift_labels_3 = shift_labels_3.to(shift_logits_3.device)
-                loss_3 = loss_fct(shift_logits_3, shift_labels_3)
-
-            if wandb.run is not None:
-                log_key = "mt_train_loss" if self.training else "mt_eval_loss"
-                wandb.log({log_key: loss_3.item()})
-
-            loss = loss + self.text_weight * loss_3
-
-        # print(loss, self.training)
-
+            if self.cpo_beta > 0:
+                bsz = labels.size(0) // 2
+                loss = loss.sum(dim=-1)
+                logp_w = -loss[:bsz]
+                logp_l = -loss[bsz:]
+                cpo_loss = -F.logsigmoid(self.cpo_beta * (logp_w - logp_l)).mean()
+                nll_loss = -logp_w.sum() / (shift_labels[:bsz] != IGNORE_INDEX).sum()
+                loss = nll_loss + cpo_loss
+                logger.info("nll_loss {:.2f} cpo_loss {:.2f}".format(nll_loss.item(), cpo_loss.item()))
+            else:
+                loss = loss.sum() / (shift_labels != IGNORE_INDEX).sum()
+            
         if not return_dict:
             output = (logits,) + outputs[1:]
             return (loss,) + output if loss is not None else output

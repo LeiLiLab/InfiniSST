@@ -165,7 +165,7 @@ def eval_model(args):
                 num_beams=args.beam,
                 max_new_tokens=max_new_tokens,
                 # stopping_criteria=[stopping_criteria],
-                no_repeat_ngram_size=3,          
+                no_repeat_ngram_size=5,          
                 repetition_penalty=1.2,          
                 length_penalty=1.0,
                 pad_token_id=tokenizer.pad_token_id,

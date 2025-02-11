@@ -102,6 +102,10 @@ class DataArguments:
         default=1,
         metadata={"help": "Maximum multiplier for trajectory"}
     )
+    preference_optimization_max_multiplier: int = field(
+        default=1,
+        metadata={"help": "Maximum multiplier for preference optimization"}
+    )
     trajectory_prob_aug: float = field(
         default=0.0,
         metadata={"help": "Probability of augmentation for trajectory"}
@@ -115,12 +119,15 @@ class TrainingArguments:
     text_weight: float = field(default=0.)
     train_bsz: int = field(default=8) # in terms of number of frames
     eval_bsz: int = field(default=8) # in terms of number of frames
+    bsz_sent: int = field(default=3) # in terms of number of sentences
     learning_rate: float = field(default=2e-4)
     scheduler: str = field(default="cosine")
     min_learning_rate: float = field(default=0.)
     weight_decay: float = field(default=0.)
     warmup_steps: int = field(default=400)
     run_name: str = field(default=None)
+
+    cpo_beta: float = field(default=0.0)
 
     n_device: int = field(default=1)
     deepspeed_stage: int = field(default=2)
@@ -209,7 +216,7 @@ def train():
 
     # start training
     if os.path.exists(training_args.save_dir) and len(os.listdir(training_args.save_dir)) >= 1:
-        ckpt_path = os.path.join(training_args.save_dir, 'last.ckpt')
+        ckpt_path = os.path.join(training_args.save_dir, 'last.ckpt', 'checkpoint')
         trainer.fit(model_lightning, ckpt_path=ckpt_path)
     else:
         trainer.fit(model_lightning)
