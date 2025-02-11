@@ -182,6 +182,12 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
             ], 
             special_tokens=True
         )
+        if tokenizer.pad_token_id is None:
+            logger.info("No pad token found, adding it")
+            tokenizer.add_tokens(
+                [tokenizer.pad_token],
+                special_tokens=True
+            )
         self.resize_token_embeddings(len(tokenizer), mean_resizing=True)
 
         sp_patch_token_id, sp_start_token_id, sp_end_token_id = \
