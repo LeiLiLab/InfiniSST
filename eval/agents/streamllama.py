@@ -55,7 +55,7 @@ def synchronized_timer(description: str):
         if torch.cuda.is_available():
             torch.cuda.synchronize()
         elapsed_time = perf_counter() - start
-        # print(f"{description}: {elapsed_time:.4f} seconds")
+        print(f"{description}: {elapsed_time:.4f} seconds")
     return timer_with_sync()
 
 @dataclass
@@ -87,6 +87,7 @@ class StreamLlama(SpeechToTextAgent):
         self.min_start_sec = args.min_start_sec
         self.source_segment_size = args.source_segment_size
         self.latency_multiplier = args.latency_multiplier
+        self.max_latency_multiplier = args.max_latency_multiplier
         self.source_lang = args.source_lang
         self.target_lang = args.target_lang
         
@@ -178,12 +179,13 @@ class StreamLlama(SpeechToTextAgent):
         self.length_shrink_func = speech_encoder._get_feat_extract_output_lengths
         
         self.model.model.speech_encoder = speech_encoder
-        self.model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.latency_multiplier)
+        self.model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.max_latency_multiplier)
 
         state_dict = torch.load(args.state_dict_path, map_location='cpu', weights_only=True)
         self.model.load_state_dict(state_dict)
         self.model.model.inference = True
 
+        self.llama31 = '3.1' in args.model_name
 
     @staticmethod
     def add_args(parser):
@@ -193,6 +195,7 @@ class StreamLlama(SpeechToTextAgent):
         parser.add_argument("--model-name", type=str, default="facebook/opt-350m")
         parser.add_argument("--state-dict-path", type=str, default=None)
         parser.add_argument("--latency-multiplier", type=int, default=4)
+        parser.add_argument("--max-latency-multiplier", type=int, default=4)
         parser.add_argument("--max-llm-cache-size", type=int, default=10000)
         parser.add_argument("--always-cache-system-prompt", action='store_true') # LLM-Inf
         parser.add_argument("--dpo-sampling", action='store_true', help="Enable storing sampling for DPO")
@@ -258,7 +261,10 @@ class StreamLlama(SpeechToTextAgent):
         # to remove system prompt and preserve last EOT
         # TODO: modify for llama-3-8B-instruct
         if states.speech_cache is not None:
-            input_ids = input_ids[:, 25:] 
+            if self.llama31:
+                input_ids = input_ids[:, 25:] 
+            else:
+                input_ids[:, 0] = self.tokenizer.eos_token_id
         input_ids = input_ids.cuda()
         return input_ids
 
@@ -282,12 +288,6 @@ class StreamLlama(SpeechToTextAgent):
         with synchronized_timer('generate'):
             speech_batch = self._prepare_speech(states)
             input_ids = self._prepare_inputs(states)
-            
-            
-            max_number_of_tokens = int(length_in_seconds * self.max_len_a + self.max_len_b)
-
-
-            max_number_of_tokens = int(length_in_seconds * self.max_len_a + self.max_len_b)
 
             if states.source_finished:
                 states.segment_idx = -1            
