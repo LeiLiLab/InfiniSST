@@ -10,6 +10,7 @@ from simuleval.agents.actions import WriteAction, ReadAction
 from simuleval.agents.states import AgentStates
 from dataclasses import dataclass
 
+import copy
 import numpy
 import torch
 import torch.nn.functional as F
@@ -47,15 +48,35 @@ class AlignAttStreamAttFW(AlignAtt):
 
         if states is not None and not states.source_finished:
             target = self.tokenizer.decode(states.target_ids, skip_special_tokens=True).strip()
-            target_len = len(target.split(' ')) if self.target_lang != 'zh' else len(target)
+            target_len = len(target.split(' ')) if self.target_lang != 'Chinese' else len(target)
             if target_len > self.preserve_t or len(states.source) > self.preserve_s:
-                target = ' '.join(target.split(' ')[-self.preserve_t:]) if self.target_lang != 'zh' else target[-self.preserve_t:]
+                target = ' '.join(target.split(' ')[-self.preserve_t:]) if self.target_lang != 'Chinese' else target[-self.preserve_t:]
                 states.target_ids = self.tokenizer.encode(target, add_special_tokens=False)
 
+                # orig_most_attended_indices = copy.deepcopy(states.most_attended_indices)
                 states.most_attended_indices = states.most_attended_indices[-len(states.target_ids):]
                 # bug for n pop
                 # n_pop = 0
-                # print("most attended indices:", len(states.most_attended_indices))
+                # # print("most attended indices:", len(states.most_attended_indices))
+
+                # target_words = target.split(' ') if self.target_lang != 'Chinese' else target
+                # final_target_suffix = target
+                # for i in range(len(target_words)):
+                #     target_suffix = ' '.join(target_words[i:]) if self.target_lang != 'Chinese' else target_words[i:]
+                #     target_suffix_ids = self.tokenizer.encode(target_suffix, add_special_tokens=False)
+                #     try:
+                #         idx = states.most_attended_indices[-len(target_suffix_ids)]
+                #     except Exception as e:
+                #         print(target_suffix, target_suffix_ids)
+                #         print(target_words, states.target_ids)
+                #         print(states.most_attended_indices)
+                #         raise e
+                #     if len(states.source) - idx >= self.preserve_s:
+                #         n_pop = i + 1
+                #         final_target_suffix = target_suffix
+                # states.target_ids = self.tokenizer.encode(final_target_suffix, add_special_tokens=False)
+                # states.most_attended_indices = states.most_attended_indices[n_pop:]
+
                 # for i, idx in enumerate(states.most_attended_indices):
                 #     if len(states.source) - idx >= self.preserve_s:
                 #         n_pop = i + 1

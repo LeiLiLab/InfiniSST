@@ -115,6 +115,8 @@ class AlignAttSpeechLlama3(StreamLlama):
             after_lens=speech_lens,
             do_sample=False,
             num_beams=4,
+            top_p=1.0,
+            temperature=1.0,
             max_new_tokens=max(1, max_number_of_tokens - len(states.target_ids)),
             no_repeat_ngram_size=self.no_repeat_ngram_size,
             repetition_penalty=self.repetition_penalty,
@@ -158,8 +160,6 @@ class AlignAttSpeechLlama3(StreamLlama):
                     sum_att = attentions[0][self.attn_layer][0].mean(dim=0)[i, speech_start_pos:speech_end_pos]
                 
                 most_attended_idx = sum_att.argmax()
-                if speech_start_pos + most_attended_idx >= speech_end_pos - self.frame_num:
-                    break
                 states.most_attended_indices.append(most_attended_idx * 1280)
             cnt = 0
             for i in range(0, len(output_ids)-1):
@@ -179,6 +179,8 @@ class AlignAttSpeechLlama3(StreamLlama):
             states.most_attended_indices = torch.LongTensor(states.most_attended_indices)
 
             prediction_ids = output_ids[:cnt]
+            if '�' in self.tokenizer.decode(prediction_ids):
+                prediction_ids = prediction_ids[:-1]
         else:
             prediction_ids = output_ids
         states.target_ids.extend(prediction_ids)
