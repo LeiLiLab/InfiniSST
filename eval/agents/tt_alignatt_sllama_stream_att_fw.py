@@ -56,32 +56,20 @@ class AlignAttStreamAttFW(AlignAtt):
                 # orig_most_attended_indices = copy.deepcopy(states.most_attended_indices)
                 states.most_attended_indices = states.most_attended_indices[-len(states.target_ids):]
                 # bug for n pop
-                # n_pop = 0
-                # # print("most attended indices:", len(states.most_attended_indices))
+                n_pop = 0
+                # print("most attended indices:", len(states.most_attended_indices))
 
-                # target_words = target.split(' ') if self.target_lang != 'Chinese' else target
-                # final_target_suffix = target
-                # for i in range(len(target_words)):
-                #     target_suffix = ' '.join(target_words[i:]) if self.target_lang != 'Chinese' else target_words[i:]
-                #     target_suffix_ids = self.tokenizer.encode(target_suffix, add_special_tokens=False)
-                #     try:
-                #         idx = states.most_attended_indices[-len(target_suffix_ids)]
-                #     except Exception as e:
-                #         print(target_suffix, target_suffix_ids)
-                #         print(target_words, states.target_ids)
-                #         print(states.most_attended_indices)
-                #         raise e
-                #     if len(states.source) - idx >= self.preserve_s:
-                #         n_pop = i + 1
-                #         final_target_suffix = target_suffix
-                # states.target_ids = self.tokenizer.encode(final_target_suffix, add_special_tokens=False)
-                # states.most_attended_indices = states.most_attended_indices[n_pop:]
-
-                # for i, idx in enumerate(states.most_attended_indices):
-                #     if len(states.source) - idx >= self.preserve_s:
-                #         n_pop = i + 1
-                # states.most_attended_indices = states.most_attended_indices[n_pop:]
-                # states.target_ids = states.target_ids[n_pop:]
+                for i, idx in enumerate(states.most_attended_indices):
+                    if len(states.source) - idx >= self.preserve_s:
+                        n_pop = i + 1
+                if self.target_lang == 'Chinese':
+                    while n_pop < len(states.target_ids) and '�' in self.tokenizer.decode(states.target_ids[n_pop:]):
+                        n_pop += 1
+                else:
+                    while n_pop < len(states.target_ids) and not self.tokenizer.decode(states.target_ids[n_pop:]).startswith(' '):
+                        n_pop += 1
+                states.most_attended_indices = states.most_attended_indices[n_pop:]
+                states.target_ids = states.target_ids[n_pop:]
                 # print("n_pop:", n_pop)
                 # print("most attended history indices:", len(states.most_attended_indices))
                 if len(states.most_attended_indices) > 0:
