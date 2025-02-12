@@ -967,18 +967,8 @@ def llama_attention_new_forward(self, *args, **kwargs):
         total_seq_len = key_states.size(-2)  # Use actual size after cache update
         past_seq_len = total_seq_len - q_len
         
-        # Generate position IDs for the full sequence
-        if cache_position is None:
-            # If no cache_position provided, assume sequential positions
-            key_position_ids = torch.arange(total_seq_len, device=cos.device)
-            query_position_ids = torch.arange(past_seq_len, total_seq_len, device=cos.device)
-        else:
-            # Use provided cache positions and append new positions
-            key_position_ids = torch.cat([
-                cache_position,
-                torch.arange(past_seq_len, total_seq_len, device=cos.device)
-            ])
-            query_position_ids = torch.arange(past_seq_len, total_seq_len, device=cos.device)
+        key_position_ids = torch.arange(total_seq_len, device=cos.device)
+        query_position_ids = torch.arange(past_seq_len, total_seq_len, device=cos.device)
         
         # Get rotary embeddings for queries and keys separately
         key_cos, key_sin = self.rotary_emb(value_states, key_position_ids.unsqueeze(0))
@@ -1170,7 +1160,7 @@ def llama_sdpa_attention_new_forward(self, *args, **kwargs):
             "LlamaModel is using LlamaSdpaAttention, but `torch.nn.functional.scaled_dot_product_attention` does not support `output_attentions=True`. Falling back to the manual attention implementation, "
             'but specifying the manual implementation will be required from Transformers version v5.0.0 onwards. This warning can be removed using the argument `attn_implementation="eager"` when loading the model.'
         )
-        return super().forward(
+        return super(LlamaSdpaAttention, self).forward(
             hidden_states=hidden_states,
             attention_mask=attention_mask,
             position_ids=position_ids,
