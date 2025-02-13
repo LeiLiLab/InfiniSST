@@ -93,10 +93,11 @@ class StreamLlama(SpeechToTextAgent):
         
         # gen
         self.beam = args.beam
-        # assert self.beam == 1 # only support beam=1 for now due to the implementation of HF beam search
+        assert self.beam > 1
         self.no_repeat_ngram_lookback = args.no_repeat_ngram_lookback
         self.no_repeat_ngram_size = args.no_repeat_ngram_size
         self.repetition_penalty = args.repetition_penalty
+        self.suppress_non_language = args.suppress_non_language
         self.max_len_a = args.max_len_a
         self.max_len_b = args.max_len_b
         self.max_new_tokens = args.max_new_tokens
@@ -105,6 +106,7 @@ class StreamLlama(SpeechToTextAgent):
         self.top_k = args.top_k
         self.epsilon_cutoff = args.epsilon_cutoff
         self.temperature = args.temperature
+        self.pseudo_batch_size = args.pseudo_batch_size
 
         logger.info(f"max_new_tokens: {self.max_new_tokens}")
 
@@ -139,11 +141,12 @@ class StreamLlama(SpeechToTextAgent):
         self.tokenizer.pad_token = "<|finetune_right_pad_id|>"
 
         self.bad_words_ids = []
-        # bad_words = ['(', '（']
-        # for idx in tqdm(range(len(self.tokenizer)), desc="Obtaining bad words ids"):
-        #     decoded_token = self.tokenizer.decode(idx, skip_special_tokens=True)
-        #     if any(bad_word in decoded_token for bad_word in bad_words):
-        #         self.bad_words_ids.append(idx)
+        if self.suppress_non_language:
+            bad_words = ['(', '（']
+            for idx in tqdm(range(len(self.tokenizer)), desc="Obtaining bad words ids"):
+                decoded_token = self.tokenizer.decode(idx, skip_special_tokens=True)
+                if any(bad_word in decoded_token for bad_word in bad_words):
+                    self.bad_words_ids.append(idx)
 
         self.model = SpeechLlamaForCausalLM.from_pretrained(
             args.model_name,
@@ -179,7 +182,7 @@ class StreamLlama(SpeechToTextAgent):
         self.length_shrink_func = speech_encoder._get_feat_extract_output_lengths
         
         self.model.model.speech_encoder = speech_encoder
-        self.model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.max_latency_multiplier)
+        self.model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.max_latency_multiplier, resize=False)
 
         state_dict = torch.load(args.state_dict_path, map_location='cpu', weights_only=True)
         self.model.load_state_dict(state_dict)
@@ -200,6 +203,7 @@ class StreamLlama(SpeechToTextAgent):
         parser.add_argument("--always-cache-system-prompt", action='store_true') # LLM-Inf
         parser.add_argument("--dpo-sampling", action='store_true', help="Enable storing sampling for DPO")
         parser.add_argument("--output-file", type=str, default="translations.json", help="Output file for sampling")
+        parser.add_argument("--pseudo-batch-size", type=int, default=1)
 
     def _prepare_speech(self, states):
         sp_seg_frame = int(self.args.block_size // 4 * 0.08 * 16000)
@@ -283,11 +287,23 @@ class StreamLlama(SpeechToTextAgent):
             return ReadAction()
         
         if states.source_finished and length_in_seconds < 0.32:
-            return WriteAction(content="", finished=True)        
+            return WriteAction(content="", finished=True)
         
         with synchronized_timer('generate'):
             speech_batch = self._prepare_speech(states)
             input_ids = self._prepare_inputs(states)
+
+            speech_batch = speech_batch.repeat(self.pseudo_batch_size, 1)
+            input_ids = input_ids.repeat(self.pseudo_batch_size, 1)
+            if states.speech_cache is not None:
+                for i, (k, v) in enumerate(states.past_key_values):
+                    states.past_key_values.key_cache[i] = k.repeat(self.pseudo_batch_size, 1, 1, 1)
+                    states.past_key_values.value_cache[i] = v.repeat(self.pseudo_batch_size, 1, 1, 1)
+            
+            encoder_input_ids = torch.tensor(
+                states.target_ids[-self.no_repeat_ngram_lookback:]
+            ).unsqueeze(0).to(self.model.device)
+            encoder_input_ids = encoder_input_ids.repeat(self.pseudo_batch_size, 1)
 
             if states.source_finished:
                 states.segment_idx = -1            
@@ -308,7 +324,7 @@ class StreamLlama(SpeechToTextAgent):
                 num_return_sequences=1,
                 # this needs modifying the code of HF greedy search
                 # /home/siqiouya/anaconda3/envs/speechllama/lib/python3.9/site-packages/transformers/generation/utils.py
-                encoder_input_ids=torch.tensor(states.target_ids[-self.no_repeat_ngram_lookback:]).unsqueeze(0).to(self.model.device),
+                encoder_input_ids=encoder_input_ids,
                 encoder_no_repeat_ngram_size=self.no_repeat_ngram_size,
                 no_repeat_ngram_size=self.no_repeat_ngram_size,
                 # encoder_repetition_penalty=self.repetition_penalty,
