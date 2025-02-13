@@ -101,9 +101,11 @@ class SLlamaLightning(L.LightningModule):
         if self.model is not None:
             return
 
+        logger.info("use_flash_attn: {}".format(self.model_args.use_flash_attn))
         model = SpeechLlamaForCausalLM.from_pretrained(
             self.model_args.llm_path,
-            torch_dtype=torch.bfloat16,
+            torch_dtype=torch.bfloat16 if self.model_args.use_flash_attn else None,
+            attn_implementation="flash_attention_2" if self.model_args.use_flash_attn else 'sdpa'
         )
         model.config.use_cache = False
         model.rdrop = self.training_args.rdrop
@@ -153,6 +155,7 @@ class SLlamaLightning(L.LightningModule):
         model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.data_args.trajectory_max_multiplier)
 
         if self.model_args.sllm_weight_path is not None:
+            logger.info("Loading SLLM weights from {}".format(self.model_args.sllm_weight_path))
             state_dict = torch.load(self.model_args.sllm_weight_path, map_location='cpu', weights_only=True)
             model.load_state_dict(state_dict, strict=True)
     

@@ -170,7 +170,7 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
     def get_output_embeddings(self):
         return self.lm_head
     
-    def preprocess(self, tokenizer, max_multiplier=4):      
+    def preprocess(self, tokenizer, max_multiplier=4, resize=True):      
         tokenizer.add_tokens(
             [
                 DEFAULT_SPEECH_PATCH_TOKEN, 
@@ -188,7 +188,7 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
                 [tokenizer.pad_token],
                 special_tokens=True
             )
-        self.resize_token_embeddings(len(tokenizer), mean_resizing=True)
+        self.resize_token_embeddings(len(tokenizer), mean_resizing=resize)
 
         sp_patch_token_id, sp_start_token_id, sp_end_token_id = \
             tokenizer.convert_tokens_to_ids(
