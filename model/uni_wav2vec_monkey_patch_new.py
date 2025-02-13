@@ -1011,14 +1011,14 @@ def llama_attention_new_forward(self, *args, **kwargs):
 
 
 def llama_flash_attention_2_new_forward(self, *args, **kwargs):
-    hidden_states = kwargs.get('hidden_states', args[0] if args else None)
-    attention_mask = kwargs.get('attention_mask', None)
-    position_ids = kwargs.get('position_ids', None) 
-    past_key_value = kwargs.get('past_key_value', None)
-    output_attentions = kwargs.get('output_attentions', False)
-    use_cache = kwargs.get('use_cache', False)
-    cache_position = kwargs.get('cache_position', None)
-    position_embeddings = kwargs.get('position_embeddings', None)
+    hidden_states = kwargs.pop('hidden_states', args[0] if args else None)
+    attention_mask = kwargs.pop('attention_mask', None)
+    position_ids = kwargs.pop('position_ids', None) 
+    past_key_value = kwargs.pop('past_key_value', None)
+    output_attentions = kwargs.pop('output_attentions', False)
+    use_cache = kwargs.pop('use_cache', False)
+    cache_position = kwargs.pop('cache_position', None)
+    position_embeddings = kwargs.pop('position_embeddings', None)
 
     if isinstance(past_key_value, StaticCache):
         raise ValueError(
@@ -1063,18 +1063,8 @@ def llama_flash_attention_2_new_forward(self, *args, **kwargs):
         total_seq_len = key_states.size(-2)  # Use actual size after cache update
         past_seq_len = total_seq_len - q_len
         
-        # Generate position IDs for the full sequence
-        if cache_position is None:
-            # If no cache_position provided, assume sequential positions
-            key_position_ids = torch.arange(total_seq_len, device=cos.device)
-            query_position_ids = torch.arange(past_seq_len, total_seq_len, device=cos.device)
-        else:
-            # Use provided cache positions and append new positions
-            key_position_ids = torch.cat([
-                cache_position,
-                torch.arange(past_seq_len, total_seq_len, device=cos.device)
-            ])
-            query_position_ids = torch.arange(past_seq_len, total_seq_len, device=cos.device)
+        key_position_ids = torch.arange(total_seq_len, device=cos.device)
+        query_position_ids = torch.arange(past_seq_len, total_seq_len, device=cos.device)
         
         # Get rotary embeddings for queries and keys separately
         key_cos, key_sin = self.rotary_emb(value_states, key_position_ids.unsqueeze(0))
