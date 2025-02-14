@@ -68,6 +68,10 @@ def add_gen_args(parser):
         default=1.2
     )
     parser.add_argument(
+        "--suppress-non-language",
+        action="store_true",
+    )
+    parser.add_argument(
         "--max-new-tokens",
         type=int,
         default=1000

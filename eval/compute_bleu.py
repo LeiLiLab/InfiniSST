@@ -6,7 +6,7 @@ with open(os.path.join(sys.argv[1], 'hyp'), 'r') as f:
 with open(os.path.join(sys.argv[1], 'ref'), 'r') as f:
     refs = [l for l in f.readlines() if len(l.split('\t')) > 1]
 
-scorer = BLEU(tokenize='zh')
+scorer = BLEU(tokenize='zh' if 'zh' in sys.argv[1] else '13a')
 
 hs = []
 rs = []

@@ -455,6 +455,22 @@ def uni_transformer_encoder_forward(self, x, padding_mask=None, layer=None, cach
 
     return x, layer_results
 
+def sinusoidal_positional_embedding(offset, length, d_model):
+    half_dim = d_model // 2
+    emb = math.log(10000) / (half_dim - 1)
+    emb = torch.exp(torch.arange(half_dim, dtype=torch.bfloat16) * -emb)
+    emb = torch.arange(offset, offset + length, dtype=torch.bfloat16).unsqueeze(
+        1
+    ) * emb.unsqueeze(0)
+    emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=1).view(
+        length, -1
+    )
+    if d_model % 2 == 1:
+        # zero pad
+        emb = torch.cat([emb, torch.zeros(length, 1)], dim=1)
+    return emb
+
+
 def uni_transformer_encoder_extract_features(
     self,
     x,
@@ -477,6 +493,11 @@ def uni_transformer_encoder_extract_features(
     else:
         padding_mask, _ = pad_to_multiple(
             padding_mask, self.required_seq_len_multiple, dim=-1, value=True
+        )
+
+    if not ROPE:
+        x = x + sinusoidal_positional_embedding(
+            cache.n_steps, x.size(0), x.size(1)
         )
 
     if not self.layer_norm_first:
@@ -806,7 +827,8 @@ def uni_mha_forward(
     else:
         cache.k, cache.v = k, v
     
-    q, k = self.rotary_emb.rotate_queries_with_cached_keys(q, k)
+    if ROPE:
+        q, k = self.rotary_emb.rotate_queries_with_cached_keys(q, k)
 
     assert k is not None
     assert k.size(1) == src_len
@@ -1241,11 +1263,12 @@ def llama_sdpa_attention_new_forward(self, *args, **kwargs):
 
     return attn_output, None, past_key_value
 
-def patch_w2v2(blocksize=1, xpos=True):
-    global BLOCKSIZE, XPOS
+def patch_w2v2(blocksize=1, xpos=True, rope=True):
+    global BLOCKSIZE, XPOS, ROPE
     print("Patching with block size {} and xpos {}".format(blocksize, xpos))
     BLOCKSIZE = blocksize
     XPOS = xpos
+    ROPE = rope
     Wav2Vec2Model.extract_features = uni_w2v2_extract_features
     Wav2Vec2Model.forward = uni_w2v2_forward
     HubertModel.extract_features = uni_hubert_extract_features
