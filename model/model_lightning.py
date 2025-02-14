@@ -66,6 +66,7 @@ class SLlamaLightning(L.LightningModule):
         self.tokenizer.pad_token = "<|finetune_right_pad_id|>"
 
         # load speech encoder
+        logger.info("rope: {}".format(self.speech_args.rope))
         speech_encoder_args = [
             self.speech_args.w2v2_path,
             self.speech_args.ctc_finetuned,
@@ -76,6 +77,7 @@ class SLlamaLightning(L.LightningModule):
             1,
             None,
             self.speech_args.xpos,
+            self.speech_args.rope,
         ]
         if self.speech_args.w2v2_type == 'hubert':
             speech_encoder = SpeechEncoderHuBERTRope(*speech_encoder_args)

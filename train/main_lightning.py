@@ -58,7 +58,8 @@ class SpeechEncoderArguments:
     length_shrink_cfg: str = field(default=None)
     block_size: int = field(default=48)
     max_cache_size: int = field(default=500)
-    xpos: bool = field(default=True)
+    xpos: bool = field(default=False)
+    rope: bool = field(default=True)
 
 @dataclass
 class ModelArguments:
@@ -67,6 +68,7 @@ class ModelArguments:
     llm_emb_freeze: bool = field(default=False)
     llm_head_freeze: bool = field(default=False)
     sllm_weight_path: Optional[str] = field(default=None)
+    use_flash_attn: bool = field(default=False)
 
 @dataclass
 class DataArguments:

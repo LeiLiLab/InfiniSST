@@ -35,12 +35,13 @@ class AlignAttStreamAttFW(AlignAtt):
         super().__init__(args)
         self.preserve_t = args.text_preserve_num
         self.min_speech_duration = args.min_speech_duration
-
+        self.max_speech_duration = args.max_speech_duration
     @staticmethod
     def add_args(parser):
         AlignAtt.add_args(parser)
         parser.add_argument("--text-preserve-num", type=int, default=40)
         parser.add_argument("--min-speech-duration", type=float, default=10)
+        parser.add_argument("--max-speech-duration", type=float, default=28.8)
 
     @torch.inference_mode()
     def policy(self, states: Optional[S2TAgentStates] = None):
@@ -71,6 +72,8 @@ class AlignAttStreamAttFW(AlignAtt):
                     src_idx = states.most_attended_indices[-len(states.target_ids):].min()
                     src_idx = min(src_idx, max(0, len(states.source) - int(self.min_speech_duration * 16000)))
                     states.source = states.source[src_idx:]
+
+            states.source = states.source[-int(self.max_speech_duration * 16000):]
             
             print('-' * 100)
             print(f"speech_len: {len(states.source) / 16000}, text_len: {len(states.target_ids)}, preserved text: {self.tokenizer.decode(states.target_ids)}")

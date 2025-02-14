@@ -1,4 +1,4 @@
-llm_model=/compute/babel-5-23/siqiouya/runs/en-zh/8B-s2-bi-v3.5/last.ckpt/
+llm_model=/compute/babel-5-23/siqiouya/runs/en-es/8B-s2-bi-v3.5.2/last.ckpt/
 # llm_model=/compute/babel-5-23/siqiouya/runs/8B-traj-s2-v2.2/last.ckpt/
 w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
 # w2v2_path=/data/user_data/siqiouya/runs/pretrained/hubert_large_ll60k_finetune_ls960.pt
@@ -6,10 +6,10 @@ w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
 w2v2_type=w2v2
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de
 # data_path=/compute/babel-6-17/xixu/datasets/must-c-v2.0/en-zh
-data_path=/compute/babel-14-5/siqiouya/en-zh
+data_path=/compute/babel-14-5/siqiouya/en-es
 source_lang=English
 # target_lang=German
-target_lang=Chinese
+target_lang=Spanish
 xpos=0
 
 beam=4
@@ -56,14 +56,14 @@ python /home/siqiouya/work/sllama/eval/test_dataset_instruct.py \
     --model-name /compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf \
     --state-dict-path ${llm_model}/pytorch_model.bin \
     --data-path ${data_path} \
-    --data-split tst-COMMON \
+    --data-split tst-COMMON_st_es \
     \
     --beam ${beam} \
     --result ${llm_model}/offline_beam${beam} \
-    --batch-size 2500 \
+    --batch-size 2000 \
     \
     --source-lang ${source_lang} \
     --target-lang ${target_lang}
 
 python /home/siqiouya/work/sllama/eval/compute_bleu.py \
-    ${llm_model}/offline_beam${beam}/tst-COMMON
+    ${llm_model}/offline_beam${beam}/tst-COMMON_st_es
