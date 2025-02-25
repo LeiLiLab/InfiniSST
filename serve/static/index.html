@@ -100,8 +100,7 @@
             <input type="file" id="audioFile" accept="audio/*" />
             <audio id="audioPlayer" controls style="width: 100%; margin-top: 10px;"></audio>
             <div class="button-group">
-                <button id="startTranslation" disabled>Start Translation</button>
-                <button id="resetTranslation" disabled>Reset Translation</button>
+                <button id="resetTranslation" disabled>Reset</button>
             </div>
             <div id="audioStatus" class="status"></div>
         </div>
@@ -125,6 +124,7 @@
         let audioBuffer = new Float32Array();
         let resampledBuffer = new Float32Array();
         let firstChunkSent = false; // 添加标志，跟踪是否已发送第一个数据块
+        let translationPaused = true; // 初始设置为暂停状态，等待用户点击播放
         
         // 添加预缓冲延迟配置
         const PRE_BUFFER_DELAY_MS = 300; // 预缓冲延迟，毫秒
@@ -137,11 +137,13 @@
         const updateLatency = document.getElementById('updateLatency');
         const audioFile = document.getElementById('audioFile');
         const audioPlayer = document.getElementById('audioPlayer');
-        const startTranslation = document.getElementById('startTranslation');
         const resetTranslation = document.getElementById('resetTranslation');
         const translationOutput = document.getElementById('translationOutput');
         const audioStatus = document.getElementById('audioStatus');
         const currentSettings = document.getElementById('currentSettings');
+        
+        // 翻译系统状态
+        let translationInitialized = false;
 
         // 函数：滚动翻译输出框到底部，显示最新内容
         function scrollTranslationToBottom() {
@@ -241,7 +243,6 @@
                 translationOutput.textContent = '';
                 
                 // 重置UI状态
-                startTranslation.disabled = true;
                 updateLatency.disabled = true;
                 resetTranslation.disabled = true;
                 
@@ -271,11 +272,13 @@
                 const data = await response.json();
                 sessionId = data.session_id;
                 
-                // 如果已经有音频文件，则启用开始翻译按钮
-                startTranslation.disabled = !audioPlayer.src;
+                // 重置翻译初始化状态
+                translationInitialized = false;
+                
+                // 启用重置按钮
                 updateLatency.disabled = false;
                 resetTranslation.disabled = false;
-                audioStatus.textContent = 'Model loaded successfully';
+                audioStatus.textContent = 'Model loaded successfully. Upload audio and press play to start translation.';
                 audioStatus.className = 'status success';
                 
                 updateSettingsDisplay();
@@ -289,24 +292,32 @@
             const file = event.target.files[0];
             if (file) {
                 audioPlayer.src = URL.createObjectURL(file);
-                startTranslation.disabled = !sessionId;
+                // 重置翻译初始化状态，因为新的音频文件被上传
+                translationInitialized = false;
+                audioStatus.textContent = 'Audio loaded. Press play to start translation.';
+                audioStatus.className = 'status success';
             }
         });
-
-        startTranslation.addEventListener('click', async () => {
-            if (!sessionId) return;
+        
+        // 初始化翻译系统
+        async function initializeTranslation() {
+            if (!sessionId || translationInitialized) return;
             
             try {
                 // Clear previous translation
                 translationOutput.textContent = '';
+                translationPaused = false; // 设置为播放状态，因为用户点击了播放按钮
                 
                 // Initialize WebSocket connection
                 ws = new WebSocket(`ws://${window.location.host}/ws/${sessionId}`);
                 
                 ws.onmessage = (event) => {
-                    translationOutput.textContent = event.data;
-                    // 自动滚动到底部，显示最新翻译内容
-                    scrollTranslationToBottom();
+                    // 只有在未暂停状态下才更新翻译
+                    if (!translationPaused) {
+                        translationOutput.textContent = event.data;
+                        // 自动滚动到底部，显示最新翻译内容
+                        scrollTranslationToBottom();
+                    }
                 };
                 
                 ws.onerror = (error) => {
@@ -314,95 +325,158 @@
                     audioStatus.className = 'status error';
                 };
                 
-                ws.onopen = async () => {
-                    try {
-                        // Initialize audio processing
-                        audioContext = new AudioContext();
-                        audioSource = audioContext.createMediaElementSource(audioPlayer);
-                        
-                        // 创建重采样节点
-                        const originalSampleRate = audioContext.sampleRate;
-                        const resampleRatio = targetSampleRate / originalSampleRate;
-                        
-                        // 创建ScriptProcessor节点
-                        processor = audioContext.createScriptProcessor(segmentSize, 1, 1);
-                        
-                        processor.onaudioprocess = (e) => {
-                            if (ws && ws.readyState === WebSocket.OPEN) {
-                                const inputData = e.inputBuffer.getChannelData(0);
-                                
-                                // 对输入数据进行重采样
-                                const resampledLength = Math.floor(inputData.length * resampleRatio);
-                                const resampledChunk = new Float32Array(resampledLength);
-                                
-                                for (let i = 0; i < resampledLength; i++) {
-                                    const originalIndex = Math.floor(i / resampleRatio);
-                                    resampledChunk[i] = inputData[originalIndex];
+                return new Promise((resolve, reject) => {
+                    ws.onopen = async () => {
+                        try {
+                            // Initialize audio processing
+                            audioContext = new AudioContext();
+                            audioSource = audioContext.createMediaElementSource(audioPlayer);
+                            
+                            // 创建重采样节点
+                            const originalSampleRate = audioContext.sampleRate;
+                            const resampleRatio = targetSampleRate / originalSampleRate;
+                            
+                            // 创建ScriptProcessor节点
+                            processor = audioContext.createScriptProcessor(segmentSize, 1, 1);
+                            
+                            processor.onaudioprocess = (e) => {
+                                // 只有在未暂停状态下才处理音频
+                                if (ws && ws.readyState === WebSocket.OPEN && !translationPaused) {
+                                    const inputData = e.inputBuffer.getChannelData(0);
+                                    
+                                    // 对输入数据进行重采样
+                                    const resampledLength = Math.floor(inputData.length * resampleRatio);
+                                    const resampledChunk = new Float32Array(resampledLength);
+                                    
+                                    for (let i = 0; i < resampledLength; i++) {
+                                        const originalIndex = Math.floor(i / resampleRatio);
+                                        resampledChunk[i] = inputData[originalIndex];
+                                    }
+                                    
+                                    // 将重采样后的数据添加到缓冲区
+                                    const newBuffer = new Float32Array(resampledBuffer.length + resampledChunk.length);
+                                    newBuffer.set(resampledBuffer);
+                                    newBuffer.set(resampledChunk, resampledBuffer.length);
+                                    resampledBuffer = newBuffer;
+                                    
+                                    // 计算当前的目标块大小
+                                    const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
+                                    
+                                    // 当缓冲区达到目标大小时发送数据
+                                    while (resampledBuffer.length >= targetChunkSize) {
+                                        const chunk = resampledBuffer.slice(0, targetChunkSize);
+                                        ws.send(chunk.buffer);
+                                        resampledBuffer = resampledBuffer.slice(targetChunkSize);
+                                    }
+                                }
+                            };
+                            
+                            // 连接节点
+                            audioSource.connect(processor);
+                            processor.connect(audioContext.destination);
+                            audioSource.connect(audioContext.destination);
+                            
+                            // 标记翻译系统已初始化
+                            translationInitialized = true;
+                            audioStatus.textContent = 'Playing and translating...';
+                            audioStatus.className = 'status success';
+                            
+                            // 设置音频结束事件
+                            audioPlayer.onended = () => {
+                                // 发送剩余的数据（如果有的话）
+                                if (resampledBuffer.length > 0) {
+                                    // 计算当前的目标块大小
+                                    const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
+                                    
+                                    // 用0填充最后一个块至目标大小
+                                    const finalChunk = new Float32Array(targetChunkSize);
+                                    finalChunk.set(resampledBuffer);
+                                    ws.send(finalChunk.buffer);
                                 }
                                 
-                                // 将重采样后的数据添加到缓冲区
-                                const newBuffer = new Float32Array(resampledBuffer.length + resampledChunk.length);
-                                newBuffer.set(resampledBuffer);
-                                newBuffer.set(resampledChunk, resampledBuffer.length);
-                                resampledBuffer = newBuffer;
-                                
-                                // 计算当前的目标块大小
-                                const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
-                                
-                                // 当缓冲区达到目标大小时发送数据
-                                while (resampledBuffer.length >= targetChunkSize) {
-                                    const chunk = resampledBuffer.slice(0, targetChunkSize);
-                                    ws.send(chunk.buffer);
-                                    resampledBuffer = resampledBuffer.slice(targetChunkSize);
+                                if (ws) ws.close();
+                                if (processor) {
+                                    processor.disconnect();
+                                    audioSource.disconnect();
                                 }
-                            }
-                        };
-                        
-                        // 连接节点
-                        audioSource.connect(processor);
-                        processor.connect(audioContext.destination);
-                        audioSource.connect(audioContext.destination);
-                        
-                        // 开始播放
-                        await audioPlayer.play();
-                        audioStatus.textContent = 'Playing and translating...';
-                        audioStatus.className = 'status success';
-                        
-                    } catch (error) {
-                        console.error('Error:', error);
-                        audioStatus.textContent = 'Error starting audio: ' + error;
-                        audioStatus.className = 'status error';
-                        if (ws) ws.close();
-                    }
-                };
-                
-                audioPlayer.onended = () => {
-                    // 发送剩余的数据（如果有的话）
-                    if (resampledBuffer.length > 0) {
-                        // 计算当前的目标块大小
-                        const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
-                        
-                        // 用0填充最后一个块至目标大小
-                        const finalChunk = new Float32Array(targetChunkSize);
-                        finalChunk.set(resampledBuffer);
-                        ws.send(finalChunk.buffer);
-                    }
-                    
-                    if (ws) ws.close();
-                    if (processor) {
-                        processor.disconnect();
-                        audioSource.disconnect();
-                    }
-                    if (audioContext) {
-                        audioContext.close();
-                    }
-                    audioStatus.textContent = 'Translation completed';
-                    audioStatus.className = 'status success';
-                };
-                
+                                if (audioContext) {
+                                    audioContext.close();
+                                }
+                                audioStatus.textContent = 'Translation completed';
+                                audioStatus.className = 'status success';
+                                translationInitialized = false;
+                            };
+                            
+                            resolve();
+                        } catch (error) {
+                            console.error('Error:', error);
+                            audioStatus.textContent = 'Error initializing audio: ' + error;
+                            audioStatus.className = 'status error';
+                            if (ws) ws.close();
+                            translationInitialized = false;
+                            reject(error);
+                        }
+                    };
+                });
             } catch (error) {
                 audioStatus.textContent = 'Error: ' + error;
                 audioStatus.className = 'status error';
+                translationInitialized = false;
+                throw error;
+            }
+        }
+
+        // 添加音频播放器事件监听器
+        audioPlayer.addEventListener('play', async () => {
+            // 如果翻译系统尚未初始化，则初始化
+            if (!translationInitialized && sessionId) {
+                try {
+                    // 暂停音频，等待翻译系统初始化
+                    audioPlayer.pause();
+                    audioStatus.textContent = 'Initializing translation system...';
+                    audioStatus.className = 'status';
+                    
+                    // 初始化翻译系统
+                    await initializeTranslation();
+                    
+                    // 恢复播放
+                    audioPlayer.play().catch(e => {
+                        console.error('Error playing audio:', e);
+                        audioStatus.textContent = 'Error playing audio: ' + e;
+                        audioStatus.className = 'status error';
+                    });
+                } catch (error) {
+                    console.error('Error initializing translation:', error);
+                    audioStatus.textContent = 'Error initializing translation: ' + error;
+                    audioStatus.className = 'status error';
+                }
+            } else if (translationInitialized) {
+                // 翻译系统已初始化，只需恢复翻译
+                translationPaused = false;
+                audioStatus.textContent = 'Playing and translating...';
+                audioStatus.className = 'status success';
+                
+                // 恢复音频上下文
+                if (audioContext && audioContext.state === 'suspended') {
+                    audioContext.resume().catch(e => {
+                        console.error('Error resuming audio context:', e);
+                    });
+                }
+            }
+        });
+        
+        audioPlayer.addEventListener('pause', () => {
+            if (translationInitialized) {
+                translationPaused = true;
+                audioStatus.textContent = 'Translation paused';
+                audioStatus.className = 'status';
+                
+                // 暂停音频上下文
+                if (audioContext && audioContext.state === 'running') {
+                    audioContext.suspend().catch(e => {
+                        console.error('Error suspending audio context:', e);
+                    });
+                }
             }
         });
 
@@ -424,6 +498,9 @@
                     audioFile.value = '';
                 }
                 
+                // 重置翻译初始化状态
+                translationInitialized = false;
+                
                 // 清理音频和WebSocket资源
                 cleanupAudioResources();
                 
@@ -442,7 +519,6 @@
                     audioStatus.className = 'status success';
                     
                     // 确保按钮状态正确
-                    startTranslation.disabled = true; // 禁用开始按钮，直到用户重新上传文件
                     updateLatency.disabled = false;
                 } else {
                     audioStatus.textContent = 'Failed to reset translation: ' + data.error;
