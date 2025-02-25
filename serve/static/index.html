@@ -194,9 +194,13 @@
         let idleTimer = null;
         const IDLE_TIMEOUT = 5 * 60 * 1000; // 5分钟，转换为毫秒
         
-        // 添加心跳机制变量
-        let heartbeatInterval = null;
-        const HEARTBEAT_INTERVAL = 5000; // 5秒发送一次心跳
+        // 添加ping机制变量
+        const PING_INTERVAL = 5000; // 5秒发送一次ping
+        let pingInterval = null;
+        
+        // 删除心跳机制变量，添加会话删除重试变量
+        const SESSION_DELETE_RETRY_INTERVAL = 10000; // 10秒重试一次会话删除
+        let deleteRetryInterval = null;
         
         // UI Elements
         const agentType = document.getElementById('agentType');
@@ -299,99 +303,133 @@
             }
         }
 
-        // 发送心跳以保持会话活跃
-        function startHeartbeat() {
-            // 清除现有心跳
-            if (heartbeatInterval) {
-                clearInterval(heartbeatInterval);
-                console.log('Previous heartbeat stopped');
+        // 删除心跳相关函数
+        // 替换为检查未删除会话的函数
+        function checkForUndeletedSessions() {
+            // 从localStorage获取待删除的会话信息
+            // 这些是在浏览器关闭/刷新时未能成功删除的会话（即真正的"孤儿"会话）
+            const pendingDeleteSessions = JSON.parse(localStorage.getItem('pendingDeleteSessions') || '{}');
+            const currentTime = Date.now();
+            let hasSessionsToDelete = false;
+            
+            // 检查每个待删除的会话
+            for (const [sessionId, timestamp] of Object.entries(pendingDeleteSessions)) {
+                hasSessionsToDelete = true;
+                console.log(`Attempting to delete orphaned session: ${sessionId} (orphaned during page close/refresh)`);
+                
+                // 发送删除请求
+                const formData = new FormData();
+                formData.append('session_id', sessionId);
+                
+                // 使用fetch而不是sendBeacon，因为我们需要知道请求是否成功
+                fetch('/delete_session', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log(`Successfully deleted orphaned session: ${sessionId}`);
+                        // 从待删除列表中移除
+                        delete pendingDeleteSessions[sessionId];
+                        localStorage.setItem('pendingDeleteSessions', JSON.stringify(pendingDeleteSessions));
+                    } else {
+                        console.warn(`Failed to delete orphaned session: ${sessionId}, will retry in 10 seconds`);
+                    }
+                })
+                .catch(error => {
+                    console.error(`Error deleting orphaned session: ${sessionId}`, error);
+                });
             }
             
-            // 如果有活跃会话，则设置新的心跳
-            if (sessionId) {
-                console.log(`Starting heartbeat for session ${sessionId} with interval ${HEARTBEAT_INTERVAL}ms`);
-                
-                // 立即发送一次心跳，不等待第一个间隔
-                sendHeartbeat();
-                
-                heartbeatInterval = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
-                console.log('Heartbeat mechanism started');
-            } else {
-                console.warn('Cannot start heartbeat: No active session');
+            // 如果没有待删除的会话，停止重试
+            if (!hasSessionsToDelete) {
+                if (deleteRetryInterval) {
+                    clearInterval(deleteRetryInterval);
+                    deleteRetryInterval = null;
+                    console.log('No more orphaned sessions to delete, stopping retry interval');
+                }
             }
         }
         
-        // 发送单次心跳
-        async function sendHeartbeat() {
+        // 启动会话删除重试
+        function startSessionDeleteRetry() {
+            // 如果已经有重试间隔，先停止它
+            if (deleteRetryInterval) {
+                clearInterval(deleteRetryInterval);
+            }
+            
+            // 立即检查一次
+            checkForUndeletedSessions();
+            
+            // 设置重试间隔
+            deleteRetryInterval = setInterval(checkForUndeletedSessions, SESSION_DELETE_RETRY_INTERVAL);
+            console.log(`Started orphaned session cleanup retry interval (${SESSION_DELETE_RETRY_INTERVAL}ms) for sessions not properly deleted during browser close/refresh`);
+        }
+
+        // 开始发送ping
+        function startPinging() {
+            // 如果已经有ping间隔，先停止它
+            if (pingInterval) {
+                clearInterval(pingInterval);
+            }
+            
+            // 如果没有会话ID，不需要发送ping
             if (!sessionId) {
-                console.warn('Cannot send heartbeat: No active session');
-                stopHeartbeat();
+                return;
+            }
+            
+            // 立即发送一次ping
+            sendPing();
+            
+            // 设置ping间隔
+            pingInterval = setInterval(sendPing, PING_INTERVAL);
+            console.log(`Started ping interval (${PING_INTERVAL}ms) to indicate webpage is still open`);
+        }
+        
+        // 停止发送ping
+        function stopPinging() {
+            if (pingInterval) {
+                clearInterval(pingInterval);
+                pingInterval = null;
+                console.log('Stopped ping interval');
+            }
+        }
+        
+        // 发送ping
+        async function sendPing() {
+            if (!sessionId) {
+                stopPinging();
                 return;
             }
             
             try {
-                // 记录发送时间以计算往返时间
-                const startTime = performance.now();
-                
-                // 发送心跳请求
-                const response = await fetch('/heartbeat?' + new URLSearchParams({
+                const response = await fetch('/ping?' + new URLSearchParams({
                     session_id: sessionId
                 }), {
                     method: 'POST'
                 });
                 
-                // 计算往返时间
-                const rtt = performance.now() - startTime;
-                
-                // 检查响应
                 const data = await response.json();
                 if (!data.success) {
-                    console.warn('Heartbeat failed:', data.error);
-                    // 如果心跳失败，可能是会话已经不存在，清理客户端资源
-                    if (data.error.includes('Invalid session ID')) {
-                        console.log('Session no longer exists, cleaning up client resources');
-                        stopHeartbeat();
+                    console.warn('Failed to send ping:', data.error);
+                    // 如果会话ID无效，停止发送ping
+                    if (data.error === 'Invalid session ID') {
+                        stopPinging();
                         sessionId = null;
-                        updateLatency.disabled = true;
-                        resetTranslation.disabled = true;
-                        audioStatus.textContent = 'Session expired or no longer valid. Please reload the model.';
-                        audioStatus.className = 'status error';
-                    }
-                } else {
-                    const serverTime = new Date(data.timestamp * 1000);
-                    const sessionInfo = data.session_info;
-                    
-                    // 格式化会话信息以便于日志记录
-                    const infoStr = `Session: ${sessionInfo.id} | Type: ${sessionInfo.type} | Lang: ${sessionInfo.language_pair} | Latency: ${sessionInfo.latency_multiplier}x | Idle: ${sessionInfo.last_activity_seconds_ago.toFixed(1)}s`;
-                    
-                    console.log(`Heartbeat successful (RTT: ${rtt.toFixed(1)}ms) | ${infoStr} | Server time: ${serverTime.toISOString()}`);
-                    
-                    // 如果空闲时间接近超时阈值，发出警告
-                    if (sessionInfo.last_activity_seconds_ago > 5) {
-                        console.warn(`Session idle for ${sessionInfo.last_activity_seconds_ago.toFixed(1)} seconds, approaching orphan threshold (10s)`);
+                        localStorage.removeItem('translationSessionId');
                     }
                 }
             } catch (error) {
-                console.error('Error sending heartbeat:', error);
-                // 连续失败计数可以在这里实现
-                // 如果连续失败超过阈值，可以考虑停止心跳并通知用户
-            }
-        }
-        
-        // 停止心跳
-        function stopHeartbeat() {
-            if (heartbeatInterval) {
-                clearInterval(heartbeatInterval);
-                heartbeatInterval = null;
-                console.log('Heartbeat mechanism stopped');
+                console.error('Error sending ping:', error);
             }
         }
 
         // 清理会话资源
         async function cleanupSession() {
             try {
-                // 停止心跳
-                stopHeartbeat();
+                // 停止发送ping
+                stopPinging();
                 
                 // 如果麦克风正在录制，停止它（传入false表示不是手动暂停）
                 if (isMicRecording) {
@@ -418,6 +456,7 @@
                 
                 // 删除后端会话
                 if (sessionId) {
+                    console.log(`Deleting session ${sessionId} from client side`);
                     try {
                         const response = await fetch('/delete_session?' + new URLSearchParams({
                             session_id: sessionId
@@ -428,6 +467,8 @@
                         const data = await response.json();
                         if (!data.success) {
                             console.error('Failed to delete session:', data.error);
+                        } else {
+                            console.log('Session successfully deleted from server');
                         }
                     } catch (e) {
                         console.error('Error deleting session:', e);
@@ -455,6 +496,9 @@
 
         // 处理窗口关闭/刷新事件的特殊函数
         function handleWindowClose() {
+            // 停止发送ping
+            stopPinging();
+            
             // 使用 sendBeacon API 确保请求在页面关闭前发送
             if (sessionId) {
                 // 创建 FormData 对象
@@ -465,6 +509,25 @@
                 const beaconSent = navigator.sendBeacon('/delete_session', formData);
                 
                 console.log('Sent session deletion request via sendBeacon:', beaconSent ? 'success' : 'failed');
+                
+                // 如果无法确定请求是否成功，将会话ID添加到待删除列表
+                // 这样在下次页面加载时可以重试删除
+                if (!beaconSent) {
+                    // 获取现有的待删除会话列表
+                    const pendingDeleteSessions = JSON.parse(localStorage.getItem('pendingDeleteSessions') || '{}');
+                    
+                    // 添加当前会话到待删除列表，带上时间戳
+                    // 这会创建一个"孤儿"会话 - 即在浏览器关闭/刷新时未能成功删除的会话
+                    pendingDeleteSessions[sessionId] = Date.now();
+                    
+                    // 保存回localStorage
+                    try {
+                        localStorage.setItem('pendingDeleteSessions', JSON.stringify(pendingDeleteSessions));
+                        console.log(`Added session ${sessionId} to pending delete list for future retry (orphaned session)`);
+                    } catch (e) {
+                        console.error('Error saving pending delete sessions to localStorage:', e);
+                    }
+                }
                 
                 // 从localStorage中移除会话ID
                 try {
@@ -504,14 +567,16 @@
             // 清除现有计时器
             if (idleTimer) {
                 clearTimeout(idleTimer);
+                console.log('Idle timer reset due to user activity');
             }
             
             // 如果有活跃会话，则设置新的计时器
             if (sessionId) {
                 idleTimer = setTimeout(async () => {
-                    console.log('Application idle for 5 minutes, releasing resources...');
+                    console.log('Application idle for 5 minutes (no user activity), releasing resources...');
+                    // 客户端主动清理空闲会话，不依赖服务器端检测
                     await cleanupSession();
-                    audioStatus.textContent = 'Session closed due to inactivity (5 minutes idle time)';
+                    audioStatus.textContent = 'Session closed due to inactivity (5 minutes without user interaction)';
                     audioStatus.className = 'status';
                 }, IDLE_TIMEOUT);
             }
@@ -543,12 +608,21 @@
                 // 验证会话是否仍然有效
                 checkSessionStatus(storedSessionId);
             }
+            
+            // 检查是否有未删除的会话（孤儿会话），并开始重试删除
+            // 孤儿会话是指在浏览器关闭/刷新时未能成功删除的会话
+            const pendingDeleteSessions = JSON.parse(localStorage.getItem('pendingDeleteSessions') || '{}');
+            if (Object.keys(pendingDeleteSessions).length > 0) {
+                console.log(`Found ${Object.keys(pendingDeleteSessions).length} orphaned sessions to delete (from previous browser close/refresh)`);
+                startSessionDeleteRetry();
+            }
         });
         
         // 检查会话状态
         async function checkSessionStatus(checkSessionId) {
             try {
-                const response = await fetch('/heartbeat?' + new URLSearchParams({
+                // 使用 /delete_session 端点检查会话是否存在
+                const response = await fetch('/delete_session?' + new URLSearchParams({
                     session_id: checkSessionId
                 }), {
                     method: 'POST'
@@ -556,23 +630,16 @@
                 
                 const data = await response.json();
                 if (data.success) {
-                    console.log('Restored session:', checkSessionId);
-                    // 会话有效，恢复状态
-                    sessionId = checkSessionId;
-                    
-                    // 启用相关按钮
-                    updateLatency.disabled = false;
-                    resetTranslation.disabled = false;
-                    
-                    // 开始心跳
-                    startHeartbeat();
-                    
-                    // 更新UI
-                    audioStatus.textContent = 'Session restored. Ready to continue.';
-                    audioStatus.className = 'status success';
+                    console.log('Session exists and was deleted:', checkSessionId);
+                    // 会话已被删除，清除localStorage
+                    localStorage.removeItem('translationSessionId');
+                } else if (data.error && data.error.includes('Invalid session ID')) {
+                    console.log('Stored session no longer exists:', checkSessionId);
+                    // 会话不存在，清除localStorage
+                    localStorage.removeItem('translationSessionId');
                 } else {
-                    console.log('Stored session is no longer valid');
-                    // 清除无效的会话ID
+                    console.error('Unexpected error checking session:', data.error);
+                    // 出现意外错误，清除localStorage
                     localStorage.removeItem('translationSessionId');
                 }
             } catch (error) {
@@ -618,8 +685,8 @@
                 
                 updateSettingsDisplay();
                 
-                // 开始心跳
-                startHeartbeat();
+                // 开始发送ping
+                startPinging();
                 
                 // 重置空闲计时器
                 resetIdleTimer();
