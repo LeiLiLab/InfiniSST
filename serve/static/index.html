@@ -48,7 +48,9 @@
     <div class="controls">
         <select id="agentType">
             <option value="InfiniSST">InfiniSST</option>
+            <!-- 暂时禁用StreamAtt
             <option value="StreamAtt">StreamAtt</option>
+            -->
         </select>
         
         <select id="languagePair">
@@ -59,6 +61,17 @@
         
         <button id="loadModel">Load Model</button>
     </div>
+    
+    <div class="controls">
+        <select id="latencyMultiplier">
+            <option value="1">Latency: 1x (Fastest)</option>
+            <option value="2" selected>Latency: 2x (Default)</option>
+            <option value="3">Latency: 3x (More Accurate)</option>
+            <option value="4">Latency: 4x (Most Accurate)</option>
+        </select>
+        
+        <button id="updateLatency" disabled>Update Latency</button>
+    </div>
 
     <div class="container">
         <div class="column">
@@ -66,11 +79,13 @@
             <input type="file" id="audioFile" accept="audio/*" />
             <audio id="audioPlayer" controls style="width: 100%; margin-top: 10px;"></audio>
             <button id="startTranslation" disabled>Start Translation</button>
+            <button id="resetTranslation" disabled>Reset Translation</button>
             <div id="audioStatus" class="status"></div>
         </div>
         
         <div class="column">
             <h2>Translation Output</h2>
+            <div id="currentSettings"></div>
             <div id="translationOutput"></div>
         </div>
     </div>
@@ -83,25 +98,32 @@
         let processor = null;
         const segmentSize = 4096;  // 使用较大的buffer size以减少处理次数
         const targetSampleRate = 16000;
-        const targetChunkSize = 960 * 16;
+        const baseChunkSize = 960 * 16;  // 基础块大小
+        let currentLatencyMultiplier = 2; // 默认延迟倍数
         let audioBuffer = new Float32Array();
         let resampledBuffer = new Float32Array();
         
         // UI Elements
         const agentType = document.getElementById('agentType');
         const languagePair = document.getElementById('languagePair');
+        const latencyMultiplier = document.getElementById('latencyMultiplier');
         const loadModel = document.getElementById('loadModel');
+        const updateLatency = document.getElementById('updateLatency');
         const audioFile = document.getElementById('audioFile');
         const audioPlayer = document.getElementById('audioPlayer');
         const startTranslation = document.getElementById('startTranslation');
+        const resetTranslation = document.getElementById('resetTranslation');
         const translationOutput = document.getElementById('translationOutput');
         const audioStatus = document.getElementById('audioStatus');
+        const currentSettings = document.getElementById('currentSettings');
 
         loadModel.addEventListener('click', async () => {
             try {
+                currentLatencyMultiplier = parseInt(latencyMultiplier.value);
                 const response = await fetch('/init?' + new URLSearchParams({
                     agent_type: agentType.value,
-                    language_pair: languagePair.value
+                    language_pair: languagePair.value,
+                    latency_multiplier: currentLatencyMultiplier
                 }), {
                     method: 'POST'
                 });
@@ -109,8 +131,12 @@
                 const data = await response.json();
                 sessionId = data.session_id;
                 startTranslation.disabled = false;
+                updateLatency.disabled = false;
+                resetTranslation.disabled = false;
                 audioStatus.textContent = 'Model loaded successfully';
                 audioStatus.className = 'status success';
+                
+                updateSettingsDisplay();
             } catch (error) {
                 audioStatus.textContent = 'Error loading model: ' + error;
                 audioStatus.className = 'status error';
@@ -176,6 +202,9 @@
                                 newBuffer.set(resampledChunk, resampledBuffer.length);
                                 resampledBuffer = newBuffer;
                                 
+                                // 计算当前的目标块大小
+                                const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
+                                
                                 // 当缓冲区达到目标大小时发送数据
                                 while (resampledBuffer.length >= targetChunkSize) {
                                     const chunk = resampledBuffer.slice(0, targetChunkSize);
@@ -206,6 +235,9 @@
                 audioPlayer.onended = () => {
                     // 发送剩余的数据（如果有的话）
                     if (resampledBuffer.length > 0) {
+                        // 计算当前的目标块大小
+                        const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
+                        
                         // 用0填充最后一个块至目标大小
                         const finalChunk = new Float32Array(targetChunkSize);
                         finalChunk.set(resampledBuffer);
@@ -229,6 +261,104 @@
                 audioStatus.className = 'status error';
             }
         });
+
+        // 停止并重置翻译
+        resetTranslation.addEventListener('click', async () => {
+            if (!sessionId) return;
+            
+            try {
+                // 停止当前的音频播放和WebSocket连接
+                if (audioPlayer) {
+                    audioPlayer.pause();
+                    audioPlayer.currentTime = 0;
+                }
+                
+                if (ws) {
+                    ws.close();
+                    ws = null;
+                }
+                
+                if (processor) {
+                    processor.disconnect();
+                    processor = null;
+                }
+                
+                if (audioSource) {
+                    audioSource.disconnect();
+                    audioSource = null;
+                }
+                
+                if (audioContext) {
+                    audioContext.close();
+                    audioContext = null;
+                }
+                
+                // 重置缓冲区
+                audioBuffer = new Float32Array();
+                resampledBuffer = new Float32Array();
+                
+                // 调用后端重置翻译状态
+                const response = await fetch('/reset_translation?' + new URLSearchParams({
+                    session_id: sessionId
+                }), {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    // 清空翻译输出
+                    translationOutput.textContent = '';
+                    audioStatus.textContent = 'Translation reset successfully';
+                    audioStatus.className = 'status success';
+                } else {
+                    audioStatus.textContent = 'Failed to reset translation: ' + data.error;
+                    audioStatus.className = 'status error';
+                }
+            } catch (error) {
+                audioStatus.textContent = 'Error resetting translation: ' + error;
+                audioStatus.className = 'status error';
+            }
+        });
+
+        // 更新延迟倍数
+        updateLatency.addEventListener('click', async () => {
+            if (!sessionId) return;
+            
+            try {
+                currentLatencyMultiplier = parseInt(latencyMultiplier.value);
+                const response = await fetch('/update_latency?' + new URLSearchParams({
+                    session_id: sessionId,
+                    latency_multiplier: currentLatencyMultiplier
+                }), {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    audioStatus.textContent = 'Latency updated successfully';
+                    audioStatus.className = 'status success';
+                    updateSettingsDisplay();
+                } else {
+                    audioStatus.textContent = 'Failed to update latency: ' + data.error;
+                    audioStatus.className = 'status error';
+                }
+            } catch (error) {
+                audioStatus.textContent = 'Error updating latency: ' + error;
+                audioStatus.className = 'status error';
+            }
+        });
+        
+        // 更新设置显示
+        function updateSettingsDisplay() {
+            currentSettings.innerHTML = `
+                <div style="margin-bottom: 10px; padding: 5px; background-color: #f8f9fa; border-radius: 3px;">
+                    <strong>Current Settings:</strong><br>
+                    Model: ${agentType.value}<br>
+                    Languages: ${languagePair.value}<br>
+                    Latency: ${latencyMultiplier.value}x
+                </div>
+            `;
+        }
     </script>
 </body>
 </html> 
