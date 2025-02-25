@@ -117,8 +117,117 @@
         const audioStatus = document.getElementById('audioStatus');
         const currentSettings = document.getElementById('currentSettings');
 
+        // 清理音频和WebSocket资源
+        function cleanupAudioResources() {
+            // 关闭WebSocket连接
+            if (ws) {
+                try {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.close();
+                    }
+                } catch (e) {
+                    console.error('Error closing WebSocket:', e);
+                }
+                ws = null;
+            }
+            
+            // 断开并清理音频处理节点
+            if (processor) {
+                try {
+                    processor.disconnect();
+                } catch (e) {
+                    console.error('Error disconnecting processor:', e);
+                }
+                processor = null;
+            }
+            
+            if (audioSource) {
+                try {
+                    audioSource.disconnect();
+                } catch (e) {
+                    console.error('Error disconnecting audio source:', e);
+                }
+                audioSource = null;
+            }
+            
+            // 关闭音频上下文
+            if (audioContext) {
+                try {
+                    if (audioContext.state !== 'closed') {
+                        audioContext.close().catch(e => {
+                            console.error('Error closing audio context:', e);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Error in audio context cleanup:', e);
+                }
+                audioContext = null;
+            }
+            
+            // Reset buffers
+            resampledBuffer = new Float32Array();
+            audioBuffer = new Float32Array();
+            firstChunkSent = false;
+        }
+
+        // 清理会话资源
+        async function cleanupSession() {
+            try {
+                // 停止当前的音频播放
+                if (audioPlayer) {
+                    audioPlayer.pause();
+                    audioPlayer.currentTime = 0;
+                    // 不清除音频源，允许用户在加载新模型后继续使用相同的音频文件
+                }
+                
+                // 不重置文件输入，允许用户在加载新模型后继续使用相同的音频文件
+                
+                // 清理音频和WebSocket资源
+                cleanupAudioResources();
+                
+                // 删除后端会话
+                if (sessionId) {
+                    try {
+                        const response = await fetch('/delete_session?' + new URLSearchParams({
+                            session_id: sessionId
+                        }), {
+                            method: 'POST'
+                        });
+                        
+                        const data = await response.json();
+                        if (!data.success) {
+                            console.error('Failed to delete session:', data.error);
+                        }
+                    } catch (e) {
+                        console.error('Error deleting session:', e);
+                    }
+                    
+                    // 清空会话ID
+                    sessionId = null;
+                }
+                
+                // 清空翻译输出
+                translationOutput.textContent = '';
+                
+                // 重置UI状态
+                startTranslation.disabled = true;
+                updateLatency.disabled = true;
+                resetTranslation.disabled = true;
+                
+            } catch (error) {
+                console.error('Error cleaning up session:', error);
+            }
+        }
+
         loadModel.addEventListener('click', async () => {
             try {
+                // 清理现有会话和资源
+                await cleanupSession();
+                
+                // 显示加载状态
+                audioStatus.textContent = 'Loading model...';
+                audioStatus.className = 'status';
+                
                 currentLatencyMultiplier = parseInt(latencyMultiplier.value);
                 const response = await fetch('/init?' + new URLSearchParams({
                     agent_type: agentType.value,
@@ -130,7 +239,9 @@
                 
                 const data = await response.json();
                 sessionId = data.session_id;
-                startTranslation.disabled = false;
+                
+                // 如果已经有音频文件，则启用开始翻译按钮
+                startTranslation.disabled = !audioPlayer.src;
                 updateLatency.disabled = false;
                 resetTranslation.disabled = false;
                 audioStatus.textContent = 'Model loaded successfully';
@@ -267,35 +378,21 @@
             if (!sessionId) return;
             
             try {
-                // 停止当前的音频播放和WebSocket连接
+                // 停止当前的音频播放
                 if (audioPlayer) {
                     audioPlayer.pause();
                     audioPlayer.currentTime = 0;
+                    // 清除音频源，强制用户重新上传
+                    audioPlayer.src = '';
                 }
                 
-                if (ws) {
-                    ws.close();
-                    ws = null;
+                // 重置文件输入，强制用户重新选择文件
+                if (audioFile) {
+                    audioFile.value = '';
                 }
                 
-                if (processor) {
-                    processor.disconnect();
-                    processor = null;
-                }
-                
-                if (audioSource) {
-                    audioSource.disconnect();
-                    audioSource = null;
-                }
-                
-                if (audioContext) {
-                    audioContext.close();
-                    audioContext = null;
-                }
-                
-                // 重置缓冲区
-                audioBuffer = new Float32Array();
-                resampledBuffer = new Float32Array();
+                // 清理音频和WebSocket资源
+                cleanupAudioResources();
                 
                 // 调用后端重置翻译状态
                 const response = await fetch('/reset_translation?' + new URLSearchParams({
@@ -308,8 +405,12 @@
                 if (data.success) {
                     // 清空翻译输出
                     translationOutput.textContent = '';
-                    audioStatus.textContent = 'Translation reset successfully';
+                    audioStatus.textContent = data.message || 'Translation reset successfully. Please upload a new audio file.';
                     audioStatus.className = 'status success';
+                    
+                    // 确保按钮状态正确
+                    startTranslation.disabled = true; // 禁用开始按钮，直到用户重新上传文件
+                    updateLatency.disabled = false;
                 } else {
                     audioStatus.textContent = 'Failed to reset translation: ' + data.error;
                     audioStatus.className = 'status error';
