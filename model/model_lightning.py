@@ -132,6 +132,7 @@ class SLlamaLightning(L.LightningModule):
             model.model.embed_tokens.embedding_dim,
             None,
             self.speech_args.xpos,
+            self.speech_args.rope,
         ]
         if self.speech_args.w2v2_type == 'hubert':
             speech_encoder = SpeechEncoderHuBERTRope(*speech_encoder_args)

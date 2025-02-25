@@ -35,13 +35,12 @@ from transformers.utils import logging
 
 logger = logging.get_logger(__name__)
 
-BLOCKSIZE = 1
 XPOS = True
 
-def get_attn_mask_training(seq_len, max_cache_size=None):
+def get_attn_mask_training(seq_len, max_cache_size=None, blocksize=1):
     blocksizes = [
-        min(BLOCKSIZE, seq_len - i * BLOCKSIZE) 
-        for i in range((seq_len + BLOCKSIZE - 1) // BLOCKSIZE)
+        min(blocksize, seq_len - i * blocksize) 
+        for i in range((seq_len + blocksize - 1) // blocksize)
     ]
 
     mask = torch.zeros(seq_len, seq_len, device='cuda', dtype=torch.bool)
@@ -60,12 +59,12 @@ def get_attn_mask_training(seq_len, max_cache_size=None):
     
     return mask_num
 
-def get_attn_mask_inference(seq_len, prefix_len, max_cache_size):
+def get_attn_mask_inference(seq_len, prefix_len, max_cache_size, blocksize=1):
     max_len = seq_len + min(prefix_len, max_cache_size)
 
     blocksizes = [
-        min(BLOCKSIZE, seq_len + prefix_len - i * BLOCKSIZE) 
-        for i in range((seq_len + prefix_len + BLOCKSIZE - 1) // BLOCKSIZE)
+        min(blocksize, seq_len + prefix_len - i * blocksize) 
+        for i in range((seq_len + prefix_len + blocksize - 1) // blocksize)
     ]
 
     mask = torch.zeros(seq_len, max_len, device='cuda', dtype=torch.bool)
@@ -134,10 +133,10 @@ def uni_hubert_forward(
         features = features[..., cache.src_len:]
         cache.src_len = new_src_len
 
-        max_src_token_len = 79 + 320 + 320 * BLOCKSIZE
+        max_src_token_len = 79 + 320 + 320 * self.blocksize
         if cache.src.size(1) > max_src_token_len:
             cache.src = cache.src[:, -max_src_token_len:]
-            cache.src_len = BLOCKSIZE
+            cache.src_len = self.blocksize
     else:
         cache.src_len = features.size(-1)
 
@@ -261,15 +260,16 @@ def uni_w2v2_forward(
         with torch.no_grad():
             features = self.feature_extractor(source)
     
+    # logger.info(f"w2v2 forward: device {features.device}, blocksize {self.blocksize}")
     if cache.src_len > 0:
         new_src_len = features.size(-1)
         features = features[..., cache.src_len:]
         cache.src_len = new_src_len
 
-        max_src_token_len = 79 + 320 + 320 * BLOCKSIZE
+        max_src_token_len = 79 + 320 + 320 * self.blocksize
         if cache.src.size(1) > max_src_token_len:
             cache.src = cache.src[:, -max_src_token_len:]
-            cache.src_len = BLOCKSIZE
+            cache.src_len = self.blocksize
     else:
         cache.src_len = features.size(-1)
 
@@ -455,11 +455,11 @@ def uni_transformer_encoder_forward(self, x, padding_mask=None, layer=None, cach
 
     return x, layer_results
 
-def sinusoidal_positional_embedding(offset, length, d_model):
+def sinusoidal_positional_embedding(offset, length, d_model, device):
     half_dim = d_model // 2
     emb = math.log(10000) / (half_dim - 1)
-    emb = torch.exp(torch.arange(half_dim, dtype=torch.bfloat16) * -emb)
-    emb = torch.arange(offset, offset + length, dtype=torch.bfloat16).unsqueeze(
+    emb = torch.exp(torch.arange(half_dim, dtype=torch.bfloat16, device=device) * -emb)
+    emb = torch.arange(offset, offset + length, dtype=torch.bfloat16, device=device).unsqueeze(
         1
     ) * emb.unsqueeze(0)
     emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=1).view(
@@ -496,9 +496,11 @@ def uni_transformer_encoder_extract_features(
         )
 
     if not ROPE:
-        x = x + sinusoidal_positional_embedding(
-            cache.n_steps, x.size(0), x.size(1)
+        pos_emb = sinusoidal_positional_embedding(
+            cache.n_steps, x.size(1), x.size(2), x.device
         )
+        # logger.info(f"pos_emb: {pos_emb.shape}, x: {x.shape}")
+        x = x + pos_emb
 
     if not self.layer_norm_first:
         x = self.layer_norm(x)
@@ -510,10 +512,11 @@ def uni_transformer_encoder_extract_features(
 
     prefix_len = cache.n_steps
     seq_len = x.size(0)
+    # logger.info(f"w2v2 enc forward: device {x.device}, blocksize {self.blocksize}")
     if prefix_len > 0:
-        attn_mask = get_attn_mask_inference(seq_len, prefix_len, cache.max_steps)
+        attn_mask = get_attn_mask_inference(seq_len, prefix_len, cache.max_steps, self.blocksize)
     else:
-        attn_mask = get_attn_mask_training(seq_len, cache.max_steps)
+        attn_mask = get_attn_mask_training(seq_len, cache.max_steps, self.blocksize)
 
     layer_results = []
     r = None
@@ -1263,10 +1266,9 @@ def llama_sdpa_attention_new_forward(self, *args, **kwargs):
 
     return attn_output, None, past_key_value
 
-def patch_w2v2(blocksize=1, xpos=True, rope=True):
-    global BLOCKSIZE, XPOS, ROPE
-    print("Patching with block size {} and xpos {}".format(blocksize, xpos))
-    BLOCKSIZE = blocksize
+def patch_w2v2(xpos=True, rope=True):
+    global XPOS, ROPE
+    print("Patching with xpos {}, rope {}".format(xpos, rope))
     XPOS = xpos
     ROPE = rope
     Wav2Vec2Model.extract_features = uni_w2v2_extract_features
