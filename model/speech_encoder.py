@@ -654,17 +654,17 @@ class SpeechEncoderW2V2RoPE(L.LightningModule):
         w2v2_path, w2v2_ctc_finetuned,
         length_shrink_cfg=None,
         block_size=16, max_cache_size=125,
-        llm_embedding_dim=4096, llm_embedding=None, xpos=True,
+        llm_embedding_dim=4096, llm_embedding=None, xpos=True, rope=True,
         train_ds=None, dev_ds=None, train_bsz=None, dev_bsz=None, collate_fn=None,
-        lr=1e-4, warmup_updates=0, min_lr=1e-6, temp=0.5, loss_fn='waco'
+        lr=1e-4, warmup_updates=0, min_lr=1e-6, temp=0.5, loss_fn='waco' 
     ):
         super().__init__()
 
-        patch_w2v2(block_size, xpos)
+        patch_w2v2(xpos, rope)
         self.speech_encoder, s_dim, self.s_layer = self._load_w2v2(
             w2v2_path, w2v2_ctc_finetuned
         )
-        self.block_size = block_size
+        self.blocksize = block_size
         self.max_cache_size = max_cache_size
         
         self.length_shrink = None
@@ -692,6 +692,10 @@ class SpeechEncoderW2V2RoPE(L.LightningModule):
         }
         self.loss_fn = loss_fn
         self.temp = temp
+
+    def set_blocksize(self, multiplier):
+        self.speech_encoder.blocksize = self.blocksize * multiplier
+        self.speech_encoder.encoder.blocksize = self.blocksize * multiplier
 
     def _load_w2v2(self, speech_tower_path, ssl_finetuned):
         if not ssl_finetuned: # ssl model

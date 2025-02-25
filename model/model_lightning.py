@@ -15,7 +15,6 @@ from lightning.pytorch.utilities import grad_norm
 from torch.optim import Adam
 # from apex.optimizers import FusedAdam
 from deepspeed.ops.adam import FusedAdam, DeepSpeedCPUAdam
-from schedulefree import RAdamScheduleFree
 
 from train.dataset import (
     SpeechSampler, 
@@ -25,7 +24,8 @@ from train.dataset import (
     DataCollatorForSupervisedInstructDataset,
     DataCollatorForTrajectoryDataset,
     DataCollatorForTrajectoryInstructDataset,
-    DataCollatorForTrajectoryInstructMultiLatencyDataset
+    DataCollatorForTrajectoryInstructMultiLatencyDataset,
+    DataCollatorForPreferenceOptimizationDataset
 )
 from model.model_new import SpeechLlamaForCausalLM
 from model.speech_encoder import (
@@ -41,7 +41,8 @@ collator_classes = {
     1: DataCollatorForSupervisedInstructDataset,
     2: DataCollatorForTrajectoryDataset,
     3: DataCollatorForTrajectoryInstructDataset,
-    4: DataCollatorForTrajectoryInstructMultiLatencyDataset
+    4: DataCollatorForTrajectoryInstructMultiLatencyDataset,
+    5: DataCollatorForPreferenceOptimizationDataset
 }
 
 class SLlamaLightning(L.LightningModule):
@@ -65,6 +66,7 @@ class SLlamaLightning(L.LightningModule):
         self.tokenizer.pad_token = "<|finetune_right_pad_id|>"
 
         # load speech encoder
+        logger.info("rope: {}".format(self.speech_args.rope))
         speech_encoder_args = [
             self.speech_args.w2v2_path,
             self.speech_args.ctc_finetuned,
@@ -75,6 +77,7 @@ class SLlamaLightning(L.LightningModule):
             1,
             None,
             self.speech_args.xpos,
+            self.speech_args.rope,
         ]
         if self.speech_args.w2v2_type == 'hubert':
             speech_encoder = SpeechEncoderHuBERTRope(*speech_encoder_args)
@@ -100,9 +103,11 @@ class SLlamaLightning(L.LightningModule):
         if self.model is not None:
             return
 
+        logger.info("use_flash_attn: {}".format(self.model_args.use_flash_attn))
         model = SpeechLlamaForCausalLM.from_pretrained(
             self.model_args.llm_path,
-            torch_dtype=torch.bfloat16,
+            torch_dtype=torch.bfloat16 if self.model_args.use_flash_attn else None,
+            attn_implementation="flash_attention_2" if self.model_args.use_flash_attn else 'sdpa'
         )
         model.config.use_cache = False
         model.rdrop = self.training_args.rdrop
@@ -111,6 +116,8 @@ class SLlamaLightning(L.LightningModule):
         if self.model_args.llm_freeze:
             model.model.requires_grad_(False)
             model.model.embed_tokens.requires_grad_(True)
+        if self.model_args.llm_emb_freeze:
+            model.model.embed_tokens.requires_grad_(False)
         if self.model_args.llm_head_freeze:
             model.lm_head.requires_grad_(False)
 
@@ -125,6 +132,7 @@ class SLlamaLightning(L.LightningModule):
             model.model.embed_tokens.embedding_dim,
             None,
             self.speech_args.xpos,
+            self.speech_args.rope,
         ]
         if self.speech_args.w2v2_type == 'hubert':
             speech_encoder = SpeechEncoderHuBERTRope(*speech_encoder_args)
@@ -142,26 +150,15 @@ class SLlamaLightning(L.LightningModule):
         speech_encoder.to(dtype=model.dtype, device=model.device)
         model.model.speech_encoder = speech_encoder
 
+        model.cpo_beta = self.training_args.cpo_beta
+
         if self.speech_args.w2v2_freeze:
             model.model.speech_encoder.requires_grad_(False)
 
         model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.data_args.trajectory_max_multiplier)
 
-        if self.model_args.llm_emb_freeze:
-            # model.model.embed_tokens.requires_grad_(False)
-            added_token_ids = [
-                model.config.sp_patch_token_id,
-                model.config.sp_start_token_id,
-                model.config.sp_end_token_id,
-            ] + model.config.latency_token_ids
-            indices_mask = torch.zeros_like(model.model.embed_tokens.weight, dtype=torch.bool)
-            indices_mask[added_token_ids, :] = True
-            def freeze_grad(grad):
-                grad[~indices_mask] = 0.0
-                return grad
-            model.model.embed_tokens.weight.register_hook(freeze_grad)
-
         if self.model_args.sllm_weight_path is not None:
+            logger.info("Loading SLLM weights from {}".format(self.model_args.sllm_weight_path))
             state_dict = torch.load(self.model_args.sllm_weight_path, map_location='cpu', weights_only=True)
             model.load_state_dict(state_dict, strict=True)
     
@@ -183,17 +180,21 @@ class SLlamaLightning(L.LightningModule):
             block_size=self.speech_args.block_size,
             perturb=self.data_args.trajectory_perturb,
             max_multiplier=self.data_args.trajectory_max_multiplier,
-            prob_aug=self.data_args.trajectory_prob_aug
+            po_max_multiplier=self.data_args.preference_optimization_max_multiplier,
+            prob_aug=self.data_args.trajectory_prob_aug,
+            trainer=self.trainer
         )
 
         # if self.data_args.trajectory >= 1:
         #     data_collator.validate(train_dataset)
 
+        logger.info("train_bsz: {}, bsz_sent: {}".format(self.training_args.train_bsz, self.training_args.bsz_sent))
+
         train_sampler = SpeechSampler(
             train_dataset, 
             shuffle=True, 
             batch_size=self.training_args.train_bsz, 
-            batch_size_sent=20,
+            batch_size_sent=self.training_args.bsz_sent,
             min_ms=320,
             multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
             filter=True,
@@ -208,7 +209,7 @@ class SLlamaLightning(L.LightningModule):
     
     def val_dataloader(self):
         eval_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
-            self.data_args.data_path, self.data_args.data_split_eval
+        self.data_args.data_path, self.data_args.data_split_eval
         )
         collator_cls = collator_classes[self.data_args.trajectory]
         data_collator = collator_cls(
@@ -217,7 +218,9 @@ class SLlamaLightning(L.LightningModule):
             self.data_args.source_lang,
             self.data_args.target_lang,
             block_size=self.speech_args.block_size,
-            max_multiplier=self.data_args.trajectory_max_multiplier
+            max_multiplier=self.data_args.trajectory_max_multiplier,
+            po_max_multiplier=self.data_args.preference_optimization_max_multiplier,
+            prob_aug=self.data_args.trajectory_prob_aug
         )
 
         # if self.data_args.trajectory >= 1:
@@ -227,10 +230,10 @@ class SLlamaLightning(L.LightningModule):
             eval_dataset, 
             shuffle=False, 
             batch_size=self.training_args.eval_bsz, 
-            batch_size_sent=20,
+            batch_size_sent=self.training_args.bsz_sent,
             min_ms=320,
             multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
-            filter=False,
+            filter=True,
             tokenizer=self.tokenizer,
         )
         eval_dataloader = DataLoader(
@@ -271,10 +274,6 @@ class SLlamaLightning(L.LightningModule):
         lr = self.optimizer_params["lr"]
         warmup_updates = self.optimizer_params["warmup_updates"]
 
-        if self.training_args.scheduler == "free":
-            optimizer = RAdamScheduleFree(self.model.parameters(), lr=lr, weight_decay=self.training_args.weight_decay)
-            return optimizer
-
         optimizer_cls = DeepSpeedCPUAdam if self.training_args.deepspeed_offload else FusedAdam
         optimizer = optimizer_cls(self.parameters(), lr=lr, weight_decay=self.training_args.weight_decay)  
 
@@ -308,24 +307,8 @@ class SLlamaLightning(L.LightningModule):
             }
         }
     
-    def on_train_start(self):
-        if self.training_args.scheduler == "free":
-            self.trainer.optimizers[0].optimizer.train()
-    
-    def on_save_checkpoint(self, checkpoint):
-        if self.training_args.scheduler == "free":
-            self.trainer.optimizers[0].optimizer.eval()
-    
-    def on_validation_start(self):
-        if self.training_args.scheduler == "free":
-            self.trainer.optimizers[0].optimizer.eval()
-    
-    def on_validation_end(self):
-        if self.training_args.scheduler == "free":
-            self.trainer.optimizers[0].optimizer.train()
-    
     def forward(self, batch):
-        # logger.info("{} {} {}".format(self.model.device, batch['after_lens'].max(), batch['labels'].size()))
+        logger.info("device: {}, batch size: {}".format(self.device, batch['input_ids'].size()))
         output = self.model(
             **batch,
             return_dict=True

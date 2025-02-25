@@ -35,13 +35,12 @@ from transformers.utils import logging
 
 logger = logging.get_logger(__name__)
 
-BLOCKSIZE = 1
 XPOS = True
 
-def get_attn_mask_training(seq_len, max_cache_size=None):
+def get_attn_mask_training(seq_len, max_cache_size=None, blocksize=1):
     blocksizes = [
-        min(BLOCKSIZE, seq_len - i * BLOCKSIZE) 
-        for i in range((seq_len + BLOCKSIZE - 1) // BLOCKSIZE)
+        min(blocksize, seq_len - i * blocksize) 
+        for i in range((seq_len + blocksize - 1) // blocksize)
     ]
 
     mask = torch.zeros(seq_len, seq_len, device='cuda', dtype=torch.bool)
@@ -60,12 +59,12 @@ def get_attn_mask_training(seq_len, max_cache_size=None):
     
     return mask_num
 
-def get_attn_mask_inference(seq_len, prefix_len, max_cache_size):
+def get_attn_mask_inference(seq_len, prefix_len, max_cache_size, blocksize=1):
     max_len = seq_len + min(prefix_len, max_cache_size)
 
     blocksizes = [
-        min(BLOCKSIZE, seq_len + prefix_len - i * BLOCKSIZE) 
-        for i in range((seq_len + prefix_len + BLOCKSIZE - 1) // BLOCKSIZE)
+        min(blocksize, seq_len + prefix_len - i * blocksize) 
+        for i in range((seq_len + prefix_len + blocksize - 1) // blocksize)
     ]
 
     mask = torch.zeros(seq_len, max_len, device='cuda', dtype=torch.bool)
@@ -134,10 +133,10 @@ def uni_hubert_forward(
         features = features[..., cache.src_len:]
         cache.src_len = new_src_len
 
-        max_src_token_len = 79 + 320 + 320 * BLOCKSIZE
+        max_src_token_len = 79 + 320 + 320 * self.blocksize
         if cache.src.size(1) > max_src_token_len:
             cache.src = cache.src[:, -max_src_token_len:]
-            cache.src_len = BLOCKSIZE
+            cache.src_len = self.blocksize
     else:
         cache.src_len = features.size(-1)
 
@@ -261,15 +260,16 @@ def uni_w2v2_forward(
         with torch.no_grad():
             features = self.feature_extractor(source)
     
+    # logger.info(f"w2v2 forward: device {features.device}, blocksize {self.blocksize}")
     if cache.src_len > 0:
         new_src_len = features.size(-1)
         features = features[..., cache.src_len:]
         cache.src_len = new_src_len
 
-        max_src_token_len = 79 + 320 + 320 * BLOCKSIZE
+        max_src_token_len = 79 + 320 + 320 * self.blocksize
         if cache.src.size(1) > max_src_token_len:
             cache.src = cache.src[:, -max_src_token_len:]
-            cache.src_len = BLOCKSIZE
+            cache.src_len = self.blocksize
     else:
         cache.src_len = features.size(-1)
 
@@ -455,6 +455,22 @@ def uni_transformer_encoder_forward(self, x, padding_mask=None, layer=None, cach
 
     return x, layer_results
 
+def sinusoidal_positional_embedding(offset, length, d_model, device):
+    half_dim = d_model // 2
+    emb = math.log(10000) / (half_dim - 1)
+    emb = torch.exp(torch.arange(half_dim, dtype=torch.bfloat16, device=device) * -emb)
+    emb = torch.arange(offset, offset + length, dtype=torch.bfloat16, device=device).unsqueeze(
+        1
+    ) * emb.unsqueeze(0)
+    emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=1).view(
+        length, -1
+    )
+    if d_model % 2 == 1:
+        # zero pad
+        emb = torch.cat([emb, torch.zeros(length, 1)], dim=1)
+    return emb
+
+
 def uni_transformer_encoder_extract_features(
     self,
     x,
@@ -479,6 +495,13 @@ def uni_transformer_encoder_extract_features(
             padding_mask, self.required_seq_len_multiple, dim=-1, value=True
         )
 
+    if not ROPE:
+        pos_emb = sinusoidal_positional_embedding(
+            cache.n_steps, x.size(1), x.size(2), x.device
+        )
+        # logger.info(f"pos_emb: {pos_emb.shape}, x: {x.shape}")
+        x = x + pos_emb
+
     if not self.layer_norm_first:
         x = self.layer_norm(x)
 
@@ -489,10 +512,11 @@ def uni_transformer_encoder_extract_features(
 
     prefix_len = cache.n_steps
     seq_len = x.size(0)
+    # logger.info(f"w2v2 enc forward: device {x.device}, blocksize {self.blocksize}")
     if prefix_len > 0:
-        attn_mask = get_attn_mask_inference(seq_len, prefix_len, cache.max_steps)
+        attn_mask = get_attn_mask_inference(seq_len, prefix_len, cache.max_steps, self.blocksize)
     else:
-        attn_mask = get_attn_mask_training(seq_len, cache.max_steps)
+        attn_mask = get_attn_mask_training(seq_len, cache.max_steps, self.blocksize)
 
     layer_results = []
     r = None
@@ -806,7 +830,8 @@ def uni_mha_forward(
     else:
         cache.k, cache.v = k, v
     
-    q, k = self.rotary_emb.rotate_queries_with_cached_keys(q, k)
+    if ROPE:
+        q, k = self.rotary_emb.rotate_queries_with_cached_keys(q, k)
 
     assert k is not None
     assert k.size(1) == src_len
@@ -967,18 +992,8 @@ def llama_attention_new_forward(self, *args, **kwargs):
         total_seq_len = key_states.size(-2)  # Use actual size after cache update
         past_seq_len = total_seq_len - q_len
         
-        # Generate position IDs for the full sequence
-        if cache_position is None:
-            # If no cache_position provided, assume sequential positions
-            key_position_ids = torch.arange(total_seq_len, device=cos.device)
-            query_position_ids = torch.arange(past_seq_len, total_seq_len, device=cos.device)
-        else:
-            # Use provided cache positions and append new positions
-            key_position_ids = torch.cat([
-                cache_position,
-                torch.arange(past_seq_len, total_seq_len, device=cos.device)
-            ])
-            query_position_ids = torch.arange(past_seq_len, total_seq_len, device=cos.device)
+        key_position_ids = torch.arange(total_seq_len, device=cos.device)
+        query_position_ids = torch.arange(past_seq_len, total_seq_len, device=cos.device)
         
         # Get rotary embeddings for queries and keys separately
         key_cos, key_sin = self.rotary_emb(value_states, key_position_ids.unsqueeze(0))
@@ -1021,14 +1036,14 @@ def llama_attention_new_forward(self, *args, **kwargs):
 
 
 def llama_flash_attention_2_new_forward(self, *args, **kwargs):
-    hidden_states = kwargs.get('hidden_states', args[0] if args else None)
-    attention_mask = kwargs.get('attention_mask', None)
-    position_ids = kwargs.get('position_ids', None) 
-    past_key_value = kwargs.get('past_key_value', None)
-    output_attentions = kwargs.get('output_attentions', False)
-    use_cache = kwargs.get('use_cache', False)
-    cache_position = kwargs.get('cache_position', None)
-    position_embeddings = kwargs.get('position_embeddings', None)
+    hidden_states = kwargs.pop('hidden_states', args[0] if args else None)
+    attention_mask = kwargs.pop('attention_mask', None)
+    position_ids = kwargs.pop('position_ids', None) 
+    past_key_value = kwargs.pop('past_key_value', None)
+    output_attentions = kwargs.pop('output_attentions', False)
+    use_cache = kwargs.pop('use_cache', False)
+    cache_position = kwargs.pop('cache_position', None)
+    position_embeddings = kwargs.pop('position_embeddings', None)
 
     if isinstance(past_key_value, StaticCache):
         raise ValueError(
@@ -1073,18 +1088,8 @@ def llama_flash_attention_2_new_forward(self, *args, **kwargs):
         total_seq_len = key_states.size(-2)  # Use actual size after cache update
         past_seq_len = total_seq_len - q_len
         
-        # Generate position IDs for the full sequence
-        if cache_position is None:
-            # If no cache_position provided, assume sequential positions
-            key_position_ids = torch.arange(total_seq_len, device=cos.device)
-            query_position_ids = torch.arange(past_seq_len, total_seq_len, device=cos.device)
-        else:
-            # Use provided cache positions and append new positions
-            key_position_ids = torch.cat([
-                cache_position,
-                torch.arange(past_seq_len, total_seq_len, device=cos.device)
-            ])
-            query_position_ids = torch.arange(past_seq_len, total_seq_len, device=cos.device)
+        key_position_ids = torch.arange(total_seq_len, device=cos.device)
+        query_position_ids = torch.arange(past_seq_len, total_seq_len, device=cos.device)
         
         # Get rotary embeddings for queries and keys separately
         key_cos, key_sin = self.rotary_emb(value_states, key_position_ids.unsqueeze(0))
@@ -1170,7 +1175,7 @@ def llama_sdpa_attention_new_forward(self, *args, **kwargs):
             "LlamaModel is using LlamaSdpaAttention, but `torch.nn.functional.scaled_dot_product_attention` does not support `output_attentions=True`. Falling back to the manual attention implementation, "
             'but specifying the manual implementation will be required from Transformers version v5.0.0 onwards. This warning can be removed using the argument `attn_implementation="eager"` when loading the model.'
         )
-        return super().forward(
+        return super(LlamaSdpaAttention, self).forward(
             hidden_states=hidden_states,
             attention_mask=attention_mask,
             position_ids=position_ids,
@@ -1261,11 +1266,11 @@ def llama_sdpa_attention_new_forward(self, *args, **kwargs):
 
     return attn_output, None, past_key_value
 
-def patch_w2v2(blocksize=1, xpos=True):
-    global BLOCKSIZE, XPOS
-    print("Patching with block size {} and xpos {}".format(blocksize, xpos))
-    BLOCKSIZE = blocksize
+def patch_w2v2(xpos=True, rope=True):
+    global XPOS, ROPE
+    print("Patching with xpos {}, rope {}".format(xpos, rope))
     XPOS = xpos
+    ROPE = rope
     Wav2Vec2Model.extract_features = uni_w2v2_extract_features
     Wav2Vec2Model.forward = uni_w2v2_forward
     HubertModel.extract_features = uni_hubert_extract_features
