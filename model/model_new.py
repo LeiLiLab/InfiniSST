@@ -72,10 +72,12 @@ class SpeechLlamaModel(LlamaModel):
         after_lens: Optional[List[torch.FloatTensor]] = None,
         return_dict: Optional[bool] = None,
         states: Optional[object] = None,
+        multiplier: Optional[int] = 1,
         **kwargs,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
 
         if speech_batch is not None and not self.speech_features_extracted:
+            self.speech_encoder.set_blocksize(multiplier)
             if states is None:
                 speech_features, _ = self.speech_encoder.encode_speech(
                     speech_batch, 
@@ -231,6 +233,7 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
         after_lens: Optional[List[torch.FloatTensor]] = None,
         return_dict: Optional[bool] = None,
         states: Optional[object] = None,
+        multiplier: Optional[int] = 1,
         **kwargs,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -253,6 +256,7 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
             src_lengths=src_lengths,
             after_lens=after_lens,
             states=states,
+            multiplier=multiplier,
         )
 
         hidden_states = outputs[0]
@@ -311,6 +315,7 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
                 "src_lengths": kwargs.get("src_lengths", None),
                 "after_lens": kwargs.get("after_lens", None),
                 "states": kwargs.get("states", None),
+                "multiplier": kwargs.get("multiplier", 1),
             }
         )
         return model_inputs

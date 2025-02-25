@@ -33,6 +33,11 @@ def add_speech_encoder_args(parser):
         type=int,
         default=1, # 1 for True, 0 for False
     )
+    parser.add_argument(
+        "--rope",
+        type=int,
+        default=1, # 1 for True, 0 for False
+    )
 
 def add_gen_args(parser):                 
     parser.add_argument(
