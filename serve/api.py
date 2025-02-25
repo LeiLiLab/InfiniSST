@@ -5,6 +5,8 @@ import soundfile as sf
 import numpy as np
 import json
 import asyncio
+import argparse
+import copy
 from typing import Dict, Optional
 from eval.agents.streamllama import StreamLlama
 from eval.agents.tt_alignatt_sllama_stream_att_fw import AlignAttStreamAttFW
@@ -14,7 +16,8 @@ import uvicorn
 # 支持的翻译模型列表
 TRANSLATION_AGENTS = {
     "InfiniSST": StreamLlama,
-    "StreamAtt": AlignAttStreamAttFW,
+    # 暂时禁用StreamAtt
+    # "StreamAtt": AlignAttStreamAttFW,
 }
 
 # 支持的语言方向
@@ -42,6 +45,7 @@ class TranslationSession:
         args.state_dict_path = model_path.format(src_code, tgt_code)
         
         self.agent = TRANSLATION_AGENTS[agent_type](args)
+        self.agent.update_multiplier(args.latency_multiplier)
         self.states = self.agent.build_states()
         self.states.reset()
         self.args = args  # Store args in the session
@@ -60,14 +64,12 @@ class TranslationSession:
         return ""
 
 @app.post("/init")
-async def initialize_translation(agent_type: str, language_pair: str):
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--source-segment-size", type=int, default=960)
-    StreamLlama.add_args(parser)
-    args = parser.parse_args()
-
-    session = TranslationSession(agent_type, language_pair, args)
+async def initialize_translation(agent_type: str, language_pair: str, latency_multiplier: int = 2):
+    global args
+    session_args = copy.deepcopy(args)
+    session_args.latency_multiplier = latency_multiplier
+    session_args.max_new_tokens = 10 * latency_multiplier
+    session = TranslationSession(agent_type, language_pair, session_args)
     session_id = f"{agent_type}_{language_pair}_{len(active_sessions)}"
     active_sessions[session_id] = session
     return {"session_id": session_id}
@@ -104,9 +106,6 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
         print(f"Error in WebSocket connection: {str(e)}")
         import traceback
         traceback.print_exc()
-    finally:
-        if session_id in active_sessions:
-            del active_sessions[session_id]
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
@@ -114,8 +113,55 @@ async def upload_file(file: UploadFile = File(...)):
     audio_data, sr = sf.read(io.BytesIO(contents))
     return {"sample_rate": sr, "duration": len(audio_data) / sr}
 
+@app.post("/update_latency")
+async def update_latency(session_id: str, latency_multiplier: int):
+    if session_id not in active_sessions:
+        return {"success": False, "error": "Invalid session ID"}
+    
+    try:
+        session = active_sessions[session_id]
+        session.args.latency_multiplier = int(latency_multiplier)
+        session.agent.update_multiplier(int(latency_multiplier))
+        return {"success": True}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
+
+@app.post("/reset_translation")
+async def reset_translation(session_id: str):
+    if session_id not in active_sessions:
+        return {"success": False, "error": "Invalid session ID"}
+    
+    try:
+        session = active_sessions[session_id]
+        # Reset the states without reloading the model
+        session.states.reset()
+        return {"success": True, "message": "Translation reset successfully"}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
+
+@app.post("/delete_session")
+async def delete_session(session_id: str):
+    if session_id not in active_sessions:
+        return {"success": False, "error": "Invalid session ID"}
+    
+    try:
+        # Delete the session
+        del active_sessions[session_id]
+        return {"success": True, "message": "Session deleted successfully"}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
+
 # Mount static files
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    StreamLlama.add_args(parser)
+    args = parser.parse_args()
     uvicorn.run(app, host="0.0.0.0", port=8000) 

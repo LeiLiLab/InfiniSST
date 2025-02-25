@@ -1,7 +1,6 @@
 export PYTHONPATH=/home/siqiouya/work/sllama
 python api.py \
-    --source-segment-size 960 \
-    --latency-multiplier 1 \
+    --latency-multiplier 2 \
     --min-start-sec 0 \
     --w2v2-path /data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt \
     --w2v2-type w2v2 \

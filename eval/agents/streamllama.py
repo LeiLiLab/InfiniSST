@@ -85,8 +85,8 @@ class StreamLlama(SpeechToTextAgent):
 
         # simuleval
         self.min_start_sec = args.min_start_sec
-        self.source_segment_size = args.source_segment_size
         self.latency_multiplier = args.latency_multiplier
+        self.source_segment_size = getattr(args, 'source_segment_size', 960 * args.latency_multiplier)
         self.max_latency_multiplier = args.max_latency_multiplier
         self.source_lang = args.source_lang
         self.target_lang = args.target_lang
@@ -131,6 +131,11 @@ class StreamLlama(SpeechToTextAgent):
             segment_idx=0,
             translations_list=[]
         )
+    
+    def update_multiplier(self, multiplier):
+        self.latency_multiplier = multiplier
+        # self.source_segment_size = 960 * multiplier
+        self.max_new_tokens = 10 * multiplier
 
     def load_model(self, args):
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
@@ -320,11 +325,8 @@ class StreamLlama(SpeechToTextAgent):
                 epsilon_cutoff=self.epsilon_cutoff,
                 temperature=self.temperature,
                 num_beams=self.beam,
-                # /home/siqiouya/anaconda3/envs/speechllama/lib/python3.9/site-packages/transformers/generation/beam_search.py
                 max_new_tokens=self.max_new_tokens,
                 num_return_sequences=1,
-                # this needs modifying the code of HF greedy search
-                # /home/siqiouya/anaconda3/envs/speechllama/lib/python3.9/site-packages/transformers/generation/utils.py
                 encoder_input_ids=encoder_input_ids,
                 encoder_no_repeat_ngram_size=self.no_repeat_ngram_size,
                 no_repeat_ngram_size=self.no_repeat_ngram_size,
