@@ -190,6 +190,14 @@
         // 添加预缓冲延迟配置
         const PRE_BUFFER_DELAY_MS = 300; // 预缓冲延迟，毫秒
         
+        // 添加空闲计时器变量
+        let idleTimer = null;
+        const IDLE_TIMEOUT = 5 * 60 * 1000; // 5分钟，转换为毫秒
+        
+        // 添加心跳机制变量
+        let heartbeatInterval = null;
+        const HEARTBEAT_INTERVAL = 5000; // 5秒发送一次心跳
+        
         // UI Elements
         const agentType = document.getElementById('agentType');
         const languagePair = document.getElementById('languagePair');
@@ -291,9 +299,100 @@
             }
         }
 
+        // 发送心跳以保持会话活跃
+        function startHeartbeat() {
+            // 清除现有心跳
+            if (heartbeatInterval) {
+                clearInterval(heartbeatInterval);
+                console.log('Previous heartbeat stopped');
+            }
+            
+            // 如果有活跃会话，则设置新的心跳
+            if (sessionId) {
+                console.log(`Starting heartbeat for session ${sessionId} with interval ${HEARTBEAT_INTERVAL}ms`);
+                
+                // 立即发送一次心跳，不等待第一个间隔
+                sendHeartbeat();
+                
+                heartbeatInterval = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+                console.log('Heartbeat mechanism started');
+            } else {
+                console.warn('Cannot start heartbeat: No active session');
+            }
+        }
+        
+        // 发送单次心跳
+        async function sendHeartbeat() {
+            if (!sessionId) {
+                console.warn('Cannot send heartbeat: No active session');
+                stopHeartbeat();
+                return;
+            }
+            
+            try {
+                // 记录发送时间以计算往返时间
+                const startTime = performance.now();
+                
+                // 发送心跳请求
+                const response = await fetch('/heartbeat?' + new URLSearchParams({
+                    session_id: sessionId
+                }), {
+                    method: 'POST'
+                });
+                
+                // 计算往返时间
+                const rtt = performance.now() - startTime;
+                
+                // 检查响应
+                const data = await response.json();
+                if (!data.success) {
+                    console.warn('Heartbeat failed:', data.error);
+                    // 如果心跳失败，可能是会话已经不存在，清理客户端资源
+                    if (data.error.includes('Invalid session ID')) {
+                        console.log('Session no longer exists, cleaning up client resources');
+                        stopHeartbeat();
+                        sessionId = null;
+                        updateLatency.disabled = true;
+                        resetTranslation.disabled = true;
+                        audioStatus.textContent = 'Session expired or no longer valid. Please reload the model.';
+                        audioStatus.className = 'status error';
+                    }
+                } else {
+                    const serverTime = new Date(data.timestamp * 1000);
+                    const sessionInfo = data.session_info;
+                    
+                    // 格式化会话信息以便于日志记录
+                    const infoStr = `Session: ${sessionInfo.id} | Type: ${sessionInfo.type} | Lang: ${sessionInfo.language_pair} | Latency: ${sessionInfo.latency_multiplier}x | Idle: ${sessionInfo.last_activity_seconds_ago.toFixed(1)}s`;
+                    
+                    console.log(`Heartbeat successful (RTT: ${rtt.toFixed(1)}ms) | ${infoStr} | Server time: ${serverTime.toISOString()}`);
+                    
+                    // 如果空闲时间接近超时阈值，发出警告
+                    if (sessionInfo.last_activity_seconds_ago > 5) {
+                        console.warn(`Session idle for ${sessionInfo.last_activity_seconds_ago.toFixed(1)} seconds, approaching orphan threshold (10s)`);
+                    }
+                }
+            } catch (error) {
+                console.error('Error sending heartbeat:', error);
+                // 连续失败计数可以在这里实现
+                // 如果连续失败超过阈值，可以考虑停止心跳并通知用户
+            }
+        }
+        
+        // 停止心跳
+        function stopHeartbeat() {
+            if (heartbeatInterval) {
+                clearInterval(heartbeatInterval);
+                heartbeatInterval = null;
+                console.log('Heartbeat mechanism stopped');
+            }
+        }
+
         // 清理会话资源
         async function cleanupSession() {
             try {
+                // 停止心跳
+                stopHeartbeat();
+                
                 // 如果麦克风正在录制，停止它（传入false表示不是手动暂停）
                 if (isMicRecording) {
                     stopMicrophone(false);
@@ -334,6 +433,9 @@
                         console.error('Error deleting session:', e);
                     }
                     
+                    // 从localStorage中移除会话ID
+                    localStorage.removeItem('translationSessionId');
+                    
                     // 清空会话ID
                     sessionId = null;
                 }
@@ -351,6 +453,136 @@
             }
         }
 
+        // 处理窗口关闭/刷新事件的特殊函数
+        function handleWindowClose() {
+            // 使用 sendBeacon API 确保请求在页面关闭前发送
+            if (sessionId) {
+                // 创建 FormData 对象
+                const formData = new FormData();
+                formData.append('session_id', sessionId);
+                
+                // 使用 sendBeacon 发送请求，这种方式更可靠地在页面关闭时发送请求
+                const beaconSent = navigator.sendBeacon('/delete_session', formData);
+                
+                console.log('Sent session deletion request via sendBeacon:', beaconSent ? 'success' : 'failed');
+                
+                // 从localStorage中移除会话ID
+                try {
+                    localStorage.removeItem('translationSessionId');
+                } catch (e) {
+                    console.error('Error removing session ID from localStorage:', e);
+                }
+                
+                // 清理客户端资源
+                if (micStream) {
+                    micStream.getTracks().forEach(track => track.stop());
+                }
+                
+                if (audioContext && audioContext.state !== 'closed') {
+                    try {
+                        audioContext.close();
+                    } catch (e) {
+                        console.error('Error closing audio context:', e);
+                    }
+                }
+                
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.close();
+                }
+                
+                // 清空会话ID
+                sessionId = null;
+            }
+        }
+
+        // 添加窗口关闭/刷新事件处理
+        window.addEventListener('beforeunload', handleWindowClose);
+        window.addEventListener('unload', handleWindowClose);
+
+        // 重置空闲计时器
+        function resetIdleTimer() {
+            // 清除现有计时器
+            if (idleTimer) {
+                clearTimeout(idleTimer);
+            }
+            
+            // 如果有活跃会话，则设置新的计时器
+            if (sessionId) {
+                idleTimer = setTimeout(async () => {
+                    console.log('Application idle for 5 minutes, releasing resources...');
+                    await cleanupSession();
+                    audioStatus.textContent = 'Session closed due to inactivity (5 minutes idle time)';
+                    audioStatus.className = 'status';
+                }, IDLE_TIMEOUT);
+            }
+        }
+
+        // 监听用户交互事件以重置空闲计时器
+        function setupIdleDetection() {
+            // 监听用户交互事件
+            const userEvents = ['mousedown', 'keypress', 'scroll', 'touchstart'];
+            userEvents.forEach(eventType => {
+                document.addEventListener(eventType, resetIdleTimer);
+            });
+            
+            // 监听音频播放和暂停事件
+            audioPlayer.addEventListener('play', resetIdleTimer);
+            audioPlayer.addEventListener('pause', resetIdleTimer);
+            
+            // 初始设置计时器
+            resetIdleTimer();
+        }
+
+        // 在文档加载完成后初始化空闲检测
+        document.addEventListener('DOMContentLoaded', () => {
+            setupIdleDetection();
+            
+            // 检查是否有存储的会话ID（例如从localStorage）
+            const storedSessionId = localStorage.getItem('translationSessionId');
+            if (storedSessionId) {
+                // 验证会话是否仍然有效
+                checkSessionStatus(storedSessionId);
+            }
+        });
+        
+        // 检查会话状态
+        async function checkSessionStatus(checkSessionId) {
+            try {
+                const response = await fetch('/heartbeat?' + new URLSearchParams({
+                    session_id: checkSessionId
+                }), {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    console.log('Restored session:', checkSessionId);
+                    // 会话有效，恢复状态
+                    sessionId = checkSessionId;
+                    
+                    // 启用相关按钮
+                    updateLatency.disabled = false;
+                    resetTranslation.disabled = false;
+                    
+                    // 开始心跳
+                    startHeartbeat();
+                    
+                    // 更新UI
+                    audioStatus.textContent = 'Session restored. Ready to continue.';
+                    audioStatus.className = 'status success';
+                } else {
+                    console.log('Stored session is no longer valid');
+                    // 清除无效的会话ID
+                    localStorage.removeItem('translationSessionId');
+                }
+            } catch (error) {
+                console.error('Error checking session status:', error);
+                // 清除可能无效的会话ID
+                localStorage.removeItem('translationSessionId');
+            }
+        }
+        
+        // 修改loadModel函数，保存会话ID到localStorage
         loadModel.addEventListener('click', async () => {
             try {
                 // 清理现有会话和资源
@@ -372,6 +604,9 @@
                 const data = await response.json();
                 sessionId = data.session_id;
                 
+                // 保存会话ID到localStorage
+                localStorage.setItem('translationSessionId', sessionId);
+                
                 // 重置翻译初始化状态
                 translationInitialized = false;
                 
@@ -382,6 +617,12 @@
                 audioStatus.className = 'status success';
                 
                 updateSettingsDisplay();
+                
+                // 开始心跳
+                startHeartbeat();
+                
+                // 重置空闲计时器
+                resetIdleTimer();
             } catch (error) {
                 audioStatus.textContent = 'Error loading model: ' + error;
                 audioStatus.className = 'status error';
@@ -396,6 +637,9 @@
                 translationInitialized = false;
                 audioStatus.textContent = 'Audio loaded. Press play to start translation.';
                 audioStatus.className = 'status success';
+                
+                // 重置空闲计时器
+                resetIdleTimer();
             }
         });
         
@@ -481,6 +725,9 @@
                             audioStatus.textContent = 'Playing and translating...';
                             audioStatus.className = 'status success';
                             
+                            // 重置空闲计时器
+                            resetIdleTimer();
+                            
                             // 设置音频结束事件
                             audioPlayer.onended = () => {
                                 // 发送剩余的数据（如果有的话）
@@ -545,6 +792,9 @@
                         audioStatus.textContent = 'Error playing audio: ' + e;
                         audioStatus.className = 'status error';
                     });
+                    
+                    // 重置空闲计时器
+                    resetIdleTimer();
                 } catch (error) {
                     console.error('Error initializing translation:', error);
                     audioStatus.textContent = 'Error initializing translation: ' + error;
@@ -675,10 +925,12 @@
                             const volumePercent = Math.min(100, Math.round(averageVolume * 1000));
                             volumeLevel.style.width = volumePercent + '%';
                             
-                            if (!hasSound) {
-                                console.log('No sound detected in microphone input');
-                            } else {
+                            // 如果检测到声音，重置空闲计时器
+                            if (hasSound) {
                                 console.log('Sound detected in microphone input');
+                                resetIdleTimer();
+                            } else {
+                                console.log('No sound detected in microphone input');
                             }
                             
                             // 对输入数据进行重采样
@@ -726,6 +978,9 @@
                     isMicRecording = true;
                     audioStatus.textContent = 'Translating from microphone...';
                     audioStatus.className = 'status success';
+                    
+                    // 重置空闲计时器
+                    resetIdleTimer();
                     
                     // 发送一个小的静音数据块，以初始化翻译系统
                     const silentChunk = new Float32Array(baseChunkSize * currentLatencyMultiplier);
