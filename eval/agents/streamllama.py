@@ -66,6 +66,7 @@ class S2TAgentStates(AgentStates):
     target_ids: list
     segment_idx: int
     translations_list: list
+    MAX_SRC_LEN = 1600000
 
     def reset(self):
         super().reset()
@@ -215,6 +216,10 @@ class StreamLlama(SpeechToTextAgent):
         sp_seg_frame = int(self.args.block_size // 4 * 0.08 * 16000)
         
         # Only tensorize the new part
+        if len(states.source) > states.MAX_SRC_LEN:
+            states.src_len -= len(states.source) - states.MAX_SRC_LEN
+            states.source = states.source[-states.MAX_SRC_LEN:]
+           
         source = torch.tensor(states.source[states.src_len:])
         
         # Pad if needed
