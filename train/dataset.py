@@ -8,6 +8,8 @@ import csv
 import io
 import logging
 import re
+import time
+import random
 import copy
 import torch.nn.functional as F
 from collections import defaultdict
@@ -81,6 +83,7 @@ class SpeechToTextDatasetItem(object):
     speech_word: Optional[List] = None
     text_word: Optional[List] = None
     trajectory: Optional[List] = None
+    sampled_trajectory: Optional[List] = None
     
 class PromptSpeechToTextDataset(SpeechToTextDataset):
 
@@ -95,6 +98,7 @@ class PromptSpeechToTextDataset(SpeechToTextDataset):
         speech_words: Optional[List] = None,
         text_words: Optional[List] = None,
         trajectories: Optional[List[List[str]]] = None,
+        sampled_trajectories: Optional[List[List[str]]] = None,
     ):
         self.audio_paths = audio_paths
         self.n_frames = n_frames
@@ -105,13 +109,20 @@ class PromptSpeechToTextDataset(SpeechToTextDataset):
         self.speech_words = speech_words
         self.text_words = text_words
         self.trajectories = trajectories
-
+        self.sampled_trajectories = sampled_trajectories       
+    
     def __getitem__(
         self, index: int
     ) -> Tuple[int, torch.Tensor, Optional[torch.Tensor]]:
-        source, sr = get_features_or_waveform(
-            self.audio_paths[index],
-        )
+        while True:
+            try:
+                source, sr = get_features_or_waveform(
+                    self.audio_paths[index],
+                )
+                break  # Exit the loop if successful
+            except Exception as e:
+                time.sleep(random.uniform(0, 1))  # Sleep for a random time <= 1 second
+
         source = torch.from_numpy(source).float()
         # with torch.no_grad():
         #     source = F.layer_norm(source, source.shape)
@@ -122,11 +133,13 @@ class PromptSpeechToTextDataset(SpeechToTextDataset):
         speech_word = self.speech_words[index] if self.speech_words is not None else None
         text_word = self.text_words[index] if self.text_words is not None else None
         trajectory = self.trajectories[index] if self.trajectories is not None else None
-        
+        sampled_trajectory = self.sampled_trajectories[index] if self.sampled_trajectories is not None else None
         return SpeechToTextDatasetItem(
             index=index, source=source, target=text, src_text=src_text, id=id, task=task,
-            speech_word=speech_word, text_word=text_word, trajectory=trajectory
+            speech_word=speech_word, text_word=text_word, 
+            trajectory=trajectory, sampled_trajectory=sampled_trajectory
         )
+    
     def __len__(self):
         return len(self.audio_paths)
         
@@ -183,6 +196,9 @@ class PromptSpeechToTextDatasetCreator(object):
         trajectories_str = [s.get(cls.KEY_TRAJECTORY, '') for s in samples]
         trajectories = [eval(s) if s != '' else None for s in trajectories_str]
 
+        sampled_trajectories_str = [s.get('sampling', '') for s in samples]
+        sampled_trajectories = [eval(s) if s != '' else None for s in sampled_trajectories_str]
+
         return PromptSpeechToTextDataset(
             audio_paths,
             n_frames=n_frames,
@@ -193,6 +209,7 @@ class PromptSpeechToTextDatasetCreator(object):
             speech_words=speech_words,
             text_words=text_words,
             trajectories=trajectories,
+            sampled_trajectories=sampled_trajectories
         )
 
 
@@ -208,10 +225,10 @@ class SpeechSampler(DistributedSampler):
         for idx in range(len(self.dataset)):
             sp_seg_frame = int(12 * 0.08 * 16000)
             n_seg = (self.dataset.n_frames[idx] + sp_seg_frame - 1) // sp_seg_frame
-            eff_size = n_seg * 5 * 2 # text headers
+            eff_size = n_seg * 5 * 2 # headers
             eff_size += n_seg * 12 # speech features
             eff_size += len(tokenizer(self.dataset.tgt_texts[idx], add_special_tokens=False).input_ids) # text tokens
-            eff_size += 35 # beginning prompt
+            eff_size += 39 # beginning prompt
             eff_sizes.append((eff_size, idx))
 
         sorted_eff_sizes = sorted(eff_sizes)
@@ -638,8 +655,12 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
         speech_lens = self.length_shrink_func(n_frames)
 
         for x in samples:
-            if type(x.trajectory[0]) == str:
-                x.trajectory = [[seg, True] for seg in x.trajectory]
+            try:
+                if type(x.trajectory[0]) == str:
+                    x.trajectory = [[seg, True] for seg in x.trajectory]
+            except:
+                print(x)
+                raise KeyError
 
         mode = np.random.choice(['opt', 'aug', 'off'], p=self.perturb)
         for x in samples:
@@ -765,13 +786,14 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
 class DataCollatorForTrajectoryInstructMultiLatencyDataset(DataCollatorForTrajectoryDataset):
     def __init__(self, 
             tokenizer, length_shrink_func, source_lang, target_lang, 
-            block_size=48, max_multiplier=1, prob_aug=0., **kwargs
+            block_size=48, max_multiplier=1, prob_aug=0., trainer=None, **kwargs
         ):
         super().__init__(tokenizer, length_shrink_func, source_lang, target_lang, block_size, **kwargs)
         assert max_multiplier >= 1 and prob_aug >= 0 and prob_aug <= 1
         self.max_multiplier = max_multiplier
         self.prob_aug = prob_aug
-    
+        self.trainer = trainer
+
     def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
         indices = torch.tensor([x.index for x in samples], dtype=torch.long)
 
@@ -809,7 +831,7 @@ class DataCollatorForTrajectoryInstructMultiLatencyDataset(DataCollatorForTrajec
                 new_traj.append([partial_translation, True])
             x.trajectory = new_traj
 
-        if np.random.rand() < self.prob_aug:
+        if np.random.rand() < self.prob_aug: # only zh
             for x in samples:
                 traj = x.trajectory
 
@@ -915,6 +937,26 @@ class DataCollatorForTrajectoryInstructMultiLatencyDataset(DataCollatorForTrajec
             multiplier=multiplier
         )
 
+        return batch
+
+
+class DataCollatorForPreferenceOptimizationDataset(DataCollatorForTrajectoryInstructMultiLatencyDataset):
+    def __init__(self, 
+            tokenizer, length_shrink_func, source_lang, target_lang, 
+            block_size=48, max_multiplier=1, prob_aug=0., po_max_multiplier=1, **kwargs
+        ):
+        super().__init__(tokenizer, length_shrink_func, source_lang, target_lang, block_size, 
+                         max_multiplier=po_max_multiplier, prob_aug=prob_aug, **kwargs)
+    
+    def __call__(self, samples: List[SpeechToTextDatasetItem]):
+        bad_samples = []
+        # bad example
+        for x in samples:
+            x_ = copy.deepcopy(x)
+            x_.trajectory = x_.sampled_trajectory
+            bad_samples.append(x_)
+
+        batch = super().__call__(samples + bad_samples)
         return batch
 
 

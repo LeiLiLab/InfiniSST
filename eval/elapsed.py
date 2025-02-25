@@ -64,6 +64,8 @@ def adjust_elapsed_latency(delays, elapsed):
             # Same speech frame, calculate relative inference time
             frame_inference_time += wrong_elapsed - elapsed[frame_start_index]
 
+        logging.info(f"frame_inference_time: {frame_inference_time}")
+
         corrected_time = buffer + frame_inference_time + speech_start
         corrected_elapsed.append(corrected_time)
 
@@ -134,7 +136,8 @@ def update_log_file(log_file_path, new_file_path):
     except Exception as e:
         logging.error(f"An error occurred: {e}")
 
-# Example usage:
-# log_file_path = "instances.log"
-# new_file_path = "instance_corrected.log"
-# update_log_file(log_file_path, new_file_path)
+
+if __name__ == "__main__":
+    import sys
+    log_file_path = sys.argv[1]
+    update_log_file(log_file_path, log_file_path + '.corrected')

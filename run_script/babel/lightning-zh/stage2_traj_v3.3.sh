@@ -7,8 +7,8 @@
 #SBATCH --mem=500GB
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-13,babel-10-[5,13],babel-11-25,babel-12-29,babel-13-[13,29]
-#SBATCH --partition=preempt
+#SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,13],babel-11-25,babel-12-29,babel-13-[13,21,29],babel-14-25
+#SBATCH --partition=general
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
 ##SBATCH --array=1-7
@@ -21,6 +21,7 @@
 source /home/siqiouya/anaconda3/bin/activate speechllama
 
 llm_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf
+sllm_weight_path=/compute/babel-5-23/siqiouya/runs/8B-traj-s1-v3.3/last.ckpt/
 w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
 # w2v2_path=/data/user_data/siqiouya/runs/pretrained/hubert_large_ll60k_finetune_ls960.pt
 w2v2_type=w2v2
@@ -32,12 +33,13 @@ data_path=/compute/babel-14-5/siqiouya/en-zh/
 
 source_lang="English"
 target_lang="Chinese"
-name="8B-traj-s1-v3.1"
+name="8B-traj-s2-v3.3"
 save_path=/compute/babel-5-23/siqiouya/runs/$name
-# rm -rf ${save_path}
+rm -rf ${save_path}
 mkdir -p ${save_path}
 
 export PYTHONPATH=/home/siqiouya/work/sllama
+export TOKENIZERS_PARALLELISM=false
 export WANDB_PROJECT="mustc_1.0_zh"
 export WANDB_ENTITY="streamllama"
 
@@ -51,6 +53,7 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     \
     --w2v2_path ${w2v2_path} \
     --w2v2_type ${w2v2_type} \
+    --w2v2_freeze True \
     --ctc_finetuned ${ctc_finetuned} \
     --length_shrink_cfg "[(1024,2,2)] * 2" \
     --block_size 48 \
@@ -58,30 +61,30 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     --xpos False \
     \
     --llm_path ${llm_path} \
-    --llm_freeze True \
-    --llm_emb_freeze True \
-    --llm_head_freeze True \
+    --sllm_weight_path ${sllm_weight_path}/pytorch_model.bin \
     \
     --data_path ${data_path} \
-    --data_split_train 'train_ft_traj_45' \
-    --data_split_eval 'dev_traj_45' \
+    --data_split_train 'train_st_zh_ft_traj_30_filtered' \
+    --data_split_eval 'dev_st_zh_traj_30' \
     --source_lang "${source_lang}" \
     --target_lang "${target_lang}" \
     --trajectory 4 \
     --trajectory_max_multiplier 4 \
     --trajectory_prob_aug 0.0 \
     \
-    --seed 998244353 \
-    --stage 1 \
-    --train_bsz 1500 \
-    --eval_bsz 1500 \
-    --learning_rate 2e-4 \
-    --warmup_steps 1000 \
+    --seed 42 \
+    --stage 2 \
+    --train_bsz 2400 \
+    --eval_bsz 2400 \
+    --bsz_sent 3 \
+    --learning_rate 7e-6 \
+    --warmup_steps 100 \
     --run_name $name \
     \
     --n_device ${SLURM_GPUS} \
     --deepspeed_stage 2 \
-    --max_epochs 6 \
+    --deepspeed_offload True \
+    --max_epochs 1 \
     --grad_acc_steps 4 \
     --clip_norm 1.0 \
     --save_dir ${save_path} \

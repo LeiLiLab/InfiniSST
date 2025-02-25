@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=causal-alignatt
+#SBATCH --job-name=bi-a-4
 #SBATCH --output=./slurm-out/alignatt.out
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -26,7 +26,7 @@ PORT=${SLURM_ARRAY_TASK_ID:-23456}
 src_segment_size=960
 # frame_num=2 # 2 to 20
 frame_num=$SLURM_ARRAY_TASK_ID
-batch_size=1
+frame_num=2
 attn_layer=20
 
 # checkpoint_dir=/compute/babel-5-23/siqiouya/runs/8B-s2-v2.0/last.ckpt/
@@ -47,7 +47,7 @@ simuleval \
   --target-lang "Chinese" \
   --source /compute/babel-14-5/siqiouya/en-zh//tst-COMMON.source \
   --target /compute/babel-14-5/siqiouya/en-zh/tst-COMMON.target \
-  --output result/alignatt_bi_b1/${frame_num} \
+  --output result/alignatt_bi_b4/${frame_num} \
   --quality-metrics BLEU \
   --sacrebleu-tokenizer zh \
   --min-start-sec 0.96 \
@@ -61,5 +61,6 @@ simuleval \
   --max-len-b 256 \
   --repetition-penalty 1.2 \
   --beam 1 \
+  --latency-multiplier 0 \
   --eval-latency-unit char \
   --no-repeat-ngram-size 3
