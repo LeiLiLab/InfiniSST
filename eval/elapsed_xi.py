@@ -48,8 +48,10 @@ def adjust_elapsed_latency(delays, elapsed):
     previous_speech_start = delays[0]
     previous_wrong_elapsed = elapsed[0]
     frame_start_index = 0
+    frame_inference_times = []  # To store (i, frame_inference_time)
 
-    logging.info(f"Speech Frame List: {speech_frame_list}")
+
+    # logging.info(f"Speech Frame List: {speech_frame_list}")
 
     for i in range(len(elapsed)):
         speech_start = delays[i]
@@ -63,8 +65,7 @@ def adjust_elapsed_latency(delays, elapsed):
         else:
             # Same speech frame, calculate relative inference time
             frame_inference_time += wrong_elapsed - elapsed[frame_start_index]
-
-        logging.info(f"frame_inference_time: {frame_inference_time}")
+        frame_inference_times.append((i, int(frame_inference_time)))
 
         corrected_time = buffer + frame_inference_time + speech_start
         corrected_elapsed.append(corrected_time)
@@ -73,62 +74,61 @@ def adjust_elapsed_latency(delays, elapsed):
         if i < len(delays) - 1:
             next_speech_start = delays[i + 1]
             if next_speech_start != speech_start:
-                buffer = max(0, buffer + frame_inference_time - (next_speech_start - speech_start))
+                buffer = max(0, frame_inference_time - (next_speech_start - speech_start))
                 # buffer += max(0, frame_inference_time - (next_speech_start - speech_start))
 
 
-        logging.debug(f"Token {i}:")
-        logging.debug(f"  Speech Start: {speech_start}")
-        logging.debug(f"  Wrong Elapsed: {wrong_elapsed}")
-        logging.debug(f"  Corrected Time: {corrected_time}")
-        logging.debug(f"  Buffer: {buffer}")
-        logging.debug(f"  Frame Inference Time: {frame_inference_time}")
-        logging.debug("--------------------")
+        # logging.debug(f"Token {i}:")
+        # logging.debug(f"  Speech Start: {speech_start}")
+        # logging.debug(f"  Wrong Elapsed: {wrong_elapsed}")
+        # logging.debug(f"  Corrected Time: {corrected_time}")
+        # logging.debug(f"  Buffer: {buffer}")
+        # logging.debug(f"  Frame Inference Time: {frame_inference_time}")
+        # logging.debug("--------------------")
 
         # Update previous values for the next iteration
         previous_speech_start = speech_start
         previous_wrong_elapsed = wrong_elapsed
 
-    return corrected_elapsed
+    return corrected_elapsed, frame_inference_times
 
 def update_log_file(log_file_path, new_file_path):
-    """
-    Load the log file, correct the elapsed times, and save the updated log to a new file.
-    
-    Args:
-        log_file_path (str): Path to the original log file (instances.log).
-        new_file_path (str): Path to save the corrected log file (instance_corrected.log).
-    
-    Returns:
-        None
-    """
     try:
-        # Step 1: Load the log data (multiple instances)
         with open(log_file_path, 'r') as log_file:
             log_data = [json.loads(line) for line in log_file if line.strip()]
 
-        # Step 2: Process each instance and adjust elapsed times
-        for instance in log_data:
+        frame_inference_times_all = []
+
+        for instance_index, instance in enumerate(log_data):
             delays = instance.get('delays', [])
             elapsed = instance.get('elapsed', [])
 
             if not delays or not elapsed:
-                logging.error("Instance missing 'delays' or 'elapsed' data.")
+                # logging.error("Instance missing 'delays' or 'elapsed' data.")
                 continue
 
-            logging.info(f"Processing instance with delays: {delays} and elapsed: {elapsed}")
-            corrected_elapsed = adjust_elapsed_latency(delays, elapsed)
+            # logging.info(f"Processing instance {instance_index} with delays: {delays} and elapsed: {elapsed}")
+            corrected_elapsed, frame_inference_times = adjust_elapsed_latency(delays, elapsed)
 
-            # Update the instance with the corrected elapsed time
             instance['elapsed'] = corrected_elapsed
+            frame_inference_times_all.append({
+                "instance_index": instance_index,
+                "frame_inference_times": frame_inference_times
+            })
 
-        # Step 3: Write the updated instances to the new log file
+        # Write updated instances with corrected elapsed times to the new log file
         with open(new_file_path, 'w') as new_log_file:
             for instance in log_data:
                 new_log_file.write(json.dumps(instance) + '\n')
 
+        # Write frame_inference_times to a separate log file
+        frame_inference_file_path = "/home/xixu/SimulEval_n/frame.log"
+        with open(frame_inference_file_path, 'w') as frame_log_file:
+            for entry in frame_inference_times_all:
+                frame_log_file.write(json.dumps(entry) + '\n')
+
         logging.info(f"Updated log file saved to {new_file_path} successfully.")
-    
+
     except FileNotFoundError:
         logging.error(f"Log file {log_file_path} not found.")
     except json.JSONDecodeError:
@@ -137,7 +137,6 @@ def update_log_file(log_file_path, new_file_path):
         logging.error(f"An error occurred: {e}")
 
 
-if __name__ == "__main__":
-    import sys
-    log_file_path = sys.argv[1]
-    update_log_file(log_file_path, log_file_path + '.corrected')
+log_file_path = "/compute/babel-5-23/siqiouya/runs/en-de/8B-s2-bi-v3.5.2/last.ckpt/streamatt/bsz1_layer14_t40_d10_fn1/instances.log"
+new_file_path = "instance_corrected_bi_1.log"
+update_log_file(log_file_path, new_file_path)
