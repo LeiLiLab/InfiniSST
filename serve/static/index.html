@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simultaneous Speech Translation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .column {
+            flex: 1;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        select, button {
+            margin: 5px;
+            padding: 5px 10px;
+        }
+        #translationOutput {
+            min-height: 200px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        .success { background-color: #dff0d8; }
+        .error { background-color: #f2dede; }
+    </style>
+</head>
+<body>
+    <h1>Simultaneous Speech Translation</h1>
+    
+    <div class="controls">
+        <select id="agentType">
+            <option value="InfiniSST">InfiniSST</option>
+            <option value="StreamAtt">StreamAtt</option>
+        </select>
+        
+        <select id="languagePair">
+            <option value="English -> Chinese">English -> Chinese</option>
+            <option value="English -> German">English -> German</option>
+            <option value="English -> Spanish">English -> Spanish</option>
+        </select>
+        
+        <button id="loadModel">Load Model</button>
+    </div>
+
+    <div class="container">
+        <div class="column">
+            <h2>Audio Input</h2>
+            <input type="file" id="audioFile" accept="audio/*" />
+            <audio id="audioPlayer" controls style="width: 100%; margin-top: 10px;"></audio>
+            <button id="startTranslation" disabled>Start Translation</button>
+            <div id="audioStatus" class="status"></div>
+        </div>
+        
+        <div class="column">
+            <h2>Translation Output</h2>
+            <div id="translationOutput"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let sessionId = null;
+        let audioContext = null;
+        let audioSource = null;
+        let processor = null;
+        const segmentSize = 4096;  // 使用较大的buffer size以减少处理次数
+        const targetSampleRate = 16000;
+        const targetChunkSize = 960 * 16;
+        let audioBuffer = new Float32Array();
+        let resampledBuffer = new Float32Array();
+        
+        // UI Elements
+        const agentType = document.getElementById('agentType');
+        const languagePair = document.getElementById('languagePair');
+        const loadModel = document.getElementById('loadModel');
+        const audioFile = document.getElementById('audioFile');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const startTranslation = document.getElementById('startTranslation');
+        const translationOutput = document.getElementById('translationOutput');
+        const audioStatus = document.getElementById('audioStatus');
+
+        loadModel.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/init?' + new URLSearchParams({
+                    agent_type: agentType.value,
+                    language_pair: languagePair.value
+                }), {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                sessionId = data.session_id;
+                startTranslation.disabled = false;
+                audioStatus.textContent = 'Model loaded successfully';
+                audioStatus.className = 'status success';
+            } catch (error) {
+                audioStatus.textContent = 'Error loading model: ' + error;
+                audioStatus.className = 'status error';
+            }
+        });
+
+        audioFile.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                audioPlayer.src = URL.createObjectURL(file);
+                startTranslation.disabled = !sessionId;
+            }
+        });
+
+        startTranslation.addEventListener('click', async () => {
+            if (!sessionId) return;
+            
+            try {
+                // Clear previous translation
+                translationOutput.textContent = '';
+                
+                // Initialize WebSocket connection
+                ws = new WebSocket(`ws://${window.location.host}/ws/${sessionId}`);
+                
+                ws.onmessage = (event) => {
+                    translationOutput.textContent = event.data;
+                };
+                
+                ws.onerror = (error) => {
+                    audioStatus.textContent = 'WebSocket error: ' + error;
+                    audioStatus.className = 'status error';
+                };
+                
+                ws.onopen = async () => {
+                    try {
+                        // Initialize audio processing
+                        audioContext = new AudioContext();
+                        audioSource = audioContext.createMediaElementSource(audioPlayer);
+                        
+                        // 创建重采样节点
+                        const originalSampleRate = audioContext.sampleRate;
+                        const resampleRatio = targetSampleRate / originalSampleRate;
+                        
+                        // 创建ScriptProcessor节点
+                        processor = audioContext.createScriptProcessor(segmentSize, 1, 1);
+                        
+                        processor.onaudioprocess = (e) => {
+                            if (ws && ws.readyState === WebSocket.OPEN) {
+                                const inputData = e.inputBuffer.getChannelData(0);
+                                
+                                // 对输入数据进行重采样
+                                const resampledLength = Math.floor(inputData.length * resampleRatio);
+                                const resampledChunk = new Float32Array(resampledLength);
+                                
+                                for (let i = 0; i < resampledLength; i++) {
+                                    const originalIndex = Math.floor(i / resampleRatio);
+                                    resampledChunk[i] = inputData[originalIndex];
+                                }
+                                
+                                // 将重采样后的数据添加到缓冲区
+                                const newBuffer = new Float32Array(resampledBuffer.length + resampledChunk.length);
+                                newBuffer.set(resampledBuffer);
+                                newBuffer.set(resampledChunk, resampledBuffer.length);
+                                resampledBuffer = newBuffer;
+                                
+                                // 当缓冲区达到目标大小时发送数据
+                                while (resampledBuffer.length >= targetChunkSize) {
+                                    const chunk = resampledBuffer.slice(0, targetChunkSize);
+                                    ws.send(chunk.buffer);
+                                    resampledBuffer = resampledBuffer.slice(targetChunkSize);
+                                }
+                            }
+                        };
+                        
+                        // 连接节点
+                        audioSource.connect(processor);
+                        processor.connect(audioContext.destination);
+                        audioSource.connect(audioContext.destination);
+                        
+                        // 开始播放
+                        await audioPlayer.play();
+                        audioStatus.textContent = 'Playing and translating...';
+                        audioStatus.className = 'status success';
+                        
+                    } catch (error) {
+                        console.error('Error:', error);
+                        audioStatus.textContent = 'Error starting audio: ' + error;
+                        audioStatus.className = 'status error';
+                        if (ws) ws.close();
+                    }
+                };
+                
+                audioPlayer.onended = () => {
+                    // 发送剩余的数据（如果有的话）
+                    if (resampledBuffer.length > 0) {
+                        // 用0填充最后一个块至目标大小
+                        const finalChunk = new Float32Array(targetChunkSize);
+                        finalChunk.set(resampledBuffer);
+                        ws.send(finalChunk.buffer);
+                    }
+                    
+                    if (ws) ws.close();
+                    if (processor) {
+                        processor.disconnect();
+                        audioSource.disconnect();
+                    }
+                    if (audioContext) {
+                        audioContext.close();
+                    }
+                    audioStatus.textContent = 'Translation completed';
+                    audioStatus.className = 'status success';
+                };
+                
+            } catch (error) {
+                audioStatus.textContent = 'Error: ' + error;
+                audioStatus.className = 'status error';
+            }
+        });
+    </script>
+</body>
+</html> 
