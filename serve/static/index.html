@@ -75,6 +75,30 @@
             font-style: italic;
             color: #666;
         }
+        .volume-indicator {
+            margin-top: 10px;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        .volume-level {
+            height: 100%;
+            width: 0%;
+            background-color: #4CAF50;
+            transition: width 0.1s ease;
+        }
+        .volume-text {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            line-height: 20px;
+            color: #333;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -128,9 +152,12 @@
                 <div class="input-option">
                     <label><input type="radio" name="audioSource" value="mic"> Microphone</label>
                     <div id="micInputContainer" style="display: none;">
-                        <button id="startMic" class="mic-button">Start Microphone</button>
-                        <button id="stopMic" class="mic-button" disabled>Stop Microphone</button>
+                        <button id="toggleMic" class="mic-button">Start Microphone</button>
                         <div id="micStatus" class="mic-status"></div>
+                        <div class="volume-indicator">
+                            <div id="volumeLevel" class="volume-level"></div>
+                            <div class="volume-text">Microphone Level</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -178,9 +205,9 @@
         const audioSourceRadios = document.getElementsByName('audioSource');
         const fileInputContainer = document.getElementById('fileInputContainer');
         const micInputContainer = document.getElementById('micInputContainer');
-        const startMic = document.getElementById('startMic');
-        const stopMic = document.getElementById('stopMic');
+        const toggleMic = document.getElementById('toggleMic');
         const micStatus = document.getElementById('micStatus');
+        const volumeLevel = document.getElementById('volumeLevel');
         
         // 翻译系统状态
         let translationInitialized = false;
@@ -207,6 +234,15 @@
                     console.error('Error closing WebSocket:', e);
                 }
                 ws = null;
+            }
+            
+            // 停止麦克风流
+            if (micStream) {
+                micStream.getTracks().forEach(track => {
+                    track.stop();
+                    console.log('Microphone track stopped');
+                });
+                micStream = null;
             }
             
             // 断开并清理音频处理节点
@@ -246,15 +282,28 @@
             resampledBuffer = new Float32Array();
             audioBuffer = new Float32Array();
             firstChunkSent = false;
+            
+            // 重置麦克风状态
+            if (isMicRecording) {
+                isMicRecording = false;
+                toggleMic.textContent = 'Start Microphone';
+                micStatus.textContent = '';
+            }
         }
 
         // 清理会话资源
         async function cleanupSession() {
             try {
-                // 如果麦克风正在录制，停止它
+                // 如果麦克风正在录制，停止它（传入false表示不是手动暂停）
                 if (isMicRecording) {
-                    stopMicrophone();
+                    stopMicrophone(false);
+                } else {
+                    // 确保音量指示器被重置，即使麦克风没有在录制
+                    volumeLevel.style.width = '0%';
                 }
+                
+                // 清空麦克风状态消息
+                micStatus.textContent = '';
                 
                 // 停止当前的音频播放
                 if (audioPlayer) {
@@ -295,8 +344,7 @@
                 // 重置UI状态
                 updateLatency.disabled = true;
                 resetTranslation.disabled = true;
-                startMic.disabled = false;
-                stopMic.disabled = true;
+                toggleMic.textContent = 'Start Microphone';
                 
             } catch (error) {
                 console.error('Error cleaning up session:', error);
@@ -539,9 +587,9 @@
                 if (source === 'file') {
                     fileInputContainer.style.display = 'block';
                     micInputContainer.style.display = 'none';
-                    // 如果麦克风正在录制，停止它
+                    // 如果麦克风正在录制，停止它（传入false表示不是手动暂停）
                     if (isMicRecording) {
-                        stopMicrophone();
+                        stopMicrophone(false);
                     }
                 } else if (source === 'mic') {
                     fileInputContainer.style.display = 'none';
@@ -554,16 +602,26 @@
             });
         });
 
+        // 切换麦克风录制状态
+        toggleMic.addEventListener('click', async () => {
+            if (isMicRecording) {
+                // 用户手动暂停，显示暂停消息
+                stopMicrophone(true); // true表示是手动暂停
+            } else {
+                startMicrophone();
+            }
+        });
+
         // 开始麦克风录制
-        startMic.addEventListener('click', async () => {
+        async function startMicrophone() {
             if (!sessionId) {
                 micStatus.textContent = 'Please load a model first';
                 return;
             }
             
             try {
-                // 重置翻译输出
-                translationOutput.textContent = '';
+                // 不再清空翻译输出，保留之前的结果
+                // translationOutput.textContent = '';
                 
                 // 请求麦克风权限
                 micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -603,12 +661,19 @@
                             
                             // 检查音频数据是否有声音
                             let hasSound = false;
+                            let volumeSum = 0;
                             for (let i = 0; i < inputData.length; i++) {
-                                if (Math.abs(inputData[i]) > 0.01) {
+                                const volume = Math.abs(inputData[i]);
+                                volumeSum += volume;
+                                if (volume > 0.01) {
                                     hasSound = true;
-                                    break;
                                 }
                             }
+                            
+                            // 计算平均音量并更新音量指示器
+                            const averageVolume = volumeSum / inputData.length;
+                            const volumePercent = Math.min(100, Math.round(averageVolume * 1000));
+                            volumeLevel.style.width = volumePercent + '%';
                             
                             if (!hasSound) {
                                 console.log('No sound detected in microphone input');
@@ -656,8 +721,7 @@
                     translationPaused = false;
                     
                     // 更新UI状态
-                    startMic.disabled = true;
-                    stopMic.disabled = false;
+                    toggleMic.textContent = 'Pause Microphone';
                     micStatus.textContent = 'Microphone active. Speaking will be translated in real-time.';
                     isMicRecording = true;
                     audioStatus.textContent = 'Translating from microphone...';
@@ -676,12 +740,9 @@
                 micStatus.textContent = 'Error accessing microphone: ' + error;
                 console.error('Microphone error:', error);
             }
-        });
+        }
 
-        // 停止麦克风录制
-        stopMic.addEventListener('click', stopMicrophone);
-
-        function stopMicrophone() {
+        function stopMicrophone(isManualPause = false) {
             // 发送剩余的数据（如果有的话）
             if (ws && ws.readyState === WebSocket.OPEN && resampledBuffer.length > 0) {
                 const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
@@ -746,13 +807,20 @@
             // 重置缓冲区
             resampledBuffer = new Float32Array();
             
+            // 重置音量指示器
+            volumeLevel.style.width = '0%';
+            
             // 更新UI状态
-            startMic.disabled = false;
-            stopMic.disabled = true;
-            micStatus.textContent = 'Microphone stopped.';
+            toggleMic.textContent = 'Start Microphone';
+            
+            // 只有在手动暂停时才显示暂停消息
+            if (isManualPause) {
+                micStatus.textContent = 'Microphone paused.';
+            } else {
+                micStatus.textContent = '';
+            }
+            
             isMicRecording = false;
-            audioStatus.textContent = 'Microphone translation stopped.';
-            audioStatus.className = 'status';
             
             // 重置翻译状态
             translationPaused = true;
@@ -764,9 +832,14 @@
             if (!sessionId) return;
             
             try {
-                // 如果麦克风正在录制，停止它
+                // 如果麦克风正在录制，停止它（传入false表示不是手动暂停）
                 if (isMicRecording) {
-                    stopMicrophone();
+                    stopMicrophone(false);
+                } else {
+                    // 确保音量指示器被重置，即使麦克风没有在录制
+                    volumeLevel.style.width = '0%';
+                    // 清空麦克风状态消息
+                    micStatus.textContent = '';
                 }
                 
                 // 停止当前的音频播放
@@ -781,6 +854,9 @@
                 if (audioFile) {
                     audioFile.value = '';
                 }
+                
+                // 重置音量指示器
+                volumeLevel.style.width = '0%';
                 
                 // 重置翻译初始化状态
                 translationInitialized = false;
