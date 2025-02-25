@@ -60,6 +60,21 @@
             border-bottom: 1px solid #eee;
             padding-bottom: 10px;
         }
+        .input-options {
+            margin-bottom: 15px;
+        }
+        .input-option {
+            margin-bottom: 10px;
+        }
+        .mic-button {
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+        .mic-status {
+            margin-top: 10px;
+            font-style: italic;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -102,8 +117,23 @@
         
         <div class="panel">
             <h2>Audio Input</h2>
-            <input type="file" id="audioFile" accept="audio/*" />
-            <audio id="audioPlayer" controls style="width: 100%; margin-top: 10px;"></audio>
+            <div class="input-options">
+                <div class="input-option">
+                    <label><input type="radio" name="audioSource" value="file" checked> File Upload</label>
+                    <div id="fileInputContainer">
+                        <input type="file" id="audioFile" accept="audio/*" />
+                        <audio id="audioPlayer" controls style="width: 100%; margin-top: 10px;"></audio>
+                    </div>
+                </div>
+                <div class="input-option">
+                    <label><input type="radio" name="audioSource" value="mic"> Microphone</label>
+                    <div id="micInputContainer" style="display: none;">
+                        <button id="startMic" class="mic-button">Start Microphone</button>
+                        <button id="stopMic" class="mic-button" disabled>Stop Microphone</button>
+                        <div id="micStatus" class="mic-status"></div>
+                    </div>
+                </div>
+            </div>
             <div class="button-group">
                 <button id="resetTranslation" disabled>Reset</button>
             </div>
@@ -145,9 +175,20 @@
         const translationOutput = document.getElementById('translationOutput');
         const audioStatus = document.getElementById('audioStatus');
         const currentSettings = document.getElementById('currentSettings');
+        const audioSourceRadios = document.getElementsByName('audioSource');
+        const fileInputContainer = document.getElementById('fileInputContainer');
+        const micInputContainer = document.getElementById('micInputContainer');
+        const startMic = document.getElementById('startMic');
+        const stopMic = document.getElementById('stopMic');
+        const micStatus = document.getElementById('micStatus');
         
         // 翻译系统状态
         let translationInitialized = false;
+
+        // 麦克风相关变量
+        let micStream = null;
+        let micRecorder = null;
+        let isMicRecording = false;
 
         // 函数：滚动翻译输出框到底部，显示最新内容
         function scrollTranslationToBottom() {
@@ -210,6 +251,11 @@
         // 清理会话资源
         async function cleanupSession() {
             try {
+                // 如果麦克风正在录制，停止它
+                if (isMicRecording) {
+                    stopMicrophone();
+                }
+                
                 // 停止当前的音频播放
                 if (audioPlayer) {
                     audioPlayer.pause();
@@ -249,6 +295,8 @@
                 // 重置UI状态
                 updateLatency.disabled = true;
                 resetTranslation.disabled = true;
+                startMic.disabled = false;
+                stopMic.disabled = true;
                 
             } catch (error) {
                 console.error('Error cleaning up session:', error);
@@ -484,11 +532,243 @@
             }
         });
 
-        // 停止并重置翻译
+        // 切换音频输入源
+        audioSourceRadios.forEach(radio => {
+            radio.addEventListener('change', (event) => {
+                const source = event.target.value;
+                if (source === 'file') {
+                    fileInputContainer.style.display = 'block';
+                    micInputContainer.style.display = 'none';
+                    // 如果麦克风正在录制，停止它
+                    if (isMicRecording) {
+                        stopMicrophone();
+                    }
+                } else if (source === 'mic') {
+                    fileInputContainer.style.display = 'none';
+                    micInputContainer.style.display = 'block';
+                    // 如果有音频正在播放，暂停它
+                    if (audioPlayer) {
+                        audioPlayer.pause();
+                    }
+                }
+            });
+        });
+
+        // 开始麦克风录制
+        startMic.addEventListener('click', async () => {
+            if (!sessionId) {
+                micStatus.textContent = 'Please load a model first';
+                return;
+            }
+            
+            try {
+                // 重置翻译输出
+                translationOutput.textContent = '';
+                
+                // 请求麦克风权限
+                micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // 初始化WebSocket连接
+                ws = new WebSocket(`ws://${window.location.host}/ws/${sessionId}`);
+                
+                ws.onmessage = (event) => {
+                    translationOutput.textContent = event.data;
+                    scrollTranslationToBottom();
+                };
+                
+                ws.onerror = (error) => {
+                    micStatus.textContent = 'WebSocket error: ' + error;
+                    stopMicrophone();
+                };
+                
+                ws.onopen = () => {
+                    // 创建音频上下文
+                    audioContext = new AudioContext();
+                    const micSource = audioContext.createMediaStreamSource(micStream);
+                    
+                    // 创建处理节点
+                    processor = audioContext.createScriptProcessor(4096, 1, 1);
+                    
+                    // 重采样率计算
+                    const originalSampleRate = audioContext.sampleRate;
+                    const resampleRatio = targetSampleRate / originalSampleRate;
+                    
+                    console.log('Microphone sample rate:', originalSampleRate);
+                    console.log('Target sample rate:', targetSampleRate);
+                    console.log('Resample ratio:', resampleRatio);
+                    
+                    processor.onaudioprocess = (e) => {
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            const inputData = e.inputBuffer.getChannelData(0);
+                            
+                            // 检查音频数据是否有声音
+                            let hasSound = false;
+                            for (let i = 0; i < inputData.length; i++) {
+                                if (Math.abs(inputData[i]) > 0.01) {
+                                    hasSound = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (!hasSound) {
+                                console.log('No sound detected in microphone input');
+                            } else {
+                                console.log('Sound detected in microphone input');
+                            }
+                            
+                            // 对输入数据进行重采样
+                            const resampledLength = Math.floor(inputData.length * resampleRatio);
+                            const resampledChunk = new Float32Array(resampledLength);
+                            
+                            for (let i = 0; i < resampledLength; i++) {
+                                const originalIndex = Math.floor(i / resampleRatio);
+                                resampledChunk[i] = inputData[originalIndex];
+                            }
+                            
+                            // 将重采样后的数据添加到缓冲区
+                            const newBuffer = new Float32Array(resampledBuffer.length + resampledChunk.length);
+                            newBuffer.set(resampledBuffer);
+                            newBuffer.set(resampledChunk, resampledBuffer.length);
+                            resampledBuffer = newBuffer;
+                            
+                            // 计算当前的目标块大小
+                            const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
+                            
+                            // 当缓冲区达到目标大小时发送数据
+                            while (resampledBuffer.length >= targetChunkSize) {
+                                const chunk = resampledBuffer.slice(0, targetChunkSize);
+                                try {
+                                    ws.send(chunk.buffer);
+                                    console.log(`Sent audio chunk of size ${chunk.length} to server`);
+                                } catch (error) {
+                                    console.error('Error sending audio data:', error);
+                                }
+                                resampledBuffer = resampledBuffer.slice(targetChunkSize);
+                            }
+                        }
+                    };
+                    
+                    // 连接节点
+                    micSource.connect(processor);
+                    processor.connect(audioContext.destination);
+                    
+                    // 设置translationPaused为false，确保翻译处理正常进行
+                    translationPaused = false;
+                    
+                    // 更新UI状态
+                    startMic.disabled = true;
+                    stopMic.disabled = false;
+                    micStatus.textContent = 'Microphone active. Speaking will be translated in real-time.';
+                    isMicRecording = true;
+                    audioStatus.textContent = 'Translating from microphone...';
+                    audioStatus.className = 'status success';
+                    
+                    // 发送一个小的静音数据块，以初始化翻译系统
+                    const silentChunk = new Float32Array(baseChunkSize * currentLatencyMultiplier);
+                    try {
+                        ws.send(silentChunk.buffer);
+                        console.log('Sent initial silent chunk to server');
+                    } catch (error) {
+                        console.error('Error sending initial silent chunk:', error);
+                    }
+                };
+            } catch (error) {
+                micStatus.textContent = 'Error accessing microphone: ' + error;
+                console.error('Microphone error:', error);
+            }
+        });
+
+        // 停止麦克风录制
+        stopMic.addEventListener('click', stopMicrophone);
+
+        function stopMicrophone() {
+            // 发送剩余的数据（如果有的话）
+            if (ws && ws.readyState === WebSocket.OPEN && resampledBuffer.length > 0) {
+                const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
+                const finalChunk = new Float32Array(targetChunkSize);
+                finalChunk.set(resampledBuffer);
+                try {
+                    ws.send(finalChunk.buffer);
+                    console.log('Sent final audio chunk to server');
+                } catch (error) {
+                    console.error('Error sending final audio chunk:', error);
+                }
+            }
+            
+            // 关闭WebSocket连接
+            if (ws) {
+                try {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.close();
+                        console.log('WebSocket connection closed');
+                    }
+                } catch (e) {
+                    console.error('Error closing WebSocket:', e);
+                }
+                ws = null;
+            }
+            
+            // 停止麦克风流
+            if (micStream) {
+                micStream.getTracks().forEach(track => {
+                    track.stop();
+                    console.log('Microphone track stopped');
+                });
+                micStream = null;
+            }
+            
+            // 断开并清理音频处理节点
+            if (processor) {
+                try {
+                    processor.disconnect();
+                    console.log('Audio processor disconnected');
+                } catch (e) {
+                    console.error('Error disconnecting processor:', e);
+                }
+                processor = null;
+            }
+            
+            // 关闭音频上下文
+            if (audioContext) {
+                try {
+                    if (audioContext.state !== 'closed') {
+                        audioContext.close().catch(e => {
+                            console.error('Error closing audio context:', e);
+                        });
+                        console.log('Audio context closed');
+                    }
+                } catch (e) {
+                    console.error('Error in audio context cleanup:', e);
+                }
+                audioContext = null;
+            }
+            
+            // 重置缓冲区
+            resampledBuffer = new Float32Array();
+            
+            // 更新UI状态
+            startMic.disabled = false;
+            stopMic.disabled = true;
+            micStatus.textContent = 'Microphone stopped.';
+            isMicRecording = false;
+            audioStatus.textContent = 'Microphone translation stopped.';
+            audioStatus.className = 'status';
+            
+            // 重置翻译状态
+            translationPaused = true;
+            translationInitialized = false;
+        }
+
+        // 修改重置函数，确保麦克风也被正确停止
         resetTranslation.addEventListener('click', async () => {
             if (!sessionId) return;
             
             try {
+                // 如果麦克风正在录制，停止它
+                if (isMicRecording) {
+                    stopMicrophone();
+                }
+                
                 // 停止当前的音频播放
                 if (audioPlayer) {
                     audioPlayer.pause();
@@ -519,7 +799,7 @@
                 if (data.success) {
                     // 清空翻译输出
                     translationOutput.textContent = '';
-                    audioStatus.textContent = data.message || 'Translation reset successfully. Please upload a new audio file.';
+                    audioStatus.textContent = data.message || 'Translation reset successfully. Please select an audio source.';
                     audioStatus.className = 'status success';
                     
                     // 确保按钮状态正确
