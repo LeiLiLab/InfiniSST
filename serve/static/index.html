@@ -95,14 +95,18 @@
 
     <div class="container">
         <div class="panel">
-            <h2>Audio Input</h2>
+            <h2>Model Status</h2>
             <div id="currentSettings" class="settings-panel"></div>
+            <div id="audioStatus" class="status"></div>
+        </div>
+        
+        <div class="panel">
+            <h2>Audio Input</h2>
             <input type="file" id="audioFile" accept="audio/*" />
             <audio id="audioPlayer" controls style="width: 100%; margin-top: 10px;"></audio>
             <div class="button-group">
                 <button id="resetTranslation" disabled>Reset</button>
             </div>
-            <div id="audioStatus" class="status"></div>
         </div>
         
         <div class="panel">
