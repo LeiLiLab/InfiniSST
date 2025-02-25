@@ -24,7 +24,8 @@ frame_num=${SLURM_ARRAY_TASK_ID}
 batch_size=1
 attn_layer=14
 preserve_t=40
-min_speech_duration=10
+min_speech_duration=0
+max_speech_duration=28.8
 
 checkpoint_dir=/compute/babel-5-23/siqiouya/runs/en-de/8B-s2-bi-v3.5.2/last.ckpt/
 
@@ -65,4 +66,5 @@ simuleval \
   --no-repeat-ngram-size 5 \
   \
   --text-preserve-num ${preserve_t} \
-  --min-speech-duration ${min_speech_duration}
+  --min-speech-duration ${min_speech_duration} \
+  --max-speech-duration ${max_speech_duration}

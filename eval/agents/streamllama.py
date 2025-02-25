@@ -81,7 +81,7 @@ class StreamLlama(SpeechToTextAgent):
 
     def __init__(self, args):
         super().__init__(args)
-        # transformers.set_seed(998244353)
+        transformers.set_seed(998244353)
 
         # simuleval
         self.min_start_sec = args.min_start_sec
@@ -163,7 +163,8 @@ class StreamLlama(SpeechToTextAgent):
             args.max_cache_size,
             self.model.model.embed_tokens.embedding_dim,
             None,
-            bool(args.xpos)
+            bool(args.xpos),
+            bool(args.rope)
         ]
         if args.w2v2_type == 'hubert':
             speech_encoder = SpeechEncoderHuBERTRope(*speech_encoder_args)
@@ -336,6 +337,7 @@ class StreamLlama(SpeechToTextAgent):
                 past_key_values=states.past_key_values,
                 suppress_tokens=self.bad_words_ids,
                 states=states,
+                multiplier=self.latency_multiplier,
             )
 
             states.past_key_values = outputs.past_key_values
