@@ -21,5 +21,6 @@ python api.py \
     --no-repeat-ngram-lookback 100 \
     --no-repeat-ngram-size 5 \
     --repetition-penalty 1.2 \
+    --suppress-non-language \
     \
     --model-name /compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf
