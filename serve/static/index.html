@@ -5,16 +5,16 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 1200px;
+            max-width: 800px;
             margin: 0 auto;
             padding: 20px;
         }
         .container {
             display: flex;
+            flex-direction: column;
             gap: 20px;
         }
-        .column {
-            flex: 1;
+        .panel {
             padding: 20px;
             border: 1px solid #ccc;
             border-radius: 5px;
@@ -26,12 +26,21 @@
             margin: 5px;
             padding: 5px 10px;
         }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
         #translationOutput {
-            min-height: 200px;
+            height: 200px;
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 5px;
             white-space: pre-wrap;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            font-size: 16px;
+            line-height: 1.5;
         }
         .status {
             margin-top: 10px;
@@ -40,6 +49,17 @@
         }
         .success { background-color: #dff0d8; }
         .error { background-color: #f2dede; }
+        .settings-panel {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        h2 {
+            margin-top: 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -74,18 +94,20 @@
     </div>
 
     <div class="container">
-        <div class="column">
+        <div class="panel">
             <h2>Audio Input</h2>
+            <div id="currentSettings" class="settings-panel"></div>
             <input type="file" id="audioFile" accept="audio/*" />
             <audio id="audioPlayer" controls style="width: 100%; margin-top: 10px;"></audio>
-            <button id="startTranslation" disabled>Start Translation</button>
-            <button id="resetTranslation" disabled>Reset Translation</button>
+            <div class="button-group">
+                <button id="startTranslation" disabled>Start Translation</button>
+                <button id="resetTranslation" disabled>Reset Translation</button>
+            </div>
             <div id="audioStatus" class="status"></div>
         </div>
         
-        <div class="column">
+        <div class="panel">
             <h2>Translation Output</h2>
-            <div id="currentSettings"></div>
             <div id="translationOutput"></div>
         </div>
     </div>
@@ -102,6 +124,10 @@
         let currentLatencyMultiplier = 2; // 默认延迟倍数
         let audioBuffer = new Float32Array();
         let resampledBuffer = new Float32Array();
+        let firstChunkSent = false; // 添加标志，跟踪是否已发送第一个数据块
+        
+        // 添加预缓冲延迟配置
+        const PRE_BUFFER_DELAY_MS = 300; // 预缓冲延迟，毫秒
         
         // UI Elements
         const agentType = document.getElementById('agentType');
@@ -116,6 +142,11 @@
         const translationOutput = document.getElementById('translationOutput');
         const audioStatus = document.getElementById('audioStatus');
         const currentSettings = document.getElementById('currentSettings');
+
+        // 函数：滚动翻译输出框到底部，显示最新内容
+        function scrollTranslationToBottom() {
+            translationOutput.scrollTop = translationOutput.scrollHeight;
+        }
 
         // 清理音频和WebSocket资源
         function cleanupAudioResources() {
@@ -274,6 +305,8 @@
                 
                 ws.onmessage = (event) => {
                     translationOutput.textContent = event.data;
+                    // 自动滚动到底部，显示最新翻译内容
+                    scrollTranslationToBottom();
                 };
                 
                 ws.onerror = (error) => {
