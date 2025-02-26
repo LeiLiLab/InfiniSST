@@ -36,13 +36,13 @@ from transformers.generation.beam_search import BeamSearchScorer, BeamScorer, Be
 
 XPOS = True
 
-def get_attn_mask_training(seq_len, max_cache_size=None, blocksize=1):
+def get_attn_mask_training(seq_len, max_cache_size=None, blocksize=1, device='cuda'):
     blocksizes = [
         min(blocksize, seq_len - i * blocksize) 
         for i in range((seq_len + blocksize - 1) // blocksize)
     ]
 
-    mask = torch.zeros(seq_len, seq_len, device='cuda', dtype=torch.bool)
+    mask = torch.zeros(seq_len, seq_len, device=device, dtype=torch.bool)
     start_idx = 0
     for block_size in blocksizes:
         end_idx = start_idx + block_size
@@ -58,7 +58,7 @@ def get_attn_mask_training(seq_len, max_cache_size=None, blocksize=1):
     
     return mask_num
 
-def get_attn_mask_inference(seq_len, prefix_len, max_cache_size, blocksize=1):
+def get_attn_mask_inference(seq_len, prefix_len, max_cache_size, blocksize=1, device='cuda'):
     max_len = seq_len + min(prefix_len, max_cache_size)
 
     blocksizes = [
@@ -66,7 +66,7 @@ def get_attn_mask_inference(seq_len, prefix_len, max_cache_size, blocksize=1):
         for i in range((seq_len + prefix_len + blocksize - 1) // blocksize)
     ]
 
-    mask = torch.zeros(seq_len, max_len, device='cuda', dtype=torch.bool)
+    mask = torch.zeros(seq_len, max_len, device=device, dtype=torch.bool)
     start_idx = 0
     for block_size in blocksizes:
         end_idx = start_idx + block_size
@@ -513,9 +513,9 @@ def uni_transformer_encoder_extract_features(
     seq_len = x.size(0)
     # logger.info(f"w2v2 enc forward: device {x.device}, blocksize {self.blocksize}")
     if prefix_len > 0:
-        attn_mask = get_attn_mask_inference(seq_len, prefix_len, cache.max_steps, self.blocksize)
+        attn_mask = get_attn_mask_inference(seq_len, prefix_len, cache.max_steps, self.blocksize, x.device)
     else:
-        attn_mask = get_attn_mask_training(seq_len, cache.max_steps, self.blocksize)
+        attn_mask = get_attn_mask_training(seq_len, cache.max_steps, self.blocksize, x.device)
 
     layer_results = []
     r = None
