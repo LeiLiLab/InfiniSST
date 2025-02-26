@@ -280,7 +280,7 @@ class StreamLlama(SpeechToTextAgent):
                 input_ids = input_ids[:, 25:] 
             else:
                 input_ids[:, 0] = self.tokenizer.eos_token_id
-        input_ids = input_ids.cuda()
+        input_ids = input_ids.to(device=self.model.device)
         return input_ids
 
     @torch.inference_mode()
