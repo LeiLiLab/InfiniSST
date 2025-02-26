@@ -10,7 +10,8 @@ conda activate infinisst
 
 # torch and related packages
 pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
-pip install transformers==4.47.0 evaluate jiwer lightning accelerate deepspeed rotary_embedding_torch torchtune wandb tensorboardX matplotlib soundfile simuleval jupyter jieba unbabel-comet sentence-transformer flash-attn --no-build-isolation
+pip install transformers==4.47.0 evaluate jiwer lightning accelerate deepspeed rotary_embedding_torch torchtune sentence-transformers wandb tensorboardX matplotlib soundfile simuleval jupyter jieba unbabel-comet 
+pip install flash-attn --no-build-isolation
 
 # fairseq for wav2vec2
 git clone git@github.com:facebookresearch/fairseq.git
@@ -26,6 +27,8 @@ pip install fastapi uvicorn python-multipart websockets
 Also you need to login wandb with `wandb login` to use the `wandb` package.
 
 ## Data Construction
+
+For detailed information about data preparation, please refer to the [Data Preparation README](data_prepare/README.md).
 
 ## Training
 
