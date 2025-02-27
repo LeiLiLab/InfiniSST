@@ -18,9 +18,7 @@
 #SBATCH -e slurm_logs/%A-%a.err
 #SBATCH -o slurm_logs/%A-%a.out
 
-source /home/siqiouya/anaconda3/bin/activate speechllama
+source /home/siqiouya/anaconda3/bin/activate infinisst
 
 tsv_path=$1
-
-cd /home/siqiouya/work/sllama/data
-python asr.py --num_splits 8 --split_id $SLURM_ARRAY_TASK_ID --tsv_path $tsv_path
+python data_prep/asr.py --num_splits 8 --split_id $SLURM_ARRAY_TASK_ID --tsv_path $tsv_path
