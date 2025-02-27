@@ -73,7 +73,7 @@ import argparse
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Filter ASR results based on WER.")
-    parser.add_argument('--tsv_path', type=str, required=True, help='Path to the input TSV file.')
+    parser.add_argument('--tsv-path', type=str, required=True, help='Path to the input TSV file.')
     return parser.parse_args()
 
 args = parse_args()
