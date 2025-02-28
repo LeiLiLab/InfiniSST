@@ -233,7 +233,7 @@
         const loadModel = document.getElementById('loadModel');
         const updateLatency = document.getElementById('updateLatency');
         const audioFile = document.getElementById('audioFile');
-        const audioPlayer = document.getElementById('audioPlayer');
+        let audioPlayer = document.getElementById('audioPlayer');
         const resetTranslation = document.getElementById('resetTranslation');
         const translationOutput = document.getElementById('translationOutput');
         const audioStatus = document.getElementById('audioStatus');
@@ -252,6 +252,9 @@
         let micStream = null;
         let micRecorder = null;
         let isMicRecording = false;
+
+        // Add a flag to track if the audio element has been connected
+        let audioElementConnected = false;
 
         // 函数：滚动翻译输出框到底部，显示最新内容
         function scrollTranslationToBottom() {
@@ -291,27 +294,29 @@
                 processor = null;
             }
             
+            // Properly disconnect audioSource
             if (audioSource) {
                 try {
                     audioSource.disconnect();
+                    console.log('Audio source disconnected');
                 } catch (e) {
                     console.error('Error disconnecting audio source:', e);
                 }
                 audioSource = null;
             }
             
-            // 关闭音频上下文
+            // Close the audio context completely
             if (audioContext) {
                 try {
-                    if (audioContext.state !== 'closed') {
-                        audioContext.close().catch(e => {
-                            console.error('Error closing audio context:', e);
-                        });
-                    }
+                    audioContext.close().then(() => {
+                        console.log('AudioContext closed successfully');
+                        audioContext = null;
+                    }).catch(e => {
+                        console.error('Error closing audio context:', e);
+                    });
                 } catch (e) {
                     console.error('Error in audio context cleanup:', e);
                 }
-                audioContext = null;
             }
             
             // Reset buffers
@@ -325,6 +330,9 @@
                 toggleMic.textContent = 'Start Microphone';
                 micStatus.textContent = '';
             }
+            
+            // Reset the audio element connection flag
+            audioElementConnected = false;
         }
 
         // 删除心跳相关函数
@@ -480,6 +488,19 @@
                 
                 // 清理音频和WebSocket资源
                 cleanupAudioResources();
+                
+                // Now fully close the AudioContext
+                if (audioContext) {
+                    try {
+                        if (audioContext.state !== 'closed') {
+                            await audioContext.close();
+                            console.log('AudioContext fully closed');
+                        }
+                        audioContext = null;
+                    } catch (e) {
+                        console.error('Error closing AudioContext:', e);
+                    }
+                }
                 
                 // 删除后端会话
                 if (sessionId) {
@@ -868,7 +889,11 @@
                 translationPaused = false; // 设置为播放状态，因为用户点击了播放按钮
                 
                 // Initialize WebSocket connection
-                ws = new WebSocket(`ws://${window.location.host}/ws/${sessionId}`);
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                // Always use /wss/ path since that's what the server expects
+                const wsUrl = `${protocol}//${window.location.host}/wss/${sessionId}`;
+                console.log(`Connecting to WebSocket at: ${wsUrl}`);
+                ws = new WebSocket(wsUrl);
                 
                 ws.onmessage = (event) => {
                     const message = event.data;
@@ -904,9 +929,65 @@
                 return new Promise((resolve, reject) => {
                     ws.onopen = async () => {
                         try {
-                            // Initialize audio processing
+                            // Check if we need to recreate the audio player
+                            if (audioElementConnected) {
+                                console.log('Audio element already connected, recreating it');
+                                
+                                // Close any existing AudioContext
+                                if (audioContext) {
+                                    try {
+                                        await audioContext.close();
+                                        console.log('Previous AudioContext closed');
+                                    } catch (e) {
+                                        console.error('Error closing previous AudioContext:', e);
+                                    }
+                                    audioContext = null;
+                                }
+                                
+                                // Recreate the audio player
+                                const audioPlayerParent = document.getElementById('fileInputContainer');
+                                const oldAudioPlayer = document.getElementById('audioPlayer');
+                                const audioSrc = oldAudioPlayer.src; // Save the current source
+                                const audioPaused = oldAudioPlayer.paused; // Save the paused state
+                                const audioCurrentTime = oldAudioPlayer.currentTime; // Save the current time
+                                
+                                // Remove the old player
+                                if (oldAudioPlayer) {
+                                    audioPlayerParent.removeChild(oldAudioPlayer);
+                                }
+                                
+                                // Create a new audio player
+                                const newAudioPlayer = document.createElement('audio');
+                                newAudioPlayer.id = 'audioPlayer';
+                                newAudioPlayer.controls = true;
+                                newAudioPlayer.style.width = '100%';
+                                newAudioPlayer.style.marginTop = '10px';
+                                newAudioPlayer.src = audioSrc; // Restore the source
+                                newAudioPlayer.currentTime = audioCurrentTime; // Restore the current time
+                                
+                                // Add the new player to the DOM
+                                audioPlayerParent.appendChild(newAudioPlayer);
+                                
+                                // Update the global reference
+                                audioPlayer = newAudioPlayer;
+                                
+                                // Re-add event listeners
+                                addAudioPlayerEventListeners();
+                                
+                                // Reset the connection flag
+                                audioElementConnected = false;
+                            }
+                            
+                            // Create a new AudioContext
                             audioContext = new AudioContext();
+                            console.log('New AudioContext created with sample rate:', audioContext.sampleRate);
+                            
+                            // Create a new MediaElementSource
                             audioSource = audioContext.createMediaElementSource(audioPlayer);
+                            console.log('New MediaElementSource created');
+                            
+                            // Mark the audio element as connected
+                            audioElementConnected = true;
                             
                             // 创建重采样节点
                             const originalSampleRate = audioContext.sampleRate;
@@ -976,10 +1057,10 @@
                                 if (ws) ws.close();
                                 if (processor) {
                                     processor.disconnect();
-                                    audioSource.disconnect();
                                 }
+                                // Don't disconnect audioSource here, as we might reuse it
                                 if (audioContext) {
-                                    audioContext.close();
+                                    audioContext.suspend(); // Suspend instead of close
                                 }
                                 audioStatus.textContent = 'Translation completed';
                                 audioStatus.className = 'status success';
@@ -1005,62 +1086,57 @@
             }
         }
 
-        // 添加音频播放器事件监听器
-        audioPlayer.addEventListener('play', async () => {
-            // 如果翻译系统尚未初始化，则初始化
-            if (!translationInitialized && sessionId) {
-                try {
-                    // 暂停音频，等待翻译系统初始化
-                    audioPlayer.pause();
-                    audioStatus.textContent = 'Initializing translation system...';
+        // Function to add event listeners to the audio player
+        function addAudioPlayerEventListeners() {
+            audioPlayer.addEventListener('play', async () => {
+                // If translation system is not initialized, initialize it
+                if (!translationInitialized && sessionId) {
+                    try {
+                        audioPlayer.pause();
+                        audioStatus.textContent = 'Initializing translation system...';
+                        audioStatus.className = 'status';
+                        
+                        await initializeTranslation();
+                        
+                        audioPlayer.play().catch(e => {
+                            console.error('Error playing audio:', e);
+                            audioStatus.textContent = 'Error playing audio: ' + e;
+                            audioStatus.className = 'status error';
+                        });
+                        
+                        resetIdleTimer();
+                    } catch (error) {
+                        console.error('Error initializing translation:', error);
+                        audioStatus.textContent = 'Error initializing translation: ' + error;
+                        audioStatus.className = 'status error';
+                    }
+                } else if (translationInitialized) {
+                    translationPaused = false;
+                    audioStatus.textContent = 'Playing and translating...';
+                    audioStatus.className = 'status success';
+                    
+                    if (audioContext && audioContext.state === 'suspended') {
+                        audioContext.resume().catch(e => {
+                            console.error('Error resuming audio context:', e);
+                        });
+                    }
+                }
+            });
+            
+            audioPlayer.addEventListener('pause', () => {
+                if (translationInitialized) {
+                    translationPaused = true;
+                    audioStatus.textContent = 'Translation paused';
                     audioStatus.className = 'status';
                     
-                    // 初始化翻译系统
-                    await initializeTranslation();
-                    
-                    // 恢复播放
-                    audioPlayer.play().catch(e => {
-                        console.error('Error playing audio:', e);
-                        audioStatus.textContent = 'Error playing audio: ' + e;
-                        audioStatus.className = 'status error';
-                    });
-                    
-                    // 重置空闲计时器
-                    resetIdleTimer();
-                } catch (error) {
-                    console.error('Error initializing translation:', error);
-                    audioStatus.textContent = 'Error initializing translation: ' + error;
-                    audioStatus.className = 'status error';
+                    if (audioContext && audioContext.state === 'running') {
+                        audioContext.suspend().catch(e => {
+                            console.error('Error suspending audio context:', e);
+                        });
+                    }
                 }
-            } else if (translationInitialized) {
-                // 翻译系统已初始化，只需恢复翻译
-                translationPaused = false;
-                audioStatus.textContent = 'Playing and translating...';
-                audioStatus.className = 'status success';
-                
-                // 恢复音频上下文
-                if (audioContext && audioContext.state === 'suspended') {
-                    audioContext.resume().catch(e => {
-                        console.error('Error resuming audio context:', e);
-                    });
-                }
-            }
-        });
-        
-        audioPlayer.addEventListener('pause', () => {
-            if (translationInitialized) {
-                translationPaused = true;
-                audioStatus.textContent = 'Translation paused';
-                audioStatus.className = 'status';
-                
-                // 暂停音频上下文
-                if (audioContext && audioContext.state === 'running') {
-                    audioContext.suspend().catch(e => {
-                        console.error('Error suspending audio context:', e);
-                    });
-                }
-            }
-        });
+            });
+        }
 
         // 切换音频输入源
         audioSourceRadios.forEach(radio => {
@@ -1108,8 +1184,12 @@
                 // 请求麦克风权限
                 micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 
-                // 初始化WebSocket连接
-                ws = new WebSocket(`ws://${window.location.host}/ws/${sessionId}`);
+                // Initialize WebSocket connection
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                // Always use /wss/ path since that's what the server expects
+                const wsUrl = `${protocol}//${window.location.host}/wss/${sessionId}`;
+                console.log(`Connecting to WebSocket at: ${wsUrl}`);
+                ws = new WebSocket(wsUrl);
                 
                 ws.onmessage = (event) => {
                     translationOutput.textContent = event.data;
@@ -1329,13 +1409,49 @@
                     micStatus.textContent = '';
                 }
                 
-                // 停止当前的音频播放
-                if (audioPlayer) {
-                    audioPlayer.pause();
-                    audioPlayer.currentTime = 0;
-                    // 清除音频源，强制用户重新上传
-                    audioPlayer.src = '';
+                // 清理音频和WebSocket资源
+                cleanupAudioResources();
+                
+                // Now fully close the AudioContext
+                if (audioContext) {
+                    try {
+                        if (audioContext.state !== 'closed') {
+                            await audioContext.close();
+                            console.log('AudioContext fully closed');
+                        }
+                        audioContext = null;
+                    } catch (e) {
+                        console.error('Error closing AudioContext:', e);
+                    }
                 }
+                
+                // Reset the audio element connection flag
+                audioElementConnected = false;
+                
+                // Completely recreate the audio player element
+                const audioPlayerParent = document.getElementById('fileInputContainer');
+                const oldAudioPlayer = document.getElementById('audioPlayer');
+                
+                // Remove the old player
+                if (oldAudioPlayer) {
+                    audioPlayerParent.removeChild(oldAudioPlayer);
+                }
+                
+                // Create a new audio player with the same attributes
+                const newAudioPlayer = document.createElement('audio');
+                newAudioPlayer.id = 'audioPlayer';
+                newAudioPlayer.controls = true;
+                newAudioPlayer.style.width = '100%';
+                newAudioPlayer.style.marginTop = '10px';
+                
+                // Add the new player to the DOM
+                audioPlayerParent.appendChild(newAudioPlayer);
+                
+                // Update the global reference
+                audioPlayer = newAudioPlayer;
+                
+                // Add event listeners to the new audio player
+                addAudioPlayerEventListeners();
                 
                 // 重置文件输入，强制用户重新选择文件
                 if (audioFile) {
@@ -1347,9 +1463,6 @@
                 
                 // 重置翻译初始化状态
                 translationInitialized = false;
-                
-                // 清理音频和WebSocket资源
-                cleanupAudioResources();
                 
                 // 调用后端重置翻译状态
                 const response = await fetch('/reset_translation?' + new URLSearchParams({

@@ -43,7 +43,7 @@ LANGUAGE_PAIRS = {
     "English -> Spanish": ("English", "Spanish", "en", "es"),
 }
 
-model_path = "/compute/babel-5-23/siqiouya/runs/{}-{}/8B-traj-s2-v3.6/last.ckpt/pytorch_model.bin"
+model_path = "/mnt/data6/xixu/demo/{}-{}/pytorch_model.bin"
 
 app = FastAPI()
 
@@ -653,7 +653,7 @@ async def get_queue_status(session_id: str):
     # Session not found
     return {"session_id": session_id, "status": "not_found", "error": "Session not found in queue or active sessions"}
 
-@app.websocket("/ws/{session_id}")
+@app.websocket("/wss/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
     await websocket.accept()
     
