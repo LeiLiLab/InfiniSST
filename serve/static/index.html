@@ -673,6 +673,37 @@
                 console.log(`Found ${Object.keys(pendingDeleteSessions).length} orphaned sessions to delete (from previous browser close/refresh)`);
                 startSessionDeleteRetry();
             }
+            
+            // Add event listeners to the initial audio player
+            addAudioPlayerEventListeners();
+            
+            // Perform an initial reset to ensure everything is properly initialized
+            if (resetTranslation) {
+                // We'll trigger a "silent reset" that doesn't show any messages
+                // but ensures the audio system is properly initialized
+                const silentReset = async () => {
+                    try {
+                        // Reset the audio element connection flag
+                        audioElementConnected = false;
+                        
+                        // Ensure the audio player is properly set up
+                        const audioPlayerParent = document.getElementById('fileInputContainer');
+                        const oldAudioPlayer = document.getElementById('audioPlayer');
+                        
+                        if (oldAudioPlayer) {
+                            // Make sure event listeners are properly attached
+                            addAudioPlayerEventListeners();
+                        }
+                        
+                        // Reset translation initialization state
+                        translationInitialized = false;
+                    } catch (error) {
+                        console.error('Error during silent reset:', error);
+                    }
+                };
+                
+                silentReset();
+            }
         });
         
         // 检查会话状态
