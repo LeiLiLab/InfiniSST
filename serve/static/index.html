@@ -259,6 +259,8 @@
         // 函数：滚动翻译输出框到底部，显示最新内容
         function scrollTranslationToBottom() {
             translationOutput.scrollTop = translationOutput.scrollHeight;
+            // 重置空闲计时器，因为有新的翻译内容
+            resetIdleTimer();
         }
 
         // 清理音频和WebSocket资源
@@ -545,77 +547,6 @@
             }
         }
 
-        // 处理窗口关闭/刷新事件的特殊函数
-        function handleWindowClose() {
-            // 停止发送ping
-            stopPinging();
-            
-            // 停止检查队列状态
-            stopQueueCheck();
-            
-            // 使用 sendBeacon API 确保请求在页面关闭前发送
-            if (sessionId) {
-                // 创建 FormData 对象
-                const formData = new FormData();
-                formData.append('session_id', sessionId);
-                
-                // 使用 sendBeacon 发送请求，这种方式更可靠地在页面关闭时发送请求
-                const beaconSent = navigator.sendBeacon('/delete_session', formData);
-                
-                console.log('Sent session deletion request via sendBeacon:', beaconSent ? 'success' : 'failed');
-                
-                // 如果无法确定请求是否成功，将会话ID添加到待删除列表
-                // 这样在下次页面加载时可以重试删除
-                if (!beaconSent) {
-                    // 获取现有的待删除会话列表
-                    const pendingDeleteSessions = JSON.parse(localStorage.getItem('pendingDeleteSessions_' + clientId) || '{}');
-                    
-                    // 添加当前会话到待删除列表，带上时间戳
-                    // 这会创建一个"孤儿"会话 - 即在浏览器关闭/刷新时未能成功删除的会话
-                    pendingDeleteSessions[sessionId] = Date.now();
-                    
-                    // 保存回localStorage
-                    try {
-                        localStorage.setItem('pendingDeleteSessions_' + clientId, JSON.stringify(pendingDeleteSessions));
-                        console.log(`Added session ${sessionId} to pending delete list for future retry (orphaned session)`);
-                    } catch (e) {
-                        console.error('Error saving pending delete sessions to localStorage:', e);
-                    }
-                }
-                
-                // 从localStorage中移除会话ID
-                try {
-                    localStorage.removeItem('translationSessionId_' + clientId);
-                } catch (e) {
-                    console.error('Error removing session ID from localStorage:', e);
-                }
-                
-                // 清理客户端资源
-                if (micStream) {
-                    micStream.getTracks().forEach(track => track.stop());
-                }
-                
-                if (audioContext && audioContext.state !== 'closed') {
-                    try {
-                        audioContext.close();
-                    } catch (e) {
-                        console.error('Error closing audio context:', e);
-                    }
-                }
-                
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.close();
-                }
-                
-                // 清空会话ID
-                sessionId = null;
-            }
-        }
-
-        // 添加窗口关闭/刷新事件处理
-        window.addEventListener('beforeunload', handleWindowClose);
-        window.addEventListener('unload', handleWindowClose);
-
         // 重置空闲计时器
         function resetIdleTimer() {
             // 清除现有计时器
@@ -627,6 +558,13 @@
             // 如果有活跃会话，则设置新的计时器
             if (sessionId) {
                 idleTimer = setTimeout(async () => {
+                    // 检查是否正在进行翻译，如果是则不关闭会话
+                    if (translationInitialized && !translationPaused) {
+                        console.log('Translation is active, not closing session due to inactivity');
+                        resetIdleTimer(); // 重新设置计时器
+                        return;
+                    }
+                    
                     console.log('Application idle for 5 minutes (no user activity), releasing resources...');
                     // 客户端主动清理空闲会话，不依赖服务器端检测
                     await cleanupSession();
@@ -917,7 +855,8 @@
             try {
                 // Clear previous translation
                 translationOutput.textContent = '';
-                translationPaused = false; // 设置为播放状态，因为用户点击了播放按钮
+                // Explicitly set to false at initialization
+                translationPaused = false;
                 
                 // Initialize WebSocket connection
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -1123,17 +1062,44 @@
                 // If translation system is not initialized, initialize it
                 if (!translationInitialized && sessionId) {
                     try {
+                        // Store the current time before pausing
+                        const currentTime = audioPlayer.currentTime;
+                        
+                        // Pause the audio player while we initialize
                         audioPlayer.pause();
                         audioStatus.textContent = 'Initializing translation system...';
                         audioStatus.className = 'status';
                         
+                        // Initialize the translation system
                         await initializeTranslation();
                         
-                        audioPlayer.play().catch(e => {
-                            console.error('Error playing audio:', e);
-                            audioStatus.textContent = 'Error playing audio: ' + e;
-                            audioStatus.className = 'status error';
-                        });
+                        // Set the current time back to where it was
+                        audioPlayer.currentTime = currentTime;
+                        
+                        // Make sure we're not paused
+                        translationPaused = false;
+                        
+                        // Resume the audio context if it's suspended
+                        if (audioContext && audioContext.state === 'suspended') {
+                            await audioContext.resume();
+                        }
+                        
+                        // Add a small delay before playing to ensure everything is ready
+                        setTimeout(() => {
+                            // Explicitly call play() after initialization is complete
+                            console.log('Initialization complete, playing audio now');
+                            audioPlayer.play().then(() => {
+                                console.log('Audio playback started successfully');
+                                audioStatus.textContent = 'Playing and translating...';
+                                audioStatus.className = 'status success';
+                                // 确保重置空闲计时器，因为翻译已经开始
+                                resetIdleTimer();
+                            }).catch(e => {
+                                console.error('Error playing audio after initialization:', e);
+                                audioStatus.textContent = 'Error playing audio: ' + e;
+                                audioStatus.className = 'status error';
+                            });
+                        }, 50); // 100ms delay to ensure audio context is fully ready
                         
                         resetIdleTimer();
                     } catch (error) {
@@ -1151,6 +1117,9 @@
                             console.error('Error resuming audio context:', e);
                         });
                     }
+                    
+                    // 确保重置空闲计时器，因为翻译已经恢复
+                    resetIdleTimer();
                 }
             });
             
