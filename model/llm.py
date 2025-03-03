@@ -96,22 +96,6 @@ class SpeechLlamaModel(LlamaModel):
             inputs_embeds = self.embed_tokens(input_ids)
             filled_inputs_embeds = []
             for i in range(input_ids.size(0)):
-                # sp_start_pos = (input_ids[i] == self.config.sp_start_token_id).nonzero()
-                # sp_end_pos = (input_ids[i] == self.config.sp_end_token_id).nonzero()
-                # filled_inputs_embed = inputs_embeds[i]
-                # index = 0
-                # for st, ed in zip(sp_start_pos, sp_end_pos):
-                #     filled_inputs_embed = torch.cat(
-                #         [
-                #             filled_inputs_embed[: st + 1],
-                #             speech_features[i, index : index + ed - st - 1],
-                #             filled_inputs_embed[ed :]
-                #         ],
-                #         dim=0                            
-                #     )
-                #     index += ed - st - 1
-                # filled_inputs_embeds.append(filled_inputs_embed)
-
                 user_pos = (input_ids[i] == self.config.user_token_id).nonzero()
                 assist_pos = (input_ids[i] == self.config.assist_token_id).nonzero()
 

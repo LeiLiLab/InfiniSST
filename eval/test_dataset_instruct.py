@@ -10,7 +10,7 @@ import transformers
 from fairseq.data.audio.speech_to_text_dataset import _collate_frames
 
 from eval.utils import disable_torch_init
-from model.model_new import SpeechLlamaForCausalLM, SpeechLlamaConfig
+from model.llm import SpeechLlamaForCausalLM, SpeechLlamaConfig
 from model.speech_encoder import (
     SpeechEncoderHuBERTRope, 
     SpeechEncoderW2V2RoPE, 

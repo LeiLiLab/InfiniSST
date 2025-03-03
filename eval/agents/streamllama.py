@@ -1,7 +1,5 @@
-import argparse, os, sys, time, json
 import contextlib
 from time import perf_counter
-from collections import Counter
 
 from typing import Optional
 from simuleval.agents.states import AgentStates
@@ -17,28 +15,19 @@ import torch
 import torch.nn.functional as F
 import transformers
 from tqdm import tqdm
-import conversation as conversation_lib
-from conversation import SeparatorStyle
-from eval.utils import disable_torch_init
-from model.model_new import SpeechLlamaForCausalLM
-from model.utils import SpaceStoppingCriteria, KeywordsStoppingCriteria
-# from train.uni_wav2vec_monkey_patch import replace_uni_train
-from fairseq.data.audio.speech_to_text_dataset import _collate_frames
+from model.llm import SpeechLlamaForCausalLM
+from model.patches.patch_speech_encoder import patch_w2v2
+from model.patches.patch_llm import patch_llm
+from model.patches.patch_hf import patch_hf
 
 from train.options import (
     add_speech_encoder_args,
     add_simuleval_args,
     add_gen_args
 )
-from model.speech_encoder import (
-    SpeechEncoderHuBERTRope,
-    SpeechEncoderW2V2RoPE,
-    SpeechEncoderW2VBERT2
-)
+from model.speech_encoder import SpeechEncoderW2V2RoPE
 from train.dataset import (
     DEFAULT_SPEECH_PATCH_TOKEN,
-    DEFAULT_SPEECH_START_TOKEN,
-    DEFAULT_SPEECH_END_TOKEN,
     DEFAULT_LATENCY_TOKEN
 )
 
@@ -139,6 +128,10 @@ class StreamLlama(SpeechToTextAgent):
         self.max_new_tokens = 10 * multiplier
 
     def load_model(self, args):
+        patch_w2v2(args.xpos, args.rope)
+        patch_llm()
+        patch_hf()
+
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
             args.model_name,
             padding_side="right",
@@ -172,18 +165,10 @@ class StreamLlama(SpeechToTextAgent):
             bool(args.xpos),
             bool(args.rope)
         ]
-        if args.w2v2_type == 'hubert':
-            speech_encoder = SpeechEncoderHuBERTRope(*speech_encoder_args)
-        elif args.w2v2_type == 'w2v-bert':
-            speech_encoder = SpeechEncoderW2VBERT2(
-                args.w2v2_path,
-                args.length_shrink_cfg,
-                args.block_size,
-                args.max_cache_size,
-                self.model.model.embed_tokens.embedding_dim,
-            )
-        else:
+        if args.w2v2_type == 'w2v2':
             speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args)
+        else:
+            raise ValueError(f"Unsupported type: {args.w2v2_type}")
         speech_encoder.eval()
         speech_encoder.to(dtype=self.model.dtype, device=self.model.device)
         self.length_shrink_func = speech_encoder._get_feat_extract_output_lengths
@@ -353,19 +338,6 @@ class StreamLlama(SpeechToTextAgent):
             cur_llm_cache_size = states.past_key_values[0][0].size(2)
             self.cache_checkpoints.append(cur_llm_cache_size)
 
-            # cut cache
-            # max_total_cache_size = self.max_llm_cache_size
-            # if self.always_cache_system_prompt:
-            #     max_total_cache_size += self.system_prompt_size
-            # if states.past_key_values[0][0].size(2) > max_total_cache_size:
-            #     for i, (k, v) in enumerate(states.past_key_values):
-            #         k_cache = k[:, :, -self.max_llm_cache_size:]
-            #         v_cache = v[:, :, -self.max_llm_cache_size:]
-            #         if self.always_cache_system_prompt:
-            #             k_cache = torch.cat([k[:, :, :self.system_prompt_size], k_cache], dim=2)
-            #             v_cache = torch.cat([v[:, :, :self.system_prompt_size], v_cache], dim=2)
-            #         states.past_key_values.key_cache[i] = k_cache
-            #         states.past_key_values.value_cache[i] = v_cache
             if cur_llm_cache_size > self.max_llm_cache_size:
                 new_llm_cache_size = 0
                 for i, ckpt in enumerate(self.cache_checkpoints):
