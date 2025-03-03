@@ -28,7 +28,7 @@ Also you need to login wandb with `wandb login` to use the `wandb` package.
 
 ## Data Preparation
 
-For detailed information about data preparation, please refer to the [Data Preparation README](data_prep/README.md).
+For detailed information about data preparation, please refer to the [Data Preparation README](preprocess/README.md).
 
 ## Training
 

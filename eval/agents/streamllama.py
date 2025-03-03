@@ -20,7 +20,7 @@ from model.patches.patch_speech_encoder import patch_w2v2
 from model.patches.patch_llm import patch_llm
 from model.patches.patch_hf import patch_hf
 
-from train.options import (
+from eval.options import (
     add_speech_encoder_args,
     add_simuleval_args,
     add_gen_args
