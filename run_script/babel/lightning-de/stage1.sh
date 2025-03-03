@@ -8,7 +8,7 @@
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
 #SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,9,13],babel-11-25,babel-12-29,babel-13-[13,21,29],babel-14-25
-#SBATCH --partition=preempt
+#SBATCH --partition=general
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
 ##SBATCH --array=1-7
@@ -18,7 +18,7 @@
 #SBATCH -e slurm_logs/%j.err
 #SBATCH -o slurm_logs/%j.out
 
-source /home/siqiouya/anaconda3/bin/activate speechllama
+source /home/siqiouya/anaconda3/bin/activate infinisst
 
 llm_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf
 w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
@@ -32,7 +32,7 @@ data_path=/compute/babel-14-5/siqiouya/en-de/
 
 source_lang="English"
 target_lang="German"
-name="8B-s1-bi-v2.0"
+name="8B-traj-s1-v3.6"
 save_path=/compute/babel-5-23/siqiouya/runs/en-de/$name
 rm -rf ${save_path}
 mkdir -p ${save_path}
@@ -54,27 +54,30 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     --w2v2_type ${w2v2_type} \
     --ctc_finetuned ${ctc_finetuned} \
     --length_shrink_cfg "[(1024,2,2)] * 2" \
-    --block_size 10000000 \
-    --max_cache_size 10000000 \
+    --block_size 48 \
+    --max_cache_size 576 \
     --xpos False \
     \
     --llm_path ${llm_path} \
     --llm_freeze True \
     --llm_emb_freeze True \
     --llm_head_freeze True \
+    --use_flash_attn True \
     \
     --data_path ${data_path} \
-    --data_split_train 'train_st_de' \
-    --data_split_eval 'dev_st_de' \
+    --data_split_train 'train_st_de_nospeaker_traj_30_filtered' \
+    --data_split_eval 'dev_st_de_nospeaker_traj_30_filtered' \
     --source_lang "${source_lang}" \
     --target_lang "${target_lang}" \
-    --trajectory 1 \
+    --trajectory 4 \
+    --trajectory_max_multiplier 4 \
+    --trajectory_prob_aug 0.0 \
     \
     --seed 998244353 \
     --stage 1 \
-    --train_bsz 1700 \
-    --eval_bsz 1700 \
-    --bsz_sent 10 \
+    --train_bsz 1800 \
+    --eval_bsz 1800 \
+    --bsz_sent 2 \
     --learning_rate 2e-4 \
     --warmup_steps 1000 \
     --run_name $name \

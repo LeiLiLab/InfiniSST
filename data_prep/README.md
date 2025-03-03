@@ -53,7 +53,8 @@ mfa model download acoustic english_mfa
 ```
 
 Then you need to conduct forced alignment on the utterances in the train and dev sets.
-You start at the root of the repository and run the following commands.
+
+**You need to start at the root of the repository and run the following commands.**
 ```bash
 # Prepare MFA inputs
 conda activate infinisst
