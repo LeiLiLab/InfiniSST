@@ -15,39 +15,18 @@
 #    limitations under the License.
 
 import os
-import copy
-import json
-import pathlib
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict
-
-import torch
-import torch.distributed
-import torch.nn as nn
-from torch.utils.data import Dataset
+from typing import Optional
 
 import transformers
-from transformers import Trainer, set_seed
-
-from fairseq.data.audio.speech_to_text_dataset import _collate_frames
-
-import conversation as conversation_lib
-from train.dataset import PromptSpeechToTextDatasetCreator, SpeechToTextDatasetItem
-from model.model_new import SpeechLlamaForCausalLM
-from model.speech_encoder import (
-    SpeechEncoderHuBERTRope,
-    SpeechEncoderW2V2RoPE
-)
+from transformers import set_seed
 
 import lightning as L
-from lightning.pytorch.strategies import FSDPStrategy
-from lightning.pytorch.plugins.precision import FSDPPrecision
 from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor
 from lightning.pytorch.loggers import WandbLogger
-from lightning.pytorch.strategies import DeepSpeedStrategy, FSDPStrategy
+from lightning.pytorch.strategies import DeepSpeedStrategy
 
-from model.model_lightning import SLlamaLightning
-# TODO: import and use code from ../data/dataset.py
+from model.model import SLlamaLightning
 
 @dataclass
 class SpeechEncoderArguments:

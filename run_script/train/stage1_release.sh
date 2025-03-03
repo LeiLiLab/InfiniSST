@@ -36,6 +36,7 @@ source_lang="English"
 target_lang=${lang} # e.g. German
 name="stage1"
 save_path=${save_dir}/${name}
+rm -rf ${save_path} # comment this line if you want to resume training
 mkdir -p ${save_path}
 
 export PYTHONPATH=$PYTHONPATH:$PWD
@@ -52,7 +53,7 @@ export TORCH_DISTRIBUTED_DEBUG=INFO
 export NCCL_DEBUG=INFO
 SLURM_GPUS=8
 
-srun python train/main_lightning.py \
+srun python train/main.py \
     \
     --w2v2_path ${w2v2_path} \
     --w2v2_type ${w2v2_type} \
