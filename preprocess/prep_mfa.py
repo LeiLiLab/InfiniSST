@@ -4,7 +4,7 @@ import argparse
 from tqdm import tqdm
 import soundfile as sf
 
-from data_prep.utils import read_tsv, read_wav
+from preprocess.utils import read_tsv, read_wav
 
 splits = ['train', 'dev']
 
