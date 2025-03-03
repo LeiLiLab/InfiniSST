@@ -27,12 +27,11 @@ from train.dataset import (
     DataCollatorForTrajectoryInstructMultiLatencyDataset,
     DataCollatorForPreferenceOptimizationDataset
 )
-from model.model_new import SpeechLlamaForCausalLM
-from model.speech_encoder import (
-    SpeechEncoderHuBERTRope,
-    SpeechEncoderW2V2RoPE,
-    SpeechEncoderW2VBERT2
-)
+from model.llm import SpeechLlamaForCausalLM
+from model.speech_encoder import SpeechEncoderW2V2RoPE
+from model.patches.patch_speech_encoder import patch_w2v2
+from model.patches.patch_llm import patch_llm
+from model.patches.patch_hf import patch_hf
 
 logger = logging.getLogger(__name__)
 
@@ -79,19 +78,12 @@ class SLlamaLightning(L.LightningModule):
             self.speech_args.xpos,
             self.speech_args.rope,
         ]
-        if self.speech_args.w2v2_type == 'hubert':
-            speech_encoder = SpeechEncoderHuBERTRope(*speech_encoder_args)
-        elif self.speech_args.w2v2_type == 'w2v2':
+        if self.speech_args.w2v2_type == 'w2v2':
             speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args) 
-        elif self.speech_args.w2v2_type == 'w2v-bert':
-            speech_encoder = SpeechEncoderW2VBERT2(
-                self.speech_args.w2v2_path,
-                self.speech_args.length_shrink_cfg,
-                self.speech_args.block_size,
-                self.speech_args.max_cache_size,
-                1
-            )
-        self.length_shrink_func = speech_encoder._get_feat_extract_output_lengths
+        else:
+            raise ValueError(f"Unsupported type: {self.speech_args.w2v2_type}")
+
+        self.length_shrink_func = speech_encoder._get_feat_extract_output_lengths # TODO: make this more efficient
 
         self.optimizer_params = {
             "lr": lr,
@@ -102,6 +94,10 @@ class SLlamaLightning(L.LightningModule):
     def configure_model(self):
         if self.model is not None:
             return
+        
+        patch_w2v2(self.speech_args.xpos, self.speech_args.rope)
+        patch_llm()
+        patch_hf()
 
         logger.info("use_flash_attn: {}".format(self.model_args.use_flash_attn))
         model = SpeechLlamaForCausalLM.from_pretrained(
@@ -134,18 +130,10 @@ class SLlamaLightning(L.LightningModule):
             self.speech_args.xpos,
             self.speech_args.rope,
         ]
-        if self.speech_args.w2v2_type == 'hubert':
-            speech_encoder = SpeechEncoderHuBERTRope(*speech_encoder_args)
-        elif self.speech_args.w2v2_type == 'w2v2':
+        if self.speech_args.w2v2_type == 'w2v2':
             speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args) 
-        elif self.speech_args.w2v2_type == 'w2v-bert':
-            speech_encoder = SpeechEncoderW2VBERT2(
-                self.speech_args.w2v2_path,
-                self.speech_args.length_shrink_cfg,
-                self.speech_args.block_size,
-                self.speech_args.max_cache_size,
-                model.model.embed_tokens.embedding_dim,
-            )
+        else:
+            raise ValueError(f"Unsupported type: {self.speech_args.w2v2_type}")
 
         speech_encoder.to(dtype=model.dtype, device=model.device)
         model.model.speech_encoder = speech_encoder
