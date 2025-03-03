@@ -24,6 +24,14 @@ pip install -e .
 pip install fastapi uvicorn python-multipart websockets
 ```
 
+Finally, you can clone the repository and checkout to the release branch.
+
+```bash
+git clone git@github.com:siqiouya/InfiniSST.git
+cd InfiniSST
+git checkout release
+```
+
 Also you need to login wandb with `wandb login` to use the `wandb` package.
 
 ## Data Preparation
@@ -33,7 +41,7 @@ For detailed information about data preparation, please refer to the [Data Prepa
 ## Training
 
 You need to first download the pre-trained speech encoder [wav2vec 2.0](https://dl.fbaipublicfiles.com/fairseq/wav2vec/wav2vec_vox_960h_pl.pt) and [Llama-3.1-8B-Instruct](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct).
-Then you need to fill in the following variables in the `run_script/train/stage1.sh` script.
+Then you need to fill in the following variables in the `scripts/train/stage1.sh` script.
 
 ```bash
 llama_path= # path to the Llama-3.1-8B-Instruct model
@@ -49,16 +57,39 @@ Then you can run the following script to train the model. By default, we assume 
 ```bash
 # use sbatch to run the script on the SLURM cluster
 # if you are running on a single machine, you can run the script directly
-sbatch run_script/train/stage1.sh
+sbatch scripts/train/stage1.sh
 ```
 
-After the first stage of training, you need to set the aforementioned variables together with the `stage1_ckpt_dir` variable in the `run_script/train/stage2.sh` script to the path of the checkpoint saved in the first stage. Then you can run the following script to train the model for the second stage.
+After the first stage of training, you need to set the aforementioned variables together with the `stage1_ckpt_dir` variable in the `scripts/train/stage2.sh` script to the path of the checkpoint saved in the first stage. Then you can run the following script to train the model for the second stage.
 
 ```bash
-sbatch run_script/train/stage2.sh
+sbatch scripts/train/stage2.sh
 ```
 
-## Evaluation
+## Inference
+
+After the training is complete, you can use simuleval to perform inference on the tst-COMMON set.
+You need to fill in the following variables in the `scripts/infer/infinisst.sh` script.
+
+```bash
+checkpoint_dir= # path to the stage 2 checkpoint directory
+llama_path= # path to the Llama-3.1-8B-Instruct model
+w2v2_path= # path to the wav2vec 2.0 model
+w2v2_type= # wav2vec 2.0 type
+ctc_finetuned= # whether the wav2vec 2.0 model is finetuned
+ROOT= # path to the root directory of the data
+lang_code= # language code, e.g. de, es, zh, etc.
+lang= # language name, e.g. German, Spanish, Chinese, etc.
+tokenizer= # tokenizer, e.g. 13a, zh, etc.
+unit= # unit, e.g. word, char, etc.
+```
+
+Then you can run the following script
+```bash
+sbatch scripts/infer/infinisst.sh
+```
+
+## Evaluation with StreamLAAL
 
 ## Serving
 
