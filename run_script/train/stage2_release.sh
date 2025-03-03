@@ -10,7 +10,7 @@
 #SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,9,13],babel-11-25,babel-12-29,babel-13-[13,21,29],babel-14-25
 #SBATCH --partition=general
 #SBATCH --time=2-00:00:00
-##SBATCH --dependency=afterok:4118506
+##SBATCH --dependency=afterok:4212422
 ##SBATCH --array=1-7
 ##SBATCH --account=siqiouya
 #SBATCH --mail-type=ALL
@@ -18,38 +18,42 @@
 #SBATCH -e slurm_logs/%j.err
 #SBATCH -o slurm_logs/%j.out
 
-source /home/siqiouya/anaconda3/bin/activate speechllama
+source /home/siqiouya/anaconda3/bin/activate infinisst
 
-llm_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf
-sllm_weight_path=/compute/babel-5-23/siqiouya/runs/en-de/8B-traj-s1-v3.5/last.ckpt/
+stage1_ckpt_dir=/compute/babel-5-23/siqiouya/runs/en-de/release/stage1/last.ckpt/
+llama_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf
 w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
-# w2v2_path=/data/user_data/siqiouya/runs/pretrained/hubert_large_ll60k_finetune_ls960.pt
+ROOT=/compute/babel-14-5/siqiouya
+lang_code=de
+lang=German
+save_dir=/compute/babel-5-23/siqiouya/runs/en-de/release
+
 w2v2_type=w2v2
 ctc_finetuned=True
-# data_path=/scratch/xixu/dataset/must-c-v1.0/en-es
-# data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de
-# data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-fr
-data_path=/compute/babel-14-5/siqiouya/en-de/
+
+data_path=$ROOT/en-${lang_code}/
 
 source_lang="English"
-target_lang="German"
-name="8B-traj-s2-v3.5"
-save_path=/compute/babel-5-23/siqiouya/runs/en-de/$name
-rm -rf ${save_path}
+target_lang=${lang} # e.g. German
+name="stage2"
+save_path=${save_dir}/${name}
 mkdir -p ${save_path}
 
-export PYTHONPATH=/home/siqiouya/work/sllama
+export PYTHONPATH=$PYTHONPATH:$PWD
 export TOKENIZERS_PARALLELISM=false
-export WANDB_PROJECT="mustc_1.0_de"
+export WANDB_PROJECT="mustc_${lang_code}"
 export WANDB_ENTITY="streamllama"
 
+# disable P2P and InfiniBand for L40S 8-GPU nodes
+# if your node supports P2P and InfiniBand, you need to remove these two lines
 export NCCL_P2P_DISABLE=1
 export NCCL_IB_DISABLE=1
+
 export TORCH_DISTRIBUTED_DEBUG=INFO
 export NCCL_DEBUG=INFO
 SLURM_GPUS=8
 
-srun python /home/siqiouya/work/sllama/train/main_lightning.py \
+srun python train/main_lightning.py \
     \
     --w2v2_path ${w2v2_path} \
     --w2v2_type ${w2v2_type} \
@@ -57,15 +61,16 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     --ctc_finetuned ${ctc_finetuned} \
     --length_shrink_cfg "[(1024,2,2)] * 2" \
     --block_size 48 \
-    --max_cache_size 480 \
+    --max_cache_size 576 \
     --xpos False \
     \
-    --llm_path ${llm_path} \
-    --sllm_weight_path ${sllm_weight_path}/pytorch_model.bin \
+    --llm_path ${llama_path} \
+    --sllm_weight_path ${stage1_ckpt_dir}/pytorch_model.bin \
+    --use_flash_attn True \
     \
     --data_path ${data_path} \
-    --data_split_train 'train_st_de_nospeaker_traj_30_filtered' \
-    --data_split_eval 'dev_st_de_nospeaker_traj_30_filtered' \
+    --data_split_train 'train_nospeaker_traj_30_filtered' \
+    --data_split_eval 'dev_nospeaker_traj_30_filtered' \
     --source_lang "${source_lang}" \
     --target_lang "${target_lang}" \
     --trajectory 4 \
@@ -74,8 +79,8 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     \
     --seed 42 \
     --stage 2 \
-    --train_bsz 2300 \
-    --eval_bsz 2300 \
+    --train_bsz 2400 \
+    --eval_bsz 2400 \
     --bsz_sent 3 \
     --learning_rate 7e-6 \
     --warmup_steps 100 \
@@ -91,5 +96,5 @@ srun python /home/siqiouya/work/sllama/train/main_lightning.py \
     --log_step 5 \
     --eval_step 200
 
-python /home/siqiouya/work/sllama/train/zero_to_fp32.py ${save_path}/last.ckpt ${save_path}/last.ckpt/pytorch_model.bin
-python /home/siqiouya/work/sllama/train/prune_bin.py ${save_path}/last.ckpt/pytorch_model.bin
+python train/zero_to_fp32.py ${save_path}/last.ckpt ${save_path}/last.ckpt/pytorch_model.bin
+python train/prune_bin.py ${save_path}/last.ckpt/pytorch_model.bin
