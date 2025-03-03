@@ -1,6 +1,10 @@
 # InfiniSST
 
+This repository contains a demo and the implementation of our paper "InfiniSST: Simultaneous Translation of Unbounded Speech with Large Language Model".
+
 ## Online Demo
+
+The link to the online demo is [here](https://c79b-128-111-28-80.ngrok-free.app/).
 
 ## Installation
 
@@ -91,9 +95,21 @@ sbatch scripts/infer/infinisst.sh
 
 ## Evaluation with StreamLAAL
 
-## Serving
+After the inference is complete, you can evaluate the resulting instance log following the instructions in the [StreamLAAL](https://github.com/hlt-mt/FBK-fairseq/blob/master/fbk_works/STREAMATT_STREAMLAAL.md#-evaluation-streamlaal).
 
 ## Citation
 
+If you find this work useful, please consider citing:
+
+```bibtex
+@article{ouyang2025infinisst,
+  title={InfiniSST: Simultaneous Translation of Unbounded Speech with Large Language Model},
+  author={Ouyang, Siqi and Zhang, Yong and Zhang, Yong and Zhang, Yong},
+  journal={arXiv preprint arXiv:2503.00000},
+  year={2025}
+}
+```
+
 ## Contact
 
+If you have any questions, please feel free to raise GitHub issues or contact me at siqiouya[at]andrew.cmu.edu.
