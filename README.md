@@ -26,11 +26,37 @@ pip install fastapi uvicorn python-multipart websockets
 
 Also you need to login wandb with `wandb login` to use the `wandb` package.
 
-## Data Construction
+## Data Preparation
 
 For detailed information about data preparation, please refer to the [Data Preparation README](data_prep/README.md).
 
 ## Training
+
+You need to first download the pre-trained speech encoder [wav2vec 2.0](https://dl.fbaipublicfiles.com/fairseq/wav2vec/wav2vec_vox_960h_pl.pt) and [Llama-3.1-8B-Instruct](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct).
+Then you need to fill in the following variables in the `run_script/train/stage1.sh` script.
+
+```bash
+llama_path= # path to the Llama-3.1-8B-Instruct model
+w2v2_path= # path to the wav2vec 2.0 model
+ROOT= # path to the root directory of the data
+lang_code= # language code, e.g. de, es, zh, etc.
+lang= # language name, e.g. German, Spanish, Chinese, etc.
+save_dir= # path to the directory to save the model
+```
+
+Then you can run the following script to train the model. By default, we assume you are at the root directory of the repository when running the script. If not, you need to set the `PYTHONPATH` variable to the root directory of the repository.
+
+```bash
+# use sbatch to run the script on the SLURM cluster
+# if you are running on a single machine, you can run the script directly
+sbatch run_script/train/stage1.sh
+```
+
+After the first stage of training, you need to set the aforementioned variables together with the `stage1_ckpt_dir` variable in the `run_script/train/stage2.sh` script to the path of the checkpoint saved in the first stage. Then you can run the following script to train the model for the second stage.
+
+```bash
+sbatch run_script/train/stage2.sh
+```
 
 ## Evaluation
 
