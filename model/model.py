@@ -11,15 +11,11 @@ from transformers.optimization import (
     get_constant_schedule_with_warmup
 )
 import lightning as L
-from lightning.pytorch.utilities import grad_norm
-from torch.optim import Adam
-# from apex.optimizers import FusedAdam
 from deepspeed.ops.adam import FusedAdam, DeepSpeedCPUAdam
 
 from train.dataset import (
     SpeechSampler, 
     PromptSpeechToTextDatasetCreator, 
-    SpeechToTextDatasetItem,
     DataCollatorForSupervisedDataset,
     DataCollatorForSupervisedInstructDataset,
     DataCollatorForTrajectoryDataset,

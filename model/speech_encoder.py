@@ -1,24 +1,16 @@
 from typing import List, Tuple
 
-import fairseq.tasks
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-# from x_transformers.x_transformers import (
-#     AttentionLayers, 
-#     LayerIntermediates
-# )
-
 import lightning as L
 from train.dataset import SpeechSampler
 
 import fairseq
-from fairseq.dataclass.utils import convert_namespace_to_omegaconf
 from fairseq.modules import TransposeLast
 from fairseq.models.wav2vec import Wav2VecEncoder, Wav2Vec2Model
-from fairseq.models.hubert import HubertEncoder
 from fairseq.models.speech_to_text import (
     lengths_to_padding_mask,
 )

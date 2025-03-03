@@ -1,10 +1,4 @@
-import os
-import copy
-import random
-import time
-import fairseq
 from typing import List, Optional, Tuple, Union
-from lightning.pytorch.utilities.types import EVAL_DATALOADERS
 
 import wandb
 
@@ -12,22 +6,18 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
-from torch.utils.data import DataLoader
-from fairseq.models.speech_to_text import (
-    lengths_to_padding_mask,
-    Conv1dSubsampler,
-)
-from fairseq.models.wav2vec import Wav2VecEncoder
-from fairseq.models.hubert import HubertEncoder
-from fairseq.optim.lr_scheduler.inverse_square_root_schedule import (
-    InverseSquareRootLRScheduleConfig,
-    InverseSquareRootSchedule
-)
-from torch.optim.optimizer import Optimizer
-from transformers import AutoConfig, AutoModelForCausalLM, \
-                         LlamaConfig, LlamaModel, LlamaForCausalLM
 
-from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
+from transformers import (
+    AutoConfig,
+    AutoModelForCausalLM,
+    LlamaConfig, 
+    LlamaModel, 
+    LlamaForCausalLM
+)
+from transformers.modeling_outputs import (
+    BaseModelOutputWithPast, 
+    CausalLMOutputWithPast
+)
 
 from train.dataset import (
     DEFAULT_SPEECH_PATCH_TOKEN,
