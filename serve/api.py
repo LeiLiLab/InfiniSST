@@ -21,8 +21,8 @@ import time
 from multiprocessing import Process, Queue, Manager
 from queue import Empty
 from typing import Dict, Optional, Any, Tuple
-from eval.agents.streamllama import StreamLlama
-from eval.agents.tt_alignatt_sllama_stream_att_fw import AlignAttStreamAttFW
+from eval.agents.infinisst import InfiniSST
+from eval.agents.streamatt import AlignAttStreamAttFW
 import io
 import uvicorn
 import gc
@@ -31,7 +31,7 @@ import starlette.websockets
 
 # 支持的翻译模型列表
 TRANSLATION_AGENTS = {
-    "InfiniSST": StreamLlama,
+    "InfiniSST": InfiniSST,
     # 暂时禁用StreamAtt
     # "StreamAtt": AlignAttStreamAttFW,
 }
