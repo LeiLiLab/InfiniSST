@@ -6,9 +6,10 @@ results
 **/*.pyc
 **/stderr*
 **/stdout*
-.vscode/launch.json
+.vscode/
 **/wandb
 mwerSegmenter/*
 slurm*
 profile/*
 debug*/
+debug.ipynb
