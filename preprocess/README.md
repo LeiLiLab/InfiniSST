@@ -59,7 +59,7 @@ Then you need to conduct forced alignment on the utterances in the train and dev
 # Prepare MFA inputs
 conda activate infinisst
 export PYTHONPATH=$PYTHONPATH:$(pwd) 
-python data_prep/prep_mfa.py --data-root $ROOT/en-$lang/
+python preprocess/prep_mfa.py --data-root $ROOT/en-$lang/
 
 # Conduct forced alignment
 conda activate mfa
@@ -79,9 +79,9 @@ We remove speaker names from transcripts and translations and store the new tsv 
 
 ```bash
 conda activate infinisst
-python data_prep/remove_speakers.py \
+python preprocess/remove_speakers.py \
    --tsv-path $ROOT/en-$lang/train.tsv
-python data_prep/remove_speakers.py \
+python preprocess/remove_speakers.py \
    --tsv-path $ROOT/en-$lang/dev.tsv
 ```
 
@@ -90,12 +90,12 @@ python data_prep/remove_speakers.py \
 We form trajectories and robust segments for the train and dev sets and store them as `train_nospeaker_traj_30.tsv` and `dev_nospeaker_traj_30.tsv`.
 
 ```bash
-python data_prep/build_trajectory_full_mfa.py \
+python preprocess/build_trajectory_full_mfa.py \
 	--data-root $ROOT/en-$lang \
 	--lang ${lang} --split train_nospeaker \
 	--output-split train_nospeaker_traj_30 \
 	--mult 30 --max-duration 28.8
-python data_prep/build_trajectory_full_mfa.py \
+python preprocess/build_trajectory_full_mfa.py \
 	--data-root $ROOT/en-$lang \
 	--lang ${lang} --split dev_nospeaker \
 	--output-split dev_nospeaker_traj_30 \
@@ -109,13 +109,13 @@ Finally, we filter out the utterances whose transcripts are not aligned with Whi
 ```bash
 # we split the data into 8 parts and run ASR on each part in parallel
 # use this only if you have slurm, otherwise, run asr.py directly
-sbatch data_prep/asr.sh $ROOT/en-$lang/train_nospeaker_traj_30.tsv
-sbatch data_prep/asr.sh $ROOT/en-$lang/dev_nospeaker_traj_30.tsv
+sbatch preprocess/asr.sh $ROOT/en-$lang/train_nospeaker_traj_30.tsv
+sbatch preprocess/asr.sh $ROOT/en-$lang/dev_nospeaker_traj_30.tsv
 
 # filter the data
-python data_prep/filter_by_asr.py \
+python preprocess/filter_by_asr.py \
 	--tsv-path $ROOT/en-${lang}/train_nospeaker_traj_30.tsv
-python data_prep/filter_by_asr.py \
+python preprocess/filter_by_asr.py \
 	--tsv-path $ROOT/en-${lang}/dev_nospeaker_traj_30.tsv
 ```
 
@@ -125,6 +125,6 @@ We prepare the SimulEval inputs for the tst-COMMON set.
 The output files are `tst-COMMON_full.source` and `tst-COMMON_full.target` in the `$ROOT/en-$lang` directory.
 
 ```bash
-python data_prep/prepare_simuleval_inputs.py \
+python preprocess/prepare_simuleval_inputs.py \
 	--tsv-path $ROOT/en-$lang/tst-COMMON.tsv
 ```

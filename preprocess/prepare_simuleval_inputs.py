@@ -1,5 +1,5 @@
 import os
-from data_prep.utils import read_tsv
+from preprocess.utils import read_tsv
 
 import argparse
 
