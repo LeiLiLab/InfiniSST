@@ -21,7 +21,6 @@ from train.dataset import (
     DataCollatorForTrajectoryDataset,
     DataCollatorForTrajectoryInstructDataset,
     DataCollatorForTrajectoryInstructMultiLatencyDataset,
-    DataCollatorForPreferenceOptimizationDataset
 )
 from model.llm import SpeechLlamaForCausalLM
 from model.speech_encoder import SpeechEncoderW2V2RoPE
@@ -37,7 +36,6 @@ collator_classes = {
     2: DataCollatorForTrajectoryDataset,
     3: DataCollatorForTrajectoryInstructDataset,
     4: DataCollatorForTrajectoryInstructMultiLatencyDataset,
-    5: DataCollatorForPreferenceOptimizationDataset
 }
 
 class SLlamaLightning(L.LightningModule):

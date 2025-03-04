@@ -70,6 +70,8 @@ After the first stage of training, you need to set the aforementioned variables 
 sbatch scripts/train/stage2.sh
 ```
 
+For en-de direction, stage 1 takes around 6 hours and stage 2 takes around 4.5 hours on a single node of 8 NVIDIA L40S GPUs.
+
 ## Inference
 
 After the training is complete, you can use simuleval to perform inference on the tst-COMMON set.
@@ -80,7 +82,6 @@ checkpoint_dir= # path to the stage 2 checkpoint directory
 llama_path= # path to the Llama-3.1-8B-Instruct model
 w2v2_path= # path to the wav2vec 2.0 model
 w2v2_type= # wav2vec 2.0 type
-ctc_finetuned= # whether the wav2vec 2.0 model is finetuned
 ROOT= # path to the root directory of the data
 lang_code= # language code, e.g. de, es, zh, etc.
 lang= # language name, e.g. German, Spanish, Chinese, etc.
