@@ -98,7 +98,7 @@ sbatch scripts/infer/infinisst.sh
 
 After the inference is complete, you can evaluate the resulting instance log following the instructions in the [StreamLAAL](https://github.com/hlt-mt/FBK-fairseq/blob/master/fbk_works/STREAMATT_STREAMLAAL.md#-evaluation-streamlaal).
 
-## Citation
+<!-- ## Citation
 
 If you find this work useful, please consider citing:
 
@@ -109,7 +109,7 @@ If you find this work useful, please consider citing:
   journal={arXiv preprint arXiv:2503.00000},
   year={2025}
 }
-```
+``` -->
 
 ## Contact
 
