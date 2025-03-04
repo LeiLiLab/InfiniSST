@@ -11,7 +11,8 @@ def add_speech_encoder_args(parser):
     )
     parser.add_argument(
         "--ctc-finetuned",
-        action="store_true"
+        type=lambda x: (str(x).lower() == "true"), 
+        default=False
     )
     parser.add_argument(
         "--length-shrink-cfg",

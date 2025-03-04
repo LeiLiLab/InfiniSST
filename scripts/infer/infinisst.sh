@@ -19,7 +19,7 @@
 
 source /home/siqiouya/anaconda3/bin/activate infinisst
 
-checkpoint_dir=/compute/babel-5-23/siqiouya/runs/en-de/8B-traj-s2-v3.6/last.ckpt/
+checkpoint_dir=/compute/babel-5-23/siqiouya/runs/en-de/release/stage2/last.ckpt/
 llama_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf
 
 w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
@@ -60,7 +60,7 @@ simuleval \
     --min-start-sec ${ms} \
     --source ${ROOT}/en-${lang_code}/tst-COMMON_full.source \
     --target ${ROOT}/en-${lang_code}/tst-COMMON_full.target \
-    --output ${ckpt_dir}/infinisst/cache${max_llm_cache_size}_seg${src_segment_size}_beam${beam}_ms${ms}_nrnl${no_repeat_ngram_lookback}_nrns${no_repeat_ngram_size} \
+    --output ${checkpoint_dir}/infinisst/cache${max_llm_cache_size}_seg${src_segment_size}_beam${beam}_ms${ms}_nrnl${no_repeat_ngram_lookback}_nrns${no_repeat_ngram_size} \
     --w2v2-path ${w2v2_path} \
     --w2v2-type ${w2v2_type} \
     --ctc-finetuned ${ctc_finetuned} \
