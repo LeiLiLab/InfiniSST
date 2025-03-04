@@ -21,8 +21,8 @@ import time
 from multiprocessing import Process, Queue, Manager
 from queue import Empty
 from typing import Dict, Optional, Any, Tuple
-from eval.agents.infinisst import InfiniSST
-from eval.agents.streamatt import AlignAttStreamAttFW
+from agents.infinisst import InfiniSST
+from agents.streamatt import StreamAtt
 import io
 import uvicorn
 import gc
@@ -33,7 +33,7 @@ import starlette.websockets
 TRANSLATION_AGENTS = {
     "InfiniSST": InfiniSST,
     # 暂时禁用StreamAtt
-    # "StreamAtt": AlignAttStreamAttFW,
+    # "StreamAtt": StreamAtt,
 }
 
 # 支持的语言方向
@@ -889,7 +889,7 @@ app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    StreamLlama.add_args(parser)
+    InfiniSST.add_args(parser)
     args = parser.parse_args()
     
     print(f"Starting server with {num_gpus} GPUs available")
