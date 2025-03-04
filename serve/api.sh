@@ -5,7 +5,7 @@ python api.py \
     --min-start-sec 0 \
     --w2v2-path /mnt/data6/xixu/demo/wav2_vec_vox_960h_pl.pt \
     --w2v2-type w2v2 \
-    --ctc-finetuned \
+    --ctc-finetuned True \
     \
     --length-shrink-cfg "[(1024,2,2)] * 2" \
     --block-size 48 \
