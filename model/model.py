@@ -24,7 +24,7 @@ from train.dataset import (
 )
 from model.llm import SpeechLlamaForCausalLM
 from model.speech_encoder import SpeechEncoderW2V2RoPE
-from model.patches.patch_speech_encoder import patch_w2v2
+from model.patches.patch_w2v2 import patch_w2v2
 from model.patches.patch_llama31 import patch_llama31
 from model.patches.patch_hf import patch_hf
 

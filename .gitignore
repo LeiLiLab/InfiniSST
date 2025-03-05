@@ -11,6 +11,6 @@ results
 mwerSegmenter/*
 slurm*
 profile/*
-debug*/
+debug*
 debug.ipynb
 *.wav
