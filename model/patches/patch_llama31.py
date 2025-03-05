@@ -335,7 +335,7 @@ def llama_sdpa_attention_new_forward(self, *args, **kwargs):
 
     return attn_output, None, past_key_value
 
-def patch_llm():    
+def patch_llama31():    
     # Patch LLaMA attention to store unrotated key/value states in the cache
     LlamaAttention.forward = llama_attention_new_forward
     LlamaFlashAttention2.forward = llama_flash_attention_2_new_forward

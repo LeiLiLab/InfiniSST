@@ -17,7 +17,7 @@ import transformers
 from tqdm import tqdm
 from model.llm import SpeechLlamaForCausalLM
 from model.patches.patch_speech_encoder import patch_w2v2
-from model.patches.patch_llm import patch_llm
+from model.patches.patch_llama31 import patch_llama31
 from model.patches.patch_hf import patch_hf
 
 from agents.options import (
@@ -129,7 +129,7 @@ class InfiniSST(SpeechToTextAgent):
 
     def load_model(self, args):
         patch_w2v2(args.xpos, args.rope)
-        patch_llm()
+        patch_llama31()
         patch_hf()
 
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
