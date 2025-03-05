@@ -25,7 +25,7 @@ from train.dataset import (
 from model.llm import SpeechLlamaForCausalLM
 from model.speech_encoder import SpeechEncoderW2V2RoPE
 from model.patches.patch_speech_encoder import patch_w2v2
-from model.patches.patch_llm import patch_llm
+from model.patches.patch_llama31 import patch_llama31
 from model.patches.patch_hf import patch_hf
 
 logger = logging.getLogger(__name__)
@@ -90,7 +90,7 @@ class SLlamaLightning(L.LightningModule):
             return
         
         patch_w2v2(self.speech_args.xpos, self.speech_args.rope)
-        patch_llm()
+        patch_llama31()
         patch_hf()
 
         logger.info("use_flash_attn: {}".format(self.model_args.use_flash_attn))
