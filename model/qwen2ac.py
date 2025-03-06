@@ -1097,32 +1097,27 @@ class Qwen2AudioForConditionalGeneration(Qwen2AudioPreTrainedModel, GenerationMi
                 audio_feat_lengths, audio_output_lengths = self.audio_tower._get_feat_extract_output_lengths(
                     feature_attention_mask.sum(-1)
                 )
-                batch_size, _, max_mel_seq_len = input_features.shape
-                max_seq_len = (max_mel_seq_len - 2) // 2 + 1
-                # Create a sequence tensor of shape (batch_size, max_seq_len)
-                seq_range = (
-                    torch.arange(0, max_seq_len, dtype=audio_feat_lengths.dtype, device=audio_feat_lengths.device)
-                    .unsqueeze(0)
-                    .expand(batch_size, max_seq_len)
-                )
-                lengths_expand = audio_feat_lengths.unsqueeze(1).expand(batch_size, max_seq_len)
-                # Create mask
-                padding_mask = seq_range >= lengths_expand
-
-                audio_attention_mask_ = padding_mask.view(batch_size, 1, 1, max_seq_len).expand(
-                    batch_size, 1, max_seq_len, max_seq_len
-                )
-                audio_attention_mask = audio_attention_mask_.to(
-                    dtype=self.audio_tower.conv1.weight.dtype, device=self.audio_tower.conv1.weight.device
-                )
-                audio_attention_mask[audio_attention_mask_] = float("-inf")
-                
-                audio_outputs = self.audio_tower(input_features, attention_mask=audio_attention_mask, cache=cache)
+                audio_outputs = self.audio_tower(input_features, attention_mask=None, cache=cache)
                 selected_audio_feature = audio_outputs.last_hidden_state
                 audio_features = self.multi_modal_projector(selected_audio_feature)
 
+                # split audio features into chunks
+                chunksize = self.audio_tower.blocksize // 2
+                n_chunk = (audio_output_lengths + chunksize - 1) // chunksize
+                bsz = audio_features.size(0)
+                audio_features_split = []
+                sizes_split = []
+                for batch_idx in range(bsz):
+                    chunk_features = audio_features[batch_idx].split(chunksize)
+                    audio_features_split.extend(chunk_features[:n_chunk[batch_idx]])
+
+                    sizes_split.extend([chunksize] * n_chunk[batch_idx])
+                    sizes_split[-1] += audio_output_lengths[batch_idx] - n_chunk[batch_idx] * chunksize    
+                audio_features_split = torch.stack(audio_features_split, dim=0)
+                audio_output_lengths_split = torch.tensor(sizes_split, dtype=audio_output_lengths.dtype, device=audio_output_lengths.device)
+
                 inputs_embeds, attention_mask, labels, position_ids, _ = self._merge_input_ids_with_audio_features(
-                    audio_features, audio_output_lengths, inputs_embeds, input_ids, attention_mask, labels
+                    audio_features_split, audio_output_lengths_split, inputs_embeds, input_ids, attention_mask, labels
                 )
 
         outputs = self.language_model(
