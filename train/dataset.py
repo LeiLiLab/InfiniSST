@@ -449,6 +449,87 @@ class DataCollatorForSupervisedInstructDataset(DataCollatorForSupervisedDataset)
         )
 
         return batch
+    
+
+class DataCollatorForOfflineQwen2ACDataset:
+    def __init__(self, processor, source_lang, target_lang, **kwargs):
+        self.processor = processor
+        self.source_lang = source_lang
+        self.target_lang = target_lang
+
+    def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
+        speech_batch = _collate_frames([x.source for x in samples], is_audio_input=True)
+        n_frames = torch.tensor([x.source.size(0) for x in samples], dtype=torch.long)
+
+        prompts = []
+        instruction = f"Translate the following speech from {self.source_lang} to {self.target_lang}."
+        for i, x in enumerate(samples):
+            messages = [{
+                "role": "system",
+                "content": instruction
+            }]
+            messages.append(
+                {
+                    "role": "user",
+                    "content": "<|audio_bos|><|AUDIO|><|audio_eos|>"
+                }
+            )
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": x.target
+                }
+            )
+            prompts.append(messages)
+     
+        # Tokenize with explicit padding settings
+        texts = self.processor.apply_chat_template(
+            prompts,
+            return_tensors='pt',
+            padding=True, 
+            truncation=False, 
+            add_special_tokens=False
+        )
+
+        inputs = self.processor(
+            text=texts, 
+            audios=speech_batch, 
+            sampling_rate=self.processor.feature_extractor.sampling_rate, 
+            return_tensors="pt", 
+            padding="longest",
+            max_length=n_frames.max(),
+        )
+
+        input_ids = inputs["input_ids"]
+        attention_mask = (input_ids != self.processor.tokenizer.pad_token_id).long()
+
+        # Create targets and handle padding properly
+        targets = input_ids.clone()
+        targets[attention_mask == 0] = IGNORE_INDEX
+        user_id = self.processor.tokenizer.convert_tokens_to_ids('user')
+        assist_id = self.processor.tokenizer.convert_tokens_to_ids('assistant')
+        start_header_id = self.processor.tokenizer.convert_tokens_to_ids('<|im_start|>')
+        label_mask = torch.zeros_like(targets, dtype=torch.bool)
+        for i in range(len(samples)):
+            user_pos = (targets[i] == user_id).nonzero()
+            assist_pos = (targets[i] == assist_id).nonzero()
+
+            user_pos = [
+                pos for pos in user_pos if targets[i, pos[0] - 1] == start_header_id
+            ]
+            assist_pos = [
+                pos for pos in assist_pos if targets[i, pos[0] - 1] == start_header_id
+            ]
+
+            assert len(user_pos) == 1 and len(assist_pos) == 1
+
+            label_mask[i, assist_pos[0][0] + 2:] = True
+        targets[~label_mask] = IGNORE_INDEX        
+                
+        inputs["labels"] = targets
+
+        return inputs
+
 
 @dataclass
 class DataCollatorForTrajectoryDataset(object):
@@ -938,3 +1019,4 @@ class DataCollatorForTrajectoryInstructMultiLatencyDataset(DataCollatorForTrajec
         )
 
         return batch
+        
