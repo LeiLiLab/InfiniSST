@@ -15,7 +15,7 @@ import torch
 import torch.nn.functional as F
 import transformers
 from tqdm import tqdm
-from model.llm import SpeechLlamaForCausalLM
+from model.llama31 import SpeechLlamaForCausalLM
 from model.patches.patch_w2v2 import patch_w2v2
 from model.patches.patch_llama31 import patch_llama31
 from model.patches.patch_hf import patch_hf
@@ -25,7 +25,7 @@ from agents.options import (
     add_simuleval_args,
     add_gen_args
 )
-from model.speech_encoder import SpeechEncoderW2V2RoPE
+from model.w2v2 import SpeechEncoderW2V2RoPE
 from train.dataset import (
     DEFAULT_SPEECH_PATCH_TOKEN,
     DEFAULT_LATENCY_TOKEN

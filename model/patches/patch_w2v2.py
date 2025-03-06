@@ -49,6 +49,7 @@ def get_attn_mask_training(seq_len, max_cache_size=None, blocksize=1, device='cu
     
     return mask_num
 
+# TODO: simplify and optimize
 def get_attn_mask_inference(seq_len, prefix_len, max_cache_size, blocksize=1, device='cuda'):
     max_len = seq_len + min(prefix_len, max_cache_size)
 
