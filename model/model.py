@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 
 import transformers
+from transformers import AutoProcessor
 from transformers.optimization import (
     get_cosine_schedule_with_warmup,
     get_cosine_with_min_lr_schedule_with_warmup,
@@ -21,12 +22,16 @@ from train.dataset import (
     DataCollatorForTrajectoryDataset,
     DataCollatorForTrajectoryInstructDataset,
     DataCollatorForTrajectoryInstructMultiLatencyDataset,
+    DataCollatorForOfflineQwen2ACDataset
 )
 from model.llama31 import SpeechLlamaForCausalLM
 from model.w2v2 import SpeechEncoderW2V2RoPE
 from model.patches.patch_w2v2 import patch_w2v2
 from model.patches.patch_llama31 import patch_llama31
 from model.patches.patch_hf import patch_hf
+
+from model.qwen2ac import Qwen2AudioForConditionalGeneration
+from model.patches.patch_qwen2ac import patch_qwen2ac
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +41,7 @@ collator_classes = {
     2: DataCollatorForTrajectoryDataset,
     3: DataCollatorForTrajectoryInstructDataset,
     4: DataCollatorForTrajectoryInstructMultiLatencyDataset,
+    5: DataCollatorForOfflineQwen2ACDataset
 }
 
 class SLlamaLightning(L.LightningModule):
@@ -296,3 +302,133 @@ class SLlamaLightning(L.LightningModule):
             return_dict=True
         )
         return output.loss
+
+
+class Qwen2ACLightning(SLlamaLightning):
+    def __init__(
+            self, speech_args, model_args, data_args, training_args,
+            lr=2e-4, warmup_updates=4000, min_lr=0.
+        ):
+        super(SLlamaLightning, self).__init__()
+        self.model = None
+
+        self.speech_args = speech_args
+        self.model_args = model_args
+        self.data_args = data_args
+        self.training_args = training_args
+
+        self.processor = AutoProcessor.from_pretrained(
+            self.model_args.llm_path,
+            use_fast=False,
+        )
+
+        self.optimizer_params = {
+            "lr": lr,
+            "warmup_updates": warmup_updates,
+            "min_lr": min_lr,
+        }
+
+    def configure_model(self):
+        if self.model is not None:
+            return
+        
+        patch_qwen2ac()
+
+        logger.info("use_flash_attn: {}".format(self.model_args.use_flash_attn))
+        
+        model = Qwen2AudioForConditionalGeneration.from_pretrained(
+            self.model_args.llm_path, 
+            torch_dtype=torch.bfloat16 if self.model_args.use_flash_attn else None, 
+            attn_implementation="flash_attention_2" if self.model_args.use_flash_attn else 'sdpa'
+        )
+        model.config.audio_config.sliding_window_size = self.speech_args.max_cache_size
+        model.config.audio_config.blocksize = self.speech_args.block_size
+
+        if self.model_args.llm_freeze:
+            model.language_model.requires_grad_(False)
+
+        if self.speech_args.whisper_freeze:
+            model.audio_tower.requires_grad_(False)
+
+        if self.speech_args.adapter_freeze:
+            model.multi_modal_projector.requires_grad_(False)
+
+        if self.model_args.sllm_weight_path is not None:
+            logger.info("Loading weights from {}".format(self.model_args.sllm_weight_path))
+            state_dict = torch.load(self.model_args.sllm_weight_path, map_location='cpu', weights_only=True)
+            model.load_state_dict(state_dict, strict=True)
+    
+        self.model = model
+    
+    def train_dataloader(self):
+        train_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
+            self.data_args.data_path, self.data_args.data_split_train
+        )
+        collator_cls = collator_classes[self.data_args.trajectory]
+
+        logger.info("collator class: {}".format(collator_cls))
+
+        data_collator = collator_cls(
+            self.processor, 
+            self.data_args.source_lang,
+            self.data_args.target_lang,
+            block_size=self.speech_args.block_size,
+            perturb=self.data_args.trajectory_perturb,
+            max_multiplier=self.data_args.trajectory_max_multiplier,
+            prob_aug=self.data_args.trajectory_prob_aug,
+            trainer=self.trainer
+        )
+
+        logger.info("train_bsz: {}, bsz_sent: {}".format(self.training_args.train_bsz, self.training_args.bsz_sent))
+
+        train_sampler = SpeechSampler(
+            train_dataset, 
+            shuffle=True, 
+            batch_size=self.training_args.train_bsz, 
+            batch_size_sent=self.training_args.bsz_sent,
+            min_ms=320,
+            multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
+            filter=True,
+            tokenizer=self.processor.tokenizer,
+            model_type="qwen2ac"
+        )
+        train_dataloader = DataLoader(
+            train_dataset, 
+            batch_sampler=train_sampler, 
+            collate_fn=data_collator
+        )
+        return train_dataloader
+    
+    def val_dataloader(self):
+        eval_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
+        self.data_args.data_path, self.data_args.data_split_eval
+        )
+        collator_cls = collator_classes[self.data_args.trajectory]
+        data_collator = collator_cls(
+            self.processor, 
+            self.data_args.source_lang,
+            self.data_args.target_lang,
+            block_size=self.speech_args.block_size,
+            perturb=self.data_args.trajectory_perturb,
+            max_multiplier=self.data_args.trajectory_max_multiplier,
+            prob_aug=self.data_args.trajectory_prob_aug,
+            trainer=self.trainer
+        )
+
+        eval_sampler = SpeechSampler(
+            eval_dataset, 
+            shuffle=False, 
+            batch_size=self.training_args.eval_bsz, 
+            batch_size_sent=self.training_args.bsz_sent,
+            min_ms=320,
+            multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
+            filter=True,
+            tokenizer=self.processor.tokenizer,
+            model_type="qwen2ac"
+        )
+        eval_dataloader = DataLoader(
+            eval_dataset, 
+            batch_sampler=eval_sampler, 
+            collate_fn=data_collator
+        )
+        return eval_dataloader

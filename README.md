@@ -19,7 +19,8 @@ pip install flash-attn --no-build-isolation
 
 # fairseq for wav2vec2
 git clone git@github.com:facebookresearch/fairseq.git
-cd fairseq
+mv fairseq fairseq-0.12.2
+cd fairseq-0.12.2
 git checkout 0.12.2-release
 pip install pip==23.3
 pip install -e .

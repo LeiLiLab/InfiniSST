@@ -327,6 +327,7 @@ class Qwen2AudioEncoderLayer(nn.Module):
         super().__init__()
         self.embed_dim = config.d_model
 
+        config._attn_implementation = "sdpa" # only sdpa is supported for whisper
         self.self_attn = QWEN2AUDIO_ATTENTION_CLASSES[config._attn_implementation](
             embed_dim=self.embed_dim,
             num_heads=config.encoder_attention_heads,
@@ -1035,6 +1036,7 @@ class Qwen2AudioForConditionalGeneration(Qwen2AudioPreTrainedModel, GenerationMi
         return_dict: Optional[bool] = None,
         cache: Optional[Qwen2ACRoPECache] = None,
         multiplier: Optional[int] = 1,
+        **kwargs,
     ) -> Union[Tuple, Qwen2AudioCausalLMOutputWithPast]:
         r"""
         Args:
@@ -1097,6 +1099,7 @@ class Qwen2AudioForConditionalGeneration(Qwen2AudioPreTrainedModel, GenerationMi
                 audio_feat_lengths, audio_output_lengths = self.audio_tower._get_feat_extract_output_lengths(
                     feature_attention_mask.sum(-1)
                 )
+                audio_output_lengths -= 1 # exclude the last state
                 audio_outputs = self.audio_tower(input_features, attention_mask=None, cache=cache)
                 selected_audio_feature = audio_outputs.last_hidden_state
                 audio_features = self.multi_modal_projector(selected_audio_feature)
@@ -1231,6 +1234,8 @@ class Qwen2AudioForConditionalGeneration(Qwen2AudioPreTrainedModel, GenerationMi
                 "attention_mask": attention_mask,
                 "input_features": input_features,
                 "feature_attention_mask": feature_attention_mask,
+                "cache": kwargs.get("cache", None),
+                "multiplier": kwargs.get("multiplier", 1),
             }
         )
         return model_inputs

@@ -214,21 +214,34 @@ class PromptSpeechToTextDatasetCreator(object):
 
 
 class SpeechSampler(DistributedSampler):
-    def __init__(self, dataset, shuffle, batch_size, batch_size_sent=30, min_ms=0, multiplier=1, filter=True, tokenizer=None):
+    def __init__(self, dataset, shuffle, batch_size, batch_size_sent=30, min_ms=0, multiplier=1, filter=True, tokenizer=None, model_type="w2v2_llama31"):
         super().__init__(dataset=dataset, shuffle=shuffle)
         self.batch_size = batch_size
         self.batch_size_sent = batch_size_sent
+        self.model_type = model_type
         self._obtain_batches(min_ms, multiplier, filter, tokenizer)
 
-    def _obtain_batches(self, min_ms, multiplier, filter, tokenizer):
-        eff_sizes = []
-        for idx in range(len(self.dataset)):
+    def get_eff_size(self, idx, tokenizer):
+        if self.model_type == "w2v2_llama31":
             sp_seg_frame = int(12 * 0.08 * 16000)
             n_seg = (self.dataset.n_frames[idx] + sp_seg_frame - 1) // sp_seg_frame
             eff_size = n_seg * 5 * 2 # headers
             eff_size += n_seg * 12 # speech features
             eff_size += len(tokenizer(self.dataset.tgt_texts[idx], add_special_tokens=False).input_ids) # text tokens
             eff_size += 39 # beginning prompt
+        elif self.model_type == "qwen2ac":
+            sp_seg_frame = 16000
+            n_seg = (self.dataset.n_frames[idx] + sp_seg_frame - 1) // sp_seg_frame
+            eff_size = n_seg * 5 * 2 # headers
+            eff_size += n_seg * 25 # speech features
+            eff_size += len(tokenizer(self.dataset.tgt_texts[idx], add_special_tokens=False).input_ids) # text tokens
+            eff_size += 14 # beginning prompt
+        return eff_size
+
+    def _obtain_batches(self, min_ms, multiplier, filter, tokenizer):
+        eff_sizes = []
+        for idx in range(len(self.dataset)):
+            eff_size = self.get_eff_size(idx, tokenizer)
             eff_sizes.append((eff_size, idx))
 
         sorted_eff_sizes = sorted(eff_sizes)
@@ -265,11 +278,6 @@ class SpeechSampler(DistributedSampler):
         indices_batch_ind = indices_batch_ind[self.rank:len(self):self.num_replicas]
 
         for i in indices_batch_ind:
-            # max_n_frames = max(self.dataset.n_frames[idx] for idx in self.batch_indices[i])
-            # max_n_words = max(len(self.dataset.tgt_texts[idx].split(' ')) for idx in self.batch_indices[i])
-            # logger.info("rank {}: speech {:.2f} s, text {} words, n sentence {}".format(
-            #     self.rank, max_n_frames / 16000, max_n_words, len(self.batch_indices[i])
-            # ))
             yield self.batch_indices[i]
         
     def __len__(self):
@@ -458,7 +466,7 @@ class DataCollatorForOfflineQwen2ACDataset:
         self.target_lang = target_lang
 
     def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
-        speech_batch = _collate_frames([x.source for x in samples], is_audio_input=True)
+        audios = [x.source.numpy() for x in samples]
         n_frames = torch.tensor([x.source.size(0) for x in samples], dtype=torch.long)
 
         prompts = []
@@ -493,7 +501,7 @@ class DataCollatorForOfflineQwen2ACDataset:
 
         inputs = self.processor(
             text=texts, 
-            audios=speech_batch, 
+            audios=audios, 
             sampling_rate=self.processor.feature_extractor.sampling_rate, 
             return_tensors="pt", 
             padding="longest",
@@ -527,6 +535,7 @@ class DataCollatorForOfflineQwen2ACDataset:
         targets[~label_mask] = IGNORE_INDEX        
                 
         inputs["labels"] = targets
+        inputs["src_lengths"] = n_frames
 
         return inputs
 

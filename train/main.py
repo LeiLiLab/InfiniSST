@@ -26,22 +26,35 @@ from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.strategies import DeepSpeedStrategy
 
-from model.model import SLlamaLightning
+from model.model import SLlamaLightning, Qwen2ACLightning
+
+MODEL_CLASSES = {
+    "w2v2_llama31": SLlamaLightning,
+    "qwen2ac": Qwen2ACLightning
+}
 
 @dataclass
 class SpeechEncoderArguments:
+    # w2v2-llama
     w2v2_path: Optional[str] = field(default=None)
     w2v2_type: Optional[str] = field(default=None)
     w2v2_freeze: bool = field(default=False)
     ctc_finetuned: bool = field(default=False)
     length_shrink_cfg: str = field(default=None)
-    block_size: int = field(default=48)
-    max_cache_size: int = field(default=500)
     xpos: bool = field(default=False)
     rope: bool = field(default=True)
 
+    # qwen2-audio-chat
+    whisper_freeze: bool = field(default=False)
+    adapter_freeze: bool = field(default=False)
+
+    # common
+    block_size: int = field(default=48)
+    max_cache_size: int = field(default=500)
+
 @dataclass
 class ModelArguments:
+    model_type: str = field(default="w2v2_llama31")
     llm_path: Optional[str] = field(default="facebook/opt-125m")
     llm_freeze: bool = field(default=False) # freeze LLM except embedding layer
     llm_emb_freeze: bool = field(default=False)
@@ -142,8 +155,9 @@ def train():
 
     # Set seed before initializing model.
     set_seed(training_args.seed) 
-  
-    model_lightning = SLlamaLightning(
+
+    model_class = MODEL_CLASSES[model_args.model_type]  
+    model_lightning = model_class(
         speech_args=speech_args,
         model_args=model_args,
         data_args=data_args,
