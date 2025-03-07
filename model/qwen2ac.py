@@ -132,6 +132,7 @@ class Qwen2AudioAttention(nn.Module):
             max_position_embeddings=3000,
             base=10000,
         )
+        # self.rotary_emb = RotaryEmbedding(self.head_dim)
 
         if layer_idx is None and is_decoder:
             logger.warning_once(
@@ -193,7 +194,8 @@ class Qwen2AudioAttention(nn.Module):
         attn_weights = torch.matmul(rotated_query_states, rotated_key_states.transpose(2, 3))
 
         if attention_mask is not None:  # no matter the length, we just slice it
-            attn_weights = attn_weights + attention_mask
+            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
+            attn_weights = attn_weights + causal_mask
 
         attn_weights = nn.functional.softmax(attn_weights, dim=-1)
 
@@ -282,10 +284,19 @@ class Qwen2AudioSdpaAttention(Qwen2AudioAttention):
         rotated_query_states = apply_rotary_pos_emb(query_states, query_states, q_cos, q_sin)[0]
         rotated_key_states = apply_rotary_pos_emb(key_states, key_states, k_cos, k_sin)[0]
 
+        # rotated_query_states, rotated_key_states = self.rotary_emb.rotate_queries_with_cached_keys(query_states, key_states)
+
+        # rotated_query_states = query_states
+        # rotated_key_states = key_states
+
+        causal_mask = attention_mask
+        if attention_mask is not None:  # no matter the length, we just slice it
+            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
+
         # We dispatch to SDPA's Flash Attention or Efficient kernels via this `is_causal` if statement instead of an inline conditional assignment
         # in SDPA to support both torch.compile's dynamic shapes and full graph options. An inline conditional prevents dynamic shapes from compiling.
         # The tgt_len > 1 is necessary to match with AttentionMaskConverter.to_causal_4d that does not create a causal mask in case tgt_len == 1.
-        # is_causal = True if self.is_causal and causal_mask is None and tgt_len > 1 else False
+        is_causal = True if self.is_causal and causal_mask is None and tgt_len > 1 else False
 
         # NOTE: SDPA with memory-efficient backend is currently (torch==2.1.2) bugged when using non-contiguous inputs and a custom attn_mask,
         # but we are fine here as `_shape` do call `.contiguous()`. Reference: https://github.com/pytorch/pytorch/issues/112577
@@ -293,9 +304,9 @@ class Qwen2AudioSdpaAttention(Qwen2AudioAttention):
             rotated_query_states,
             rotated_key_states,
             value_states,
-            attn_mask=attention_mask,
+            attn_mask=causal_mask,
             dropout_p=self.dropout if self.training else 0.0,
-            is_causal=False,
+            is_causal=is_causal,
         )
 
         if attn_output.size() != (bsz, self.num_heads, tgt_len, self.head_dim):
@@ -372,7 +383,7 @@ class Qwen2AudioEncoderLayer(nn.Module):
         )
         hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
-        
+
         residual = hidden_states
         hidden_states = self.final_layer_norm(hidden_states)
         hidden_states = self.activation_fn(self.fc1(hidden_states))
@@ -588,7 +599,8 @@ class Qwen2AudioEncoder(Qwen2AudioPreTrainedModel):
             cache.embeds_len = inputs_embeds.size(-1)
 
         inputs_embeds = inputs_embeds.permute(0, 2, 1)
-
+        # embed_pos = self.embed_positions.weight
+        # hidden_states = inputs_embeds + embed_pos
         hidden_states = inputs_embeds
         hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
 
@@ -607,7 +619,7 @@ class Qwen2AudioEncoder(Qwen2AudioPreTrainedModel):
             attn_mask = get_attn_mask_inference(seq_len, prefix_len, cache.max_steps, self.blocksize, hidden_states.device)
         else:
             attn_mask = get_attn_mask_training(seq_len, cache.max_steps, self.blocksize, hidden_states.device)
-        attn_mask = attn_mask.to(hidden_states.dtype)
+        attn_mask = attn_mask.to(hidden_states.dtype).view(1, 1, seq_len, -1)
 
         for idx, encoder_layer in enumerate(self.layers):
             if output_hidden_states:
