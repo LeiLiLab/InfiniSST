@@ -11,8 +11,11 @@ from transformers.optimization import (
     get_cosine_with_min_lr_schedule_with_warmup,
     get_constant_schedule_with_warmup
 )
+from transformers.models.seamless_m4t_v2.configuration_seamless_m4t_v2 import SeamlessM4Tv2Config
+
 import lightning as L
 from deepspeed.ops.adam import FusedAdam, DeepSpeedCPUAdam
+
 
 from train.dataset import (
     SpeechSampler, 
@@ -23,7 +26,9 @@ from train.dataset import (
     DataCollatorForTrajectoryInstructDataset,
     DataCollatorForTrajectoryInstructMultiLatencyDataset,
     DataCollatorForOfflineQwen2ACDataset,
-    DataCollatorForTrajectoryInstructMultiLatencyQwen2ACDataset
+    DataCollatorForTrajectoryInstructMultiLatencyQwen2ACDataset,
+    DataCollatorForOfflineSeamlessDataset,
+    DataCollatorForTrajectoryInstructMultiLatencySeamlessDataset
 )
 from model.llama31 import SpeechLlamaForCausalLM
 from model.w2v2 import SpeechEncoderW2V2RoPE
@@ -34,6 +39,8 @@ from model.patches.patch_hf import patch_hf
 from model.qwen2ac import Qwen2AudioForConditionalGeneration
 from model.patches.patch_qwen2ac import patch_qwen2ac
 
+from model.seamlessm4t_v2_encoder import SeamlessM4Tv2SpeechEncoder
+
 logger = logging.getLogger(__name__)
 
 collator_classes = {
@@ -43,7 +50,9 @@ collator_classes = {
     3: DataCollatorForTrajectoryInstructDataset,
     4: DataCollatorForTrajectoryInstructMultiLatencyDataset,
     5: DataCollatorForOfflineQwen2ACDataset,
-    6: DataCollatorForTrajectoryInstructMultiLatencyQwen2ACDataset
+    6: DataCollatorForTrajectoryInstructMultiLatencyQwen2ACDataset,
+    7: DataCollatorForOfflineSeamlessDataset,
+    8: DataCollatorForTrajectoryInstructMultiLatencySeamlessDataset
 }
 
 class SLlamaLightning(L.LightningModule):
@@ -423,6 +432,162 @@ class Qwen2ACLightning(SLlamaLightning):
             filter=True,
             tokenizer=self.processor.tokenizer,
             model_type="qwen2ac"
+        )
+        eval_dataloader = DataLoader(
+            eval_dataset, 
+            batch_sampler=eval_sampler, 
+            collate_fn=data_collator
+        )
+        return eval_dataloader
+    
+class SeamlessLightning(SLlamaLightning):
+    def __init__(
+            self, speech_args, model_args, data_args, training_args,
+            lr=2e-4, warmup_updates=4000, min_lr=0.
+        ):
+        super(SLlamaLightning, self).__init__()
+        self.model = None
+
+        self.speech_args = speech_args
+        self.model_args = model_args
+        self.data_args = data_args
+        self.training_args = training_args
+
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(
+            self.model_args.llm_path,
+            padding_side="right",
+            use_fast=False,
+        )
+        self.tokenizer.pad_token = "<|finetune_right_pad_id|>"
+
+        self.processor = AutoProcessor.from_pretrained(self.speech_args.seamless_path)
+
+        self.optimizer_params = {
+            "lr": lr,
+            "warmup_updates": warmup_updates,
+            "min_lr": min_lr,
+        }
+
+    def configure_model(self):
+        if self.model is not None:
+            return
+        
+        patch_llama31()
+        patch_hf()
+
+        logger.info("use_flash_attn: {}".format(self.model_args.use_flash_attn))
+        model = SpeechLlamaForCausalLM.from_pretrained(
+            self.model_args.llm_path,
+            torch_dtype=torch.bfloat16 if self.model_args.use_flash_attn else None,
+            attn_implementation="flash_attention_2" if self.model_args.use_flash_attn else 'sdpa'
+        )
+        model.config.use_cache = False
+        model.rdrop = self.training_args.rdrop
+        model.text_weight = self.training_args.text_weight
+
+        if self.model_args.llm_freeze:
+            model.model.requires_grad_(False)
+            model.model.embed_tokens.requires_grad_(True)
+        if self.model_args.llm_emb_freeze:
+            model.model.embed_tokens.requires_grad_(False)
+        if self.model_args.llm_head_freeze:
+            model.lm_head.requires_grad_(False)
+
+        # load speech encoder
+        
+        config = SeamlessM4Tv2Config.from_pretrained(self.speech_args.seamless_path)
+        config.llm_embedding_dim = model.model.embed_tokens.embedding_dim
+        config.speech_encoder_layerdrop = 0
+        config.position_embeddings_type = 'rope'
+        config.speech_encoder_chunk_size = self.speech_args.block_size
+        config.speech_encoder_left_chunk_num = self.speech_args.max_cache_size // self.speech_args.block_size
+        speech_encoder = SeamlessM4Tv2SpeechEncoder(config)
+        speech_encoder_state_dict = torch.load(os.path.join(self.speech_args.seamless_path, "speech_encoder.pt"), weights_only=True)
+        speech_encoder.load_state_dict(speech_encoder_state_dict, strict=False)        
+        speech_encoder.to(dtype=model.dtype, device=model.device)        
+        model.model.speech_encoder = speech_encoder
+
+        model.cpo_beta = self.training_args.cpo_beta
+
+        if self.speech_args.seamless_freeze:
+            model.model.speech_encoder.requires_grad_(False)
+
+        model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.data_args.trajectory_max_multiplier)
+
+        if self.model_args.sllm_weight_path is not None:
+            logger.info("Loading SLLM weights from {}".format(self.model_args.sllm_weight_path))
+            state_dict = torch.load(self.model_args.sllm_weight_path, map_location='cpu', weights_only=True)
+            model.load_state_dict(state_dict, strict=True)
+    
+        self.model = model
+    
+    def train_dataloader(self):
+        train_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
+            self.data_args.data_path, self.data_args.data_split_train
+        )
+        collator_cls = collator_classes[self.data_args.trajectory]
+
+        logger.info("collator class: {}".format(collator_cls))
+
+        data_collator = collator_cls(
+            self.tokenizer, 
+            self.processor,
+            self.data_args.source_lang,
+            self.data_args.target_lang,
+            block_size=self.speech_args.block_size,
+            max_multiplier=self.data_args.trajectory_max_multiplier,
+            prob_aug=self.data_args.trajectory_prob_aug,
+        )
+
+        # if self.data_args.trajectory >= 1:
+        #     data_collator.validate(train_dataset)
+
+        logger.info("train_bsz: {}, bsz_sent: {}".format(self.training_args.train_bsz, self.training_args.bsz_sent))
+
+        train_sampler = SpeechSampler(
+            train_dataset, 
+            shuffle=True, 
+            batch_size=self.training_args.train_bsz, 
+            batch_size_sent=self.training_args.bsz_sent,
+            min_ms=320,
+            multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
+            filter=True,
+            tokenizer=self.tokenizer,
+        )
+        train_dataloader = DataLoader(
+            train_dataset, 
+            batch_sampler=train_sampler, 
+            collate_fn=data_collator
+        )
+        return train_dataloader
+    
+    def val_dataloader(self):
+        eval_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
+        self.data_args.data_path, self.data_args.data_split_eval
+        )
+        collator_cls = collator_classes[self.data_args.trajectory]
+        data_collator = collator_cls(
+            self.tokenizer, 
+            self.processor,
+            self.data_args.source_lang,
+            self.data_args.target_lang,
+            block_size=self.speech_args.block_size,
+            max_multiplier=self.data_args.trajectory_max_multiplier,
+            prob_aug=self.data_args.trajectory_prob_aug,
+        )
+
+        # if self.data_args.trajectory >= 1:
+        #     data_collator.validate(eval_dataset)
+
+        eval_sampler = SpeechSampler(
+            eval_dataset, 
+            shuffle=False, 
+            batch_size=self.training_args.eval_bsz, 
+            batch_size_sent=self.training_args.bsz_sent,
+            min_ms=320,
+            multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
+            filter=True,
+            tokenizer=self.tokenizer,
         )
         eval_dataloader = DataLoader(
             eval_dataset, 
