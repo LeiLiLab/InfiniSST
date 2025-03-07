@@ -14,4 +14,4 @@ profile/*
 debug*
 debug.ipynb
 *.wav
-fairseq
+fairseq*
