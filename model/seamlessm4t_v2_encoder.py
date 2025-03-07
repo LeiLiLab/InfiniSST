@@ -26,6 +26,8 @@ from torch.nn import CrossEntropyLoss
 
 from rotary_embedding_torch import RotaryEmbedding
 
+from fairseq.models.speech_to_text import lengths_to_padding_mask
+
 from transformers.activations import ACT2FN
 from transformers.generation import GenerationMixin
 from transformers.integrations.deepspeed import is_deepspeed_zero3_enabled
@@ -953,6 +955,9 @@ class SeamlessM4Tv2SpeechEncoder(SeamlessM4Tv2PreTrainedModel):
 
         # Initialize weights and apply final processing
         self.post_init()
+    
+    def set_blocksize(self, multiplier):
+        self.encoder._apply_multiplier(multiplier)
 
     def forward(
         self,
@@ -970,7 +975,6 @@ class SeamlessM4Tv2SpeechEncoder(SeamlessM4Tv2PreTrainedModel):
             cache = SeamlessM4Tv2SpeechEncoderCache(
                 layers=[SeamlessM4Tv2SpeechEncoderLayerCache() for _ in range(self.config.speech_encoder_layers)],
             )
-        self.encoder._apply_multiplier(multiplier)
 
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1020,3 +1024,8 @@ class SeamlessM4Tv2SpeechEncoder(SeamlessM4Tv2PreTrainedModel):
             attentions=encoder_outputs.attentions,
             cache=cache,
         )
+
+    def encode_speech(self, speech_batch, src_lengths, cache=None):
+        attention_mask = (~lengths_to_padding_mask(src_lengths)).int()
+        output = self(speech_batch, attention_mask, cache=cache)
+        return output.last_hidden_state, output.cache

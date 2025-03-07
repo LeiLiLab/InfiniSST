@@ -540,6 +540,99 @@ class DataCollatorForOfflineQwen2ACDataset:
         return inputs
 
 
+class DataCollatorForOfflineSeamlessDataset:
+    def __init__(self, tokenizer, processor, source_lang, target_lang, **kwargs):
+        self.tokenizer = tokenizer
+        self.processor = processor
+        self.source_lang = source_lang
+        self.target_lang = target_lang
+
+    def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
+        indices = torch.tensor([x.index for x in samples], dtype=torch.long)
+        audios = [x.source.numpy() for x in samples]
+
+        audio_inputs = self.processor(
+            audios=audios, 
+            sampling_rate=16000,
+            do_normalize_per_mel_bins=False, 
+            return_tensors="pt",
+        )
+
+        input_features = audio_inputs["input_features"]
+        audio_attention_mask = audio_inputs["attention_mask"]
+        src_lengths = audio_attention_mask.sum(dim=1)
+        speech_lens = src_lengths // 8
+
+        texts = [x.target for x in samples]
+
+        prompts = []
+        instruction = f"Translate the following speech from {self.source_lang} to {self.target_lang}."
+        for i, x in enumerate(samples):
+            messages = [{
+                "role": "system",
+                "content": instruction
+            }]
+            messages.append(
+                {
+                    "role": "user",
+                    "content": speech_lens.max() * DEFAULT_SPEECH_PATCH_TOKEN
+                }
+            )
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": x.target
+                }
+            )
+            prompts.append(messages)
+     
+        # Tokenize with explicit padding settings
+        tokenized = self.tokenizer.apply_chat_template(
+            prompts,
+            return_tensors='pt',
+            padding=True, 
+            truncation=False, 
+            add_special_tokens=False
+        )
+        input_ids = tokenized
+        attention_mask = (input_ids != self.tokenizer.pad_token_id).long()
+
+        # Create targets and handle padding properly
+        targets = input_ids.clone()
+        targets[attention_mask == 0] = IGNORE_INDEX
+        user_id = self.tokenizer.convert_tokens_to_ids('user')
+        assist_id = self.tokenizer.convert_tokens_to_ids('assistant')
+        start_header_id = self.tokenizer.convert_tokens_to_ids('<|start_header_id|>')
+        label_mask = torch.zeros_like(targets, dtype=torch.bool)
+        for i in range(len(samples)):
+            user_pos = (targets[i] == user_id).nonzero()
+            assist_pos = (targets[i] == assist_id).nonzero()
+
+            user_pos = [
+                pos for pos in user_pos if targets[i, pos[0] - 1] == start_header_id
+            ]
+            assist_pos = [
+                pos for pos in assist_pos if targets[i, pos[0] - 1] == start_header_id
+            ]
+
+            assert len(user_pos) == 1 and len(assist_pos) == 1
+
+            label_mask[i, assist_pos[0][0] + 2:] = True
+        targets[~label_mask] = IGNORE_INDEX
+                
+        batch = dict(
+            input_ids=input_ids,
+            labels=targets,
+            attention_mask=attention_mask,
+            speech_batch=input_features,
+            src_lengths=src_lengths,
+            after_lens=speech_lens,
+            target_text=texts,
+            ids=indices,
+        )
+
+        return batch
+
 @dataclass
 class DataCollatorForTrajectoryDataset(object):
     def __init__(self, 
@@ -1177,3 +1270,169 @@ class DataCollatorForTrajectoryInstructMultiLatencyQwen2ACDataset:
         inputs["multiplier"] = multiplier
 
         return inputs
+    
+
+class DataCollatorForTrajectoryInstructMultiLatencySeamlessDataset:
+    def __init__(self, 
+            tokenizer, processor, source_lang, target_lang, 
+            block_size=48, max_multiplier=1, prob_aug=0., **kwargs
+        ):
+
+        self.tokenizer = tokenizer
+        self.processor = processor
+        self.source_lang = source_lang
+        self.target_lang = target_lang
+        self.speech_segment_size = block_size // 8
+
+        assert max_multiplier >= 1 and prob_aug >= 0 and prob_aug <= 1
+        self.max_multiplier = max_multiplier
+        self.prob_aug = prob_aug
+
+    def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
+        indices = torch.tensor([x.index for x in samples], dtype=torch.long)
+
+        multiplier = np.random.randint(1, self.max_multiplier + 1)
+        latency_token = DEFAULT_LATENCY_TOKEN.format(multiplier)
+
+        # pad to multiple
+        sp_seg_frame = int(self.speech_segment_size * 0.16 * 16000) * multiplier
+        for x in samples:
+            if x.source.shape[0] % sp_seg_frame != 0:
+                n_pad = sp_seg_frame - x.source.shape[0] % sp_seg_frame
+                x.source = torch.cat([x.source, torch.zeros(n_pad).to(x.source)], dim=0)
+            x.source = torch.cat([torch.zeros(79 + 320).to(x.source), x.source], dim=0)
+
+        audios = [x.source.numpy() for x in samples]
+        audio_inputs = self.processor(
+            audios=audios, 
+            sampling_rate=16000,
+            do_normalize_per_mel_bins=False, 
+            return_tensors="pt",
+        )
+
+        input_features = audio_inputs["input_features"]
+        audio_attention_mask = audio_inputs["attention_mask"]
+        src_lengths = audio_attention_mask.sum(dim=1)
+        speech_lens = src_lengths // 8
+
+        for x in samples:
+            if type(x.trajectory[0]) == str:
+                x.trajectory = [[seg, True] for seg in x.trajectory]
+        
+        for x in samples:
+            traj = x.trajectory
+            new_traj = []
+            for i in range(0, len(traj), multiplier):
+                partial_translation = ''.join(
+                    traj[j][0] for j in range(i, min(i + multiplier, len(traj)))
+                )
+                new_traj.append([partial_translation, True])
+            x.trajectory = new_traj
+
+        if np.random.rand() < self.prob_aug: # only zh
+            for x in samples:
+                traj = x.trajectory
+
+                # shift
+                shift_traj = []
+                for i in range(len(traj)):
+                    seg = traj[len(traj) - i - 1][0]
+                    if seg == "" or np.random.rand() < 0.5 or i == 0:
+                        shift_traj.append([seg, True])
+                        continue
+                    words = list(jieba.cut(seg))
+                    shift_idx = np.random.randint(len(words))
+                    shift_traj[-1][0] = ''.join(words[shift_idx:]) + shift_traj[-1][0]
+                    shift_traj.append([''.join(words[:shift_idx]), False])
+
+                shift_traj = shift_traj[::-1]
+
+                # merge
+                merge_traj = copy.deepcopy(shift_traj)
+                for i in range(len(merge_traj) - 1):
+                    seg, _ = merge_traj[i]
+                    if seg == "" or np.random.rand() < 0.5:
+                        continue
+                    
+                    merge_traj[i] = ["", False]
+                    merge_traj[i + 1][0] = seg + merge_traj[i + 1][0]
+                
+                x.trajectory = merge_traj
+
+        prompts = []
+        instruction = f"Translate the following speech from {self.source_lang} to {self.target_lang} with latency {latency_token}."
+        for i, x in enumerate(samples):
+            messages = [{
+                "role": "system",
+                "content": instruction
+            }]
+            for j, (text, _) in enumerate(x.trajectory):
+                n_sp_token = min(
+                    self.speech_segment_size * multiplier, 
+                    speech_lens[i] - j * self.speech_segment_size * multiplier
+                )
+                assert n_sp_token > 0
+
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": n_sp_token * DEFAULT_SPEECH_PATCH_TOKEN
+                    }
+                )
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": text
+                    }
+                )
+            prompts.append(messages)
+     
+        # Tokenize with explicit padding settings
+        tokenized = self.tokenizer.apply_chat_template(
+            prompts,
+            return_tensors='pt',
+            padding=True, 
+            truncation=False, 
+            add_special_tokens=False
+        )
+        input_ids = tokenized
+        attention_mask = (input_ids != self.tokenizer.pad_token_id).long()
+
+        # Create targets and handle padding properly
+        targets = input_ids.clone()
+        targets[attention_mask == 0] = IGNORE_INDEX
+        user_id = self.tokenizer.convert_tokens_to_ids('user')
+        assist_id = self.tokenizer.convert_tokens_to_ids('assistant')
+        start_header_id = self.tokenizer.convert_tokens_to_ids('<|start_header_id|>')
+        label_mask = torch.zeros_like(targets, dtype=torch.bool)
+        for i in range(len(samples)):
+            user_pos = (targets[i] == user_id).nonzero()
+            assist_pos = (targets[i] == assist_id).nonzero()
+
+            user_pos = [
+                pos for pos in user_pos if targets[i, pos[0] - 1] == start_header_id
+            ]
+            assist_pos = [
+                pos for pos in assist_pos if targets[i, pos[0] - 1] == start_header_id
+            ]
+
+            assert len(user_pos) == len(assist_pos)
+
+            for j in range(len(user_pos) - 1):
+                if samples[i].trajectory[j][1]:
+                    label_mask[i, assist_pos[j][0] + 2 : user_pos[j + 1][0] - 1] = True
+            label_mask[i, assist_pos[-1][0] + 2:] = True
+        targets[~label_mask] = IGNORE_INDEX
+
+        batch = dict(
+            input_ids=input_ids,
+            labels=targets,
+            attention_mask=attention_mask,
+            speech_batch=input_features,
+            src_lengths=src_lengths,
+            after_lens=speech_lens,
+            ids=indices,
+            multiplier=multiplier
+        )
+
+        return batch
