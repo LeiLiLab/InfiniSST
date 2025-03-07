@@ -22,7 +22,8 @@ from train.dataset import (
     DataCollatorForTrajectoryDataset,
     DataCollatorForTrajectoryInstructDataset,
     DataCollatorForTrajectoryInstructMultiLatencyDataset,
-    DataCollatorForOfflineQwen2ACDataset
+    DataCollatorForOfflineQwen2ACDataset,
+    DataCollatorForTrajectoryInstructMultiLatencyQwen2ACDataset
 )
 from model.llama31 import SpeechLlamaForCausalLM
 from model.w2v2 import SpeechEncoderW2V2RoPE
@@ -41,7 +42,8 @@ collator_classes = {
     2: DataCollatorForTrajectoryDataset,
     3: DataCollatorForTrajectoryInstructDataset,
     4: DataCollatorForTrajectoryInstructMultiLatencyDataset,
-    5: DataCollatorForOfflineQwen2ACDataset
+    5: DataCollatorForOfflineQwen2ACDataset,
+    6: DataCollatorForTrajectoryInstructMultiLatencyQwen2ACDataset
 }
 
 class SLlamaLightning(L.LightningModule):
@@ -373,10 +375,8 @@ class Qwen2ACLightning(SLlamaLightning):
             self.data_args.source_lang,
             self.data_args.target_lang,
             block_size=self.speech_args.block_size,
-            perturb=self.data_args.trajectory_perturb,
             max_multiplier=self.data_args.trajectory_max_multiplier,
             prob_aug=self.data_args.trajectory_prob_aug,
-            trainer=self.trainer
         )
 
         logger.info("train_bsz: {}, bsz_sent: {}".format(self.training_args.train_bsz, self.training_args.bsz_sent))
@@ -409,10 +409,8 @@ class Qwen2ACLightning(SLlamaLightning):
             self.data_args.source_lang,
             self.data_args.target_lang,
             block_size=self.speech_args.block_size,
-            perturb=self.data_args.trajectory_perturb,
             max_multiplier=self.data_args.trajectory_max_multiplier,
             prob_aug=self.data_args.trajectory_prob_aug,
-            trainer=self.trainer
         )
 
         eval_sampler = SpeechSampler(
