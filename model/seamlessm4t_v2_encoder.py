@@ -17,12 +17,14 @@
 import copy
 import math
 from dataclasses import dataclass
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, List
 
 import torch
 import torch.utils.checkpoint
 from torch import Tensor, nn
 from torch.nn import CrossEntropyLoss
+
+from rotary_embedding_torch import RotaryEmbedding
 
 from transformers.activations import ACT2FN
 from transformers.generation import GenerationMixin
@@ -324,6 +326,19 @@ def format_speech_generation_kwargs(kwargs):
 
 ############ SPEECH ENCODER related code ################
 
+class SeamlessM4Tv2SpeechEncoderLayerCache:
+    key: torch.Tensor = None
+    value: torch.Tensor = None
+    conv_hidden_states: torch.Tensor = None
+
+class SeamlessM4Tv2SpeechEncoderCache:
+    cache_size: int = 0
+    layers: List[SeamlessM4Tv2SpeechEncoderLayerCache] = None
+
+    def __init__(self, cache_size=0, layers=None):
+        self.cache_size = cache_size
+        self.layers = layers
+
 
 class SeamlessM4Tv2ConformerFeatureProjection(nn.Module):
     # Copied from transformers.models.seamless_m4t.modeling_seamless_m4t.SeamlessM4TConformerFeatureProjection.__init__
@@ -404,7 +419,12 @@ class SeamlessM4Tv2ConformerConvolutionModule(nn.Module):
         )
         self.dropout = nn.Dropout(config.speech_encoder_dropout)
 
-    def forward(self, hidden_states, attention_mask=None):
+    def forward(
+        self, 
+        hidden_states, 
+        attention_mask=None, 
+        cache=None,
+    ):
         hidden_states = self.layer_norm(hidden_states)
 
         # Ensure that we do not leak padded positions in depthwise convolution.
@@ -421,11 +441,17 @@ class SeamlessM4Tv2ConformerConvolutionModule(nn.Module):
         # => (batch, channel, dim)
         hidden_states = self.glu(hidden_states)
 
+        seq_len = hidden_states.size(-1)
+        if cache.conv_hidden_states is not None:
+            hidden_states = torch.cat([cache.conv_hidden_states, hidden_states], dim=2)
+        cache.conv_hidden_states = hidden_states[:, :, -self.depthwise_conv.kernel_size[0]:]
+
         # Pad the sequence entirely on the left because of causal convolution.
         hidden_states = torch.nn.functional.pad(hidden_states, (self.depthwise_conv.kernel_size[0] - 1, 0))
 
         # 1D Depthwise Conv
         hidden_states = self.depthwise_conv(hidden_states)
+        hidden_states = hidden_states[:, :, -seq_len:]
         hidden_states = self.depthwise_layer_norm(hidden_states.transpose(1, 2)).transpose(1, 2)
         hidden_states = self.activation(hidden_states)
 
@@ -459,12 +485,15 @@ class SeamlessM4Tv2ConformerSelfAttention(nn.Module):
             self.right_max_position_embeddings = config.right_max_position_embeddings
             num_positions = self.left_max_position_embeddings + self.right_max_position_embeddings + 1
             self.distance_embedding = nn.Embedding(num_positions, self.head_size)
+        elif self.position_embeddings_type == "rope":
+            self.rotary_embedding = RotaryEmbedding(self.head_size)
 
     def forward(
         self,
         hidden_states: torch.Tensor,
         attention_mask: Optional[torch.Tensor] = None,
         output_attentions: bool = False,
+        cache: Optional[SeamlessM4Tv2SpeechEncoderLayerCache] = None,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
         # self-attention mechanism
         batch_size, sequence_length, hidden_size = hidden_states.size()
@@ -482,6 +511,15 @@ class SeamlessM4Tv2ConformerSelfAttention(nn.Module):
         query = query.transpose(1, 2)
         key = key.transpose(1, 2)
         value = value.transpose(1, 2)
+
+        if cache.key is not None:
+            # saved states are stored with shape (bsz, num_heads, seq_len, head_dim)
+            key = torch.cat([cache.key, key], dim=2)
+            value = torch.cat([cache.value, value], dim=2)
+        cache.key, cache.value = key, value
+
+        if self.position_embeddings_type == "rope":
+            query, key = self.rotary_embedding.rotate_queries_with_cached_keys(query, key)
 
         attn_weights = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(self.head_size)
 
@@ -552,6 +590,7 @@ class SeamlessM4Tv2ConformerEncoderLayer(nn.Module):
         attention_mask: Optional[torch.Tensor] = None,
         output_attentions: bool = False,
         conv_attention_mask: Optional[torch.Tensor] = None,
+        cache: Optional[SeamlessM4Tv2SpeechEncoderLayerCache] = None,
     ):
         hidden_states = hidden_states
 
@@ -568,13 +607,18 @@ class SeamlessM4Tv2ConformerEncoderLayer(nn.Module):
             hidden_states=hidden_states,
             attention_mask=attention_mask,
             output_attentions=output_attentions,
+            cache=cache,
         )
         hidden_states = self.self_attn_dropout(hidden_states)
         hidden_states = hidden_states + residual
 
         # 3. Convolutional Layer
         residual = hidden_states
-        hidden_states = self.conv_module(hidden_states, attention_mask=conv_attention_mask)
+        hidden_states = self.conv_module(
+            hidden_states, 
+            attention_mask=conv_attention_mask, 
+            cache=cache,
+        )
         hidden_states = residual + hidden_states
 
         # 4. Feed-Forward 2 Layer
@@ -592,6 +636,9 @@ class SeamlessM4Tv2ConformerEncoder(nn.Module):
         super().__init__()
         self.config = config
 
+        self.speech_encoder_left_chunk_num = config.speech_encoder_left_chunk_num
+        self.speech_encoder_chunk_size = config.speech_encoder_chunk_size
+
         self.dropout = nn.Dropout(config.speech_encoder_dropout)
         self.layers = nn.ModuleList(
             [SeamlessM4Tv2ConformerEncoderLayer(config) for _ in range(config.speech_encoder_layers)]
@@ -601,14 +648,18 @@ class SeamlessM4Tv2ConformerEncoder(nn.Module):
 
         self.gradient_checkpointing = False
 
-    def _apply_chunk_attention(self, attention_mask, hidden_states):
+    def _apply_multiplier(self, multiplier):
+        self.speech_encoder_left_chunk_num = self.config.speech_encoder_left_chunk_num / multiplier
+        self.speech_encoder_chunk_size = self.config.speech_encoder_chunk_size * multiplier
+
+    def _apply_chunk_attention(self, attention_mask, hidden_states, cache):
         """
         Creates a chunk attention mask. It creates a mask to prevent attention across chunks, ensuring that each
         position attends only to positions within its own chunk. If a left chunk overlap is specified
         (`speech_encoder_chunk_size` in the configuration), the attention mask is adjusted accordingly to allow each
         position to also attends the `speech_encoder_chunk_size - 1` previous chunks.
         """
-        sequence_len = hidden_states.shape[1]
+        sequence_len = hidden_states.shape[1] + cache.cache_size
 
         chunk_indices = torch.arange(sequence_len, device=hidden_states.device)
         chunk_indices = torch.div(chunk_indices, self.config.speech_encoder_chunk_size).long()
@@ -627,10 +678,16 @@ class SeamlessM4Tv2ConformerEncoder(nn.Module):
         indices = torch.arange(sequence_len, device=hidden_states.device).unsqueeze(0).expand(sequence_len, -1)
 
         chunk_mask = (indices < start_indices) | (indices >= end_indices)
+        chunk_mask = chunk_mask[cache.cache_size:]
         chunk_mask = chunk_mask.unsqueeze(0).unsqueeze(0)
 
-        attention_mask = chunk_mask if attention_mask is None else (attention_mask.bool() | chunk_mask)
-        attention_mask = attention_mask.to(dtype=hidden_states.dtype)
+        # TODO: might need to modify later for batched inference
+        bsz = hidden_states.shape[0]
+        chunk_mask = chunk_mask.repeat(bsz, 1, 1, 1)
+
+        if attention_mask is not None:
+            chunk_mask[:, :, :, cache.cache_size:] |= attention_mask.bool()
+        attention_mask = chunk_mask.to(dtype=hidden_states.dtype)
         return attention_mask
 
     def forward(
@@ -640,6 +697,7 @@ class SeamlessM4Tv2ConformerEncoder(nn.Module):
         output_attentions=False,
         output_hidden_states=False,
         return_dict=True,
+        cache=None,
     ):
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
@@ -655,7 +713,15 @@ class SeamlessM4Tv2ConformerEncoder(nn.Module):
             )
 
         if self.config.speech_encoder_chunk_size is not None:
-            attention_mask = self._apply_chunk_attention(attention_mask, hidden_states)
+            # sliding window
+            max_cache_size = self.config.speech_encoder_chunk_size * self.config.speech_encoder_left_chunk_num
+            for layer in cache.layers:
+                if layer.key is not None:
+                    layer.key = layer.key[:, :, -max_cache_size:]
+                    layer.value = layer.value[:, :, -max_cache_size:]
+                    cache.cache_size = layer.key.size(2)
+
+            attention_mask = self._apply_chunk_attention(attention_mask, hidden_states, cache)
 
         if attention_mask is not None:
             attention_mask = attention_mask * torch.finfo(hidden_states.dtype).min
@@ -683,6 +749,7 @@ class SeamlessM4Tv2ConformerEncoder(nn.Module):
                         attention_mask,
                         output_attentions,
                         conv_attention_mask,
+                        cache.layers[i],
                     )
                 else:
                     layer_outputs = layer(
@@ -690,6 +757,7 @@ class SeamlessM4Tv2ConformerEncoder(nn.Module):
                         attention_mask=attention_mask,
                         output_attentions=output_attentions,
                         conv_attention_mask=conv_attention_mask,
+                        cache=cache.layers[i],
                     )
                 hidden_states = layer_outputs[0]
 
@@ -729,28 +797,12 @@ class SeamlessM4Tv2ConformerAdapterLayer(nn.Module):
             2 * embed_dim,
             self.kernel_size,
             stride=self.stride,
-            padding=self.stride // 2,
+            padding=0,
         )
         self.activation = nn.GLU(dim=1)
 
-        # Self-Attention
-        self.self_attn_layer_norm = nn.LayerNorm(embed_dim)
-        self.self_attn_conv = nn.Conv1d(
-            embed_dim,
-            2 * embed_dim,
-            self.kernel_size,
-            stride=self.stride,
-            padding=self.stride // 2,
-        )
-        self.self_attn = SeamlessM4Tv2ConformerSelfAttention(config, use_position_embeddings=False)
-        self.self_attn_dropout = nn.Dropout(dropout)
-
-        # Feed-forward
-        self.ffn_layer_norm = nn.LayerNorm(embed_dim)
-        self.ffn = SeamlessM4Tv2ConformerFeedForward(config, act_fn="relu", dropout=dropout)
-
     def _compute_sub_sample_lengths_from_attention_mask(self, attention_mask):
-        pad = self.kernel_size // 2
+        pad = 0
         seq_lens = attention_mask.size(1) - (1 - attention_mask.int()).sum(1)
 
         seq_lens = ((seq_lens + 2 * pad - self.kernel_size) / self.stride) + 1
@@ -762,51 +814,18 @@ class SeamlessM4Tv2ConformerAdapterLayer(nn.Module):
         hidden_states,
         attention_mask: Optional[torch.Tensor] = None,
         output_attentions: bool = False,
+        cache: Optional[SeamlessM4Tv2SpeechEncoderLayerCache] = None,
     ):
-        residual = self.residual_layer_norm(hidden_states)
+        hidden_states = self.residual_layer_norm(hidden_states)
 
         # Apply pooling to the residual to match the sequence length of the
         # multi-head attention output.
         # (batch, seq_len, feature_dim) -> (batch, feature_dim, seq_len)
-        residual = residual.transpose(1, 2)
-        residual = self.residual_conv(residual)
-        residual = self.activation(residual)
-        # (batch, feature_dim, seq_len) -> (batch, seq_len, feature_dim)
-        residual = residual.transpose(1, 2)
-
-        hidden_states = self.self_attn_layer_norm(hidden_states)
-        # Apply pooling before feeding to the multihead-attention layer.
-        # (batch, seq_len, feature_dim) -> (batch, feature_dim, seq_len)
         hidden_states = hidden_states.transpose(1, 2)
-        hidden_states = self.self_attn_conv(hidden_states)
+        hidden_states = self.residual_conv(hidden_states)
         hidden_states = self.activation(hidden_states)
         # (batch, feature_dim, seq_len) -> (batch, seq_len, feature_dim)
         hidden_states = hidden_states.transpose(1, 2)
-
-        if attention_mask is not None:
-            sub_sampled_lengths = self._compute_sub_sample_lengths_from_attention_mask(attention_mask).to(
-                hidden_states.device
-            )
-            attention_mask = _compute_new_attention_mask(hidden_states=hidden_states, seq_lens=sub_sampled_lengths)
-            attention_mask = _prepare_4d_attention_mask(
-                attention_mask,
-                hidden_states.dtype,
-            )
-
-        # The rest of the computation is identical to a vanilla Transformer
-        # encoder layer.
-        hidden_states, attn_weigths = self.self_attn(
-            hidden_states,
-            attention_mask=attention_mask,
-            output_attentions=output_attentions,
-        )
-        hidden_states = self.self_attn_dropout(hidden_states)
-        hidden_states = hidden_states + residual
-
-        residual = hidden_states
-
-        hidden_states = self.ffn_layer_norm(hidden_states)
-        hidden_states = self.ffn(hidden_states) + residual
 
         return hidden_states
 
@@ -823,7 +842,7 @@ class SeamlessM4Tv2ConformerAdapter(nn.Module):
     def forward(self, hidden_states, attention_mask):
         # down project hidden_states if necessary
 
-        for layer in self.layers:
+        for i, layer in enumerate(self.layers):
             hidden_states = layer(hidden_states, attention_mask)
 
         return hidden_states
@@ -880,192 +899,37 @@ class SeamlessM4Tv2PreTrainedModel(PreTrainedModel):
     # Copied from transformers.models.seamless_m4t.modeling_seamless_m4t.SeamlessM4TPreTrainedModel._compute_sub_sample_lengths_from_attention_mask
     def _compute_sub_sample_lengths_from_attention_mask(self, attention_mask):
         kernel_size, stride = self.config.adaptor_kernel_size, self.config.adaptor_stride
-        pad = kernel_size // 2
+        pad = 0
         seq_lens = attention_mask.size(1) - (1 - attention_mask.int()).sum(1)
 
         seq_lens = ((seq_lens + 2 * pad - kernel_size) / stride) + 1
 
         return seq_lens.floor()
 
-    def _indices_to_subwords(self, input_ids):
-        """
-        Returns the corresponding text string for each input id.
-        """
-        if not hasattr(self.generation_config, "id_to_text"):
-            raise ValueError(
-                """This model generation config doesn't have a `id_to_text` key which maps
-                token ids to subwords. Make sure to load the right generation config."""
-            )
-        batch_size, sequence_len = input_ids.shape
 
-        subwords_batch = []
-        for batch_id in range(batch_size):
-            subwords = []
-            for i in range(sequence_len):
-                subword = self.generation_config.id_to_text.get(str(input_ids[batch_id, i].item()))
-                subwords.append(str(subword))
-            subwords_batch.append(subwords)
-        return subwords_batch
+@dataclass
+class SeamlessM4Tv2SpeechEncoderBaseModelOutput(Wav2Vec2BaseModelOutput):
+    """
+    Base class for models that have been trained with the Wav2Vec2 loss objective.
 
-    def _count_character_length_in_subword(
-        self,
-        input_ids,
-        subwords_batch,
-        merge_space_with_prev_subword=False,
-        pad_token_id=0,
-        unk_token_id=1,
-        space="▁",
-    ):
-        """
-        Counts the number of characters per text string associated with the input token id.
+    Args:
+        last_hidden_state (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`):
+            Sequence of hidden-states at the output of the last layer of the model.
+        extract_features (`torch.FloatTensor` of shape `(batch_size, sequence_length, conv_dim[-1])`):
+            Sequence of extracted feature vectors of the last convolutional layer of the model.
+        hidden_states (`tuple(torch.FloatTensor)`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
+            Tuple of `torch.FloatTensor` (one for the output of the embeddings + one for the output of each layer) of
+            shape `(batch_size, sequence_length, hidden_size)`.
 
-        Args:
-            input_ids (`torch.Tensor` of shape `(batch_size, sequence_length)`):
-                Indices of input sequence tokens in the vocabulary.
-            subwords_batch (`List[List[str]]` of shape `(batch_size, sequence_length)`):
-                Corresponding text string for each input id.
-            merge_space_with_prev_subword (`bool`, *optional*, defaults to `False`):
-                Indicates if the space character is merged with the previous subword. If `False`, it will be merged
-                with the next subword.
-            pad_token_id (`int`, *optional*, defaults to 0):
-                The id of the _padding_ text token. If it is encountered when calculating the length of a subword
-                sample, the lengths of subsequent subwords will be set to 0.
-            unk_token_id (`int`, *optional*, defaults to 1):
-                The id of the _unknown_ text token. Associated to a subword of length 1.
-            space (`str`, *optional*, defaults to `"▁"`):
-                The space character.
-        """
-        batch_size, _ = input_ids.shape
+            Hidden-states of the model at the output of each layer plus the initial embedding outputs.
+        attentions (`tuple(torch.FloatTensor)`, *optional*, returned when `output_attentions=True` is passed or when `config.output_attentions=True`):
+            Tuple of `torch.FloatTensor` (one for each layer) of shape `(batch_size, num_heads, sequence_length,
+            sequence_length)`.
 
-        char_count_per_id = input_ids.new_zeros(input_ids.size())
-
-        subword_lens = input_ids.ne(pad_token_id).sum(1)
-
-        for batch_id in range(batch_size):
-            # We slice out the tensor till the padding index.
-            subword_indices = input_ids[batch_id, : subword_lens[batch_id]]
-            subwords = subwords_batch[batch_id][: subword_lens[batch_id]]
-
-            is_next_start_with_space = [
-                len(subwords[i + 1]) > 1 and subwords[i + 1][0] == space if i < len(subwords) - 1 else False
-                for i in range(len(subwords))
-            ]
-            is_punc = [
-                len(subwords[i]) == 1
-                and not subwords[i].isalpha()
-                and not subwords[i].isnumeric()
-                and subwords[i] != space
-                for i in range(len(subwords))
-            ]
-            for i, (subword_idx, subword) in enumerate(zip(subword_indices, subwords)):
-                if subword_idx == pad_token_id:
-                    break
-
-                if subword_idx == unk_token_id:
-                    # We set char_len to 1 for an unk token.
-                    char_len = 1
-
-                    if merge_space_with_prev_subword and is_next_start_with_space[i]:
-                        char_len += 1
-                else:
-                    # By default, spaces are merged with the next subword.
-                    # char_len includes the space.
-                    char_len = len(subword)
-
-                    if merge_space_with_prev_subword:
-                        # Add the space for the next subword.
-                        if is_next_start_with_space[i]:
-                            char_len += 1
-                        # Subtract the space for the current subword.
-                        if i > 0 and is_next_start_with_space[i - 1]:
-                            char_len -= 1
-                    else:
-                        # Merge space with punctuation mark by default.
-                        if is_punc[i] and is_next_start_with_space[i]:
-                            char_len += 1
-                        # Subtract the space for the subword succeeding the punctuation mark.
-                        elif i > 0 and is_punc[i - 1] and is_next_start_with_space[i - 1]:
-                            char_len -= 1
-
-                char_count_per_id[batch_id, i] = char_len
-
-        return char_count_per_id
-
-    def _get_char_input_ids(self, input_ids, subwords_batch, char_count_per_id, pad_token_id=0, unk_token_id=1):
-        """
-        Returns the corresponding character input id for each character of `subwords_batch`.
-
-        Args:
-            input_ids (`torch.Tensor` of shape `(batch_size, sequence_length)`):
-                Indices of input sequence tokens in the vocabulary.
-            subwords_batch (`List[List[str]]` of shape `(batch_size, sequence_length)`):
-                Corresponding text string for each input id.
-            char_count_per_id (`torch.Tensor` of shape `(batch_size, sequence_length)`):
-                Number of characters per input id.
-            pad_token_id (`int`, *optional*, defaults to 0):
-                The id of the _padding_ text token. If it is encountered when calculating the length of a subword
-                sample, the lengths of subsequent subwords will be set to 0.
-            unk_token_id (`int`, *optional*, defaults to 1):
-                The id of the _unknown_ text token. Associated to a subword of length 1.
-        Returns:
-            `torch.Tensor`: Tensor of shape `(batch_size, char_sequence_length)` containing the id of each character.
-        """
-        if not hasattr(self.generation_config, "char_to_id"):
-            raise ValueError(
-                """This model generation config doesn't have a `char_to_id` key which maps
-                characters to character ids. Make sure to load the right generation config."""
-            )
-
-        batch_size = input_ids.shape[0]
-        max_len = int(char_count_per_id.sum(1).max().item())
-
-        char_seqs = input_ids.new_zeros((batch_size, max_len)).fill_(pad_token_id)
-
-        subword_lens = input_ids.ne(pad_token_id).sum(1)
-
-        for batch_id in range(batch_size):
-            total = 0
-            subword_indices = input_ids[batch_id, : subword_lens[batch_id]]
-            subwords = subwords_batch[batch_id][: subword_lens[batch_id]]
-            for subword_idx, subword in zip(subword_indices, subwords):
-                if subword_idx == unk_token_id:
-                    char_ids = [unk_token_id]
-                else:
-                    # Get char token indices corresponding to the subwords.
-                    char_ids = [self.generation_config.char_to_id.get(ch, unk_token_id) for ch in list(subword)]
-                char_seq_len = len(char_ids)
-                char_seqs[batch_id, total : total + char_seq_len] = torch.tensor(char_ids).to(char_seqs)
-                total += char_seq_len
-        return char_seqs
-
-    def _hard_upsample(self, hidden_states, durations):
-        """
-        Repeats the time dimension of each sample in the batch based on the corresponding duration.
-
-        Args:
-            hidden_states (`torch.Tensor` of shape `(batch_size, sequence_length, *)`, *optional*):
-                The sequence to repeat, where `*` is any number of sequence-specific dimensions including none.
-            durations (`torch.Tensor` of shape `(batch_size, sequence_length)`, *optional*):
-                Indicates how many times to repeat time segments.
-        """
-        if hidden_states.size(0) == 1:
-            hidden_states = torch.repeat_interleave(hidden_states, durations.view(-1), dim=1)
-        else:
-            # if batched sample, need to interleave per sample, and pad -> loss of parallelism
-            if hidden_states.shape[0] > 1 and self.training:
-                logger.warning_once(
-                    """`self.training=True` and you use batching. You lose parallelism during the hifigan
-                               forward pass because the samples are interleaved."""
-                )
-            hidden_states = [
-                torch.repeat_interleave(hidden_state, duration, dim=0)
-                for (hidden_state, duration) in zip(hidden_states, durations)
-            ]
-
-            hidden_states = nn.utils.rnn.pad_sequence(hidden_states, batch_first=True)
-
-        return hidden_states
-
+            Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
+            heads.
+    """
+    cache: Optional[SeamlessM4Tv2SpeechEncoderCache] = None
 
 @add_start_docstrings(
     """Transformer speech encoder consisting of *config.speech_encoder_layers* conformer self attention layers.
@@ -1085,6 +949,8 @@ class SeamlessM4Tv2SpeechEncoder(SeamlessM4Tv2PreTrainedModel):
         self.adapter = SeamlessM4Tv2ConformerAdapter(config) if config.add_adapter else None
         self.inner_layer_norm = nn.LayerNorm(config.hidden_size)
 
+        self.final_proj = nn.Linear(config.hidden_size, config.llm_embedding_dim)
+
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -1095,8 +961,17 @@ class SeamlessM4Tv2SpeechEncoder(SeamlessM4Tv2PreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        cache: Optional[SeamlessM4Tv2SpeechEncoderCache] = None,
+        multiplier: Optional[int] = 1,
         **kwargs,
-    ) -> Union[Tuple, Wav2Vec2BaseModelOutput]:
+    ) -> Union[Tuple, SeamlessM4Tv2SpeechEncoderBaseModelOutput]:
+        
+        if cache is None:
+            cache = SeamlessM4Tv2SpeechEncoderCache(
+                layers=[SeamlessM4Tv2SpeechEncoderLayerCache() for _ in range(self.config.speech_encoder_layers)],
+            )
+        self.encoder._apply_multiplier(multiplier)
+
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1117,11 +992,12 @@ class SeamlessM4Tv2SpeechEncoder(SeamlessM4Tv2PreTrainedModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
+            cache=cache,
         )
 
         hidden_states = encoder_outputs[0]
 
-        print(hidden_states.size())
+        # print(hidden_states.size())
 
         expanded_hidden_states = self.intermediate_ffn(hidden_states)
         hidden_states = hidden_states + 0.5 * expanded_hidden_states
@@ -1129,15 +1005,18 @@ class SeamlessM4Tv2SpeechEncoder(SeamlessM4Tv2PreTrainedModel):
         if self.adapter is not None:
             hidden_states = self.adapter(hidden_states, attention_mask=attention_mask)
 
-        print(hidden_states.size())
+        # print(hidden_states.size())
 
         hidden_states = self.inner_layer_norm(hidden_states)
 
-        if not return_dict:
-            return (hidden_states,) + encoder_outputs[1:]
+        hidden_states = self.final_proj(hidden_states)
 
-        return Wav2Vec2BaseModelOutput(
+        if not return_dict:
+            return (hidden_states,) + encoder_outputs[1:] + (cache,)
+
+        return SeamlessM4Tv2SpeechEncoderBaseModelOutput(
             last_hidden_state=hidden_states,
             hidden_states=encoder_outputs.hidden_states,
             attentions=encoder_outputs.attentions,
+            cache=cache,
         )
