@@ -563,7 +563,7 @@ class SeamlessLightning(SLlamaLightning):
     
     def val_dataloader(self):
         eval_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
-        self.data_args.data_path, self.data_args.data_split_eval
+            self.data_args.data_path, self.data_args.data_split_eval
         )
         collator_cls = collator_classes[self.data_args.trajectory]
         data_collator = collator_cls(
