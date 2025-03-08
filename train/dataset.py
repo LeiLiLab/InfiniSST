@@ -561,6 +561,7 @@ class DataCollatorForOfflineSeamlessDataset:
         input_features = audio_inputs["input_features"]
         audio_attention_mask = audio_inputs["attention_mask"]
         src_lengths = audio_attention_mask.sum(dim=1)
+        input_features = input_features[:, :src_lengths.max()]
         speech_lens = src_lengths // 8
 
         texts = [x.target for x in samples]
