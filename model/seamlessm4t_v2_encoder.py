@@ -664,16 +664,16 @@ class SeamlessM4Tv2ConformerEncoder(nn.Module):
         sequence_len = hidden_states.shape[1] + cache.cache_size
 
         chunk_indices = torch.arange(sequence_len, device=hidden_states.device)
-        chunk_indices = torch.div(chunk_indices, self.config.speech_encoder_chunk_size).long()
+        chunk_indices = torch.div(chunk_indices, self.speech_encoder_chunk_size).long()
 
         start_indices = torch.full_like(chunk_indices, 0)
-        if self.config.speech_encoder_left_chunk_num >= 0:
-            start_indices = (chunk_indices - self.config.speech_encoder_left_chunk_num).clamp_(min=0)
-            start_indices = start_indices * self.config.speech_encoder_chunk_size
+        if self.speech_encoder_left_chunk_num >= 0:
+            start_indices = (chunk_indices - self.speech_encoder_left_chunk_num).clamp_(min=0)
+            start_indices = start_indices * self.speech_encoder_chunk_size
             start_indices = start_indices
         start_indices = start_indices.unsqueeze(1).expand(-1, sequence_len)
 
-        end_indices = ((chunk_indices + 1) * self.config.speech_encoder_chunk_size).clamp_(max=sequence_len)
+        end_indices = ((chunk_indices + 1) * self.speech_encoder_chunk_size).clamp_(max=sequence_len)
 
         end_indices = end_indices.unsqueeze(1).expand(-1, sequence_len)
 
@@ -714,9 +714,9 @@ class SeamlessM4Tv2ConformerEncoder(nn.Module):
                 attention_mask.shape[0], 1, attention_mask.shape[-1], attention_mask.shape[-1]
             )
 
-        if self.config.speech_encoder_chunk_size is not None:
+        if self.speech_encoder_chunk_size is not None:
             # sliding window
-            max_cache_size = self.config.speech_encoder_chunk_size * self.config.speech_encoder_left_chunk_num
+            max_cache_size = self.speech_encoder_chunk_size * self.speech_encoder_left_chunk_num
             for layer in cache.layers:
                 if layer.key is not None:
                     layer.key = layer.key[:, :, -max_cache_size:]
