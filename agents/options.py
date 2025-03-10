@@ -20,6 +20,11 @@ def add_speech_encoder_args(parser):
         default=None,
     )
     parser.add_argument(
+        "--seamless-path",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
         "--block-size", 
         type=int, 
         default=12, # blocksize=1 means 80ms

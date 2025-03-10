@@ -1,3 +1,4 @@
+import os
 import contextlib
 from time import perf_counter
 
@@ -14,6 +15,8 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import transformers
+from transformers import AutoProcessor
+
 from tqdm import tqdm
 from model.llama31 import SpeechLlamaForCausalLM
 from model.patches.patch_w2v2 import patch_w2v2
@@ -26,6 +29,10 @@ from agents.options import (
     add_gen_args
 )
 from model.w2v2 import SpeechEncoderW2V2RoPE
+from model.seamlessm4t_v2_encoder import (
+    SeamlessM4Tv2Config,
+    SeamlessM4Tv2SpeechEncoder
+)
 from train.dataset import (
     DEFAULT_SPEECH_PATCH_TOKEN,
     DEFAULT_LATENCY_TOKEN
@@ -111,6 +118,22 @@ class InfiniSST(SpeechToTextAgent):
         
         # model
         self.load_model(args)
+    
+    @staticmethod
+    def add_args(parser):
+        add_simuleval_args(parser)
+        add_speech_encoder_args(parser)
+        add_gen_args(parser)
+        parser.add_argument("--model-type", type=str, default="w2v2_llama31")
+        parser.add_argument("--model-name", type=str, default="facebook/opt-350m")
+        parser.add_argument("--state-dict-path", type=str, default=None)
+        parser.add_argument("--latency-multiplier", type=int, default=4)
+        parser.add_argument("--max-latency-multiplier", type=int, default=4)
+        parser.add_argument("--max-llm-cache-size", type=int, default=10000)
+        parser.add_argument("--always-cache-system-prompt", action='store_true') # LLM-Inf
+        parser.add_argument("--dpo-sampling", action='store_true', help="Enable storing sampling for DPO")
+        parser.add_argument("--output-file", type=str, default="translations.json", help="Output file for sampling")
+        parser.add_argument("--pseudo-batch-size", type=int, default=1)
 
     def build_states(self):
         return S2TAgentStates(
@@ -127,7 +150,53 @@ class InfiniSST(SpeechToTextAgent):
         # self.source_segment_size = 960 * multiplier
         self.max_new_tokens = 10 * multiplier
 
-    def load_model(self, args):
+    def load_seamless_llama31(self, args):
+        patch_llama31()
+        patch_hf()
+
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(
+            args.model_name,
+            padding_side="right",
+            use_fast=False,
+        )
+        self.tokenizer.pad_token = "<|finetune_right_pad_id|>"
+
+        self.bad_words_ids = []
+        if self.suppress_non_language:
+            bad_words = ['(', '（']
+            for idx in tqdm(range(len(self.tokenizer)), desc="Obtaining bad words ids"):
+                decoded_token = self.tokenizer.decode(idx, skip_special_tokens=True)
+                if any(bad_word in decoded_token for bad_word in bad_words):
+                    self.bad_words_ids.append(idx)
+
+        model = SpeechLlamaForCausalLM.from_pretrained(
+            args.model_name,
+            torch_dtype=torch.bfloat16,
+            device_map='cuda',
+        ).eval()
+
+        self.processor = AutoProcessor.from_pretrained(args.seamless_path)
+
+        config = SeamlessM4Tv2Config.from_pretrained(args.seamless_path)
+        config.llm_embedding_dim = model.model.embed_tokens.embedding_dim
+        config.position_embeddings_type = 'rope'
+        config.speech_encoder_chunk_size = args.block_size
+        config.speech_encoder_left_chunk_num = args.max_cache_size // args.block_size
+        speech_encoder = SeamlessM4Tv2SpeechEncoder(config).eval()
+        speech_encoder.to(dtype=model.dtype, device=model.device)
+        model.model.speech_encoder = speech_encoder
+
+        model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.max_latency_multiplier, resize=False)
+
+        logger.info("Loading SLLM weights from {}".format(args.state_dict_path))
+        state_dict = torch.load(args.state_dict_path, map_location='cpu', weights_only=True)
+        model.load_state_dict(state_dict, strict=True)
+    
+        self.model = model
+        self.model.model.inference = True
+        self.llama31 = '3.1' in args.model_name
+
+    def load_w2v2_llama31(self, args):
         patch_w2v2(args.xpos, args.rope)
         patch_llama31()
         patch_hf()
@@ -181,24 +250,17 @@ class InfiniSST(SpeechToTextAgent):
         self.model.model.inference = True
 
         self.llama31 = '3.1' in args.model_name
-
-    @staticmethod
-    def add_args(parser):
-        add_simuleval_args(parser)
-        add_speech_encoder_args(parser)
-        add_gen_args(parser)
-        parser.add_argument("--model-name", type=str, default="facebook/opt-350m")
-        parser.add_argument("--state-dict-path", type=str, default=None)
-        parser.add_argument("--latency-multiplier", type=int, default=4)
-        parser.add_argument("--max-latency-multiplier", type=int, default=4)
-        parser.add_argument("--max-llm-cache-size", type=int, default=10000)
-        parser.add_argument("--always-cache-system-prompt", action='store_true') # LLM-Inf
-        parser.add_argument("--dpo-sampling", action='store_true', help="Enable storing sampling for DPO")
-        parser.add_argument("--output-file", type=str, default="translations.json", help="Output file for sampling")
-        parser.add_argument("--pseudo-batch-size", type=int, default=1)
+    
+    def load_model(self, args):
+        if args.model_type == "w2v2_llama31":
+            self.load_w2v2_llama31(args)
+        elif args.model_type == "seamless_llama31":
+            self.load_seamless_llama31(args)
+        else:
+            raise ValueError(f"Unsupported model type: {args.model_type}")
 
     def _prepare_speech(self, states):
-        sp_seg_frame = int(self.args.block_size // 4 * 0.08 * 16000)
+        sp_seg_frame = int(self.args.block_size * 0.02 * 16000) * self.latency_multiplier
         
         # Only tensorize the new part
         if len(states.source) > states.MAX_SRC_LEN:
@@ -216,7 +278,26 @@ class InfiniSST(SpeechToTextAgent):
         if states.src_len == 0:
             offset = torch.zeros(79 + 320).to(source)
             source = torch.cat([offset, source], dim=0)
+        
+        if self.args.model_type == "seamless_llama31":
+            if states.src_len > 0:
+                if states.src_len >= sp_seg_frame + 320 + 79:
+                    source_left_pad = states.source[states.src_len - sp_seg_frame - 320 - 79 : states.src_len]
+                elif states.src_len == sp_seg_frame:
+                    offset = [0.] * (79 + 320)
+                    source_left_pad = offset + states.source[: states.src_len]
+                else:
+                    raise ValueError(f"Invalid source length: {len(states.source)}")
+                source_left_pad = torch.tensor(source_left_pad)
+                source = torch.cat([source_left_pad, source], dim=0)
             
+            source = self.processor(
+                audios=source.numpy(), 
+                sampling_rate=16000,
+                do_normalize_per_mel_bins=False, 
+                return_tensors="pt",
+            )['input_features'][0, -self.args.block_size * self.latency_multiplier:]
+        
         states.src_len = len(states.source)
 
         speech_batch = source.unsqueeze(0).to(device=self.model.device, dtype=self.model.dtype)
@@ -224,6 +305,8 @@ class InfiniSST(SpeechToTextAgent):
 
     def _prepare_inputs(self, states):
         messages = []
+        sp_seg_token = self.args.block_size // 4 if 'w2v2' in self.args.model_type else self.args.block_size // 8
+        sp_seg_token *= self.latency_multiplier
         if states.speech_cache is None:
             latency_token = DEFAULT_LATENCY_TOKEN.format(self.latency_multiplier)
             messages.append(
@@ -242,7 +325,7 @@ class InfiniSST(SpeechToTextAgent):
         messages.append(
             {
                 "role": "user",
-                "content": self.args.block_size // 4 * self.latency_multiplier * DEFAULT_SPEECH_PATCH_TOKEN
+                "content": sp_seg_token * DEFAULT_SPEECH_PATCH_TOKEN
             }
         )
         messages.append(
@@ -288,7 +371,10 @@ class InfiniSST(SpeechToTextAgent):
             speech_batch = self._prepare_speech(states)
             input_ids = self._prepare_inputs(states)
 
-            speech_batch = speech_batch.repeat(self.pseudo_batch_size, 1)
+            if self.args.model_type == "seamless_llama31":
+                speech_batch = speech_batch.repeat(self.pseudo_batch_size, 1, 1)
+            else:
+                speech_batch = speech_batch.repeat(self.pseudo_batch_size, 1)
             input_ids = input_ids.repeat(self.pseudo_batch_size, 1)
             if states.speech_cache is not None:
                 for i, (k, v) in enumerate(states.past_key_values):
