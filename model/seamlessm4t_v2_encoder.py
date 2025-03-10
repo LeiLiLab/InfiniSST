@@ -651,7 +651,7 @@ class SeamlessM4Tv2ConformerEncoder(nn.Module):
         self.gradient_checkpointing = False
 
     def _apply_multiplier(self, multiplier):
-        self.speech_encoder_left_chunk_num = self.config.speech_encoder_left_chunk_num / multiplier
+        self.speech_encoder_left_chunk_num = self.config.speech_encoder_left_chunk_num // multiplier
         self.speech_encoder_chunk_size = self.config.speech_encoder_chunk_size * multiplier
 
     def _apply_chunk_attention(self, attention_mask, hidden_states, cache):
@@ -1025,7 +1025,10 @@ class SeamlessM4Tv2SpeechEncoder(SeamlessM4Tv2PreTrainedModel):
             cache=cache,
         )
 
-    def encode_speech(self, speech_batch, src_lengths, cache=None):
-        attention_mask = (~lengths_to_padding_mask(src_lengths)).int()
+    def encode_speech(self, speech_batch, src_lengths=None, cache=None):
+        if src_lengths is None:
+            attention_mask = None
+        else:
+            attention_mask = (~lengths_to_padding_mask(src_lengths)).int()
         output = self(speech_batch, attention_mask, cache=cache)
         return output.last_hidden_state, output.cache
