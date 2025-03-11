@@ -28,7 +28,8 @@ from train.dataset import (
     DataCollatorForOfflineQwen2ACDataset,
     DataCollatorForTrajectoryInstructMultiLatencyQwen2ACDataset,
     DataCollatorForOfflineSeamlessDataset,
-    DataCollatorForTrajectoryInstructMultiLatencySeamlessDataset
+    DataCollatorForTrajectoryInstructMultiLatencySeamlessDataset,
+    DataCollatorForTrajectoryInstructMultiLatencyMimiDataset
 )
 from model.llama31 import SpeechLlamaForCausalLM
 from model.w2v2 import SpeechEncoderW2V2RoPE
@@ -54,7 +55,8 @@ collator_classes = {
     5: DataCollatorForOfflineQwen2ACDataset,
     6: DataCollatorForTrajectoryInstructMultiLatencyQwen2ACDataset,
     7: DataCollatorForOfflineSeamlessDataset,
-    8: DataCollatorForTrajectoryInstructMultiLatencySeamlessDataset
+    8: DataCollatorForTrajectoryInstructMultiLatencySeamlessDataset,
+    9: DataCollatorForTrajectoryInstructMultiLatencyMimiDataset
 }
 
 class SLlamaLightning(L.LightningModule):
@@ -604,6 +606,7 @@ class MimiLightning(SLlamaLightning):
             lr=2e-4, warmup_updates=4000, min_lr=0.
         ):
         super(SLlamaLightning, self).__init__()
+        self.model = None
 
         self.speech_args = speech_args
         self.model_args = model_args
@@ -647,20 +650,21 @@ class MimiLightning(SLlamaLightning):
             model.model.embed_tokens.requires_grad_(True)
         if self.model_args.llm_emb_freeze:
             model.model.freeze_embed_tokens = True
-        if self.model_args.llm_head_freeze:
-            model.lm_head.requires_grad_(False)
 
         speech_encoder = MimiModel.from_pretrained(
             self.speech_args.mimi_path, 
             torch_dtype=torch.bfloat16,
             attn_implementation="flash_attention_2"
         )
+        speech_encoder.config.use_cache = False
         speech_encoder.to(dtype=model.dtype, device=model.device)
         model.model.speech_encoder = speech_encoder
 
         model.model.speech_encoder.requires_grad_(False)
 
         model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.data_args.trajectory_max_multiplier, num_audio_tokens=speech_encoder.config.codebook_size)
+
+        model.cpo_beta = self.training_args.cpo_beta
 
         if self.model_args.sllm_weight_path is not None:
             logger.info("Loading SLLM weights from {}".format(self.model_args.sllm_weight_path))

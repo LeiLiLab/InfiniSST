@@ -1570,6 +1570,9 @@ class MimiModel(MimiPreTrainedModel):
         output = self.encode(speech_batch, num_quantizers=1, cache=cache)
         return output.audio_codes, output.cache
 
+    def set_blocksize(self, multiplier):
+        pass
+
     def _decode_frame(
         self,
         codes: torch.Tensor,

@@ -82,7 +82,7 @@ class SpeechLlamaModel(LlamaModel):
 
             if speech_features.dtype is torch.long:
                 audio_token_ids = speech_features + self.config.audio_token_offset
-                speech_features = self.embed_tokens(audio_token_ids)
+                speech_features = self.embed_tokens(audio_token_ids).squeeze(1)
 
             if self.inference:
                 self.speech_features_extracted = True

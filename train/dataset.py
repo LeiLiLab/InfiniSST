@@ -1447,7 +1447,7 @@ class DataCollatorForTrajectoryInstructMultiLatencyMimiDataset:
 
         self.tokenizer = tokenizer
         self.feature_extractor = feature_extractor
-        self.resampler = T.Resample(16000, feature_extractor.sampling_rate, dtype=torch.float64)
+        self.resampler = T.Resample(16000, feature_extractor.sampling_rate, dtype=torch.float32)
         self.source_lang = source_lang
         self.target_lang = target_lang
         self.speech_segment_size = block_size // 2
@@ -1470,6 +1470,7 @@ class DataCollatorForTrajectoryInstructMultiLatencyMimiDataset:
                 x.source = torch.cat([x.source, torch.zeros(n_pad).to(x.source)], dim=0)
         
         sources = _collate_frames([x.source for x in samples], is_audio_input=True)
+        src_lengths = torch.tensor([x.source.shape[0] for x in samples], dtype=torch.long)
         input_features = self.resampler(sources).unsqueeze(1)
 
         for x in samples:
@@ -1582,7 +1583,7 @@ class DataCollatorForTrajectoryInstructMultiLatencyMimiDataset:
             labels=targets,
             attention_mask=attention_mask,
             speech_batch=input_features,
-            src_lengths=None,
+            src_lengths=src_lengths,
             after_lens=None,
             ids=indices,
             multiplier=multiplier
