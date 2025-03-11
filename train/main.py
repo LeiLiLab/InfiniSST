@@ -26,12 +26,13 @@ from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.strategies import DeepSpeedStrategy
 
-from model.model import SLlamaLightning, Qwen2ACLightning, SeamlessLightning
+from model.model import SLlamaLightning, Qwen2ACLightning, SeamlessLightning, MimiLightning
 
 MODEL_CLASSES = {
     "w2v2_llama31": SLlamaLightning,
     "qwen2ac": Qwen2ACLightning,
-    "seamless_llama31": SeamlessLightning
+    "seamless_llama31": SeamlessLightning,
+    "mimi_llama31": MimiLightning
 }
 
 @dataclass
@@ -52,6 +53,9 @@ class SpeechEncoderArguments:
     # seamless-m4t-v2 encoder
     seamless_path: Optional[str] = field(default=None)
     seamless_freeze: bool = field(default=False)
+
+    # mimi
+    mimi_path: Optional[str] = field(default=None)
 
     # common
     block_size: int = field(default=48)

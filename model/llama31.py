@@ -80,10 +80,18 @@ class SpeechLlamaModel(LlamaModel):
                     cache=states.speech_cache
                 )
 
+            if speech_features.dtype is torch.long:
+                audio_token_ids = speech_features + self.config.audio_token_offset
+                speech_features = self.embed_tokens(audio_token_ids)
+
             if self.inference:
                 self.speech_features_extracted = True
 
-            inputs_embeds = self.embed_tokens(input_ids)
+            if getattr(self, "freeze_embed_tokens", False):
+                with torch.no_grad():
+                    inputs_embeds = self.embed_tokens(input_ids)
+            else:
+                inputs_embeds = self.embed_tokens(input_ids)
             filled_inputs_embeds = []
             for i in range(input_ids.size(0)):
                 user_pos = (input_ids[i] == self.config.user_token_id).nonzero()
@@ -146,7 +154,7 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
     def get_output_embeddings(self):
         return self.lm_head
     
-    def preprocess(self, tokenizer, max_multiplier=4, resize=True):      
+    def preprocess(self, tokenizer, max_multiplier=4, resize=True, num_audio_tokens=0):
         tokenizer.add_tokens(
             [
                 DEFAULT_SPEECH_PATCH_TOKEN, 
@@ -164,6 +172,18 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
                 [tokenizer.pad_token],
                 special_tokens=True
             )
+        
+        # add audio tokens
+        self.config.num_audio_tokens = num_audio_tokens
+        tokenizer.add_tokens(
+            [
+                "<audio_token_{}>".format(i)
+                for i in range(num_audio_tokens)
+            ],
+            special_tokens=True
+        )
+        self.config.audio_token_offset = len(tokenizer) - num_audio_tokens
+
         self.resize_token_embeddings(len(tokenizer), mean_resizing=resize)
 
         sp_patch_token_id, sp_start_token_id, sp_end_token_id = \

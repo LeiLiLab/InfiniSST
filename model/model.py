@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 
 import transformers
-from transformers import AutoProcessor
+from transformers import AutoProcessor, AutoFeatureExtractor
 from transformers.optimization import (
     get_cosine_schedule_with_warmup,
     get_cosine_with_min_lr_schedule_with_warmup,
@@ -40,6 +40,8 @@ from model.qwen2ac import Qwen2AudioForConditionalGeneration
 from model.patches.patch_qwen2ac import patch_qwen2ac
 
 from model.seamlessm4t_v2_encoder import SeamlessM4Tv2SpeechEncoder
+
+from model.mimi import MimiModel
 
 logger = logging.getLogger(__name__)
 
@@ -569,6 +571,152 @@ class SeamlessLightning(SLlamaLightning):
         data_collator = collator_cls(
             self.tokenizer, 
             self.processor,
+            self.data_args.source_lang,
+            self.data_args.target_lang,
+            block_size=self.speech_args.block_size,
+            max_multiplier=self.data_args.trajectory_max_multiplier,
+            prob_aug=self.data_args.trajectory_prob_aug,
+        )
+
+        # if self.data_args.trajectory >= 1:
+        #     data_collator.validate(eval_dataset)
+
+        eval_sampler = SpeechSampler(
+            eval_dataset, 
+            shuffle=False, 
+            batch_size=self.training_args.eval_bsz, 
+            batch_size_sent=self.training_args.bsz_sent,
+            min_ms=320,
+            multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
+            filter=True,
+            tokenizer=self.tokenizer,
+        )
+        eval_dataloader = DataLoader(
+            eval_dataset, 
+            batch_sampler=eval_sampler, 
+            collate_fn=data_collator
+        )
+        return eval_dataloader
+    
+class MimiLightning(SLlamaLightning):
+    def __init__(
+            self, speech_args, model_args, data_args, training_args,
+            lr=2e-4, warmup_updates=4000, min_lr=0.
+        ):
+        super(SLlamaLightning, self).__init__()
+
+        self.speech_args = speech_args
+        self.model_args = model_args
+        self.data_args = data_args
+        self.training_args = training_args
+
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(
+            self.model_args.llm_path,
+            padding_side="right",
+            use_fast=False,
+        )
+        self.tokenizer.pad_token = "<|finetune_right_pad_id|>"
+
+        self.feature_extractor = AutoFeatureExtractor.from_pretrained(self.speech_args.mimi_path)
+
+        self.optimizer_params = {
+            "lr": lr,
+            "warmup_updates": warmup_updates,
+            "min_lr": min_lr,
+        }
+    
+    def configure_model(self):
+        if self.model is not None:
+            return
+        
+        patch_llama31()
+        patch_hf()
+
+        logger.info("use_flash_attn: {}".format(self.model_args.use_flash_attn))
+        model = SpeechLlamaForCausalLM.from_pretrained(
+            self.model_args.llm_path,
+            torch_dtype=torch.bfloat16 if self.model_args.use_flash_attn else None,
+            attn_implementation="flash_attention_2" if self.model_args.use_flash_attn else 'sdpa'
+        )
+        model.config.use_cache = False
+        model.rdrop = self.training_args.rdrop
+        model.text_weight = self.training_args.text_weight
+
+        if self.model_args.llm_freeze:
+            model.model.requires_grad_(False)
+            model.model.embed_tokens.requires_grad_(True)
+        if self.model_args.llm_emb_freeze:
+            model.model.freeze_embed_tokens = True
+        if self.model_args.llm_head_freeze:
+            model.lm_head.requires_grad_(False)
+
+        speech_encoder = MimiModel.from_pretrained(
+            self.speech_args.mimi_path, 
+            torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2"
+        )
+        speech_encoder.to(dtype=model.dtype, device=model.device)
+        model.model.speech_encoder = speech_encoder
+
+        model.model.speech_encoder.requires_grad_(False)
+
+        model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.data_args.trajectory_max_multiplier, num_audio_tokens=speech_encoder.config.codebook_size)
+
+        if self.model_args.sllm_weight_path is not None:
+            logger.info("Loading SLLM weights from {}".format(self.model_args.sllm_weight_path))
+            state_dict = torch.load(self.model_args.sllm_weight_path, map_location='cpu', weights_only=True)
+            model.load_state_dict(state_dict, strict=True)
+    
+        self.model = model
+
+    def train_dataloader(self):
+        train_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
+            self.data_args.data_path, self.data_args.data_split_train
+        )
+        collator_cls = collator_classes[self.data_args.trajectory]
+
+        logger.info("collator class: {}".format(collator_cls))
+
+        data_collator = collator_cls(
+            self.tokenizer, 
+            self.feature_extractor,
+            self.data_args.source_lang,
+            self.data_args.target_lang,
+            block_size=self.speech_args.block_size,
+            max_multiplier=self.data_args.trajectory_max_multiplier,
+            prob_aug=self.data_args.trajectory_prob_aug,
+        )
+
+        # if self.data_args.trajectory >= 1:
+        #     data_collator.validate(train_dataset)
+
+        logger.info("train_bsz: {}, bsz_sent: {}".format(self.training_args.train_bsz, self.training_args.bsz_sent))
+
+        train_sampler = SpeechSampler(
+            train_dataset, 
+            shuffle=True, 
+            batch_size=self.training_args.train_bsz, 
+            batch_size_sent=self.training_args.bsz_sent,
+            min_ms=320,
+            multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
+            filter=True,
+            tokenizer=self.tokenizer,
+        )
+        train_dataloader = DataLoader(
+            train_dataset, 
+            batch_sampler=train_sampler, 
+            collate_fn=data_collator
+        )
+        return train_dataloader
+    
+    def val_dataloader(self):
+        eval_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
+            self.data_args.data_path, self.data_args.data_split_eval
+        )
+        collator_cls = collator_classes[self.data_args.trajectory]
+        data_collator = collator_cls(
+            self.tokenizer, 
+            self.feature_extractor,
             self.data_args.source_lang,
             self.data_args.target_lang,
             block_size=self.speech_args.block_size,
