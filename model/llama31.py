@@ -83,7 +83,7 @@ class SpeechLlamaModel(LlamaModel):
             if speech_features.dtype is torch.long:
                 audio_token_ids = speech_features + self.config.audio_token_offset
                 
-                offset_per_codebook = torch.arange(self.speech_encoder.n_quantizers) * \
+                offset_per_codebook = torch.arange(self.speech_encoder.n_quantizers, device=audio_token_ids.device) * \
                     self.speech_encoder.config.codebook_size
                 offset_per_codebook = offset_per_codebook.view(1, self.speech_encoder.n_quantizers, 1)
 

@@ -1591,7 +1591,7 @@ class MimiModel(MimiPreTrainedModel):
         return MimiEncoderOutput(encoded_frames, cache)
 
     def encode_speech(self, speech_batch, src_lengths=None, cache=None):
-        output = self.encode(speech_batch, num_quantizers=8, cache=cache)
+        output = self.encode(speech_batch, num_quantizers=self.n_quantizers, cache=cache)
         return output.audio_codes, output.cache
 
     def set_blocksize(self, multiplier):
