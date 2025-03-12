@@ -1590,6 +1590,7 @@ class MimiModel(MimiPreTrainedModel):
 
         return MimiEncoderOutput(encoded_frames, cache)
 
+    @torch.inference_mode()
     def encode_speech(self, speech_batch, src_lengths=None, cache=None):
         output = self.encode(speech_batch, num_quantizers=self.n_quantizers, cache=cache)
         return output.audio_codes, output.cache
