@@ -528,18 +528,41 @@ class MimiAttention(nn.Module):
         key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
         value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
 
+        # First update cache with unrotated key/value states
         cos, sin = self.rotary_emb(value_states, position_ids)
-        query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
-
+        unrotated_key_states = key_states.clone()
         if past_key_value is not None:
-            # sin and cos are specific to RoPE models; cache_position needed for the static cache
+            # Store unrotated keys in cache
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
-            key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+            key_states, value_states = past_key_value.update(unrotated_key_states, value_states, self.layer_idx, cache_kwargs)
+            
+            # Get the total sequence length including cached tokens
+            total_seq_len = key_states.size(-2)  # Use actual size after cache update
+            past_seq_len = total_seq_len - q_len
+            
+            key_position_ids = torch.arange(total_seq_len, device=cos.device)
+            query_position_ids = torch.arange(past_seq_len, total_seq_len, device=cos.device)
+            
+            # Get rotary embeddings for queries and keys separately
+            key_cos, key_sin = self.rotary_emb(value_states, key_position_ids.unsqueeze(0))
+            query_cos, query_sin = self.rotary_emb(value_states, query_position_ids.unsqueeze(0))
+            
+            # Apply rotation with appropriate position embeddings
+            query_states = apply_rotary_pos_emb(query_states, query_states, query_cos, query_sin)[0]
+            key_states = apply_rotary_pos_emb(key_states, key_states, key_cos, key_sin)[1]
+        else:
+            # For the first token, just apply rotation normally
+            query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
         attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) * self.scaling
+
+        if self.is_causal:
+            attention_mask = 1 - torch.tril(torch.ones(key_states.size(-2), key_states.size(-2), dtype=attn_weights.dtype, device=attn_weights.device))
+            attention_mask = attention_mask[-query_states.size(-2):].unsqueeze(0).unsqueeze(0)
+            attention_mask.masked_fill_(attention_mask == 1, float("-inf"))
 
         if attention_mask is not None:  # no matter the length, we just slice it
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
@@ -697,6 +720,7 @@ class MimiFlashAttention2(MimiAttention):
 
 
 MIMI_ATTENTION_CLASSES = {
+    "eager": MimiAttention,
     "flash_attention_2": MimiFlashAttention2,
 }
 
@@ -1567,7 +1591,7 @@ class MimiModel(MimiPreTrainedModel):
         return MimiEncoderOutput(encoded_frames, cache)
 
     def encode_speech(self, speech_batch, src_lengths=None, cache=None):
-        output = self.encode(speech_batch, num_quantizers=1, cache=cache)
+        output = self.encode(speech_batch, num_quantizers=8, cache=cache)
         return output.audio_codes, output.cache
 
     def set_blocksize(self, multiplier):

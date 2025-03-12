@@ -650,6 +650,8 @@ class MimiLightning(SLlamaLightning):
             model.model.embed_tokens.requires_grad_(True)
         if self.model_args.llm_emb_freeze:
             model.model.freeze_embed_tokens = True
+        if self.model_args.llm_head_freeze:
+            model.lm_head.requires_grad_(False)
 
         speech_encoder = MimiModel.from_pretrained(
             self.speech_args.mimi_path, 
@@ -662,7 +664,12 @@ class MimiLightning(SLlamaLightning):
 
         model.model.speech_encoder.requires_grad_(False)
 
-        model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.data_args.trajectory_max_multiplier, num_audio_tokens=speech_encoder.config.codebook_size)
+        speech_encoder.n_quantizers = self.speech_args.mimi_n_quantizers
+        model.preprocess(
+            tokenizer=self.tokenizer, 
+            max_multiplier=self.data_args.trajectory_max_multiplier, 
+            num_audio_tokens=speech_encoder.config.codebook_size * self.speech_args.mimi_n_quantizers
+        )
 
         model.cpo_beta = self.training_args.cpo_beta
 
