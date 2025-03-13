@@ -4,7 +4,7 @@ This repository contains a demo and the implementation of our paper "InfiniSST: 
 
 ## Online Demo
 
-The link to the online demo is [here](https://c8ff-128-111-28-80.ngrok-free.app).
+The link to the online demo is [here](https://infinisst.ngrok.app/).
 
 ## Installation
 
