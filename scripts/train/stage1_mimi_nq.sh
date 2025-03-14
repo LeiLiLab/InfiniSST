@@ -57,7 +57,6 @@ SLURM_GPUS=8
 srun python train/main.py \
     \
     --mimi_path ${mimi_path} \
-    --mimi_n_quantizers ${nq} \
     --block_size 24 \
     \
     --model_type mimi_llama31 \

@@ -56,7 +56,6 @@ class SpeechEncoderArguments:
 
     # mimi
     mimi_path: Optional[str] = field(default=None)
-    mimi_n_quantizers: int = field(default=8)
 
     # common
     block_size: int = field(default=48)

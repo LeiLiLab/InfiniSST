@@ -1244,9 +1244,9 @@ class MimiResidualVectorQuantizer(nn.Module):
             self.input_proj = torch.nn.Conv1d(
                 config.hidden_size, config.vector_quantization_hidden_dimension, 1, bias=False
             )
-            self.output_proj = torch.nn.Conv1d(
-                config.vector_quantization_hidden_dimension, config.hidden_size, 1, bias=False
-            )
+            # self.output_proj = torch.nn.Conv1d(
+            #     config.vector_quantization_hidden_dimension, config.hidden_size, 1, bias=False
+            # )
 
     def encode(self, embeddings: torch.Tensor, num_quantizers: Optional[int] = None) -> torch.Tensor:
         """
@@ -1478,6 +1478,9 @@ class MimiModel(MimiPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
+    def add_adapter(self, llm_embedding_dim):
+        self.final_proj = nn.Linear(self.config.vector_quantization_hidden_dimension, llm_embedding_dim)
+
     def get_encoder(self):
         return self.encoder
 
@@ -1590,10 +1593,13 @@ class MimiModel(MimiPreTrainedModel):
 
         return MimiEncoderOutput(encoded_frames, cache)
 
-    @torch.inference_mode()
     def encode_speech(self, speech_batch, src_lengths=None, cache=None):
-        output = self.encode(speech_batch, num_quantizers=self.n_quantizers, cache=cache)
-        return output.audio_codes, output.cache
+        with torch.no_grad():
+            output = self.encode(speech_batch, cache=cache)
+            codes = output.audio_codes
+            features = self.quantizer.decode(codes).transpose(1, 2)
+        speech_features = self.final_proj(features)
+        return speech_features, output.cache
 
     def set_blocksize(self, multiplier):
         pass
