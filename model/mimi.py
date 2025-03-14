@@ -1244,9 +1244,9 @@ class MimiResidualVectorQuantizer(nn.Module):
             self.input_proj = torch.nn.Conv1d(
                 config.hidden_size, config.vector_quantization_hidden_dimension, 1, bias=False
             )
-            # self.output_proj = torch.nn.Conv1d(
-            #     config.vector_quantization_hidden_dimension, config.hidden_size, 1, bias=False
-            # )
+            self.output_proj = torch.nn.Conv1d(
+                config.vector_quantization_hidden_dimension, config.hidden_size, 1, bias=False
+            )
 
     def encode(self, embeddings: torch.Tensor, num_quantizers: Optional[int] = None) -> torch.Tensor:
         """
@@ -1270,15 +1270,18 @@ class MimiResidualVectorQuantizer(nn.Module):
 
     def decode(self, codes: torch.Tensor) -> torch.Tensor:
         """Decode the given codes of shape [B, K, T] to the quantized representation."""
-        quantized_out = torch.tensor(0.0, device=codes.device)
+        # quantized_out = torch.tensor(0.0, device=codes.device)
         codes = codes.transpose(0, 1)
+        quantized_outs = []
         for i, indices in enumerate(codes):
             layer = self.layers[i]
             quantized = layer.decode(indices)
-            quantized_out = quantized_out + quantized
+            quantized_outs.append(quantized)
+        quantized_out = torch.cat(quantized_outs, dim=1)
+        # quantized_out = quantized_out + quantized
 
-        if self.output_proj is not None:
-            quantized_out = self.output_proj(quantized_out)
+        # if self.output_proj is not None:
+        #     quantized_out = self.output_proj(quantized_out)
         return quantized_out
 
 
@@ -1334,7 +1337,7 @@ class MimiSplitResidualVectorQuantizer(nn.Module):
 
         # The rest of the codebooks are decoded using the acoustic RVQ
         if codes.shape[1] > self.num_semantic_quantizers:
-            quantized_out += self.acoustic_residual_vector_quantizer.decode(codes[:, self.num_semantic_quantizers :])
+            quantized_out = torch.cat([quantized_out, self.acoustic_residual_vector_quantizer.decode(codes[:, self.num_semantic_quantizers :])], dim=1)
         return quantized_out
 
 
@@ -1479,7 +1482,10 @@ class MimiModel(MimiPreTrainedModel):
         self.post_init()
 
     def add_adapter(self, llm_embedding_dim):
-        self.final_proj = nn.Linear(self.config.vector_quantization_hidden_dimension, llm_embedding_dim)
+        self.final_proj = nn.Linear(
+            self.config.num_quantizers * self.config.codebook_dim, 
+            llm_embedding_dim
+        )
 
     def get_encoder(self):
         return self.encoder
