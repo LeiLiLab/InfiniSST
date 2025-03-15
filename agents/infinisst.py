@@ -14,8 +14,9 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 import torch.nn.functional as F
+import torchaudio.transforms as T
 import transformers
-from transformers import AutoProcessor
+from transformers import AutoProcessor, AutoFeatureExtractor
 
 from tqdm import tqdm
 from model.llama31 import SpeechLlamaForCausalLM
@@ -33,6 +34,7 @@ from model.seamlessm4t_v2_encoder import (
     SeamlessM4Tv2Config,
     SeamlessM4Tv2SpeechEncoder
 )
+from model.mimi import MimiModel
 from train.dataset import (
     DEFAULT_SPEECH_PATCH_TOKEN,
     DEFAULT_LATENCY_TOKEN
@@ -250,12 +252,60 @@ class InfiniSST(SpeechToTextAgent):
         self.model.model.inference = True
 
         self.llama31 = '3.1' in args.model_name
+
+    def load_mimi(self, args):
+        patch_llama31()
+        patch_hf()
+
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(
+            args.model_name,
+            padding_side="right",
+            use_fast=False,
+        )
+        self.tokenizer.pad_token = "<|finetune_right_pad_id|>"
+
+        self.bad_words_ids = []
+        if self.suppress_non_language:
+            bad_words = ['(', '（']
+            for idx in tqdm(range(len(self.tokenizer)), desc="Obtaining bad words ids"):
+                decoded_token = self.tokenizer.decode(idx, skip_special_tokens=True)
+                if any(bad_word in decoded_token for bad_word in bad_words):
+                    self.bad_words_ids.append(idx)
+
+        self.model = SpeechLlamaForCausalLM.from_pretrained(
+            args.model_name,
+            torch_dtype=torch.bfloat16,
+            device_map='cuda',
+        ).eval()
+
+        self.feature_extractor = AutoFeatureExtractor.from_pretrained(args.mimi_path)
+        self.resampler = T.Resample(16000, self.feature_extractor.sampling_rate, dtype=torch.float32)
+
+        speech_encoder = MimiModel.from_pretrained(
+            args.mimi_path, 
+            torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2"
+        ).eval()
+        speech_encoder.add_adapter(self.model.model.embed_tokens.embedding_dim)
+        speech_encoder.config.use_cache = True
+        speech_encoder.to(dtype=self.model.dtype, device=self.model.device)
+        self.model.model.speech_encoder = speech_encoder
+
+        self.model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.max_latency_multiplier, resize=False)
+
+        state_dict = torch.load(args.state_dict_path, map_location='cpu', weights_only=True)
+        self.model.load_state_dict(state_dict)
+        self.model.model.inference = True
+
+        self.llama31 = '3.1' in args.model_name
     
     def load_model(self, args):
         if args.model_type == "w2v2_llama31":
             self.load_w2v2_llama31(args)
         elif args.model_type == "seamless_llama31":
             self.load_seamless_llama31(args)
+        elif args.model_type == "mimi_llama31":
+            self.load_mimi(args)
         else:
             raise ValueError(f"Unsupported model type: {args.model_type}")
 
@@ -275,7 +325,7 @@ class InfiniSST(SpeechToTextAgent):
             source = torch.cat([source, torch.zeros(n_pad).to(source)], dim=0)
             
         # Add offset only for first chunk
-        if states.src_len == 0:
+        if states.src_len == 0 and self.args.model_type != 'mimi_llama31':
             offset = torch.zeros(79 + 320).to(source)
             source = torch.cat([offset, source], dim=0)
         
@@ -300,7 +350,13 @@ class InfiniSST(SpeechToTextAgent):
         
         states.src_len = len(states.source)
 
-        speech_batch = source.unsqueeze(0).to(device=self.model.device, dtype=self.model.dtype)
+        speech_batch = source.unsqueeze(0)
+
+        if self.args.model_type == "mimi_llama31":
+            speech_batch = self.resampler(speech_batch).unsqueeze(1)
+
+        speech_batch = speech_batch.to(device=self.model.device, dtype=self.model.dtype)
+
         return speech_batch
 
     def _prepare_inputs(self, states):
@@ -371,7 +427,7 @@ class InfiniSST(SpeechToTextAgent):
             speech_batch = self._prepare_speech(states)
             input_ids = self._prepare_inputs(states)
 
-            if self.args.model_type == "seamless_llama31":
+            if self.args.model_type in ["seamless_llama31", "mimi_llama31"]:
                 speech_batch = speech_batch.repeat(self.pseudo_batch_size, 1, 1)
             else:
                 speech_batch = speech_batch.repeat(self.pseudo_batch_size, 1)

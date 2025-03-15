@@ -637,6 +637,11 @@ class MimiFlashAttention2(MimiAttention):
         key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
         value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
 
+        # if past_key_value is not None and len(past_key_value.key_cache) > self.layer_idx:
+        #     logger.info("{}".format(past_key_value.key_cache[self.layer_idx].size()))
+        #     past_key_value.key_cache[self.layer_idx] = past_key_value.key_cache[self.layer_idx][:, :, -self.sliding_window:]
+        #     past_key_value.value_cache[self.layer_idx] = past_key_value.value_cache[self.layer_idx][:, :, -self.sliding_window:]
+
         # First update cache with unrotated key/value states
         cos, sin = self.rotary_emb(value_states, position_ids)
         unrotated_key_states = key_states.clone()

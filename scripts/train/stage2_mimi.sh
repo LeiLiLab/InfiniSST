@@ -10,7 +10,7 @@
 #SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,9,13],babel-11-25,babel-12-29,babel-13-[1,13,21,29],babel-14-25
 #SBATCH --partition=general
 #SBATCH --time=2-00:00:00
-##SBATCH --dependency=afterok:job_id
+#SBATCH --dependency=afterok:4373910
 ##SBATCH --array=1-7
 ##SBATCH --account=siqiouya
 #SBATCH --mail-type=ALL
@@ -20,6 +20,7 @@
 
 source /home/siqiouya/anaconda3/bin/activate infinisst
 
+stage1_ckpt_dir=/compute/babel-5-23/siqiouya/runs/en-zh/stage1_mimi_cosine_6epoch/last.ckpt/
 llama_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf
 
 mimi_path=/compute/babel-4-1/siqiouya/mimi
@@ -33,7 +34,7 @@ save_dir=/compute/babel-5-23/siqiouya/runs/en-zh/
 
 source_lang="English"
 target_lang=${lang} # e.g. German
-name="stage1_mimi"
+name="stage2_mimi"
 save_path=${save_dir}/${name}
 rm -rf ${save_path} # comment this line if you want to resume training
 mkdir -p ${save_path}
@@ -60,9 +61,10 @@ srun python train/main.py \
     \
     --model_type mimi_llama31 \
     --llm_path ${llama_path} \
-    --llm_freeze True \
-    --llm_emb_freeze True \
-    --llm_head_freeze True \
+    --sllm_weight_path ${stage1_ckpt_dir}/pytorch_model.bin \
+    --llm_freeze False \
+    --llm_emb_freeze False \
+    --llm_head_freeze False \
     --use_flash_attn True \
     \
     --data_path ${data_path} \
@@ -74,19 +76,19 @@ srun python train/main.py \
     --trajectory_max_multiplier 4 \
     --trajectory_prob_aug 0.0 \
     \
-    --seed 998244353 \
-    --stage 1 \
-    --train_bsz 3600 \
-    --eval_bsz 3600 \
-    --bsz_sent 4 \
-    --learning_rate 2e-4 \
-    --warmup_steps 0 \
-    --scheduler cosine \
+    --seed 42 \
+    --stage 2 \
+    --train_bsz 2400 \
+    --eval_bsz 2400 \
+    --bsz_sent 3 \
+    --learning_rate 7e-6 \
+    --warmup_steps 100 \
     --run_name $name \
     \
     --n_device ${SLURM_GPUS} \
     --deepspeed_stage 2 \
-    --max_epochs 6 \
+    --deepspeed_offload True \
+    --max_epochs 1 \
     --grad_acc_steps 4 \
     --clip_norm 1.0 \
     --save_dir ${save_path} \

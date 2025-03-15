@@ -7,7 +7,7 @@
 #SBATCH --mem=500GB
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,9,13],babel-11-25,babel-12-29,babel-13-[13,21,29],babel-14-25
+#SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,9,13],babel-11-25,babel-12-29,babel-13-[1,13,21,29],babel-14-25
 #SBATCH --partition=preempt
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
@@ -31,11 +31,9 @@ data_path=$ROOT/en-${lang_code}/
 
 save_dir=/compute/babel-5-23/siqiouya/runs/en-zh/
 
-nq=$1
-
 source_lang="English"
 target_lang=${lang} # e.g. German
-name="stage1_mimi_nq${nq}"
+name="stage1_mimi_cosine"
 save_path=${save_dir}/${name}
 rm -rf ${save_path} # comment this line if you want to resume training
 mkdir -p ${save_path}
@@ -57,6 +55,7 @@ SLURM_GPUS=8
 srun python train/main.py \
     \
     --mimi_path ${mimi_path} \
+    \
     --block_size 24 \
     \
     --model_type mimi_llama31 \
@@ -77,16 +76,17 @@ srun python train/main.py \
     \
     --seed 998244353 \
     --stage 1 \
-    --train_bsz 1800 \
-    --eval_bsz 1800 \
-    --bsz_sent 2 \
+    --train_bsz 3600 \
+    --eval_bsz 3600 \
+    --bsz_sent 4 \
     --learning_rate 2e-4 \
-    --warmup_steps 1000 \
+    --warmup_steps 0 \
+    --scheduler cosine \
     --run_name $name \
     \
     --n_device ${SLURM_GPUS} \
     --deepspeed_stage 2 \
-    --max_epochs 6 \
+    --max_epochs 12 \
     --grad_acc_steps 4 \
     --clip_norm 1.0 \
     --save_dir ${save_path} \
