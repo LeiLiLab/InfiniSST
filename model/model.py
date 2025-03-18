@@ -113,7 +113,7 @@ class SLlamaLightning(L.LightningModule):
         logger.info("use_flash_attn: {}".format(self.model_args.use_flash_attn))
         model = SpeechLlamaForCausalLM.from_pretrained(
             self.model_args.llm_path,
-            torch_dtype=torch.bfloat16 if self.model_args.use_flash_attn else None,
+            torch_dtype=torch.bfloat16,
             attn_implementation="flash_attention_2" if self.model_args.use_flash_attn else 'sdpa'
         )
         model.config.use_cache = False
@@ -246,11 +246,10 @@ class SLlamaLightning(L.LightningModule):
 
     def training_step(self, batch, batch_idx):
         loss = self.forward(batch)
-        # TODO: optimize
-        # if not loss.isnan():
-        #     self.log("train/loss", loss, batch_size=batch["src_lengths"].sum() / 16000)
-        #     if "multiplier" in batch:
-        #         self.log("train/loss_mult{}".format(batch["multiplier"]), loss, batch_size=batch["src_lengths"].sum() / 16000)
+        if not loss.isnan() and self.global_step % self.training_args.log_steps == 0:
+            self.log("train/loss", loss, batch_size=batch["src_lengths"].sum() / 16000)
+            if "multiplier" in batch:
+                self.log("train/loss_mult{}".format(batch["multiplier"]), loss, batch_size=batch["src_lengths"].sum() / 16000)
         return loss
     
     def validation_step(self, batch, batch_idx):
