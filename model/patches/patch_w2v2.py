@@ -28,7 +28,6 @@ from rotary_embedding_torch import RotaryEmbedding
 XPOS = True
 
 def get_attn_mask_training(seq_len, max_cache_size=None, blocksize=1, device='cuda'):
-    # TODO: optimize
     blocksizes = [
         min(blocksize, seq_len - i * blocksize) 
         for i in range((seq_len + blocksize - 1) // blocksize)
@@ -50,7 +49,41 @@ def get_attn_mask_training(seq_len, max_cache_size=None, blocksize=1, device='cu
     
     return mask_num
 
-# TODO: simplify and optimize
+def get_attn_mask_training_opt(seq_len, max_cache_size=None, blocksize=1, device='cuda'):
+    """Generate block causal attention mask more efficiently using vectorized operations.
+    
+    Args:
+        seq_len: Length of sequence
+        max_cache_size: Maximum size of the cache window (optional)
+        blocksize: Size of each block for block-wise attention
+        device: Device to create tensors on
+    
+    Returns:
+        mask_num: Float tensor containing -inf for masked positions and 0 for attended positions
+    """
+    # Create position indices
+    row_idx = torch.arange(seq_len, device=device).unsqueeze(1)  # [seq_len, 1]
+    col_idx = torch.arange(seq_len, device=device).unsqueeze(0)  # [1, seq_len]
+    
+    # Calculate block indices for each position
+    row_block = row_idx // blocksize  # [seq_len, 1]
+    col_block = col_idx // blocksize  # [1, seq_len]
+    
+    # Create block causal mask
+    # Allow attention within same block or to previous blocks
+    mask = (row_block >= col_block)
+    
+    # Apply cache size limit if specified
+    if max_cache_size is not None:
+        # Only attend to at most max_cache_size previous positions
+        cache_mask = (col_idx >= (row_idx - max_cache_size))
+        mask = mask & cache_mask
+    
+    # Convert to float mask with -inf for masked positions
+    mask_num = torch.where(mask, 0.0, float('-inf'))
+    
+    return mask_num
+
 def get_attn_mask_inference(seq_len, prefix_len, max_cache_size, blocksize=1, device='cuda'):
     max_len = seq_len + min(prefix_len, max_cache_size)
 
@@ -75,6 +108,46 @@ def get_attn_mask_inference(seq_len, prefix_len, max_cache_size, blocksize=1, de
 
     mask_num = torch.zeros_like(mask, dtype=torch.float)
     mask_num.masked_fill_(~mask, float('-inf'))
+    
+    return mask_num
+
+def get_attn_mask_inference_opt(seq_len, prefix_len, max_cache_size, blocksize=1, device='cuda'):
+    """Generate block causal attention mask for inference more efficiently using vectorized operations.
+    
+    Args:
+        seq_len: Length of new sequence to generate
+        prefix_len: Length of prefix/context
+        max_cache_size: Maximum size of the cache window
+        blocksize: Size of each block for block-wise attention
+        device: Device to create tensors on
+        
+    Returns:
+        mask_num: Float tensor containing -inf for masked positions and 0 for attended positions
+    """
+    max_len = seq_len + min(prefix_len, max_cache_size)
+    
+    # Create position indices
+    # [seq_len, 1]
+    row_idx = torch.arange(seq_len, device=device).unsqueeze(1) + prefix_len
+    # [1, max_len]
+    col_idx = torch.arange(max_len, device=device).unsqueeze(0) + max(0, prefix_len - max_cache_size)
+    
+    
+    # Calculate block indices
+    # For rows: offset by prefix_len since we're only generating seq_len new tokens
+    row_block = row_idx // blocksize  # [seq_len, 1]
+    col_block = col_idx // blocksize  # [1, max_len]
+    
+    # Create block causal mask
+    mask = (row_block >= col_block)
+    
+    # Apply cache size limitation
+    # Each position can only attend to itself and max_cache_size previous positions
+    cache_mask = (col_idx >= (row_idx - max_cache_size))
+    mask = mask & cache_mask
+    
+    # Convert to float mask with -inf for masked positions
+    mask_num = torch.where(mask, 0.0, float('-inf'))
     
     return mask_num
 
@@ -507,9 +580,9 @@ def uni_transformer_encoder_extract_features(
     seq_len = x.size(0)
     # logger.info(f"w2v2 enc forward: device {x.device}, blocksize {self.blocksize}")
     if prefix_len > 0:
-        attn_mask = get_attn_mask_inference(seq_len, prefix_len, cache.max_steps, self.blocksize, x.device)
+        attn_mask = get_attn_mask_inference_opt(seq_len, prefix_len, cache.max_steps, self.blocksize, x.device)
     else:
-        attn_mask = get_attn_mask_training(seq_len, cache.max_steps, self.blocksize, x.device)
+        attn_mask = get_attn_mask_training_opt(seq_len, cache.max_steps, self.blocksize, x.device)
 
     layer_results = []
     r = None
