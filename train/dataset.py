@@ -23,6 +23,7 @@ import jieba
 import transformers
 import numpy as np
 import torch
+import torchaudio
 from torch.utils.data import DistributedSampler
 from fairseq.data import (
     ConcatDataset,
@@ -71,6 +72,69 @@ def get_features_or_waveform(
     else:
         raise ValueError(f"Invalid path: {_path}")
     return waveform, sample_rate
+
+
+def normalize(wav, alpha=0.001, eps=1e-8):
+    """
+    Accelerated version of normalize using torchaudio's lfilter with batching.
+    This implements an online normalization as a single batched IIR filter operation.
+    
+    Args:
+        wav: Input waveform (batch_size, time)
+        alpha: Smoothing factor for the running stats
+        eps: Small constant for numerical stability
+        mean: Initial mean values, should match batch size
+        var: Initial variance values, should match batch size
+    
+    Returns:
+        normalized_wav: Normalized waveform
+        final_mean: Updated mean values
+        final_var: Updated variance values
+    """
+    # Convert input to torch tensor if needed
+   
+    assert wav.ndim == 2, "Input must be 2D tensor (batch_size, time)"
+    batch_size, n_samples = wav.shape
+    
+    # Create batch-friendly filter coefficients
+    # For mean: y[n] = (1-alpha) * y[n-1] + alpha * x[n]
+    # For all channels, we use the same filter coefficients
+    a_mean = torch.tensor([1.0, -(1-alpha)], dtype=wav.dtype).repeat(batch_size, 1)
+    b_mean = torch.tensor([alpha, 0.0], dtype=wav.dtype).repeat(batch_size, 1)
+    
+    # Use lfilter with batching to compute running mean
+    # We need to reshape to make it compatible with batching
+    
+    # Calculate running mean for all channels at once
+    mean_values = torchaudio.functional.lfilter(
+        wav, 
+        a_coeffs=a_mean, 
+        b_coeffs=b_mean, 
+        clamp=False,
+        batching=True
+    )  # [batch_size, time]   
+
+    
+    # Calculate squared deviation: (x[n] - mean[n])^2
+    squared_dev = (wav - mean_values) ** 2
+    
+    # Filter coefficients for variance calculation
+    a_var = torch.tensor([1.0, -(1-alpha)], dtype=wav.dtype).repeat(batch_size, 1)
+    b_var = torch.tensor([alpha, 0.0], dtype=wav.dtype).repeat(batch_size, 1)
+    
+    # Calculate running variance using batched lfilter
+    var_values = torchaudio.functional.lfilter(
+        squared_dev, 
+        a_coeffs=a_var, 
+        b_coeffs=b_var, 
+        clamp=False,
+        batching=True
+    ) + eps  # [batch_size, time]
+    
+    # Normalize the signal
+    normalized_wav = (wav - mean_values) / torch.sqrt(var_values)
+    
+    return normalized_wav
 
 @dataclass
 class SpeechToTextDatasetItem(object):
@@ -970,14 +1034,15 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
 class DataCollatorForTrajectoryInstructMultiLatencyDataset(DataCollatorForTrajectoryDataset):
     def __init__(self, 
             tokenizer, length_shrink_func, source_lang, target_lang, 
-            block_size=48, max_multiplier=1, prob_aug=0., trainer=None, **kwargs
+            block_size=48, max_multiplier=1, prob_aug=0., trainer=None, audio_normalize=False, **kwargs
         ):
         super().__init__(tokenizer, length_shrink_func, source_lang, target_lang, block_size, **kwargs)
         assert max_multiplier >= 1 and prob_aug >= 0 and prob_aug <= 1
         self.max_multiplier = max_multiplier
         self.prob_aug = prob_aug
         self.trainer = trainer
-
+        self.audio_normalize = audio_normalize
+        
     def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
         indices = torch.tensor([x.index for x in samples], dtype=torch.long)
 
@@ -994,6 +1059,9 @@ class DataCollatorForTrajectoryInstructMultiLatencyDataset(DataCollatorForTrajec
         speech_batch = _collate_frames([x.source for x in samples], is_audio_input=True)
         offset = torch.zeros(len(samples), 79 + 320).to(speech_batch)
         speech_batch = torch.cat([offset, speech_batch], dim=1)
+
+        if self.audio_normalize:
+            speech_batch = normalize(speech_batch)
 
         n_frames = torch.tensor([x.source.size(0) + 79 + 320 for x in samples], dtype=torch.long)        
         speech_lens = self.length_shrink_func(n_frames)

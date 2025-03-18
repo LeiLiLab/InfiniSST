@@ -181,6 +181,7 @@ class SLlamaLightning(L.LightningModule):
             max_multiplier=self.data_args.trajectory_max_multiplier,
             po_max_multiplier=self.data_args.preference_optimization_max_multiplier,
             prob_aug=self.data_args.trajectory_prob_aug,
+            audio_normalize=self.data_args.audio_normalize,
             trainer=self.trainer
         )
 
@@ -219,7 +220,8 @@ class SLlamaLightning(L.LightningModule):
             block_size=self.speech_args.block_size,
             max_multiplier=self.data_args.trajectory_max_multiplier,
             po_max_multiplier=self.data_args.preference_optimization_max_multiplier,
-            prob_aug=self.data_args.trajectory_prob_aug
+            prob_aug=self.data_args.trajectory_prob_aug,
+            audio_normalize=self.data_args.audio_normalize,
         )
 
         # if self.data_args.trajectory >= 1:

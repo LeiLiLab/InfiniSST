@@ -81,6 +81,10 @@ class DataArguments:
         default=None,
         metadata={"help": "Path to the training data."}
     )
+    audio_normalize: bool = field(
+        default=False,
+        metadata={"help": "Normalize audio"}
+    )
     source_lang: str = field(
         default="English",
         metadata={"help": "Source language name"}
