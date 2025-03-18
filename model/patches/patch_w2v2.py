@@ -28,6 +28,7 @@ from rotary_embedding_torch import RotaryEmbedding
 XPOS = True
 
 def get_attn_mask_training(seq_len, max_cache_size=None, blocksize=1, device='cuda'):
+    # TODO: optimize
     blocksizes = [
         min(blocksize, seq_len - i * blocksize) 
         for i in range((seq_len + blocksize - 1) // blocksize)
@@ -238,6 +239,7 @@ def uni_w2v2_forward(
     padding_count=None,
     cache=None,
 ):
+    # TODO: optimize
     
     if cache.src is not None:
         source = torch.cat([cache.src, source], dim=1)

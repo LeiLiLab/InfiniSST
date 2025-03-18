@@ -246,10 +246,11 @@ class SLlamaLightning(L.LightningModule):
 
     def training_step(self, batch, batch_idx):
         loss = self.forward(batch)
-        if not loss.isnan():
-            self.log("train/loss", loss, batch_size=batch["src_lengths"].sum() / 16000)
-            if "multiplier" in batch:
-                self.log("train/loss_mult{}".format(batch["multiplier"]), loss, batch_size=batch["src_lengths"].sum() / 16000)
+        # TODO: optimize
+        # if not loss.isnan():
+        #     self.log("train/loss", loss, batch_size=batch["src_lengths"].sum() / 16000)
+        #     if "multiplier" in batch:
+        #         self.log("train/loss_mult{}".format(batch["multiplier"]), loss, batch_size=batch["src_lengths"].sum() / 16000)
         return loss
     
     def validation_step(self, batch, batch_idx):

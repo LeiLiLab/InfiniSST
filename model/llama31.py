@@ -86,6 +86,7 @@ class SpeechLlamaModel(LlamaModel):
             inputs_embeds = self.embed_tokens(input_ids)
             filled_inputs_embeds = []
             for i in range(input_ids.size(0)):
+                # TODO: optimize
                 user_pos = (input_ids[i] == self.config.user_token_id).nonzero()
                 assist_pos = (input_ids[i] == self.config.assist_token_id).nonzero()
 

@@ -1041,6 +1041,8 @@ class DataCollatorForTrajectoryInstructMultiLatencyDataset(DataCollatorForTrajec
         self.max_multiplier = max_multiplier
         self.prob_aug = prob_aug
         self.trainer = trainer
+
+        logger.info(f"audio_normalize: {audio_normalize}")
         self.audio_normalize = audio_normalize
         
     def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
