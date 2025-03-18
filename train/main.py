@@ -140,9 +140,12 @@ class TrainingArguments:
     grad_acc_steps: int = field(default=1)
     clip_norm: float = field(default=1.)
     save_dir: str = field(default=None)
+    save_step: int = field(default=1000)
     log_step: int = field(default=1)
     eval_step: int = field(default=1)
     debug_mode: bool = field(default=False)
+
+    profile: str = field(default=None, metadata={"help": "Profile to use"})
 
 def safe_save_model_for_hf_trainer(trainer: transformers.Trainer,
                                    output_dir: str):
@@ -178,7 +181,8 @@ def train():
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=training_args.save_dir,
-        save_on_train_epoch_end=True,
+        # save_on_train_epoch_end=True,
+        every_n_train_steps=training_args.save_step,
         save_last=True,
     )
     lr_monitor = LearningRateMonitor(
@@ -216,6 +220,7 @@ def train():
         callbacks=[lr_monitor, checkpoint_callback],
         fast_dev_run=training_args.debug_mode,
         # enable_checkpointing=False,
+        profiler=training_args.profile
     )
 
     # start training
