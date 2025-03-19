@@ -91,6 +91,7 @@ srun python train/main.py \
     \
     --n_device ${SLURM_GPUS} \
     --deepspeed_stage 2 \
+    --deepspeed_bucket_size 5e8 \
     --max_epochs 1 \
     --grad_acc_steps 4 \
     --clip_norm 1.0 \
