@@ -135,6 +135,8 @@ class TrainingArguments:
     n_device: int = field(default=1)
     deepspeed_stage: int = field(default=2)
     deepspeed_offload: bool = field(default=False)
+    deepspeed_bucket_size: int = field(default=int(2e8))
+    
     precision: str = field(default="bf16-mixed")
     max_epochs: int = field(default=1)
     grad_acc_steps: int = field(default=1)
@@ -198,6 +200,8 @@ def train():
         stage=training_args.deepspeed_stage,
         offload_optimizer=training_args.deepspeed_offload,
         offload_parameters=training_args.deepspeed_offload,
+        allgather_bucket_size=training_args.deepspeed_bucket_size,
+        reduce_bucket_size=training_args.deepspeed_bucket_size,
     )
     # strategy = FSDPStrategy(
     #     sharding_strategy=training_args.sharding,
