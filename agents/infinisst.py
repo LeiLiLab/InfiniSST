@@ -35,7 +35,8 @@ from model.seamlessm4t_v2_encoder import (
 )
 from train.dataset import (
     DEFAULT_SPEECH_PATCH_TOKEN,
-    DEFAULT_LATENCY_TOKEN
+    DEFAULT_LATENCY_TOKEN,
+    normalize
 )
 
 import logging
@@ -62,7 +63,7 @@ class S2TAgentStates(AgentStates):
     target_ids: list
     segment_idx: int
     translations_list: list
-    MAX_SRC_LEN = 1600000
+    MAX_SRC_LEN = 16000 * 10
 
     def reset(self):
         super().reset()
@@ -115,6 +116,8 @@ class InfiniSST(SpeechToTextAgent):
         # Add DPO sampling flag
         self.dpo_sampling = args.dpo_sampling
         self.output_file = args.output_file if hasattr(args, 'output_file') else 'translations.json'
+
+        self.audio_normalize = args.audio_normalize
         
         # model
         self.load_model(args)
@@ -134,6 +137,7 @@ class InfiniSST(SpeechToTextAgent):
         parser.add_argument("--dpo-sampling", action='store_true', help="Enable storing sampling for DPO")
         parser.add_argument("--output-file", type=str, default="translations.json", help="Output file for sampling")
         parser.add_argument("--pseudo-batch-size", type=int, default=1)
+        parser.add_argument("--audio-normalize", type=int, default=0)
 
     def build_states(self):
         return S2TAgentStates(
@@ -266,8 +270,12 @@ class InfiniSST(SpeechToTextAgent):
         if len(states.source) > states.MAX_SRC_LEN:
             states.src_len -= len(states.source) - states.MAX_SRC_LEN
             states.source = states.source[-states.MAX_SRC_LEN:]
+
+        source = states.source
+        if self.audio_normalize:
+            source = normalize(torch.tensor(states.source).unsqueeze(0))[0].tolist()
            
-        source = torch.tensor(states.source[states.src_len:])
+        source = torch.tensor(source[states.src_len:])
         
         # Pad if needed
         if source.size(0) % sp_seg_frame != 0:

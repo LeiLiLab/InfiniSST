@@ -18,6 +18,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Optional
 
+import torch
 import transformers
 from transformers import set_seed
 
@@ -25,6 +26,7 @@ import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.strategies import DeepSpeedStrategy
+from pytorch_lightning.profilers import AdvancedProfiler, SimpleProfiler, PyTorchProfiler
 
 from model.model import SLlamaLightning, Qwen2ACLightning, SeamlessLightning
 
@@ -167,6 +169,8 @@ def train():
         (SpeechEncoderArguments, ModelArguments, DataArguments, TrainingArguments))
     speech_args, model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
+    torch.set_float32_matmul_precision('high')
+
     # Set seed before initializing model.
     set_seed(training_args.seed) 
 
@@ -207,6 +211,21 @@ def train():
     #     sharding_strategy=training_args.sharding,
     #     state_dict_type="sharded"
     # )
+
+    profiler = None
+    if training_args.profile == "advanced":
+        profiler = AdvancedProfiler(
+            filename="profile"
+        )
+    elif training_args.profile == "simple":
+        profiler = SimpleProfiler(
+            filename="profile"
+        )
+    elif training_args.profile == "pytorch":
+        profiler = PyTorchProfiler(
+            filename="profile"
+        )
+
     trainer = L.Trainer(
         accelerator='gpu',
         devices=training_args.n_device,
@@ -224,7 +243,7 @@ def train():
         callbacks=[lr_monitor, checkpoint_callback],
         fast_dev_run=training_args.debug_mode,
         # enable_checkpointing=False,
-        profiler=training_args.profile
+        profiler=profiler
     )
 
     # start training
