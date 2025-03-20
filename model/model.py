@@ -182,7 +182,8 @@ class SLlamaLightning(L.LightningModule):
             po_max_multiplier=self.data_args.preference_optimization_max_multiplier,
             prob_aug=self.data_args.trajectory_prob_aug,
             audio_normalize=self.data_args.audio_normalize,
-            trainer=self.trainer
+            trainer=self.trainer,
+            dataset=train_dataset
         )
 
         # if self.data_args.trajectory >= 1:
@@ -203,7 +204,8 @@ class SLlamaLightning(L.LightningModule):
         train_dataloader = DataLoader(
             train_dataset, 
             batch_sampler=train_sampler, 
-            collate_fn=data_collator
+            collate_fn=data_collator,
+            num_workers=4
         )
         return train_dataloader
     
@@ -222,6 +224,7 @@ class SLlamaLightning(L.LightningModule):
             po_max_multiplier=self.data_args.preference_optimization_max_multiplier,
             prob_aug=self.data_args.trajectory_prob_aug,
             audio_normalize=self.data_args.audio_normalize,
+            dataset=eval_dataset
         )
 
         # if self.data_args.trajectory >= 1:
@@ -240,13 +243,14 @@ class SLlamaLightning(L.LightningModule):
         eval_dataloader = DataLoader(
             eval_dataset, 
             batch_sampler=eval_sampler, 
-            collate_fn=data_collator
+            collate_fn=data_collator,
+            num_workers=4
         )
         return eval_dataloader
 
     def training_step(self, batch, batch_idx):
         loss = self.forward(batch)
-        if not loss.isnan() and self.global_step % self.training_args.log_steps == 0:
+        if not loss.isnan():
             self.log("train/loss", loss, batch_size=batch["src_lengths"].sum() / 16000)
             if "multiplier" in batch:
                 self.log("train/loss_mult{}".format(batch["multiplier"]), loss, batch_size=batch["src_lengths"].sum() / 16000)

@@ -8,9 +8,9 @@
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
 ##SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,9,13],babel-11-25,babel-12-29,babel-13-[13,21,29],babel-14-25
-#SBATCH --partition=general
+#SBATCH --partition=preempt
 #SBATCH --time=2-00:00:00
-##SBATCH --dependency=afterok:job_id
+##SBATCH --dependency=afterok:4212422
 ##SBATCH --array=1-7
 ##SBATCH --account=siqiouya
 #SBATCH --mail-type=ALL
@@ -20,6 +20,7 @@
 
 source /home/siqiouya/anaconda3/bin/activate infinisst
 
+stage1_ckpt_dir=/compute/babel-5-23/siqiouya/runs/gigaspeech/en-zh/stage1/last.ckpt/
 llama_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf
 
 w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
@@ -35,7 +36,7 @@ save_dir=/compute/babel-5-23/siqiouya/runs/gigaspeech/en-zh/
 
 source_lang="English"
 target_lang=${lang} # e.g. German
-name="stage1"
+name="stage2_from_stage1_step16000"
 save_path=${save_dir}/${name}
 rm -rf ${save_path} # comment this line if you want to resume training
 mkdir -p ${save_path}
@@ -58,6 +59,7 @@ srun python train/main.py \
     \
     --w2v2_path ${w2v2_path} \
     --w2v2_type ${w2v2_type} \
+    --w2v2_freeze True \
     --ctc_finetuned ${ctc_finetuned} \
     --length_shrink_cfg "[(1024,2,2)] * 2" \
     --block_size 48 \
@@ -65,9 +67,7 @@ srun python train/main.py \
     --xpos False \
     \
     --llm_path ${llama_path} \
-    --llm_freeze True \
-    --llm_emb_freeze True \
-    --llm_head_freeze True \
+    --sllm_weight_path ${stage1_ckpt_dir}/pytorch_model.bin \
     --use_flash_attn True \
     \
     --data_path ${data_path} \
@@ -80,22 +80,23 @@ srun python train/main.py \
     --trajectory_prob_aug 0.0 \
     --audio_normalize True \
     \
-    --seed 998244353 \
-    --stage 1 \
-    --train_bsz 1800 \
-    --eval_bsz 1800 \
-    --bsz_sent 2 \
-    --learning_rate 2e-4 \
-    --warmup_steps 1000 \
+    --seed 42 \
+    --stage 2 \
+    --train_bsz 2400 \
+    --eval_bsz 2400 \
+    --bsz_sent 3 \
+    --learning_rate 7e-6 \
+    --warmup_steps 100 \
     --run_name $name \
     \
     --n_device ${SLURM_GPUS} \
     --deepspeed_stage 2 \
+    --deepspeed_offload True \
     --max_epochs 1 \
     --grad_acc_steps 4 \
     --clip_norm 1.0 \
     --save_dir ${save_path} \
-    --save_step 2000 \
+    --save_step 1000 \
     --log_step 100 \
     --eval_step 1000
 
