@@ -35,7 +35,7 @@ with open(tsv_path) as f:
 stepsize = int(0.96 * 16000)
 n_skipped = 0
 data_split = 'train' if 'dev' not in args.split else 'dev'
-textgrid_dir = os.path.join(args.data_root, "data", data_split, "textgrids")
+textgrid_dir = os.path.join(args.data_root, "data", data_split, "mfa", "textgrids")
 for sample in tqdm(samples):
     offset = int(sample['audio'].split(':')[1])
     offset_rounded = offset // stepsize * stepsize
