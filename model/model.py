@@ -16,7 +16,7 @@ from transformers.models.seamless_m4t_v2.configuration_seamless_m4t_v2 import Se
 import lightning as L
 from deepspeed.ops.adam import FusedAdam, DeepSpeedCPUAdam
 
-from peft import LoraModel, LoraConfig
+from peft import LoraConfig, get_peft_model
 
 from train.dataset import (
     SpeechSampler, 
@@ -170,10 +170,12 @@ class SLlamaLightning(L.LightningModule):
                 task_type="CAUSAL_LM",
                 inference_mode=False,
                 r=self.model_args.lora_rank,
+                target_modules='all-linear',
                 lora_alpha=16,
                 lora_dropout=0.1,
             )
-            model = LoraModel(model, lora_config, adapter_name="lora_adapter")
+            model.model = get_peft_model(model.model, lora_config, adapter_name='lora_adapter')
+            model.model.print_trainable_parameters()
     
         self.model = model
     
