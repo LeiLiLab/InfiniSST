@@ -17,6 +17,8 @@ import torch.nn.functional as F
 import transformers
 from transformers import AutoProcessor
 
+from peft import LoraConfig, get_peft_model
+
 from tqdm import tqdm
 from model.llama31 import SpeechLlamaForCausalLM
 from model.patches.patch_w2v2 import patch_w2v2
@@ -130,6 +132,8 @@ class InfiniSST(SpeechToTextAgent):
         parser.add_argument("--model-type", type=str, default="w2v2_llama31")
         parser.add_argument("--model-name", type=str, default="facebook/opt-350m")
         parser.add_argument("--state-dict-path", type=str, default=None)
+        parser.add_argument("--lora-path", type=str, default=None)
+        parser.add_argument("--lora-rank", type=int, default=8)
         parser.add_argument("--latency-multiplier", type=int, default=4)
         parser.add_argument("--max-latency-multiplier", type=int, default=4)
         parser.add_argument("--max-llm-cache-size", type=int, default=10000)
@@ -251,9 +255,25 @@ class InfiniSST(SpeechToTextAgent):
 
         logger.info("Loading SLLM weights from {}".format(args.state_dict_path))
         state_dict = torch.load(args.state_dict_path, map_location='cpu', weights_only=True)
-        self.model.load_state_dict(state_dict)
-        self.model.model.inference = True
+        self.model.load_state_dict(state_dict, strict=False)
 
+        if args.lora_path:
+            logger.info(f"Loading LORA weights from {args.lora_path}")
+            lora_config = LoraConfig(
+                task_type="CAUSAL_LM",
+                inference_mode=True,
+                r=args.lora_rank,
+                target_modules='all-linear',
+                lora_alpha=16,
+                lora_dropout=0.1,
+            )
+            self.model = get_peft_model(self.model, lora_config, adapter_name='lora_adapter')
+            
+            lora_state_dict = torch.load(args.lora_path, map_location='cpu', weights_only=True)
+            self.model.load_state_dict(lora_state_dict, strict=False)
+            self.model = self.model.merge_and_unload()
+
+        self.model.model.inference = True
         self.llama31 = '3.1' in args.model_name
     
     def load_model(self, args):
