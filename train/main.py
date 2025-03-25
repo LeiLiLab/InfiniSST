@@ -68,6 +68,7 @@ class ModelArguments:
     llm_head_freeze: bool = field(default=False)
     sllm_weight_path: Optional[str] = field(default=None)
     use_flash_attn: bool = field(default=False)
+    lora_rank: Optional[int] = field(default=-1)
 
 @dataclass
 class DataArguments:
