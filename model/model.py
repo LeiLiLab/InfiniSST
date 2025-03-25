@@ -159,7 +159,10 @@ class SLlamaLightning(L.LightningModule):
         if self.model_args.sllm_weight_path is not None:
             logger.info("Loading SLLM weights from {}".format(self.model_args.sllm_weight_path))
             state_dict = torch.load(self.model_args.sllm_weight_path, map_location='cpu', weights_only=True)
-            model.load_state_dict(state_dict, strict=True)
+            if state_dict['model.speech_encoder.proj.weight'].size() != model.model.speech_encoder.proj.weight.size():
+                state_dict.pop('model.speech_encoder.proj.weight')
+                state_dict.pop('model.speech_encoder.proj.bias')
+            model.load_state_dict(state_dict, strict=False)
     
         self.model = model
     
@@ -259,9 +262,9 @@ class SLlamaLightning(L.LightningModule):
     def validation_step(self, batch, batch_idx):
         loss = self.forward(batch)
         if not loss.isnan():
-            self.log("eval/loss", loss, batch_size=batch["src_lengths"].sum() / 16000)
+            self.log("eval/loss", loss, batch_size=batch["src_lengths"].sum() / 16000, sync_dist=True)
             if "multiplier" in batch:
-                self.log("eval/loss_mult{}".format(batch["multiplier"]), loss, batch_size=batch["src_lengths"].sum() / 16000)
+                self.log("eval/loss_mult{}".format(batch["multiplier"]), loss, batch_size=batch["src_lengths"].sum() / 16000, sync_dist=True)
 
     def setup(self, stage):
         if stage == 'fit':

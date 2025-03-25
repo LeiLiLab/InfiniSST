@@ -597,10 +597,8 @@ def uni_transformer_encoder_extract_features(
         dropout_probability = np.random.random() if self.layerdrop > 0 else 1
         if not self.training or (dropout_probability > self.layerdrop):
             if cache.layers[i].k is not None:
-                cache.layers[i].k = cache.layers[i].k[:, -cache.max_steps:]
-                cache.layers[i].v = cache.layers[i].v[:, -cache.max_steps:]
-                if cache.layers[i].key_padding_mask is not None:
-                    cache.layers[i].key_padding_mask = cache.layers[i].key_padding_mask[:, -cache.max_steps:]
+                cache.layers[i].k = cache.layers[i].k[:, :, -cache.max_steps:]
+                cache.layers[i].v = cache.layers[i].v[:, :, -cache.max_steps:]
             x, (z, lr) = layer(
                 x, 
                 self_attn_mask=attn_mask,
@@ -825,7 +823,7 @@ def uni_mha_forward(
         cache.v = torch.cat([cache.v, v], dim=2)
 
         k, v = cache.k, cache.v
-        k_len = k.size(1)
+        k_len = k.size(2)
     else:
         cache.k, cache.v = k, v
     

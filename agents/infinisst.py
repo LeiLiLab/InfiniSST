@@ -249,6 +249,7 @@ class InfiniSST(SpeechToTextAgent):
         self.model.model.speech_encoder = speech_encoder
         self.model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.max_latency_multiplier, resize=False)
 
+        logger.info("Loading SLLM weights from {}".format(args.state_dict_path))
         state_dict = torch.load(args.state_dict_path, map_location='cpu', weights_only=True)
         self.model.load_state_dict(state_dict)
         self.model.model.inference = True
