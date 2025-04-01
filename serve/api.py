@@ -43,7 +43,9 @@ LANGUAGE_PAIRS = {
     "English -> Spanish": ("English", "Spanish", "en", "es"),
 }
 
-model_path = "/mnt/data6/xixu/demo/{}-{}/pytorch_model.bin"
+# model_path = "/compute/babel-5-23/siqiouya/runs/{}-{}/8B-traj-s2-v3.6/last.ckpt/pytorch_model.bin"
+model_path = "/compute/babel-5-23/siqiouya/runs/gigaspeech/{}-{}/stage1/last.ckpt/pytorch_model.bin"
+lora_path = "/compute/babel-5-23/siqiouya/runs/gigaspeech/{}-{}/stage2_8b_lora_rank32/last.ckpt/lora_rank32.bin"
 
 app = FastAPI()
 
@@ -111,6 +113,7 @@ def session_worker_process(
         args.source_lang = source_lang
         args.target_lang = target_lang
         args.state_dict_path = model_path.format(src_code, tgt_code)
+        args.lora_path = lora_path.format(src_code, tgt_code)
         
         # Set the GPU device
         print(f"Worker process initializing on GPU {gpu_id}")

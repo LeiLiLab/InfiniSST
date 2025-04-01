@@ -1034,11 +1034,12 @@ class DataCollatorForTrajectoryInstructDataset(DataCollatorForTrajectoryDataset)
 class DataCollatorForTrajectoryInstructMultiLatencyDataset(DataCollatorForTrajectoryDataset):
     def __init__(self, 
             tokenizer, length_shrink_func, source_lang, target_lang, 
-            block_size=48, max_multiplier=1, prob_aug=0., trainer=None, audio_normalize=False, **kwargs
+            block_size=48, multiplier_step_size=1, max_multiplier=1, prob_aug=0., trainer=None, audio_normalize=False, **kwargs
         ):
         super().__init__(tokenizer, length_shrink_func, source_lang, target_lang, block_size, **kwargs)
         assert max_multiplier >= 1 and prob_aug >= 0 and prob_aug <= 1
         self.max_multiplier = max_multiplier
+        self.multiplier_step_size = multiplier_step_size
         self.prob_aug = prob_aug
         self.trainer = trainer
 
@@ -1048,8 +1049,8 @@ class DataCollatorForTrajectoryInstructMultiLatencyDataset(DataCollatorForTrajec
     def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
         indices = torch.tensor([x.index for x in samples], dtype=torch.long)
 
-        multiplier = np.random.randint(1, self.max_multiplier + 1)
-        latency_token = DEFAULT_LATENCY_TOKEN.format(multiplier)
+        multiplier = np.random.randint(1, self.max_multiplier // self.multiplier_step_size + 1) * self.multiplier_step_size
+        # latency_token = DEFAULT_LATENCY_TOKEN.format(multiplier)
 
         # pad to multiple
         sp_seg_frame = int(self.speech_segment_size * 0.08 * 16000) * multiplier
@@ -1116,7 +1117,7 @@ class DataCollatorForTrajectoryInstructMultiLatencyDataset(DataCollatorForTrajec
                 x.trajectory = merge_traj
 
         prompts = []
-        instruction = f"Translate the following speech from {self.source_lang} to {self.target_lang} with latency {latency_token}."
+        instruction = f"Translate the following speeches from {self.source_lang} to {self.target_lang} as a simultaneous interpreter."
         for i, x in enumerate(samples):
             messages = [{
                 "role": "system",
