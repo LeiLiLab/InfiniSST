@@ -65,7 +65,7 @@ class S2TAgentStates(AgentStates):
     target_ids: list
     segment_idx: int
     translations_list: list
-    MAX_SRC_LEN = 16000 * 10
+    MAX_SRC_LEN = 16000 * 30
 
     def reset(self):
         super().reset()
@@ -341,7 +341,7 @@ class InfiniSST(SpeechToTextAgent):
             messages.append(
                 {
                     "role": "system",
-                    "content": f"Translate the following speech from {self.source_lang} to {self.target_lang} with latency {latency_token}."
+                    "content": f"Translate the following speeches from {self.source_lang} to {self.target_lang} as a simultaneous interpreter."
                 }
             )
             self.system_prompt_size = self.tokenizer.apply_chat_template(

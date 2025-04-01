@@ -194,6 +194,7 @@ class SLlamaLightning(L.LightningModule):
             self.data_args.target_lang,
             block_size=self.speech_args.block_size,
             perturb=self.data_args.trajectory_perturb,
+            multiplier_step_size=self.data_args.trajectory_step_size,
             max_multiplier=self.data_args.trajectory_max_multiplier,
             po_max_multiplier=self.data_args.preference_optimization_max_multiplier,
             prob_aug=self.data_args.trajectory_prob_aug,
@@ -238,6 +239,7 @@ class SLlamaLightning(L.LightningModule):
             block_size=self.speech_args.block_size,
             max_multiplier=self.data_args.trajectory_max_multiplier,
             po_max_multiplier=self.data_args.preference_optimization_max_multiplier,
+            multiplier_step_size=self.data_args.trajectory_step_size,
             prob_aug=self.data_args.trajectory_prob_aug,
             audio_normalize=self.data_args.audio_normalize,
             dataset=eval_dataset
@@ -329,7 +331,7 @@ class SLlamaLightning(L.LightningModule):
         }
     
     def forward(self, batch):
-        logger.info("device: {}, batch size: {}".format(self.device, batch['input_ids'].size()))
+        logger.info("device: {}, batch size: {}, multiplier: {}".format(self.device, batch['input_ids'].size(), batch['multiplier']))
         output = self.model(
             **batch,
             return_dict=True
