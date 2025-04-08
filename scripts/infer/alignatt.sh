@@ -42,16 +42,13 @@ src_segment_size=960
 frame_num=${SLURM_ARRAY_TASK_ID}
 batch_size=1
 attn_layer=14
-preserve_t=40
-min_speech_duration=10
-max_speech_duration=28.8
 
 # use your own path to repo
 export PYTHONPATH=/home/siqiouya/work/sllama
 
 simuleval \
-  --agent agents/streamatt.py \
-  --agent-class "agents.StreamAtt" \
+  --agent agents/alignatt.py \
+  --agent-class "agents.AlignAtt" \
   --source-segment-size ${src_segment_size} \
   --frame-num ${frame_num} \
   --attn-layer ${attn_layer} \
@@ -59,9 +56,9 @@ simuleval \
   --state-dict-path ${checkpoint_dir}/pytorch_model.bin \
   --source-lang "English" \
   --target-lang ${lang} \
-  --source ${ROOT}/en-${lang_code}/tst-COMMON_full.source \
-  --target ${ROOT}/en-${lang_code}/tst-COMMON_full.target \
-  --output ${checkpoint_dir}/streamatt/bsz${batch_size}_layer${attn_layer}_t${preserve_t}_d${min_speech_duration}_fn${frame_num} \
+  --source ${ROOT}/en-${lang_code}/tst-COMMON.source \
+  --target ${ROOT}/en-${lang_code}/tst-COMMON.target \
+  --output ${checkpoint_dir}/alignatt/bsz${batch_size}_layer${attn_layer}_fn${frame_num} \
   \
   --quality-metrics BLEU \
   --sacrebleu-tokenizer ${tokenizer} \
@@ -70,9 +67,9 @@ simuleval \
   --w2v2-path ${w2v2_path} \
   --w2v2-type ${w2v2_type} \
   --ctc-finetuned ${ctc_finetuned} \
+  --length-shrink-cfg "[(1024,2,2)] * 2" \
   --xpos 0 \
   \
-  --length-shrink-cfg "[(1024,2,2)] * 2" \
   --latency-multiplier 1 \
   --max-latency-multiplier 1 \
   --block-size 10000000 \
@@ -81,8 +78,4 @@ simuleval \
   --max-len-b 256 \
   --repetition-penalty 1.2 \
   --beam 4 \
-  --no-repeat-ngram-size 5 \
-  \
-  --text-preserve-num ${preserve_t} \
-  --min-speech-duration ${min_speech_duration} \
-  --max-speech-duration ${max_speech_duration}
+  --no-repeat-ngram-size 5
