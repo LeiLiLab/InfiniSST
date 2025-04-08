@@ -7,10 +7,11 @@
 #SBATCH --mem=64GB
 #SBATCH --gres=gpu:L40S:1
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --partition=array
+#SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,9,13],babel-11-25,babel-12-29,babel-13-[13,21,29],babel-14-[5,25]
+#SBATCH --partition=preempt
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
-#SBATCH --array=1-4
+#SBATCH --array=1-3
 ##SBATCH --account=siqiouya
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=siqiouya@andrew.cmu.edu
@@ -19,7 +20,7 @@
 
 source /home/siqiouya/anaconda3/bin/activate infinisst
 
-checkpoint_dir=/compute/babel-5-23/siqiouya/runs/en-de/release/stage2/last.ckpt/
+checkpoint_dir="/compute/babel-5-23/siqiouya/runs/en-de/release/stage2_M=8/last.ckpt/"
 llama_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf
 
 w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
@@ -45,6 +46,7 @@ max_llm_cache_size=1000
 no_repeat_ngram_lookback=100
 no_repeat_ngram_size=5
 max_new_tokens=$(($SLURM_ARRAY_TASK_ID * 10))
+max_latency_multiplier=8
 beam=4
 ms=0
 
@@ -55,6 +57,7 @@ simuleval \
     --agent agents/infinisst.py \
     --source-segment-size ${src_segment_size} \
     --latency-multiplier ${latency_multiplier} \
+    --max-latency-multiplier ${max_latency_multiplier} \
     --source-lang English \
     --target-lang ${lang} \
     --min-start-sec ${ms} \
