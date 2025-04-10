@@ -8,9 +8,9 @@
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
 #SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,9,13],babel-11-25,babel-12-29,babel-13-[1,13,21,29],babel-14-25
-#SBATCH --partition=general
+#SBATCH --partition=preempt
 #SBATCH --time=2-00:00:00
-#SBATCH --dependency=afterok:4510213
+##SBATCH --dependency=afterok:4510213
 ##SBATCH --array=1-7
 ##SBATCH --account=siqiouya
 #SBATCH --mail-type=ALL
@@ -86,7 +86,7 @@ srun python train/main.py \
     --train_bsz 1800 \
     --eval_bsz 1800 \
     --bsz_sent 2 \
-    --learning_rate 7e-6 \
+    --learning_rate 1e-4 \
     --warmup_steps 1000 \
     --run_name $name \
     \
