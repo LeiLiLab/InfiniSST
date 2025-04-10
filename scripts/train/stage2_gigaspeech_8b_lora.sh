@@ -86,7 +86,7 @@ srun python train/main.py \
     --train_bsz 1800 \
     --eval_bsz 1800 \
     --bsz_sent 2 \
-    --learning_rate 7e-6 \
+    --learning_rate 1e-4 \
     --warmup_steps 1000 \
     --run_name $name \
     \
