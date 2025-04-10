@@ -297,7 +297,6 @@ class SpeechLlamaForCausalLM(LlamaForCausalLM):
             }
         )
         return model_inputs
-    
                    
 AutoConfig.register("SpeechLlama", SpeechLlamaConfig)
 AutoModelForCausalLM.register(SpeechLlamaConfig, SpeechLlamaForCausalLM)

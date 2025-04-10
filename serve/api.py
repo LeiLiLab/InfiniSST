@@ -44,8 +44,8 @@ LANGUAGE_PAIRS = {
 }
 
 # model_path = "/compute/babel-5-23/siqiouya/runs/{}-{}/8B-traj-s2-v3.6/last.ckpt/pytorch_model.bin"
-model_path = "/compute/babel-5-23/siqiouya/runs/gigaspeech/{}-{}/stage1/last.ckpt/pytorch_model.bin"
-lora_path = "/compute/babel-5-23/siqiouya/runs/gigaspeech/{}-{}/stage2_8b_lora_rank32/last.ckpt/lora_rank32.bin"
+model_path = "/compute/babel-5-23/siqiouya/runs/gigaspeech/{}-{}/stage1_M=12/last.ckpt/pytorch_model.bin"
+lora_path = "/compute/babel-5-23/siqiouya/runs/gigaspeech/{}-{}/stage2_8b_lora_rank32_M=12/last.ckpt/pytorch_model.bin"
 
 app = FastAPI()
 
