@@ -93,7 +93,7 @@ class InfiniSST(SpeechToTextAgent):
         
         # gen
         self.beam = args.beam
-        assert self.beam > 1
+        # assert self.beam > 1
         self.no_repeat_ngram_lookback = args.no_repeat_ngram_lookback
         self.no_repeat_ngram_size = args.no_repeat_ngram_size
         self.repetition_penalty = args.repetition_penalty
