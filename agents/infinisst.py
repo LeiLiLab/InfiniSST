@@ -1,4 +1,5 @@
 import os
+import re
 import contextlib
 from time import perf_counter
 
@@ -21,8 +22,10 @@ from peft import LoraConfig, get_peft_model
 
 from tqdm import tqdm
 from model.llama31 import SpeechLlamaForCausalLM
+from model.qwen25 import SpeechQwenForCausalLM
 from model.patches.patch_w2v2 import patch_w2v2
 from model.patches.patch_llama31 import patch_llama31
+from model.patches.patch_qwen25 import patch_qwen25
 from model.patches.patch_hf import patch_hf
 
 from agents.options import (
@@ -218,7 +221,7 @@ class InfiniSST(SpeechToTextAgent):
 
         self.bad_words_ids = []
         if self.suppress_non_language:
-            bad_words = ['(', '（']
+            bad_words = ['(', '（', '"', '“']
             for idx in tqdm(range(len(self.tokenizer)), desc="Obtaining bad words ids"):
                 decoded_token = self.tokenizer.decode(idx, skip_special_tokens=True)
                 if any(bad_word in decoded_token for bad_word in bad_words):
@@ -277,11 +280,85 @@ class InfiniSST(SpeechToTextAgent):
         self.model.model.inference = True
         self.llama31 = '3.1' in args.model_name
     
+    def load_w2v2_qwen25(self, args):
+        patch_w2v2(args.xpos, args.rope)
+        patch_qwen25()
+        patch_hf()
+
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(
+            args.model_name,
+            padding_side="right",
+            use_fast=False,
+        )
+        self.tokenizer.pad_token = "<|finetune_right_pad_id|>"
+
+        self.bad_words_ids = []
+        if self.suppress_non_language:
+            bad_words = ['(', '（']
+            for idx in tqdm(range(len(self.tokenizer)), desc="Obtaining bad words ids"):
+                decoded_token = self.tokenizer.decode(idx, skip_special_tokens=True)
+                if any(bad_word in decoded_token for bad_word in bad_words):
+                    self.bad_words_ids.append(idx)
+
+        self.model = SpeechQwenForCausalLM.from_pretrained(
+            args.model_name,
+            torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
+            device_map='cuda',
+        ).eval()
+
+        speech_encoder_args = [
+            args.w2v2_path,
+            args.ctc_finetuned,
+            args.length_shrink_cfg,
+            
+            args.block_size,
+            args.max_cache_size,
+            self.model.model.embed_tokens.embedding_dim,
+            None,
+            bool(args.xpos),
+            bool(args.rope)
+        ]
+        if args.w2v2_type == 'w2v2':
+            speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args)
+        else:
+            raise ValueError(f"Unsupported type: {args.w2v2_type}")
+        speech_encoder.eval()
+        speech_encoder.to(dtype=self.model.dtype, device=self.model.device)
+        self.length_shrink_func = speech_encoder._get_feat_extract_output_lengths
+        
+        self.model.model.speech_encoder = speech_encoder
+        self.model.preprocess(tokenizer=self.tokenizer, resize=False)
+
+        logger.info("Loading SLLM weights from {}".format(args.state_dict_path))
+        state_dict = torch.load(args.state_dict_path, map_location='cpu', weights_only=True)
+        self.model.load_state_dict(state_dict, strict=False)
+
+        if args.lora_path:
+            logger.info(f"Loading LORA weights from {args.lora_path}")
+            lora_config = LoraConfig(
+                task_type="CAUSAL_LM",
+                inference_mode=True,
+                r=args.lora_rank,
+                target_modules='all-linear',
+                lora_alpha=16,
+                lora_dropout=0.1,
+            )
+            self.model = get_peft_model(self.model, lora_config, adapter_name='lora_adapter')
+            
+            lora_state_dict = torch.load(args.lora_path, map_location='cpu', weights_only=True)
+            self.model.load_state_dict(lora_state_dict, strict=False)
+            self.model = self.model.merge_and_unload()
+
+        self.model.model.inference = True
+
     def load_model(self, args):
         if args.model_type == "w2v2_llama31":
             self.load_w2v2_llama31(args)
         elif args.model_type == "seamless_llama31":
             self.load_seamless_llama31(args)
+        elif args.model_type == 'w2v2_qwen25':
+            self.load_w2v2_qwen25(args)
         else:
             raise ValueError(f"Unsupported model type: {args.model_type}")
 
@@ -370,13 +447,21 @@ class InfiniSST(SpeechToTextAgent):
             padding=True, 
             truncation=False, 
             add_special_tokens=False
-        )[:, :-1]
+        )        
+        assert self.args.model_type in ["w2v2_llama31", "w2v2_qwen25"]
+        if self.args.model_type == "w2v2_llama31":
+            input_ids = input_ids[:, :-1]
+        elif self.args.model_type == "w2v2_qwen25":
+            input_ids = input_ids[:, :-2]
         # to remove system prompt and preserve last EOT
         if states.speech_cache is not None:
-            if self.llama31:
-                input_ids = input_ids[:, 25:] 
-            else:
-                input_ids[:, 0] = self.tokenizer.eos_token_id # llama-3-8B-instruct
+            if self.args.model_type == "w2v2_llama31":
+                if self.llama31:
+                    input_ids = input_ids[:, 25:] 
+                else:
+                    input_ids[:, 0] = self.tokenizer.eos_token_id # llama-3-8B-instruct
+            elif self.args.model_type == "w2v2_qwen25":
+                input_ids = input_ids[:, 21:]
         input_ids = input_ids.to(device=self.model.device)
         return input_ids
 
@@ -480,7 +565,7 @@ class InfiniSST(SpeechToTextAgent):
         
         states.target_ids.extend(output_ids)
         translation = self.tokenizer.decode(output_ids, skip_special_tokens=True).strip()
-        translation = translation.replace('�', '')
+        translation = re.sub(r'[（）()"“”�]', '', translation)
 
         if self.dpo_sampling:
             # Format translation with single quotes and proper UTF-8
