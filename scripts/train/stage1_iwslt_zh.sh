@@ -7,7 +7,7 @@
 #SBATCH --mem=500GB
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,9,13],babel-11-25,babel-12-29,babel-13-[1,13,21,29],babel-14-25
+#SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,9,13],babel-11-25,babel-12-[21,29],babel-13-[1,13,21,29],babel-14-25
 #SBATCH --partition=general
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
@@ -35,7 +35,7 @@ save_dir=/compute/babel-5-23/siqiouya/runs/iwslt25/en-${lang_code}/
 
 source_lang="English"
 target_lang=${lang} # e.g. German
-name="stage1_M=12"
+name="stage1_M=12_ls-cv-vp"
 save_path=${save_dir}/${name}
 rm -rf ${save_path} # comment this line if you want to resume training
 mkdir -p ${save_path}
