@@ -28,10 +28,16 @@ from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.strategies import DeepSpeedStrategy
 from pytorch_lightning.profilers import AdvancedProfiler, SimpleProfiler, PyTorchProfiler
 
-from model.model import SLlamaLightning, Qwen2ACLightning, SeamlessLightning
+from model.model import (
+    SLlamaLightning, 
+    SQwen25Lightning, 
+    Qwen2ACLightning, 
+    SeamlessLightning
+)
 
 MODEL_CLASSES = {
     "w2v2_llama31": SLlamaLightning,
+    "w2v2_qwen25": SQwen25Lightning,
     "qwen2ac": Qwen2ACLightning,
     "seamless_llama31": SeamlessLightning
 }
