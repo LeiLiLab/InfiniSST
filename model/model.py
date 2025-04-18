@@ -302,8 +302,7 @@ class SLlamaLightning(L.LightningModule):
         lr = self.optimizer_params["lr"]
         warmup_updates = self.optimizer_params["warmup_updates"]
 
-        optimizer_cls = torch.optim.Adam
-        # optimizer_cls = DeepSpeedCPUAdam if self.training_args.deepspeed_offload else FusedAdam
+        optimizer_cls = DeepSpeedCPUAdam if self.training_args.deepspeed_offload else FusedAdam
         optimizer = optimizer_cls(self.parameters(), lr=lr, weight_decay=self.training_args.weight_decay)  
 
         if self.training_args.scheduler == "cosine":

@@ -461,7 +461,7 @@ class InfiniSST(SpeechToTextAgent):
                 else:
                     input_ids[:, 0] = self.tokenizer.eos_token_id # llama-3-8B-instruct
             elif self.args.model_type == "w2v2_qwen25":
-                input_ids = input_ids[:, 21:]
+                input_ids = input_ids[:, 19:]
         input_ids = input_ids.to(device=self.model.device)
         return input_ids
 
