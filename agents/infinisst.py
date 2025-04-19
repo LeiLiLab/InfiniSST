@@ -208,7 +208,7 @@ class InfiniSST(SpeechToTextAgent):
         self.llama31 = '3.1' in args.model_name
 
     def load_w2v2_llama31(self, args):
-        patch_w2v2(args.xpos, args.rope)
+        patch_w2v2(args.rope)
         patch_llama31()
         patch_hf()
 
@@ -243,7 +243,6 @@ class InfiniSST(SpeechToTextAgent):
             args.max_cache_size,
             self.model.model.embed_tokens.embedding_dim,
             None,
-            bool(args.xpos),
             bool(args.rope)
         ]
         if args.w2v2_type == 'w2v2':
@@ -281,7 +280,7 @@ class InfiniSST(SpeechToTextAgent):
         self.llama31 = '3.1' in args.model_name
     
     def load_w2v2_qwen25(self, args):
-        patch_w2v2(args.xpos, args.rope)
+        patch_w2v2(args.rope)
         patch_qwen25()
         patch_hf()
 
@@ -316,7 +315,6 @@ class InfiniSST(SpeechToTextAgent):
             args.max_cache_size,
             self.model.model.embed_tokens.embedding_dim,
             None,
-            bool(args.xpos),
             bool(args.rope)
         ]
         if args.w2v2_type == 'w2v2':

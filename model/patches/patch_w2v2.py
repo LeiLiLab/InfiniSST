@@ -23,9 +23,11 @@ from fairseq.modules.fairseq_dropout import FairseqDropout
 from fairseq.modules.quant_noise import quant_noise
 from fairseq.utils import index_put, is_xla_tensor
 from fairseq import utils
-from rotary_embedding_torch import RotaryEmbedding
 
-XPOS = True
+from transformers.models.llama.modeling_llama import (
+    apply_rotary_pos_emb,
+    LlamaRotaryEmbedding,
+)
 
 def get_attn_mask_training(seq_len, max_cache_size=None, blocksize=1, device='cuda'):
     blocksizes = [
@@ -709,7 +711,7 @@ def uni_mha_init(
 ):
     super(MultiheadAttention, self).__init__()
     
-    self.rotary_emb = RotaryEmbedding(embed_dim // num_heads, use_xpos=XPOS)
+    self.rotary_emb = LlamaRotaryEmbedding(embed_dim // num_heads)
 
     xformers_att_config = utils.eval_str_dict(xformers_att_config)
     self.use_xformers = xformers_att_config is not None
@@ -828,7 +830,14 @@ def uni_mha_forward(
         cache.k, cache.v = k, v
     
     if ROPE:
-        q, k = self.rotary_emb.rotate_queries_with_cached_keys(q, k)
+        position_ids = torch.arange(k_len, device=v.device).repeat(bsz, 1)
+        cos, sin = self.rotary_emb(k, position_ids)
+        if q_len == k_len: # training
+            q, k = apply_rotary_pos_emb(q, k, cos, sin)
+        else: # inference
+            k, _ = apply_rotary_pos_emb(k, k, cos, sin)
+            q_cos, q_sin = self.rotary_emb(q, position_ids[:, -q_len:])
+            q, _ = apply_rotary_pos_emb(q, q, q_cos, q_sin)
 
     q = q.contiguous()
     k = k.contiguous()
@@ -846,10 +855,9 @@ def uni_mha_forward(
 
     return attn_output, None
 
-def patch_w2v2(xpos=True, rope=True):
-    global XPOS, ROPE
-    print("Patching with xpos {}, rope {}".format(xpos, rope))
-    XPOS = xpos
+def patch_w2v2(rope=True):
+    global ROPE
+    print("Patching with rope {}".format(rope))
     ROPE = rope
     Wav2Vec2Model.extract_features = uni_w2v2_extract_features
     Wav2Vec2Model.forward = uni_w2v2_forward

@@ -35,11 +35,6 @@ def add_speech_encoder_args(parser):
         default=125, # 125 * 0.08 = 1 second
     )
     parser.add_argument(
-        "--xpos",
-        type=int,
-        default=1, # 1 for True, 0 for False
-    )
-    parser.add_argument(
         "--rope",
         type=int,
         default=1, # 1 for True, 0 for False
