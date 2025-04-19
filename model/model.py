@@ -81,6 +81,12 @@ class SLlamaLightning(L.LightningModule):
         )
         self.tokenizer.pad_token = "<|finetune_right_pad_id|>"
 
+        self.fast_tokenizer = transformers.AutoTokenizer.from_pretrained(
+            self.model_args.llm_path,
+            padding_side="right",
+            use_fast=True,
+        )
+
         # load speech encoder
         logger.info("rope: {}".format(self.speech_args.rope))
         speech_encoder_args = [
@@ -219,7 +225,7 @@ class SLlamaLightning(L.LightningModule):
             min_ms=320,
             multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
             filter=True,
-            tokenizer=self.tokenizer,
+            tokenizer=self.fast_tokenizer,
         )
         train_dataloader = DataLoader(
             train_dataset, 
@@ -259,7 +265,7 @@ class SLlamaLightning(L.LightningModule):
             min_ms=320,
             multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
             filter=True,
-            tokenizer=self.tokenizer,
+            tokenizer=self.fast_tokenizer,
         )
         eval_dataloader = DataLoader(
             eval_dataset, 
@@ -300,7 +306,8 @@ class SLlamaLightning(L.LightningModule):
         lr = self.optimizer_params["lr"]
         warmup_updates = self.optimizer_params["warmup_updates"]
 
-        optimizer_cls = DeepSpeedCPUAdam if self.training_args.deepspeed_offload else FusedAdam
+        # optimizer_cls = DeepSpeedCPUAdam if self.training_args.deepspeed_offload else FusedAdam
+        optimizer_cls = torch.optim.Adam
         optimizer = optimizer_cls(self.parameters(), lr=lr, weight_decay=self.training_args.weight_decay)  
 
         if self.training_args.scheduler == "cosine":
