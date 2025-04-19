@@ -27,8 +27,8 @@ w2v2_type=w2v2
 ctc_finetuned=True
 
 ROOT=/compute/babel-14-5/siqiouya/iwslt25/train/
-lang_code=zh
-lang=Chinese
+lang_code=de
+lang=German
 data_path=$ROOT
 
 stage1_ckpt_dir="/compute/babel-5-23/siqiouya/runs/iwslt25/en-${lang_code}/stage1_M=12/last.ckpt/"

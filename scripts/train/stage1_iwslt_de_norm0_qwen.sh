@@ -4,13 +4,13 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=8
 #SBATCH --cpus-per-task=6
-#SBATCH --mem=392GB
+#SBATCH --mem=500GB
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,9,13],babel-11-25,babel-12-29,babel-13-[1,13,21,29],babel-14-25
+#SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,9,13],babel-11-25,babel-12-[21,29],babel-13-[1,13,21,29],babel-14-25
 #SBATCH --partition=general
 #SBATCH --time=2-00:00:00
-#SBATCH --dependency=afterok:4592795 
+##SBATCH --dependency=afterok:job_id
 ##SBATCH --array=1-7
 ##SBATCH --account=siqiouya
 #SBATCH --mail-type=ALL
@@ -27,16 +27,15 @@ w2v2_type=w2v2
 ctc_finetuned=True
 
 ROOT=/compute/babel-14-5/siqiouya/iwslt25/train/
-lang_code=zh
-lang=Chinese
+lang_code=de
+lang=German
 data_path=$ROOT
 
-stage1_ckpt_dir="/compute/babel-5-23/siqiouya/runs/iwslt25/en-${lang_code}/stage1_M=12_ls-cv-vp-nc_norm0_qwen/last.ckpt/"
-save_dir=/compute/babel-5-23/siqiouya/runs/iwslt25/en-${lang_code}
+save_dir=/compute/babel-5-23/siqiouya/runs/iwslt25/en-${lang_code}/
 
 source_lang="English"
 target_lang=${lang} # e.g. German
-name="stage2_M=12_ls-cv-vp-nc_norm0_qwen"
+name="stage1_M=12_ls-cv-vp-nc_norm0_qwen"
 save_path=${save_dir}/${name}
 rm -rf ${save_path} # comment this line if you want to resume training
 mkdir -p ${save_path}
@@ -61,7 +60,6 @@ srun python train/main.py \
     \
     --w2v2_path ${w2v2_path} \
     --w2v2_type ${w2v2_type} \
-    --w2v2_freeze True \
     --ctc_finetuned ${ctc_finetuned} \
     --length_shrink_cfg "[(1024,2,2)] * 2" \
     --block_size 48 \
@@ -69,9 +67,10 @@ srun python train/main.py \
     --xpos False \
     \
     --llm_path ${llm_path} \
-    --sllm_weight_path ${stage1_ckpt_dir}/pytorch_model.bin \
+    --llm_freeze True \
+    --llm_emb_freeze True \
+    --llm_head_freeze True \
     --use_flash_attn True \
-    --lora_rank 32 \
     \
     --data_path ${data_path} \
     --data_split_train train_${lang_code}_mfa \
@@ -83,12 +82,12 @@ srun python train/main.py \
     --trajectory_prob_aug 0.0 \
     --audio_normalize False \
     \
-    --seed 42 \
-    --stage 2 \
+    --seed 998244353 \
+    --stage 1 \
     --train_bsz 1800 \
     --eval_bsz 1800 \
     --bsz_sent 2 \
-    --learning_rate 1e-4 \
+    --learning_rate 2e-4 \
     --warmup_steps 1000 \
     --run_name $name \
     \
