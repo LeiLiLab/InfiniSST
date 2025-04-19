@@ -35,7 +35,7 @@ save_dir=/compute/babel-5-23/siqiouya/runs/iwslt25/en-${lang_code}/
 
 source_lang="English"
 target_lang=${lang} # e.g. German
-name="stage1_M=12_ls-cv-vp_norm0_qwen"
+name="stage1_M=12_ls-cv-vp_norm0_qwen_rope"
 save_path=${save_dir}/${name}
 rm -rf ${save_path} # comment this line if you want to resume training
 mkdir -p ${save_path}
@@ -64,7 +64,6 @@ srun python train/main.py \
     --length_shrink_cfg "[(1024,2,2)] * 2" \
     --block_size 48 \
     --max_cache_size 576 \
-    --xpos False \
     \
     --llm_path ${llm_path} \
     --llm_freeze True \

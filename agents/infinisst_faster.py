@@ -78,7 +78,6 @@ class InfiniSSTFaster(InfiniSST):
             args.max_cache_size,
             self.model.model.embed_tokens.embedding_dim,
             None,
-            bool(args.xpos),
             bool(args.rope)
         ]
         if args.w2v2_type == 'w2v2':

@@ -68,7 +68,6 @@ simuleval \
   --w2v2-type ${w2v2_type} \
   --ctc-finetuned ${ctc_finetuned} \
   --length-shrink-cfg "[(1024,2,2)] * 2" \
-  --xpos 0 \
   \
   --latency-multiplier 1 \
   --max-latency-multiplier 1 \

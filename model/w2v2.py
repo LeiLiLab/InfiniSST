@@ -108,7 +108,7 @@ class SpeechEncoderW2V2RoPE(L.LightningModule):
         w2v2_path, w2v2_ctc_finetuned,
         length_shrink_cfg=None,
         block_size=16, max_cache_size=125,
-        llm_embedding_dim=4096, llm_embedding=None, xpos=True, rope=True,
+        llm_embedding_dim=4096, llm_embedding=None, rope=True,
     ):
         super().__init__()
 

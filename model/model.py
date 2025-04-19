@@ -92,7 +92,6 @@ class SLlamaLightning(L.LightningModule):
             self.speech_args.max_cache_size,
             1,
             None,
-            self.speech_args.xpos,
             self.speech_args.rope,
         ]
         if self.speech_args.w2v2_type == 'w2v2':
@@ -112,7 +111,7 @@ class SLlamaLightning(L.LightningModule):
         if self.model is not None:
             return
         
-        patch_w2v2(self.speech_args.xpos, self.speech_args.rope)
+        patch_w2v2(self.speech_args.rope)
         patch_llama31()
         patch_hf()
 
@@ -144,7 +143,6 @@ class SLlamaLightning(L.LightningModule):
             self.speech_args.max_cache_size,
             model.model.embed_tokens.embedding_dim,
             None,
-            self.speech_args.xpos,
             self.speech_args.rope,
         ]
         if self.speech_args.w2v2_type == 'w2v2':
@@ -358,7 +356,7 @@ class SQwen25Lightning(SLlamaLightning):
         if self.model is not None:
             return
         
-        patch_w2v2(self.speech_args.xpos, self.speech_args.rope)
+        patch_w2v2(self.speech_args.rope)
         patch_qwen25()
         patch_hf()
 
@@ -388,7 +386,6 @@ class SQwen25Lightning(SLlamaLightning):
             self.speech_args.max_cache_size,
             model.model.embed_tokens.embedding_dim,
             None,
-            self.speech_args.xpos,
             self.speech_args.rope,
         ]
         if self.speech_args.w2v2_type == 'w2v2':
