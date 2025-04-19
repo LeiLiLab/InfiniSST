@@ -44,7 +44,7 @@ from train.dataset import (
 import logging
 logger = logging.getLogger(__name__)
 
-from agents.fastgen import beam_search_pseudo
+from model.flashinfer.beam_search import beam_search_pseudo
 from agents.infinisst import synchronized_timer, S2TAgentStates, InfiniSST
 
 @entrypoint
