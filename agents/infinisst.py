@@ -303,7 +303,7 @@ class InfiniSST(SpeechToTextAgent):
         self.model = SpeechQwenForCausalLM.from_pretrained(
             args.model_name,
             torch_dtype=torch.bfloat16,
-            attn_implementation="flash_attention_2",
+            attn_implementation="sdpa",
             device_map='cuda',
         ).eval()
 
