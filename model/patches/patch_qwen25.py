@@ -135,6 +135,113 @@ def qwen2_flash_attention_2_new_forward(self, *args, **kwargs):
 
     return attn_output, attn_weights, past_key_value
 
+def qwen2_sdpa_attention_new_forward(self, *args, **kwargs):
+    hidden_states = kwargs.get('hidden_states', args[0] if args else None)
+    attention_mask = kwargs.get('attention_mask', None)
+    position_ids = kwargs.get('position_ids', None) 
+    past_key_value = kwargs.get('past_key_value', None)
+    output_attentions = kwargs.get('output_attentions', False)
+    use_cache = kwargs.get('use_cache', False)
+    cache_position = kwargs.get('cache_position', None)
+    position_embeddings = kwargs.get('position_embeddings', None)
+
+    if output_attentions:
+        # TODO: Improve this warning with e.g. `model.config.attn_implementation = "manual"` once this is implemented.
+        logger.warning_once(
+            "LlamaModel is using LlamaSdpaAttention, but `torch.nn.functional.scaled_dot_product_attention` does not support `output_attentions=True`. Falling back to the manual attention implementation, "
+            'but specifying the manual implementation will be required from Transformers version v5.0.0 onwards. This warning can be removed using the argument `attn_implementation="eager"` when loading the model.'
+        )
+        return super(Qwen2SdpaAttention, self).forward(
+            hidden_states=hidden_states,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_value=past_key_value,
+            output_attentions=output_attentions,
+            use_cache=use_cache,
+            cache_position=cache_position,
+            position_embeddings=position_embeddings,
+        )
+
+    bsz, q_len, _ = hidden_states.size()
+
+    query_states = self.q_proj(hidden_states)
+    key_states = self.k_proj(hidden_states)
+    value_states = self.v_proj(hidden_states)
+
+    # use -1 to infer num_heads and num_key_value_heads as they may vary if tensor parallel is used
+    query_states = query_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+    key_states = key_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+    value_states = value_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+
+    if position_embeddings is None:
+        logger.warning_once(
+            "The attention layers in this model are transitioning from computing the RoPE embeddings internally "
+            "through `position_ids` (2D tensor with the indexes of the tokens), to using externally computed "
+            "`position_embeddings` (Tuple of tensors, containing cos and sin). In v4.46 `position_ids` will be "
+            "removed and `position_embeddings` will be mandatory."
+        )
+        cos, sin = self.rotary_emb(value_states, position_ids)
+    else:
+        cos, sin = position_embeddings
+    # First update cache with unrotated key/value states
+    unrotated_key_states = key_states.clone()
+    if past_key_value is not None:
+        # Store unrotated keys in cache
+        cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
+        key_states, value_states = past_key_value.update(unrotated_key_states, value_states, self.layer_idx, cache_kwargs)
+        
+        # Get the total sequence length including cached tokens
+        total_seq_len = key_states.size(-2)  # Use actual size after cache update
+        past_seq_len = total_seq_len - q_len
+        
+        key_position_ids = torch.arange(total_seq_len, device=cos.device)
+        query_position_ids = torch.arange(past_seq_len, total_seq_len, device=cos.device)
+        
+        # Get rotary embeddings for queries and keys separately
+        key_cos, key_sin = self.rotary_emb(value_states, key_position_ids.unsqueeze(0))
+        query_cos, query_sin = self.rotary_emb(value_states, query_position_ids.unsqueeze(0))
+        
+        # Apply rotation with appropriate position embeddings
+        query_states = apply_rotary_pos_emb(query_states, query_states, query_cos, query_sin)[0]
+        key_states = apply_rotary_pos_emb(key_states, key_states, key_cos, key_sin)[1]
+    else:
+        # For the first token, just apply rotation normally
+        query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
+
+    key_states = repeat_kv(key_states, self.num_key_value_groups)
+    value_states = repeat_kv(value_states, self.num_key_value_groups)
+
+    causal_mask = attention_mask
+    if attention_mask is not None:
+        causal_mask = causal_mask[:, :, :, : key_states.shape[-2]]
+
+    # SDPA with memory-efficient backend is currently (torch==2.1.2) bugged with non-contiguous inputs with custom attn_mask,
+    # Reference: https://github.com/pytorch/pytorch/issues/112577.
+    if query_states.device.type == "cuda" and causal_mask is not None:
+        query_states = query_states.contiguous()
+        key_states = key_states.contiguous()
+        value_states = value_states.contiguous()
+
+    # We dispatch to SDPA's Flash Attention or Efficient kernels via this `is_causal` if statement instead of an inline conditional assignment
+    # in SDPA to support both torch.compile's dynamic shapes and full graph options. An inline conditional prevents dynamic shapes from compiling.
+    is_causal = True if causal_mask is None and q_len > 1 else False
+
+    attn_output = torch.nn.functional.scaled_dot_product_attention(
+        query_states,
+        key_states,
+        value_states,
+        attn_mask=causal_mask,
+        dropout_p=self.attention_dropout if self.training else 0.0,
+        is_causal=is_causal,
+    )
+
+    attn_output = attn_output.transpose(1, 2).contiguous()
+    attn_output = attn_output.view(bsz, q_len, -1)
+
+    attn_output = self.o_proj(attn_output)
+
+    return attn_output, None, past_key_value
 
 def patch_qwen25():
     Qwen2FlashAttention2.forward = qwen2_flash_attention_2_new_forward
+    Qwen2SdpaAttention.forward = qwen2_sdpa_attention_new_forward
