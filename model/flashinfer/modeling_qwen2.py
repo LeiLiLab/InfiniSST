@@ -388,7 +388,7 @@ class Qwen2Attention(nn.Module):
             query_states,
             pagetable.paged_kv_cache[self.layer_idx],
         )
-        attn_output = attn_output.view(-1, self.num_heads * self.head_dim)
+        attn_output = attn_output.view(-1, self.hidden_size)
         attn_output = self.o_proj(attn_output)
 
         return attn_output, None, pagetable
@@ -630,6 +630,7 @@ class Qwen2Model(Qwen2PreTrainedModel):
         inputs_embeds: Optional[torch.FloatTensor] = None,
         requests: Optional[List[dict]] = None,
         pagetable: Optional[PageTable] = None,
+        output_hidden_states: bool = False,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         hidden_states = inputs_embeds
 
@@ -674,6 +675,7 @@ class Qwen2Model(Qwen2PreTrainedModel):
                 self.config.num_key_value_heads,
                 self.config.hidden_size // self.config.num_attention_heads,
                 PAGE_SIZE,
+                causal=True,
                 pos_encoding_mode='ROPE_LLAMA',
                 rope_theta=self.config.rope_theta,
                 q_data_type=hidden_states.dtype,
@@ -694,7 +696,10 @@ class Qwen2Model(Qwen2PreTrainedModel):
                 kv_data_type=hidden_states.dtype,
             )
 
+        all_hidden_states = () if output_hidden_states else None
         for decoder_layer in self.layers:
+            if output_hidden_states:
+                all_hidden_states += (hidden_states,)
             hidden_states, pagetable = decoder_layer(
                 hidden_states,
                 qo_indptr,
@@ -703,10 +708,12 @@ class Qwen2Model(Qwen2PreTrainedModel):
                 paged_kv_last_page_len,
                 pagetable,
             )
+        if output_hidden_states:
+            all_hidden_states += (hidden_states,)
 
         hidden_states = self.norm(hidden_states)
 
-        return hidden_states, requests, pagetable
+        return hidden_states, requests, pagetable, all_hidden_states
 
 
 class Qwen2ForCausalLM(Qwen2PreTrainedModel, GenerationMixin):

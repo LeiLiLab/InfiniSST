@@ -16,10 +16,8 @@ from fairseq.models.speech_to_text import (
     lengths_to_padding_mask,
 )
 
-if os.environ.get("MODEL_TYPE", "default") == "flashinfer":
-    from model.flashinfer.wav2vec2_asr import Wav2VecEncoder
-else:
-    from fairseq.models.wav2vec import Wav2VecEncoder
+from model.flashinfer.wav2vec2_asr import Wav2VecEncoder as Wav2VecEncoderFlash
+from fairseq.models.wav2vec import Wav2VecEncoder
 
 class ConvFeatureExtractionModel(nn.Module):
     def __init__(
@@ -109,11 +107,12 @@ class SpeechEncoderW2V2RoPE(L.LightningModule):
         length_shrink_cfg=None,
         block_size=16, max_cache_size=125,
         llm_embedding_dim=4096, llm_embedding=None, rope=True,
+        flash=False
     ):
         super().__init__()
 
         self.speech_encoder, s_dim, self.s_layer = self._load_w2v2(
-            w2v2_path, w2v2_ctc_finetuned
+            w2v2_path, w2v2_ctc_finetuned, flash
         )
         self.blocksize = block_size
         self.max_cache_size = max_cache_size
@@ -138,7 +137,7 @@ class SpeechEncoderW2V2RoPE(L.LightningModule):
         else:
             raise ValueError(f"Invalid multiplier: {multiplier}")
 
-    def _load_w2v2(self, speech_tower_path, ssl_finetuned):
+    def _load_w2v2(self, speech_tower_path, ssl_finetuned, flash=False):
         if not ssl_finetuned: # ssl model
             state = fairseq.checkpoint_utils.load_checkpoint_to_cpu(speech_tower_path)
             w2v_args = state["args"]
@@ -154,7 +153,12 @@ class SpeechEncoderW2V2RoPE(L.LightningModule):
             speech_dimension = cfg.encoder_embed_dim
             n_layer = cfg.encoder_layers     
 
-            model = Wav2VecEncoder(state['cfg']['model'], None)
+            if flash:
+                print("Using flashinfer Wav2VecEncoder")
+                model = Wav2VecEncoderFlash(state['cfg']['model'], None)
+            else:
+                print("Using fairseq Wav2VecEncoder")
+                model = Wav2VecEncoder(state['cfg']['model'], None)
             new = {}
             for key in state['model'].keys():
                 new_key = key.replace('w2v_encoder.', '')
@@ -202,7 +206,7 @@ class SpeechEncoderW2V2RoPE(L.LightningModule):
         return feature, cache
     
     def encode_speech_fast(self, requests, speech_pagetable):
-        feature, requests, speech_pagetable = self.speech_encoder(requests, speech_pagetable)
+        feature, requests, speech_pagetable, layer_results = self.speech_encoder(requests, speech_pagetable)
         feature = self.length_shrink(feature.transpose(0, 1).unsqueeze(0)).squeeze(0).transpose(0, 1)
         feature = self.proj(feature)
-        return feature, requests, speech_pagetable
+        return feature, requests, speech_pagetable, layer_results

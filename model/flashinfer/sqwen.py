@@ -54,6 +54,7 @@ class SpeechQwenFastModel(Qwen2Model):
         requests,
         pagetable,
         speech_features=None,
+        output_hidden_states=False,
         **kwargs,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
 
@@ -80,12 +81,13 @@ class SpeechQwenFastModel(Qwen2Model):
                 inputs_embeds[u_p + 2 : a_p - 3] = speech_features[offset : offset + a_p - u_p - 5]
                 offset += a_p - u_p - 5
 
-        hidden_state, requests, pagetable = super(SpeechQwenFastModel, self).forward(
+        hidden_state, requests, pagetable, layer_results = super(SpeechQwenFastModel, self).forward(
             inputs_embeds=inputs_embeds,
             requests=requests,
             pagetable=pagetable,
+            output_hidden_states=output_hidden_states,
         )
-        return hidden_state, requests, pagetable
+        return hidden_state, requests, pagetable, layer_results
     
 class SpeechQwenFastForCausalLM(Qwen2ForCausalLM):
     config_class = SpeechQwenFastConfig
@@ -140,12 +142,14 @@ class SpeechQwenFastForCausalLM(Qwen2ForCausalLM):
         requests,
         pagetable,
         speech_features=None,
+        output_hidden_states=False,
         **kwargs,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
-        hidden_state, requests, pagetable = self.model(
+        hidden_state, requests, pagetable, layer_results = self.model(
             requests=requests,
             pagetable=pagetable,
             speech_features=speech_features,
+            output_hidden_states=output_hidden_states,
             **kwargs,
         )
         logits = self.lm_head(hidden_state)
@@ -159,7 +163,7 @@ class SpeechQwenFastForCausalLM(Qwen2ForCausalLM):
 
         logits_list = torch.stack(logits_list, dim=0)
 
-        return logits_list, requests, pagetable
+        return logits_list, requests, pagetable, layer_results
                    
 AutoConfig.register("SpeechQwenFast", SpeechQwenFastConfig)
 AutoModelForCausalLM.register(SpeechQwenFastConfig, SpeechQwenFastForCausalLM)

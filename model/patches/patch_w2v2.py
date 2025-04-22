@@ -593,7 +593,7 @@ def uni_transformer_encoder_extract_features(
         )
 
 
-    layer_results = []
+    layer_results = [(x, None, None)]
     r = None
     for i, layer in enumerate(self.layers):
         dropout_probability = np.random.random() if self.layerdrop > 0 else 1

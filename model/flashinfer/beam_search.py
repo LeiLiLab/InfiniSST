@@ -12,6 +12,8 @@ from model.flashinfer.engine import (
     LLMCache
 )
 
+from model.qwen25 import SpeechQwenModel
+
 class BeamState:
     def __init__(self, num_beams):
         self.num_beams = num_beams
@@ -45,10 +47,8 @@ class Request:
         self.llm_max_steps_start = llm_max_steps_start
         self.llm_cache = llm_cache
 
-        self.generated_ids = []
         self.prefill_finished = False
         self.decode_finished = False
-
         self.beam_state = None
 
     def get_speech_request(self):
@@ -127,17 +127,17 @@ def prefill(
 ):
     bsz = len(requests)
     speech_requests = [request.get_speech_request() for request in requests]
-    speech_features, speech_requests, speech_pagetable = model.model.speech_encoder.encode_speech_fast(
+    speech_features, speech_requests, speech_pagetable, _ = model.model.speech_encoder.encode_speech_fast(
         speech_requests,
         speech_pagetable,
     )
 
     llm_requests = [request.get_llm_request() for request in requests] 
 
-    logits, llm_requests, llm_prefill_pagetable = model(
+    logits, llm_requests, llm_prefill_pagetable, layer_results = model(
         llm_requests,
         llm_prefill_pagetable,
-        speech_features
+        speech_features,
     )
     logps = torch.log_softmax(logits, dim=-1)
     topk_logps, topk_indices = torch.topk(logps, num_beams, dim=-1)
@@ -203,93 +203,104 @@ def decode(
     llm_decode_pagetable
 ):       
     # collect finished beams
+    mask = []
+    finished_requests = []
     remaining_requests = []
     for i in range(len(requests)):
         collect_finished_beams(requests[i], tokenizer)
         if requests[i].beam_state.num_remaining_beams > 0:
             remaining_requests.append(requests[i])
+            mask.append(True)
         else:
-            finish_beam_search(
-                requests[i], 
-                llm_decode_pagetable, 
-                llm_prefill_pagetable.paged_kv_cache.device
-            )
-    requests = remaining_requests
-
-    bsz = len(requests)
-    sum_logps = torch.cat([request.beam_state.sum_logps for request in requests], dim=0)
-    num_remaining_beams = [request.beam_state.num_remaining_beams for request in requests]
-
-    if sum(num_remaining_beams) != 0:
-        llm_requests = []
-        for request in requests:
-            for j in range(request.beam_state.num_remaining_beams):
-                llm_requests.append({
-                    "input_ids": request.beam_state.generated_ids[j][-1:],
-                    "cache": request.llm_cache[j]
-                })
-
-        logits, llm_requests, llm_decode_pagetable = model(
-            llm_requests,
-            llm_decode_pagetable,
-        )
-        logps = torch.log_softmax(logits, dim=-1)
-
-        idx = 0
-        for i in range(bsz):
-            logp = logps[idx : idx + num_remaining_beams[i]]
-            topk_logp, topk_indices = torch.topk(logp, num_remaining_beams[i], dim=-1)
-            topk_logp = topk_logp.view(-1)
-            topk_indices = topk_indices.view(-1)
-
-            sum_logp = sum_logps[idx : idx + num_remaining_beams[i]]
-            sum_logp = sum_logp.repeat_interleave(num_remaining_beams[i])
-            sum_logp += topk_logp
-
-            topk_sum_logp, topk_sum_indices = sum_logp.topk(num_remaining_beams[i], dim=-1)
-            requests[i].beam_state.sum_logps = topk_sum_logp
-
-            new_generated_ids = []
-            new_llm_cache = []
-            beam_idx = topk_sum_indices // num_remaining_beams[i]
-            for j in range(num_remaining_beams[i]):
-                prev_ids = requests[i].beam_state.generated_ids[beam_idx[j]]
-                new_id = topk_indices[topk_sum_indices[j]]
-                new_generated_ids.append(prev_ids.tolist() + [new_id.item()])
-
-                # TODO: share prefix kv cache
-                cache_j = LLMCache()
-                llm_decode_pagetable, cache_j.paged_kv_indices, cache_j.paged_kv_last_page_len = \
-                    copy_paged_kv_cache(
-                        requests[i].llm_cache[beam_idx[j]].paged_kv_indices,
-                        requests[i].llm_cache[beam_idx[j]].paged_kv_last_page_len,
-                        llm_decode_pagetable,
-                        llm_decode_pagetable
-                    )
-                new_llm_cache.append(cache_j)
-
-            # pop previous beam kv cache
-            for j in range(num_remaining_beams[i]):
-                llm_decode_pagetable.paged_queue, _, _ = pop_paged_kv_cache(
-                    llm_decode_pagetable.paged_queue,
-                    requests[i].llm_cache[j].paged_kv_indices,
-                    requests[i].llm_cache[j].paged_kv_last_page_len,
-                    0,
-                )
-            requests[i].llm_cache = new_llm_cache
-                
-            requests[i].beam_state.generated_ids = \
-                torch.tensor(new_generated_ids).to(requests[i].beam_state.generated_ids)
-            idx += num_remaining_beams[i]
-    
-    for i in range(len(requests)):
-        collect_finished_beams(requests[i], tokenizer)
-        if requests[i].beam_state.num_remaining_beams == 0:
             finish_beam_search(
                 requests[i], 
                 llm_decode_pagetable, 
                 llm_prefill_pagetable
             )
+            finished_requests.append(requests[i])
+            mask.append(False)
+        
+    if sum(mask) == 0:
+        return requests, speech_pagetable, llm_prefill_pagetable, llm_decode_pagetable
+
+    bsz = len(remaining_requests)
+    sum_logps = torch.cat([request.beam_state.sum_logps for request in remaining_requests], dim=0)
+    num_remaining_beams = [request.beam_state.num_remaining_beams for request in remaining_requests]
+
+    llm_requests = []
+    for request in remaining_requests:
+        for j in range(request.beam_state.num_remaining_beams):
+            llm_requests.append({
+                "input_ids": request.beam_state.generated_ids[j][-1:],
+                "cache": request.llm_cache[j]
+            })
+
+    logits, llm_requests, llm_decode_pagetable, _ = model(
+        llm_requests,
+        llm_decode_pagetable,
+    )
+    logps = torch.log_softmax(logits, dim=-1)
+
+    idx = 0
+    for i in range(bsz):
+        logp = logps[idx : idx + num_remaining_beams[i]]
+        topk_logp, topk_indices = torch.topk(logp, num_remaining_beams[i], dim=-1)
+        topk_logp = topk_logp.view(-1)
+        topk_indices = topk_indices.view(-1)
+
+        sum_logp = sum_logps[idx : idx + num_remaining_beams[i]]
+        sum_logp = sum_logp.repeat_interleave(num_remaining_beams[i])
+        sum_logp += topk_logp
+
+        topk_sum_logp, topk_sum_indices = sum_logp.topk(num_remaining_beams[i], dim=-1)
+        remaining_requests[i].beam_state.sum_logps = topk_sum_logp
+
+        new_generated_ids = []
+        new_llm_cache = []
+        beam_idx = topk_sum_indices // num_remaining_beams[i]
+        for j in range(num_remaining_beams[i]):
+            prev_ids = remaining_requests[i].beam_state.generated_ids[beam_idx[j]]
+            new_id = topk_indices[topk_sum_indices[j]]
+            new_generated_ids.append(prev_ids.tolist() + [new_id.item()])
+
+            # TODO: share prefix kv cache
+            cache_j = LLMCache()
+            llm_decode_pagetable, cache_j.paged_kv_indices, cache_j.paged_kv_last_page_len = \
+                copy_paged_kv_cache(
+                    remaining_requests[i].llm_cache[beam_idx[j]].paged_kv_indices,
+                    remaining_requests[i].llm_cache[beam_idx[j]].paged_kv_last_page_len,
+                    llm_decode_pagetable,
+                    llm_decode_pagetable
+                )
+            new_llm_cache.append(cache_j)
+
+        # pop previous beam kv cache
+        for j in range(num_remaining_beams[i]):
+            llm_decode_pagetable.paged_queue, _, _ = pop_paged_kv_cache(
+                llm_decode_pagetable.paged_queue,
+                remaining_requests[i].llm_cache[j].paged_kv_indices,
+                remaining_requests[i].llm_cache[j].paged_kv_last_page_len,
+                0,
+            )
+        remaining_requests[i].llm_cache = new_llm_cache
+            
+        remaining_requests[i].beam_state.generated_ids = \
+            torch.tensor(new_generated_ids).to(remaining_requests[i].beam_state.generated_ids)
+        idx += num_remaining_beams[i]
+    
+    for i in range(len(remaining_requests)):
+        collect_finished_beams(remaining_requests[i], tokenizer)
+        if remaining_requests[i].beam_state.num_remaining_beams == 0:
+            finish_beam_search(
+                remaining_requests[i], 
+                llm_decode_pagetable, 
+                llm_prefill_pagetable
+            )
+    
+    requests = []
+    for m in mask:
+        if m: requests.append(remaining_requests.pop(0))
+        else: requests.append(finished_requests.pop(0))
 
     return requests, speech_pagetable, llm_prefill_pagetable, llm_decode_pagetable
 
@@ -371,9 +382,9 @@ def beam_search_pseudo(
         for u_p, a_p in zip(user_pos, assist_pos):
             filled_inputs_embed = torch.cat(
                 [
-                    filled_inputs_embed[: u_p + 3],
+                    filled_inputs_embed[: u_p + 2],
                     speech_features[i, index : index + a_p - u_p - 5],
-                    filled_inputs_embed[a_p - 2 :]
+                    filled_inputs_embed[a_p - 3 :]
                 ],
                 dim=0                            
             )
@@ -382,7 +393,7 @@ def beam_search_pseudo(
     inputs_embeds = torch.stack(filled_inputs_embeds)
 
     # prefill
-    prefill_outputs = super(SpeechLlamaModel, model.model).forward(
+    prefill_outputs = super(SpeechQwenModel, model.model).forward(
         input_ids=None, 
         attention_mask=None,
         past_key_values=states.past_key_values,
@@ -438,7 +449,7 @@ def beam_search_pseudo(
 
         decoder_input_ids = generated_ids[:, -1:]
         decoder_input_embs = model.model.embed_tokens(decoder_input_ids)
-        decoder_outputs = super(SpeechLlamaModel, model.model).forward(
+        decoder_outputs = super(SpeechQwenModel, model.model).forward(
             input_ids=None,
             attention_mask=None,
             past_key_values=past_key_values,

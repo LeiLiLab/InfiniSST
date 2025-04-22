@@ -315,7 +315,8 @@ class InfiniSST(SpeechToTextAgent):
             args.max_cache_size,
             self.model.model.embed_tokens.embedding_dim,
             None,
-            bool(args.rope)
+            bool(args.rope),
+            False,
         ]
         if args.w2v2_type == 'w2v2':
             speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args)

@@ -21,8 +21,10 @@ from peft import LoraConfig, get_peft_model
 
 from tqdm import tqdm
 from model.llama31 import SpeechLlamaForCausalLM
+from model.qwen25 import SpeechQwenForCausalLM
 from model.patches.patch_w2v2 import patch_w2v2
 from model.patches.patch_llama31 import patch_llama31
+from model.patches.patch_qwen25 import patch_qwen25
 from model.patches.patch_hf import patch_hf
 
 from agents.options import (
@@ -56,8 +58,7 @@ class InfiniSSTFast(InfiniSST):
     @staticmethod
     def add_args(parser):
         InfiniSST.add_args(parser)
-        parser.add_argument("--gen-fn", type=str, required=True, choices=["pseudo", "flashinfer"])
-
+    
     @torch.inference_mode()
     def policy(self, states: Optional[S2TAgentStates] = None):
         if states is None:
@@ -91,19 +92,16 @@ class InfiniSSTFast(InfiniSST):
             if states.source_finished:
                 states.segment_idx = -1
 
-            if self.args.gen_fn == "pseudo":
-                results = beam_search_pseudo(
-                    self.model,
-                    self.tokenizer,
-                    input_ids,
-                    speech_batch,
-                    self.latency_multiplier, 
-                    self.beam,
-                    self.max_new_tokens,
-                    states,
-                )
-            else:
-                raise ValueError(f"Invalid generation function: {self.args.gen_fn}")
+            results = beam_search_pseudo(
+                self.model,
+                self.tokenizer,
+                input_ids,
+                speech_batch,
+                self.latency_multiplier, 
+                self.beam,
+                self.max_new_tokens,
+                states,
+            )
 
             states.past_key_values = results[0]['past_key_values']
             cur_llm_cache_size = states.past_key_values[0][0].size(2)
@@ -138,7 +136,7 @@ class InfiniSSTFast(InfiniSST):
 
         # print(f"{length_in_seconds / 60:.2f}", ':', self.tokenizer.decode(states.target_ids))
         # print(f"Speech length in minutes: {length_in_seconds / 60:.2f}")
-        print(states.past_key_values[0][0].size(2), ' '.join(states.target))
+        print(states.past_key_values[0][0].size(2), self.tokenizer.decode(states.target_ids))
 
         # print(states.segment_idx, ":", translation)
         states.segment_idx += 1
