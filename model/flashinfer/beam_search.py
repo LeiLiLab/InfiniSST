@@ -6,8 +6,7 @@ from model.flashinfer.engine import (
     pop_paged_kv_cache,
     copy_paged_kv_cache,
     move_paged_kv_cache,
-    allocate_paged_kv_cache,
-    get_cache_size,
+    duplicate_paged_kv_cache,
     SpeechCache,
     LLMCache
 )
@@ -64,7 +63,7 @@ class Request:
             "cache": self.llm_cache,
         }
 
-def collect_finished_beams(request, tokenizer):
+def collect_finished_beams(request, tokenizer, length_penalty):
     remaining_llm_cache = []
     mask = [True] * request.beam_state.num_remaining_beams
     for j in range(request.beam_state.num_remaining_beams):
@@ -74,7 +73,7 @@ def collect_finished_beams(request, tokenizer):
             mask[j] = False
             request.beam_state.results.append({
                 "sequence": gen_j.tolist(),
-                "logp": request.beam_state.sum_logps[j] / len(gen_j),
+                "logp": request.beam_state.sum_logps[j] / (len(gen_j) ** length_penalty),
                 "cache": request.llm_cache[j]
             })
         else:
@@ -88,8 +87,8 @@ def finish_beam_search(request, llm_decode_pagetable, llm_prefill_pagetable):
     assert request.beam_state.num_remaining_beams == 0
     results = sorted(request.beam_state.results, key=lambda x: x["logp"], reverse=True)
     for r in results[1:]:
-        llm_decode_pagetable.paged_queue, _, _ = pop_paged_kv_cache(
-            llm_decode_pagetable.paged_queue,
+        llm_decode_pagetable, _, _ = pop_paged_kv_cache(
+            llm_decode_pagetable,
             r['cache'].paged_kv_indices,
             r['cache'].paged_kv_last_page_len,
             0,
@@ -97,9 +96,9 @@ def finish_beam_search(request, llm_decode_pagetable, llm_prefill_pagetable):
     request.results = results[0]
     request.llm_cache = results[0]['cache']
     # trim llm kv cache
-    llm_decode_pagetable.paged_queue, request.llm_cache.paged_kv_indices, request.llm_cache.paged_kv_last_page_len = \
+    llm_decode_pagetable, request.llm_cache.paged_kv_indices, request.llm_cache.paged_kv_last_page_len = \
         pop_paged_kv_cache(
-            llm_decode_pagetable.paged_queue,
+            llm_decode_pagetable,
             request.llm_cache.paged_kv_indices,
             request.llm_cache.paged_kv_last_page_len,
             request.llm_max_steps,
@@ -121,6 +120,7 @@ def prefill(
     model,
     tokenizer,
     num_beams,
+    length_penalty,
     speech_pagetable,
     llm_prefill_pagetable,
     llm_decode_pagetable,
@@ -155,9 +155,9 @@ def prefill(
 
         # trim speech kv cache
         speech_cache = request.speech_cache
-        speech_pagetable.paged_queue, speech_cache.paged_kv_indices, speech_cache.paged_kv_last_page_len = \
+        speech_pagetable, speech_cache.paged_kv_indices, speech_cache.paged_kv_last_page_len = \
             pop_paged_kv_cache(
-                speech_pagetable.paged_queue,
+                speech_pagetable,
                 speech_cache.paged_kv_indices,
                 speech_cache.paged_kv_last_page_len,
                 request.speech_max_steps,
@@ -179,10 +179,9 @@ def prefill(
         for i in range(1, num_beams):
             cache_i = LLMCache()            
             llm_decode_pagetable, cache_i.paged_kv_indices, cache_i.paged_kv_last_page_len = \
-                copy_paged_kv_cache(
+                duplicate_paged_kv_cache(
                     llm_cache.paged_kv_indices,
                     llm_cache.paged_kv_last_page_len,
-                    llm_decode_pagetable,
                     llm_decode_pagetable,
                 )
             beam_cache.append(cache_i)
@@ -198,6 +197,7 @@ def decode(
     model, 
     tokenizer, 
     num_beams, 
+    length_penalty,
     speech_pagetable,
     llm_prefill_pagetable,
     llm_decode_pagetable
@@ -207,7 +207,7 @@ def decode(
     finished_requests = []
     remaining_requests = []
     for i in range(len(requests)):
-        collect_finished_beams(requests[i], tokenizer)
+        collect_finished_beams(requests[i], tokenizer, length_penalty)
         if requests[i].beam_state.num_remaining_beams > 0:
             remaining_requests.append(requests[i])
             mask.append(True)
@@ -266,18 +266,17 @@ def decode(
             # TODO: share prefix kv cache
             cache_j = LLMCache()
             llm_decode_pagetable, cache_j.paged_kv_indices, cache_j.paged_kv_last_page_len = \
-                copy_paged_kv_cache(
+                duplicate_paged_kv_cache(
                     remaining_requests[i].llm_cache[beam_idx[j]].paged_kv_indices,
                     remaining_requests[i].llm_cache[beam_idx[j]].paged_kv_last_page_len,
                     llm_decode_pagetable,
-                    llm_decode_pagetable
                 )
             new_llm_cache.append(cache_j)
 
         # pop previous beam kv cache
         for j in range(num_remaining_beams[i]):
-            llm_decode_pagetable.paged_queue, _, _ = pop_paged_kv_cache(
-                llm_decode_pagetable.paged_queue,
+            llm_decode_pagetable, _, _ = pop_paged_kv_cache(
+                llm_decode_pagetable,
                 remaining_requests[i].llm_cache[j].paged_kv_indices,
                 remaining_requests[i].llm_cache[j].paged_kv_last_page_len,
                 0,
@@ -289,7 +288,7 @@ def decode(
         idx += num_remaining_beams[i]
     
     for i in range(len(remaining_requests)):
-        collect_finished_beams(remaining_requests[i], tokenizer)
+        collect_finished_beams(remaining_requests[i], tokenizer, length_penalty)
         if remaining_requests[i].beam_state.num_remaining_beams == 0:
             finish_beam_search(
                 remaining_requests[i], 
@@ -309,6 +308,7 @@ def beam_search(
     model,
     tokenizer,
     num_beams,
+    length_penalty,
     speech_pagetable,
     llm_prefill_pagetable,
     llm_decode_pagetable,
@@ -322,6 +322,7 @@ def beam_search(
             model, 
             tokenizer, 
             num_beams, 
+            length_penalty,
             speech_pagetable, 
             llm_prefill_pagetable,
             llm_decode_pagetable
@@ -332,6 +333,7 @@ def beam_search(
             model, 
             tokenizer, 
             num_beams, 
+            length_penalty,
             speech_pagetable,
             llm_prefill_pagetable,
             llm_decode_pagetable
@@ -505,7 +507,8 @@ def beam_search_pseudo(
                 "logp": sum_logps[idx] / len(generated_ids[idx]),
                 "past_key_values": kv_cache
             })
-
+            idx += 1
+    
     for i in range(bsz):
         results[i] = sorted(results[i], key=lambda x: x["logp"], reverse=True)[0]
 

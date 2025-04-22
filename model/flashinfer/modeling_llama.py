@@ -819,9 +819,9 @@ class LlamaModel(LlamaPreTrainedModel):
             if request['cache'] is None:
                 request['cache'] = LlamaCache()
 
-            pagetable.paged_queue, request['cache'].paged_kv_indices, request['cache'].paged_kv_last_page_len = \
+            pagetable, request['cache'].paged_kv_indices, request['cache'].paged_kv_last_page_len = \
                 allocate_paged_kv_cache(
-                    pagetable.paged_queue,
+                    pagetable,
                     request['cache'].paged_kv_indices,
                     request['cache'].paged_kv_last_page_len,
                     request['input_ids'].shape[0]

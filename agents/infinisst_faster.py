@@ -1,3 +1,4 @@
+import re
 from typing import Optional
 from simuleval.utils import entrypoint
 from simuleval.agents.actions import WriteAction, ReadAction
@@ -22,6 +23,10 @@ from model.flashinfer.beam_search import (
 )
 from model.flashinfer.engine import (
     init_paged_kv_cache,
+    duplicate_paged_kv_cache,
+    pop_paged_kv_cache,
+    SpeechCache,
+    LLMCache
 )
 from agents.infinisst import (
     synchronized_timer, 
@@ -37,6 +42,8 @@ class InfiniSSTFaster(InfiniSST):
 
         super().__init__(args)
 
+        self.length_penalty = args.length_penalty
+
         self.blocksize = args.block_size
         speech_encoder = self.model.model.speech_encoder.speech_encoder
         llm = self.model.model
@@ -50,6 +57,7 @@ class InfiniSSTFaster(InfiniSST):
                 speech_encoder.cfg.encoder_embed_dim // speech_encoder.cfg.encoder_attention_heads,
                 args.max_llm_cache_size,
                 llm.config.num_hidden_layers,
+                llm.config.num_attention_heads,
                 llm.config.num_key_value_heads,
                 llm.config.hidden_size // llm.config.num_attention_heads,
                 dtype=self.dtype,
@@ -120,6 +128,7 @@ class InfiniSSTFaster(InfiniSST):
     @staticmethod
     def add_args(parser):
         InfiniSST.add_args(parser)
+        parser.add_argument('--length-penalty', type=float, default=1.0)
 
     @torch.inference_mode()
     def policy(self, states: Optional[S2TAgentStates] = None):
@@ -150,13 +159,13 @@ class InfiniSSTFaster(InfiniSST):
                     self.max_new_tokens,
                     
                     self.args.max_cache_size,
-                    states.speech_cache,
+                    states.speech_cache[i] if states.speech_cache is not None else None,
 
                     self.args.max_llm_cache_size,
                     self.system_prompt_size,
-                    states.past_key_values
+                    states.past_key_values[i] if states.past_key_values is not None else None
                 )
-                for _ in range(self.pseudo_batch_size)
+                for i in range(self.pseudo_batch_size)
             ]
 
             # speech_batch = speech_batch.repeat(self.pseudo_batch_size, 1)
@@ -171,27 +180,41 @@ class InfiniSSTFaster(InfiniSST):
             if states.source_finished:
                 states.segment_idx = -1
 
-            # TODO: debug with long first segment
             while not all(request.decode_finished for request in requests):
                 requests, self.speech_pagetable, self.llm_prefill_pagetable, self.llm_decode_pagetable = beam_search(
                     requests,
                     self.model,
                     self.tokenizer,
                     self.beam,
+                    self.length_penalty,
                     self.speech_pagetable,
                     self.llm_prefill_pagetable,
                     self.llm_decode_pagetable
                 )
 
-            output_ids = requests[0].results['sequence']
-            if output_ids[-1] == self.tokenizer.eos_token_id:
-                output_ids = output_ids[:-1]
-            states.speech_cache = requests[0].speech_cache
-            states.past_key_values = requests[0].llm_cache
+            output_ids = requests[0].results['sequence'][:-1]
+            states.speech_cache = [request.speech_cache for request in requests]
+            states.past_key_values = [request.llm_cache for request in requests]
+        
+        if states.source_finished:
+            for cache in states.speech_cache:
+                pop_paged_kv_cache(
+                    self.speech_pagetable, 
+                    cache.paged_kv_indices, 
+                    cache.paged_kv_last_page_len, 
+                    0
+                )
+            for cache in states.past_key_values:
+                pop_paged_kv_cache(
+                    self.llm_prefill_pagetable, 
+                    cache.paged_kv_indices, 
+                    cache.paged_kv_last_page_len, 
+                    0
+                )
      
         states.target_ids.extend(output_ids)
         translation = self.tokenizer.decode(output_ids, skip_special_tokens=True).strip()
-        translation = translation.replace('�', '')
+        translation = re.sub(r'[（）()"“”�]', '', translation)
 
         # print(f"{length_in_seconds / 60:.2f}", ':', self.tokenizer.decode(states.target_ids))
         # print(f"Speech length in minutes: {length_in_seconds / 60:.2f}")
