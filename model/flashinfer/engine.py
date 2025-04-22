@@ -13,7 +13,7 @@ class PageTable:
         self.max_steps = max_steps
         max_num_pages = 2 * max_batch_size * (max_steps + PAGE_SIZE - 1) // PAGE_SIZE
 
-        max_num_pages *= 4 # TODO: remove this
+        max_num_pages *= 8 # TODO: remove this
 
         self.paged_kv_cache = torch.zeros(
             layer, max_num_pages, 2, PAGE_SIZE, kv_heads, kv_dim, 
@@ -61,24 +61,24 @@ def init_paged_kv_cache(
     max_batch_size, 
     max_speech_steps, speech_layer, speech_kv_heads, speech_kv_dim, 
     max_llm_steps, llm_layer, llm_kv_heads, llm_kv_dim, 
-    device_prefill='cuda:0', device_decode='cuda:1'
+    dtype=torch.bfloat16, device_prefill='cuda:0', device_decode='cuda:1'
 ):
     # speech prefill
     speech_pagetable = PageTable(
         max_batch_size, max_speech_steps, speech_layer, speech_kv_heads, speech_kv_dim, 
-        device_prefill, dtype=torch.bfloat16, wrapper_type='prefill'
+        device_prefill, dtype=dtype, wrapper_type='prefill'
     )
 
     # llm prefill
     llm_prefill_pagetable = PageTable(
         max_batch_size, max_llm_steps, llm_layer, llm_kv_heads, llm_kv_dim, 
-        device_prefill, dtype=torch.bfloat16, wrapper_type='prefill'
+        device_prefill, dtype=dtype, wrapper_type='prefill'
     )
 
     # llm decode
     llm_decode_pagetable = PageTable(
         max_batch_size, max_llm_steps, llm_layer, llm_kv_heads, llm_kv_dim, 
-        device_decode, dtype=torch.bfloat16, wrapper_type='decode'
+        device_decode, dtype=dtype, wrapper_type='decode'
     )
 
     return speech_pagetable, llm_prefill_pagetable, llm_decode_pagetable

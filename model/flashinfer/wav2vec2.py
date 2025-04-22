@@ -517,7 +517,7 @@ class Wav2Vec2Model(BaseFairseqModel):
             kv_data_type=x.dtype,
         )
 
-        x, pagetable = self.encoder(
+        x, pagetable, layer_results = self.encoder(
             x,
             qo_indptr,
             paged_kv_indptr,
@@ -526,7 +526,7 @@ class Wav2Vec2Model(BaseFairseqModel):
             pagetable,
         )
 
-        return x, requests, pagetable
+        return x, requests, pagetable, layer_results
 
     def remove_pretraining_modules(self, last_layer=None):
         self.quantizer = None
@@ -683,7 +683,7 @@ class TransformerEncoder(nn.Module):
         paged_kv_last_page_len,
         pagetable,
     ):
-        x, pagetable = self.extract_features(
+        x, pagetable, layer_results = self.extract_features(
             x, 
             qo_indptr,
             paged_kv_indptr, 
@@ -695,7 +695,7 @@ class TransformerEncoder(nn.Module):
         if self.layer_norm_first:
             x = self.layer_norm(x)
 
-        return x, pagetable
+        return x, pagetable, layer_results
 
     def extract_features(
         self,
@@ -711,7 +711,7 @@ class TransformerEncoder(nn.Module):
 
         x = F.dropout(x, p=self.dropout, training=self.training)
 
-        layer_results = []
+        layer_results = [(x, None, None)]
         r = None
         for i, layer in enumerate(self.layers):
             x, (z, lr), pagetable = layer(
@@ -725,7 +725,7 @@ class TransformerEncoder(nn.Module):
             )
             layer_results.append((x, z, lr))
 
-        return x, pagetable
+        return x, pagetable, layer_results
 
     def max_positions(self):
         """Maximum output length supported by the encoder."""

@@ -33,6 +33,8 @@ from agents.infinisst import (
 class InfiniSSTFaster(InfiniSST):
 
     def __init__(self, args):
+        self.dtype = torch.bfloat16
+
         super().__init__(args)
 
         self.blocksize = args.block_size
@@ -50,6 +52,7 @@ class InfiniSSTFaster(InfiniSST):
                 llm.config.num_hidden_layers,
                 llm.config.num_key_value_heads,
                 llm.config.hidden_size // llm.config.num_attention_heads,
+                dtype=self.dtype,
                 device_prefill='cuda:0',
                 device_decode='cuda:0'
             )
@@ -64,7 +67,7 @@ class InfiniSSTFaster(InfiniSST):
 
         self.model = SpeechQwenFastForCausalLM.from_pretrained(
             args.model_name,
-            torch_dtype=torch.bfloat16,
+            torch_dtype=self.dtype,
             attn_implementation="eager",
             device_map='cuda',
         ).eval()
@@ -78,7 +81,8 @@ class InfiniSSTFaster(InfiniSST):
             args.max_cache_size,
             self.model.model.embed_tokens.embedding_dim,
             None,
-            bool(args.rope)
+            bool(args.rope),
+            True
         ]
         if args.w2v2_type == 'w2v2':
             speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args)
@@ -191,7 +195,7 @@ class InfiniSSTFaster(InfiniSST):
 
         # print(f"{length_in_seconds / 60:.2f}", ':', self.tokenizer.decode(states.target_ids))
         # print(f"Speech length in minutes: {length_in_seconds / 60:.2f}")
-        print(' '.join(states.target))
+        print(self.tokenizer.decode(states.target_ids))
 
         # print(states.segment_idx, ":", translation)
         states.segment_idx += 1
