@@ -61,7 +61,8 @@ pseudo_batch_size=$SLURM_ARRAY_TASK_ID
 export PYTHONPATH=/home/siqiouya/work/sllama-flashinfer
 
 simuleval \
-    --agent agents/infinisst.py \
+    --agent agents/infinisst_fast.py \
+    --agent-class agents.InfiniSSTFast \
     --source-segment-size ${src_segment_size} \
     --latency-multiplier ${latency_multiplier} \
     --max-latency-multiplier ${max_latency_multiplier} \
@@ -70,7 +71,7 @@ simuleval \
     --min-start-sec ${ms} \
     --source ${ROOT}/dev.source \
     --target ${ROOT}/dev.target.zh \
-    --output ${save_dir}/profile/cache${max_llm_cache_size}_seg${src_segment_size}_beam${beam}_nrns${no_repeat_ngram_size}_bsz${pseudo_batch_size} \
+    --output ${save_dir}/profile_fast/cache${max_llm_cache_size}_seg${src_segment_size}_beam${beam}_nrns${no_repeat_ngram_size}_bsz${pseudo_batch_size} \
     --pseudo-batch-size ${pseudo_batch_size} \
     --model-type w2v2_qwen25 \
     --w2v2-path ${w2v2_path} \

@@ -479,9 +479,9 @@ class Wav2Vec2Model(BaseFairseqModel):
         paged_kv_last_page_len = []
         qo_indptr = [0]
         for request in requests:
-            pagetable.paged_queue, request['cache'].paged_kv_indices, request['cache'].paged_kv_last_page_len = \
+            pagetable, request['cache'].paged_kv_indices, request['cache'].paged_kv_last_page_len = \
                 allocate_paged_kv_cache(
-                    pagetable.paged_queue,
+                    pagetable,
                     request['cache'].paged_kv_indices,
                     request['cache'].paged_kv_last_page_len,
                     request['blocksize']

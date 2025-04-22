@@ -1,4 +1,5 @@
 import os
+import re
 import contextlib
 from time import perf_counter
 
@@ -132,9 +133,9 @@ class InfiniSSTFast(InfiniSST):
         output_ids = results[0]['sequences'][:-1]        
         states.target_ids.extend(output_ids)
         translation = self.tokenizer.decode(output_ids, skip_special_tokens=True).strip()
-        translation = translation.replace('�', '')
+        translation = re.sub(r'[（）()"“”�]', '', translation)
 
-        # print(f"{length_in_seconds / 60:.2f}", ':', self.tokenizer.decode(states.target_ids))
+        # print(f"{length_in_seconds / 60:.2f}",  ':', self.tokenizer.decode(states.target_ids))
         # print(f"Speech length in minutes: {length_in_seconds / 60:.2f}")
         print(states.past_key_values[0][0].size(2), self.tokenizer.decode(states.target_ids))
 
