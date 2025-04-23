@@ -11,7 +11,7 @@
 #SBATCH --partition=general
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
-#SBATCH --array=1,2,4,8
+#SBATCH --array=16,32
 ##SBATCH --account=siqiouya
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=siqiouya@andrew.cmu.edu
@@ -45,12 +45,12 @@ unit=char
 
 # agent specific parameters
 audio_normalize=0
-src_segment_size=1920
-latency_multiplier=2
+src_segment_size=960
+latency_multiplier=1
 max_llm_cache_size=1000
 no_repeat_ngram_lookback=100
 no_repeat_ngram_size=5
-max_new_tokens=20
+max_new_tokens=10
 max_latency_multiplier=12
 beam=4
 ms=0

@@ -1,6 +1,7 @@
 import queue
 from typing import List
 from collections import Counter
+import numpy as np
 import torch
 import flashinfer
 
@@ -18,7 +19,7 @@ class PageTable:
             dtype=dtype, device=device
         ) # NHD
         self.paged_queue = list(range(max_num_pages))
-        self.page_cnt = torch.zeros(max_num_pages, dtype=torch.int32, device=device)
+        self.page_cnt = torch.zeros(max_num_pages, dtype=torch.int32)
         self.workspace_buffer = torch.empty(256 * 1024 * 1024, dtype=torch.uint8, device=device)
 
         self.wrapper_type = wrapper_type
@@ -108,6 +109,11 @@ def init_paged_kv_cache(
         device_decode, dtype=dtype, wrapper_type='decode'
     )
 
+    if device_prefill == device_decode:
+        llm_decode_pagetable.paged_queue = llm_prefill_pagetable.paged_queue
+        llm_decode_pagetable.paged_kv_cache = llm_prefill_pagetable.paged_kv_cache
+        llm_decode_pagetable.page_cnt = llm_prefill_pagetable.page_cnt
+
     return speech_pagetable, llm_prefill_pagetable, llm_decode_pagetable
 
 def allocate_paged_kv_cache(
@@ -123,7 +129,8 @@ def allocate_paged_kv_cache(
         page_indices = pagetable.paged_queue[:num_new_page]
         paged_kv_indices.extend(page_indices)
         pagetable.page_cnt[page_indices] += 1
-        pagetable.paged_queue = pagetable.paged_queue[num_new_page:]
+        for _ in range(num_new_page):
+            pagetable.paged_queue.pop(0)
         paged_kv_last_page_len = (n - (PAGE_SIZE - paged_kv_last_page_len) - 1) % PAGE_SIZE + 1
     return pagetable, paged_kv_indices, paged_kv_last_page_len
 
@@ -141,14 +148,24 @@ def pop_paged_kv_cache(
         num_pages_to_pop = (kv_cache_size - kv_cache_size_start - max_steps + PAGE_SIZE - 1) // PAGE_SIZE
         num_pages_start = kv_cache_size_start // PAGE_SIZE
 
-        page_indices_to_pop = paged_kv_indices[num_pages_start : num_pages_start + num_pages_to_pop]
+        # Convert page indices to tensor for faster operations
+        page_indices_to_pop = torch.tensor(paged_kv_indices[num_pages_start : num_pages_start + num_pages_to_pop])
+        
+        # Batch update page counts
         pagetable.page_cnt[page_indices_to_pop] -= 1
-        pop_mask = pagetable.page_cnt[page_indices_to_pop] == 0
-        page_indices_to_pop = [page_indices_to_pop[i] for i, mask in enumerate(pop_mask) if mask]
-
-        # update paged_queue
-        pagetable.paged_queue.extend(page_indices_to_pop)
-        paged_kv_indices = paged_kv_indices[:num_pages_start] + paged_kv_indices[num_pages_start + num_pages_to_pop:]
+        
+        # Get indices of pages that can be freed
+        free_mask = pagetable.page_cnt[page_indices_to_pop] == 0
+        free_indices = page_indices_to_pop[free_mask]
+        
+        # Update paged queue and indices in one operation
+        if len(free_indices) > 0:
+            # Convert to list only once for queue update
+            free_indices_list = free_indices.tolist()
+            pagetable.paged_queue.extend(free_indices_list)
+            
+            # Update paged_kv_indices in one operation
+            paged_kv_indices = paged_kv_indices[:num_pages_start] + paged_kv_indices[num_pages_start + num_pages_to_pop:]
 
     return pagetable, paged_kv_indices, paged_kv_last_page_len
 
@@ -211,6 +228,9 @@ def move_paged_kv_cache(
     src_pagetable,
     tgt_pagetable,
 ):
+    if src_pagetable.paged_kv_cache.device == tgt_pagetable.paged_kv_cache.device:
+        return src_pagetable, tgt_pagetable, src_paged_kv_indices, src_paged_kv_last_page_len
+
     tgt_pagetable, tgt_paged_kv_indices, tgt_paged_kv_last_page_len = \
         copy_paged_kv_cache(
             src_paged_kv_indices,
