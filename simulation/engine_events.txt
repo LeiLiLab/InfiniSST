@@ -1,0 +1,451 @@
+2025-04-23 01:09:40,434 - ENGINE_INITIALIZED: realtime=False, prefill_time=0.1s, decode_time=0.05s, tokens_per_step=1, beam_size=4, prefill_workers=1, decode_workers=3
+2025-04-23 01:09:42,082 - PREFILL_BATCH_START: id=1, size=1, expected_duration=0.1s
+2025-04-23 01:09:42,084 - PREFILL_REQUEST_COMPLETED: user_id=0, continue_decode=True
+2025-04-23 01:09:42,084 - PREFILL_BATCH_COMPLETED: id=1, size=1, actual_duration=0.002s
+2025-04-23 01:09:42,094 - DECODE_BATCH_START: id=1, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,104 - DECODE_REQUEST_COMPLETED: user_id=0, tokens=[9646], continue_decode=True
+2025-04-23 01:09:42,104 - DECODE_BATCH_COMPLETED: id=1, size=1, tokens_generated=1, actual_duration=0.010s
+2025-04-23 01:09:42,115 - DECODE_BATCH_START: id=2, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,116 - DECODE_REQUEST_COMPLETED: user_id=0, tokens=[13732], continue_decode=True
+2025-04-23 01:09:42,116 - DECODE_BATCH_COMPLETED: id=2, size=1, tokens_generated=1, actual_duration=0.002s
+2025-04-23 01:09:42,125 - DECODE_BATCH_START: id=3, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,132 - DECODE_REQUEST_COMPLETED: user_id=0, tokens=[22072], continue_decode=True
+2025-04-23 01:09:42,132 - DECODE_BATCH_COMPLETED: id=3, size=1, tokens_generated=1, actual_duration=0.007s
+2025-04-23 01:09:42,135 - PREFILL_BATCH_START: id=2, size=1, expected_duration=0.1s
+2025-04-23 01:09:42,136 - PREFILL_REQUEST_COMPLETED: user_id=1, continue_decode=True
+2025-04-23 01:09:42,136 - PREFILL_BATCH_COMPLETED: id=2, size=1, actual_duration=0.001s
+2025-04-23 01:09:42,143 - DECODE_BATCH_START: id=2, size=2, expected_duration=0.05s
+2025-04-23 01:09:42,147 - DECODE_REQUEST_COMPLETED: user_id=0, tokens=[768], continue_decode=True
+2025-04-23 01:09:42,307 - PREFILL_BATCH_START: id=3, size=1, expected_duration=0.1s
+2025-04-23 01:09:42,309 - PREFILL_REQUEST_COMPLETED: user_id=2, continue_decode=True
+2025-04-23 01:09:42,309 - PREFILL_BATCH_COMPLETED: id=3, size=1, actual_duration=0.002s
+2025-04-23 01:09:42,318 - DECODE_BATCH_START: id=6, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,329 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[12854], continue_decode=True
+2025-04-23 01:09:42,329 - DECODE_BATCH_COMPLETED: id=6, size=1, tokens_generated=1, actual_duration=0.011s
+2025-04-23 01:09:42,339 - DECODE_BATCH_START: id=7, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,342 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[2861], continue_decode=True
+2025-04-23 01:09:42,342 - DECODE_BATCH_COMPLETED: id=7, size=1, tokens_generated=1, actual_duration=0.003s
+2025-04-23 01:09:42,353 - DECODE_BATCH_START: id=8, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,356 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[25406], continue_decode=True
+2025-04-23 01:09:42,356 - DECODE_BATCH_COMPLETED: id=8, size=1, tokens_generated=1, actual_duration=0.003s
+2025-04-23 01:09:42,366 - DECODE_BATCH_START: id=9, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,369 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[9885], continue_decode=True
+2025-04-23 01:09:42,369 - DECODE_BATCH_COMPLETED: id=9, size=1, tokens_generated=1, actual_duration=0.003s
+2025-04-23 01:09:42,380 - DECODE_BATCH_START: id=10, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,384 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[1996], continue_decode=True
+2025-04-23 01:09:42,384 - DECODE_BATCH_COMPLETED: id=10, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,395 - DECODE_BATCH_START: id=11, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,398 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[19919], continue_decode=True
+2025-04-23 01:09:42,398 - DECODE_BATCH_COMPLETED: id=11, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,409 - DECODE_BATCH_START: id=12, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,411 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[25064], continue_decode=True
+2025-04-23 01:09:42,411 - DECODE_BATCH_COMPLETED: id=12, size=1, tokens_generated=1, actual_duration=0.002s
+2025-04-23 01:09:42,421 - DECODE_BATCH_START: id=13, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,424 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[20253], continue_decode=True
+2025-04-23 01:09:42,424 - DECODE_BATCH_COMPLETED: id=13, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,435 - DECODE_BATCH_START: id=14, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,439 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[6306], continue_decode=True
+2025-04-23 01:09:42,439 - DECODE_BATCH_COMPLETED: id=14, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,450 - DECODE_BATCH_START: id=15, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,454 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[285], continue_decode=True
+2025-04-23 01:09:42,454 - DECODE_BATCH_COMPLETED: id=15, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,472 - DECODE_BATCH_START: id=16, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,475 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[25580], continue_decode=True
+2025-04-23 01:09:42,476 - DECODE_BATCH_COMPLETED: id=16, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,486 - DECODE_BATCH_START: id=17, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,490 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[20680], continue_decode=True
+2025-04-23 01:09:42,490 - DECODE_BATCH_COMPLETED: id=17, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,501 - DECODE_BATCH_START: id=18, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,505 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[7595], continue_decode=True
+2025-04-23 01:09:42,505 - DECODE_BATCH_COMPLETED: id=18, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,513 - DECODE_BATCH_START: id=19, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,518 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[4134], continue_decode=True
+2025-04-23 01:09:42,518 - DECODE_BATCH_COMPLETED: id=19, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:42,528 - DECODE_BATCH_START: id=20, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,533 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[21055], continue_decode=True
+2025-04-23 01:09:42,533 - DECODE_BATCH_COMPLETED: id=20, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:42,544 - DECODE_BATCH_START: id=21, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,547 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[24118], continue_decode=True
+2025-04-23 01:09:42,548 - DECODE_BATCH_COMPLETED: id=21, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,558 - DECODE_BATCH_START: id=22, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,563 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[1495], continue_decode=True
+2025-04-23 01:09:42,563 - DECODE_BATCH_COMPLETED: id=22, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:42,574 - DECODE_BATCH_START: id=23, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,576 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[25243], continue_decode=True
+2025-04-23 01:09:42,576 - DECODE_BATCH_COMPLETED: id=23, size=1, tokens_generated=1, actual_duration=0.003s
+2025-04-23 01:09:42,586 - DECODE_BATCH_START: id=24, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,590 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[23708], continue_decode=True
+2025-04-23 01:09:42,590 - DECODE_BATCH_COMPLETED: id=24, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,601 - DECODE_BATCH_START: id=25, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,605 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[28021], continue_decode=True
+2025-04-23 01:09:42,605 - DECODE_BATCH_COMPLETED: id=25, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,616 - DECODE_BATCH_START: id=26, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,620 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[3561], continue_decode=True
+2025-04-23 01:09:42,620 - DECODE_BATCH_COMPLETED: id=26, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,631 - DECODE_BATCH_START: id=27, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,635 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[14703], continue_decode=True
+2025-04-23 01:09:42,635 - DECODE_BATCH_COMPLETED: id=27, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,646 - DECODE_BATCH_START: id=28, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,650 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[14445], continue_decode=True
+2025-04-23 01:09:42,650 - DECODE_BATCH_COMPLETED: id=28, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,658 - DECODE_BATCH_START: id=29, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,664 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[20440], continue_decode=True
+2025-04-23 01:09:42,664 - DECODE_BATCH_COMPLETED: id=29, size=1, tokens_generated=1, actual_duration=0.007s
+2025-04-23 01:09:42,675 - DECODE_BATCH_START: id=30, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,681 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[5003], continue_decode=True
+2025-04-23 01:09:42,681 - DECODE_BATCH_COMPLETED: id=30, size=1, tokens_generated=1, actual_duration=0.006s
+2025-04-23 01:09:42,688 - DECODE_BATCH_START: id=31, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,692 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[24902], continue_decode=True
+2025-04-23 01:09:42,692 - DECODE_BATCH_COMPLETED: id=31, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,703 - DECODE_BATCH_START: id=32, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,708 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[678], continue_decode=True
+2025-04-23 01:09:42,708 - DECODE_BATCH_COMPLETED: id=32, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:42,719 - DECODE_BATCH_START: id=33, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,723 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[14299], continue_decode=True
+2025-04-23 01:09:42,723 - DECODE_BATCH_COMPLETED: id=33, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,734 - DECODE_BATCH_START: id=34, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,739 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[27379], continue_decode=True
+2025-04-23 01:09:42,739 - DECODE_BATCH_COMPLETED: id=34, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:42,749 - DECODE_BATCH_START: id=35, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,754 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[28187], continue_decode=True
+2025-04-23 01:09:42,754 - DECODE_BATCH_COMPLETED: id=35, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,764 - DECODE_BATCH_START: id=36, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,768 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[4548], continue_decode=True
+2025-04-23 01:09:42,768 - DECODE_BATCH_COMPLETED: id=36, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,779 - DECODE_BATCH_START: id=37, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,783 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[1326], continue_decode=True
+2025-04-23 01:09:42,783 - DECODE_BATCH_COMPLETED: id=37, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:42,792 - DECODE_BATCH_START: id=38, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,796 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[8476], continue_decode=True
+2025-04-23 01:09:42,796 - DECODE_BATCH_COMPLETED: id=38, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,807 - DECODE_BATCH_START: id=39, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,810 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[424], continue_decode=True
+2025-04-23 01:09:42,811 - DECODE_BATCH_COMPLETED: id=39, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,821 - DECODE_BATCH_START: id=40, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,825 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[17285], continue_decode=True
+2025-04-23 01:09:42,826 - DECODE_BATCH_COMPLETED: id=40, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,836 - DECODE_BATCH_START: id=41, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,840 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[19503], continue_decode=True
+2025-04-23 01:09:42,840 - DECODE_BATCH_COMPLETED: id=41, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,851 - DECODE_BATCH_START: id=42, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,855 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[5078], continue_decode=True
+2025-04-23 01:09:42,856 - DECODE_BATCH_COMPLETED: id=42, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:42,863 - DECODE_BATCH_START: id=43, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,869 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[25298], continue_decode=True
+2025-04-23 01:09:42,869 - DECODE_BATCH_COMPLETED: id=43, size=1, tokens_generated=1, actual_duration=0.006s
+2025-04-23 01:09:42,880 - DECODE_BATCH_START: id=44, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,884 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[9111], continue_decode=True
+2025-04-23 01:09:42,884 - DECODE_BATCH_COMPLETED: id=44, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,895 - DECODE_BATCH_START: id=45, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,898 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[20683], continue_decode=True
+2025-04-23 01:09:42,899 - DECODE_BATCH_COMPLETED: id=45, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,909 - DECODE_BATCH_START: id=46, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,913 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[3208], continue_decode=True
+2025-04-23 01:09:42,913 - DECODE_BATCH_COMPLETED: id=46, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,924 - DECODE_BATCH_START: id=47, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,927 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[27146], continue_decode=True
+2025-04-23 01:09:42,928 - DECODE_BATCH_COMPLETED: id=47, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,935 - DECODE_BATCH_START: id=48, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,940 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[12639], continue_decode=True
+2025-04-23 01:09:42,940 - DECODE_BATCH_COMPLETED: id=48, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:42,950 - DECODE_BATCH_START: id=49, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,955 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[2216], continue_decode=True
+2025-04-23 01:09:42,955 - DECODE_BATCH_COMPLETED: id=49, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:42,965 - DECODE_BATCH_START: id=50, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,971 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[13641], continue_decode=True
+2025-04-23 01:09:42,971 - DECODE_BATCH_COMPLETED: id=50, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:42,981 - DECODE_BATCH_START: id=51, size=1, expected_duration=0.05s
+2025-04-23 01:09:42,984 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[24597], continue_decode=False
+2025-04-23 01:09:42,984 - DECODE_BATCH_COMPLETED: id=51, size=1, tokens_generated=1, actual_duration=0.002s
+2025-04-23 01:09:43,391 - PREFILL_BATCH_START: id=4, size=1, expected_duration=0.1s
+2025-04-23 01:09:43,393 - PREFILL_REQUEST_COMPLETED: user_id=2, continue_decode=True
+2025-04-23 01:09:43,393 - PREFILL_BATCH_COMPLETED: id=4, size=1, actual_duration=0.002s
+2025-04-23 01:09:43,398 - DECODE_BATCH_START: id=52, size=1, expected_duration=0.05s
+2025-04-23 01:09:43,403 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[26509], continue_decode=True
+2025-04-23 01:09:43,403 - DECODE_BATCH_COMPLETED: id=52, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:43,412 - DECODE_BATCH_START: id=53, size=1, expected_duration=0.05s
+2025-04-23 01:09:43,416 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[17882], continue_decode=True
+2025-04-23 01:09:43,417 - DECODE_BATCH_COMPLETED: id=53, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:43,433 - DECODE_BATCH_START: id=54, size=1, expected_duration=0.05s
+2025-04-23 01:09:43,437 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[28332], continue_decode=True
+2025-04-23 01:09:43,437 - DECODE_BATCH_COMPLETED: id=54, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:43,454 - DECODE_BATCH_START: id=55, size=1, expected_duration=0.05s
+2025-04-23 01:09:43,459 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[22070], continue_decode=True
+2025-04-23 01:09:43,459 - DECODE_BATCH_COMPLETED: id=55, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:43,470 - DECODE_BATCH_START: id=56, size=1, expected_duration=0.05s
+2025-04-23 01:09:43,474 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[13181], continue_decode=True
+2025-04-23 01:09:43,474 - DECODE_BATCH_COMPLETED: id=56, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:43,485 - DECODE_BATCH_START: id=57, size=1, expected_duration=0.05s
+2025-04-23 01:09:43,489 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[2275], continue_decode=False
+2025-04-23 01:09:43,489 - DECODE_BATCH_COMPLETED: id=57, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:43,945 - PREFILL_BATCH_START: id=5, size=1, expected_duration=0.1s
+2025-04-23 01:09:43,947 - PREFILL_REQUEST_COMPLETED: user_id=3, continue_decode=True
+2025-04-23 01:09:43,947 - PREFILL_BATCH_COMPLETED: id=5, size=1, actual_duration=0.001s
+2025-04-23 01:09:43,958 - DECODE_BATCH_START: id=58, size=1, expected_duration=0.05s
+2025-04-23 01:09:43,962 - DECODE_REQUEST_COMPLETED: user_id=3, tokens=[9016], continue_decode=True
+2025-04-23 01:09:43,962 - DECODE_BATCH_COMPLETED: id=58, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:43,973 - DECODE_BATCH_START: id=59, size=1, expected_duration=0.05s
+2025-04-23 01:09:43,978 - DECODE_REQUEST_COMPLETED: user_id=3, tokens=[18500], continue_decode=True
+2025-04-23 01:09:43,978 - DECODE_BATCH_COMPLETED: id=59, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:43,989 - DECODE_BATCH_START: id=60, size=1, expected_duration=0.05s
+2025-04-23 01:09:43,993 - DECODE_REQUEST_COMPLETED: user_id=3, tokens=[1488], continue_decode=True
+2025-04-23 01:09:43,993 - DECODE_BATCH_COMPLETED: id=60, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:44,004 - DECODE_BATCH_START: id=61, size=1, expected_duration=0.05s
+2025-04-23 01:09:44,007 - DECODE_REQUEST_COMPLETED: user_id=3, tokens=[18550], continue_decode=True
+2025-04-23 01:09:44,007 - DECODE_BATCH_COMPLETED: id=61, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:44,018 - DECODE_BATCH_START: id=62, size=1, expected_duration=0.05s
+2025-04-23 01:09:44,022 - DECODE_REQUEST_COMPLETED: user_id=3, tokens=[16538], continue_decode=True
+2025-04-23 01:09:44,022 - DECODE_BATCH_COMPLETED: id=62, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:44,029 - DECODE_BATCH_START: id=63, size=1, expected_duration=0.05s
+2025-04-23 01:09:44,034 - DECODE_REQUEST_COMPLETED: user_id=3, tokens=[2919], continue_decode=True
+2025-04-23 01:09:44,034 - DECODE_BATCH_COMPLETED: id=63, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:44,045 - DECODE_BATCH_START: id=64, size=1, expected_duration=0.05s
+2025-04-23 01:09:44,048 - DECODE_REQUEST_COMPLETED: user_id=3, tokens=[11964], continue_decode=True
+2025-04-23 01:09:44,049 - DECODE_BATCH_COMPLETED: id=64, size=1, tokens_generated=1, actual_duration=0.003s
+2025-04-23 01:09:44,059 - DECODE_BATCH_START: id=65, size=1, expected_duration=0.05s
+2025-04-23 01:09:44,062 - DECODE_REQUEST_COMPLETED: user_id=3, tokens=[20190], continue_decode=True
+2025-04-23 01:09:44,062 - DECODE_BATCH_COMPLETED: id=65, size=1, tokens_generated=1, actual_duration=0.003s
+2025-04-23 01:09:44,070 - DECODE_BATCH_START: id=66, size=1, expected_duration=0.05s
+2025-04-23 01:09:44,073 - DECODE_REQUEST_COMPLETED: user_id=3, tokens=[28869], continue_decode=True
+2025-04-23 01:09:44,073 - DECODE_BATCH_COMPLETED: id=66, size=1, tokens_generated=1, actual_duration=0.003s
+2025-04-23 01:09:44,083 - DECODE_BATCH_START: id=67, size=1, expected_duration=0.05s
+2025-04-23 01:09:44,086 - DECODE_REQUEST_COMPLETED: user_id=3, tokens=[20432], continue_decode=True
+2025-04-23 01:09:44,086 - DECODE_BATCH_COMPLETED: id=67, size=1, tokens_generated=1, actual_duration=0.003s
+2025-04-23 01:09:44,089 - PREFILL_BATCH_START: id=6, size=1, expected_duration=0.1s
+2025-04-23 01:09:44,090 - PREFILL_REQUEST_COMPLETED: user_id=4, continue_decode=True
+2025-04-23 01:09:44,090 - PREFILL_BATCH_COMPLETED: id=6, size=1, actual_duration=0.001s
+2025-04-23 01:09:44,097 - DECODE_BATCH_START: id=34, size=2, expected_duration=0.05s
+2025-04-23 01:09:44,102 - DECODE_REQUEST_COMPLETED: user_id=3, tokens=[909], continue_decode=True
+2025-04-23 01:09:44,384 - PREFILL_BATCH_START: id=7, size=1, expected_duration=0.1s
+2025-04-23 01:09:44,385 - PREFILL_REQUEST_COMPLETED: user_id=2, continue_decode=True
+2025-04-23 01:09:44,386 - PREFILL_BATCH_COMPLETED: id=7, size=1, actual_duration=0.002s
+2025-04-23 01:09:44,396 - DECODE_BATCH_START: id=70, size=1, expected_duration=0.05s
+2025-04-23 01:09:44,401 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[3609], continue_decode=True
+2025-04-23 01:09:44,401 - DECODE_BATCH_COMPLETED: id=70, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:44,412 - DECODE_BATCH_START: id=71, size=1, expected_duration=0.05s
+2025-04-23 01:09:44,415 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[25161], continue_decode=True
+2025-04-23 01:09:44,416 - DECODE_BATCH_COMPLETED: id=71, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:44,426 - DECODE_BATCH_START: id=72, size=1, expected_duration=0.05s
+2025-04-23 01:09:44,431 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[8392], continue_decode=True
+2025-04-23 01:09:44,431 - DECODE_BATCH_COMPLETED: id=72, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:44,442 - DECODE_BATCH_START: id=73, size=1, expected_duration=0.05s
+2025-04-23 01:09:44,446 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[12535], continue_decode=True
+2025-04-23 01:09:44,446 - DECODE_BATCH_COMPLETED: id=73, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:44,457 - DECODE_BATCH_START: id=74, size=1, expected_duration=0.05s
+2025-04-23 01:09:44,459 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[393], continue_decode=False
+2025-04-23 01:09:44,459 - DECODE_BATCH_COMPLETED: id=74, size=1, tokens_generated=1, actual_duration=0.002s
+2025-04-23 01:09:44,690 - PREFILL_BATCH_START: id=8, size=1, expected_duration=0.1s
+2025-04-23 01:09:44,691 - PREFILL_REQUEST_COMPLETED: user_id=5, continue_decode=True
+2025-04-23 01:09:44,691 - PREFILL_BATCH_COMPLETED: id=8, size=1, actual_duration=0.001s
+2025-04-23 01:09:44,700 - DECODE_BATCH_START: id=75, size=1, expected_duration=0.05s
+2025-04-23 01:09:44,704 - DECODE_REQUEST_COMPLETED: user_id=5, tokens=[28726], continue_decode=True
+2025-04-23 01:09:44,704 - DECODE_BATCH_COMPLETED: id=75, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:44,711 - DECODE_BATCH_START: id=76, size=1, expected_duration=0.05s
+2025-04-23 01:09:44,715 - DECODE_REQUEST_COMPLETED: user_id=5, tokens=[12062], continue_decode=True
+2025-04-23 01:09:44,716 - DECODE_BATCH_COMPLETED: id=76, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:44,727 - DECODE_BATCH_START: id=77, size=1, expected_duration=0.05s
+2025-04-23 01:09:44,730 - DECODE_REQUEST_COMPLETED: user_id=5, tokens=[9403], continue_decode=True
+2025-04-23 01:09:44,731 - DECODE_BATCH_COMPLETED: id=77, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:44,741 - DECODE_BATCH_START: id=78, size=1, expected_duration=0.05s
+2025-04-23 01:09:44,746 - DECODE_REQUEST_COMPLETED: user_id=5, tokens=[17183], continue_decode=True
+2025-04-23 01:09:44,746 - DECODE_BATCH_COMPLETED: id=78, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:44,753 - DECODE_BATCH_START: id=79, size=1, expected_duration=0.05s
+2025-04-23 01:09:44,757 - DECODE_REQUEST_COMPLETED: user_id=5, tokens=[23068], continue_decode=False
+2025-04-23 01:09:44,757 - DECODE_BATCH_COMPLETED: id=79, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:45,422 - PREFILL_BATCH_START: id=9, size=1, expected_duration=0.1s
+2025-04-23 01:09:45,423 - PREFILL_REQUEST_COMPLETED: user_id=2, continue_decode=True
+2025-04-23 01:09:45,423 - PREFILL_BATCH_COMPLETED: id=9, size=1, actual_duration=0.002s
+2025-04-23 01:09:45,435 - DECODE_BATCH_START: id=80, size=1, expected_duration=0.05s
+2025-04-23 01:09:45,440 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[24811], continue_decode=True
+2025-04-23 01:09:45,440 - DECODE_BATCH_COMPLETED: id=80, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:45,452 - DECODE_BATCH_START: id=81, size=1, expected_duration=0.05s
+2025-04-23 01:09:45,456 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[13000], continue_decode=True
+2025-04-23 01:09:45,457 - DECODE_BATCH_COMPLETED: id=81, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:45,466 - DECODE_BATCH_START: id=82, size=1, expected_duration=0.05s
+2025-04-23 01:09:45,471 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[20613], continue_decode=True
+2025-04-23 01:09:45,471 - DECODE_BATCH_COMPLETED: id=82, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:45,482 - DECODE_BATCH_START: id=83, size=1, expected_duration=0.05s
+2025-04-23 01:09:45,486 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[6448], continue_decode=True
+2025-04-23 01:09:45,486 - DECODE_BATCH_COMPLETED: id=83, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:45,497 - DECODE_BATCH_START: id=84, size=1, expected_duration=0.05s
+2025-04-23 01:09:45,501 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[25622], continue_decode=True
+2025-04-23 01:09:45,501 - DECODE_BATCH_COMPLETED: id=84, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:45,512 - DECODE_BATCH_START: id=85, size=1, expected_duration=0.05s
+2025-04-23 01:09:45,516 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[17009], continue_decode=True
+2025-04-23 01:09:45,517 - DECODE_BATCH_COMPLETED: id=85, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:45,527 - DECODE_BATCH_START: id=86, size=1, expected_duration=0.05s
+2025-04-23 01:09:45,531 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[9527], continue_decode=True
+2025-04-23 01:09:45,531 - DECODE_BATCH_COMPLETED: id=86, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:45,542 - DECODE_BATCH_START: id=87, size=1, expected_duration=0.05s
+2025-04-23 01:09:45,546 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[25847], continue_decode=True
+2025-04-23 01:09:45,546 - DECODE_BATCH_COMPLETED: id=87, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:45,556 - DECODE_BATCH_START: id=88, size=1, expected_duration=0.05s
+2025-04-23 01:09:45,558 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[12755], continue_decode=False
+2025-04-23 01:09:45,558 - DECODE_BATCH_COMPLETED: id=88, size=1, tokens_generated=1, actual_duration=0.002s
+2025-04-23 01:09:46,407 - PREFILL_BATCH_START: id=10, size=1, expected_duration=0.1s
+2025-04-23 01:09:46,409 - PREFILL_REQUEST_COMPLETED: user_id=2, continue_decode=True
+2025-04-23 01:09:46,409 - PREFILL_BATCH_COMPLETED: id=10, size=1, actual_duration=0.002s
+2025-04-23 01:09:46,420 - DECODE_BATCH_START: id=89, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,424 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[7313], continue_decode=True
+2025-04-23 01:09:46,424 - DECODE_BATCH_COMPLETED: id=89, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:46,430 - DECODE_BATCH_START: id=90, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,434 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[15566], continue_decode=True
+2025-04-23 01:09:46,434 - DECODE_BATCH_COMPLETED: id=90, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:46,441 - DECODE_BATCH_START: id=91, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,446 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[8839], continue_decode=True
+2025-04-23 01:09:46,446 - DECODE_BATCH_COMPLETED: id=91, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:46,457 - DECODE_BATCH_START: id=92, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,461 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[26221], continue_decode=True
+2025-04-23 01:09:46,461 - DECODE_BATCH_COMPLETED: id=92, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:46,472 - DECODE_BATCH_START: id=93, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,476 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[9231], continue_decode=True
+2025-04-23 01:09:46,476 - DECODE_BATCH_COMPLETED: id=93, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:46,485 - DECODE_BATCH_START: id=94, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,489 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[14236], continue_decode=True
+2025-04-23 01:09:46,489 - DECODE_BATCH_COMPLETED: id=94, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:46,500 - DECODE_BATCH_START: id=95, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,504 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[18066], continue_decode=True
+2025-04-23 01:09:46,504 - DECODE_BATCH_COMPLETED: id=95, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:46,515 - DECODE_BATCH_START: id=96, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,519 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[27899], continue_decode=True
+2025-04-23 01:09:46,519 - DECODE_BATCH_COMPLETED: id=96, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:46,530 - DECODE_BATCH_START: id=97, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,534 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[12087], continue_decode=True
+2025-04-23 01:09:46,534 - DECODE_BATCH_COMPLETED: id=97, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:46,545 - DECODE_BATCH_START: id=98, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,548 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[15815], continue_decode=True
+2025-04-23 01:09:46,548 - DECODE_BATCH_COMPLETED: id=98, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:46,557 - DECODE_BATCH_START: id=99, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,560 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[29396], continue_decode=True
+2025-04-23 01:09:46,561 - DECODE_BATCH_COMPLETED: id=99, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:46,571 - DECODE_BATCH_START: id=100, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,576 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[11770], continue_decode=True
+2025-04-23 01:09:46,576 - DECODE_BATCH_COMPLETED: id=100, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:46,587 - DECODE_BATCH_START: id=101, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,589 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[2262], continue_decode=True
+2025-04-23 01:09:46,589 - DECODE_BATCH_COMPLETED: id=101, size=1, tokens_generated=1, actual_duration=0.002s
+2025-04-23 01:09:46,598 - DECODE_BATCH_START: id=102, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,602 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[19147], continue_decode=True
+2025-04-23 01:09:46,603 - DECODE_BATCH_COMPLETED: id=102, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:46,613 - DECODE_BATCH_START: id=103, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,618 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[16340], continue_decode=True
+2025-04-23 01:09:46,618 - DECODE_BATCH_COMPLETED: id=103, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:46,628 - DECODE_BATCH_START: id=104, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,632 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[1454], continue_decode=True
+2025-04-23 01:09:46,632 - DECODE_BATCH_COMPLETED: id=104, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:46,643 - DECODE_BATCH_START: id=105, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,647 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[19083], continue_decode=True
+2025-04-23 01:09:46,647 - DECODE_BATCH_COMPLETED: id=105, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:46,657 - DECODE_BATCH_START: id=106, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,661 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[5889], continue_decode=True
+2025-04-23 01:09:46,662 - DECODE_BATCH_COMPLETED: id=106, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:46,670 - DECODE_BATCH_START: id=107, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,674 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[19817], continue_decode=True
+2025-04-23 01:09:46,674 - DECODE_BATCH_COMPLETED: id=107, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:46,685 - DECODE_BATCH_START: id=108, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,689 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[25859], continue_decode=True
+2025-04-23 01:09:46,689 - DECODE_BATCH_COMPLETED: id=108, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:46,700 - DECODE_BATCH_START: id=109, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,703 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[14768], continue_decode=True
+2025-04-23 01:09:46,704 - DECODE_BATCH_COMPLETED: id=109, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:46,711 - DECODE_BATCH_START: id=110, size=1, expected_duration=0.05s
+2025-04-23 01:09:46,715 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[4702], continue_decode=True
+2025-04-23 01:09:46,716 - DECODE_BATCH_COMPLETED: id=110, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:46,723 - PREFILL_BATCH_START: id=11, size=1, expected_duration=0.1s
+2025-04-23 01:09:46,724 - PREFILL_REQUEST_COMPLETED: user_id=5, continue_decode=True
+2025-04-23 01:09:46,724 - PREFILL_BATCH_COMPLETED: id=11, size=1, actual_duration=0.001s
+2025-04-23 01:09:46,733 - DECODE_BATCH_START: id=56, size=2, expected_duration=0.05s
+2025-04-23 01:09:46,740 - DECODE_REQUEST_COMPLETED: user_id=2, tokens=[17621], continue_decode=True
+2025-04-23 01:09:48,476 - PREFILL_BATCH_START: id=12, size=1, expected_duration=0.1s
+2025-04-23 01:09:48,477 - PREFILL_REQUEST_COMPLETED: user_id=8, continue_decode=True
+2025-04-23 01:09:48,478 - PREFILL_BATCH_COMPLETED: id=12, size=1, actual_duration=0.002s
+2025-04-23 01:09:48,483 - DECODE_BATCH_START: id=113, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,488 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[18499], continue_decode=True
+2025-04-23 01:09:48,488 - DECODE_BATCH_COMPLETED: id=113, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:48,497 - DECODE_BATCH_START: id=114, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,502 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[29515], continue_decode=True
+2025-04-23 01:09:48,502 - DECODE_BATCH_COMPLETED: id=114, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:48,513 - DECODE_BATCH_START: id=115, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,516 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[11872], continue_decode=True
+2025-04-23 01:09:48,516 - DECODE_BATCH_COMPLETED: id=115, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:48,527 - DECODE_BATCH_START: id=116, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,532 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[17355], continue_decode=True
+2025-04-23 01:09:48,532 - DECODE_BATCH_COMPLETED: id=116, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:48,543 - DECODE_BATCH_START: id=117, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,549 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[1553], continue_decode=True
+2025-04-23 01:09:48,549 - DECODE_BATCH_COMPLETED: id=117, size=1, tokens_generated=1, actual_duration=0.006s
+2025-04-23 01:09:48,559 - DECODE_BATCH_START: id=118, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,563 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[7072], continue_decode=True
+2025-04-23 01:09:48,564 - DECODE_BATCH_COMPLETED: id=118, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:48,574 - DECODE_BATCH_START: id=119, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,579 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[431], continue_decode=True
+2025-04-23 01:09:48,579 - DECODE_BATCH_COMPLETED: id=119, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:48,590 - DECODE_BATCH_START: id=120, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,594 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[10677], continue_decode=True
+2025-04-23 01:09:48,594 - DECODE_BATCH_COMPLETED: id=120, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:48,605 - DECODE_BATCH_START: id=121, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,609 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[5428], continue_decode=True
+2025-04-23 01:09:48,609 - DECODE_BATCH_COMPLETED: id=121, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:48,620 - DECODE_BATCH_START: id=122, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,624 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[23060], continue_decode=True
+2025-04-23 01:09:48,625 - DECODE_BATCH_COMPLETED: id=122, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:48,635 - DECODE_BATCH_START: id=123, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,639 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[7669], continue_decode=True
+2025-04-23 01:09:48,639 - DECODE_BATCH_COMPLETED: id=123, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:48,650 - DECODE_BATCH_START: id=124, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,654 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[19185], continue_decode=True
+2025-04-23 01:09:48,654 - DECODE_BATCH_COMPLETED: id=124, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:48,671 - DECODE_BATCH_START: id=125, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,675 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[12207], continue_decode=True
+2025-04-23 01:09:48,676 - DECODE_BATCH_COMPLETED: id=125, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:48,686 - DECODE_BATCH_START: id=126, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,691 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[8443], continue_decode=True
+2025-04-23 01:09:48,691 - DECODE_BATCH_COMPLETED: id=126, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:48,702 - DECODE_BATCH_START: id=127, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,706 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[16050], continue_decode=True
+2025-04-23 01:09:48,706 - DECODE_BATCH_COMPLETED: id=127, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:48,722 - DECODE_BATCH_START: id=128, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,727 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[6121], continue_decode=True
+2025-04-23 01:09:48,727 - DECODE_BATCH_COMPLETED: id=128, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:48,746 - DECODE_BATCH_START: id=129, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,750 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[6255], continue_decode=True
+2025-04-23 01:09:48,750 - DECODE_BATCH_COMPLETED: id=129, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:48,761 - DECODE_BATCH_START: id=130, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,764 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[21056], continue_decode=True
+2025-04-23 01:09:48,765 - DECODE_BATCH_COMPLETED: id=130, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:48,775 - DECODE_BATCH_START: id=131, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,780 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[20595], continue_decode=True
+2025-04-23 01:09:48,780 - DECODE_BATCH_COMPLETED: id=131, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:48,791 - DECODE_BATCH_START: id=132, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,795 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[27078], continue_decode=True
+2025-04-23 01:09:48,795 - DECODE_BATCH_COMPLETED: id=132, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:48,805 - DECODE_BATCH_START: id=133, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,809 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[45], continue_decode=True
+2025-04-23 01:09:48,809 - DECODE_BATCH_COMPLETED: id=133, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:48,829 - DECODE_BATCH_START: id=134, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,833 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[25658], continue_decode=True
+2025-04-23 01:09:48,833 - DECODE_BATCH_COMPLETED: id=134, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:48,844 - DECODE_BATCH_START: id=135, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,848 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[13143], continue_decode=True
+2025-04-23 01:09:48,848 - DECODE_BATCH_COMPLETED: id=135, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:48,859 - DECODE_BATCH_START: id=136, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,863 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[22804], continue_decode=True
+2025-04-23 01:09:48,863 - DECODE_BATCH_COMPLETED: id=136, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:48,873 - DECODE_BATCH_START: id=137, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,878 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[8141], continue_decode=True
+2025-04-23 01:09:48,878 - DECODE_BATCH_COMPLETED: id=137, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:48,888 - DECODE_BATCH_START: id=138, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,892 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[28500], continue_decode=True
+2025-04-23 01:09:48,893 - DECODE_BATCH_COMPLETED: id=138, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:48,910 - DECODE_BATCH_START: id=139, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,914 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[10867], continue_decode=True
+2025-04-23 01:09:48,914 - DECODE_BATCH_COMPLETED: id=139, size=1, tokens_generated=1, actual_duration=0.005s
+2025-04-23 01:09:48,925 - DECODE_BATCH_START: id=140, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,929 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[9254], continue_decode=True
+2025-04-23 01:09:48,929 - DECODE_BATCH_COMPLETED: id=140, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:48,940 - DECODE_BATCH_START: id=141, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,943 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[28928], continue_decode=True
+2025-04-23 01:09:48,944 - DECODE_BATCH_COMPLETED: id=141, size=1, tokens_generated=1, actual_duration=0.004s
+2025-04-23 01:09:48,952 - DECODE_BATCH_START: id=142, size=1, expected_duration=0.05s
+2025-04-23 01:09:48,956 - DECODE_REQUEST_COMPLETED: user_id=8, tokens=[22208], continue_decode=True
+2025-04-23 01:09:48,956 - DECODE_BATCH_COMPLETED: id=142, size=1, tokens_generated=1, actual_duration=0.004s
