@@ -1,6 +1,7 @@
 from typing import List
 
 import torch
+import time
 
 from model.flashinfer.engine import (
     pop_paged_kv_cache,
@@ -65,15 +66,15 @@ class Request:
 
 def collect_finished_beams(request, tokenizer, length_penalty):
     remaining_llm_cache = []
-    mask = [True] * request.beam_state.num_remaining_beams
+    mask = request.beam_state.generated_ids[:, -1] != tokenizer.eos_token_id
+    mask = mask & (request.beam_state.generated_ids.size(1) < request.max_new_tokens)
+    gen_len = request.beam_state.generated_ids.size(1)
     for j in range(request.beam_state.num_remaining_beams):
-        gen_j = request.beam_state.generated_ids[j]
-        if gen_j[-1] == tokenizer.eos_token_id or len(gen_j) >= request.max_new_tokens:
+        if not mask[j]:
             request.beam_state.num_remaining_beams -= 1
-            mask[j] = False
             request.beam_state.results.append({
-                "sequence": gen_j.tolist(),
-                "logp": request.beam_state.sum_logps[j] / (len(gen_j) ** length_penalty),
+                "sequence": request.beam_state.generated_ids[j].tolist(),
+                "logp": request.beam_state.sum_logps[j] / (gen_len ** length_penalty),
                 "cache": request.llm_cache[j]
             })
         else:
@@ -173,11 +174,10 @@ def prefill(
                 llm_decode_pagetable
             )
         
-        # TODO: share prefix kv cache
         # replicate kv cache for each beam
         beam_cache = [llm_cache]
         for i in range(1, num_beams):
-            cache_i = LLMCache()            
+            cache_i = LLMCache()
             llm_decode_pagetable, cache_i.paged_kv_indices, cache_i.paged_kv_last_page_len = \
                 duplicate_paged_kv_cache(
                     llm_cache.paged_kv_indices,
@@ -242,11 +242,13 @@ def decode(
     logps = torch.log_softmax(logits, dim=-1)
 
     idx = 0
+    topk_logp_all, topk_indices_all = torch.topk(logps, num_beams, dim=-1)
     for i in range(bsz):
-        logp = logps[idx : idx + num_remaining_beams[i]]
-        topk_logp, topk_indices = torch.topk(logp, num_remaining_beams[i], dim=-1)
-        topk_logp = topk_logp.view(-1)
-        topk_indices = topk_indices.view(-1)
+        topk_logp = topk_logp_all[idx : idx + num_remaining_beams[i], :num_remaining_beams[i]]
+        topk_indices = topk_indices_all[idx : idx + num_remaining_beams[i], :num_remaining_beams[i]]
+
+        topk_logp = topk_logp.reshape(-1)
+        topk_indices = topk_indices.reshape(-1)
 
         sum_logp = sum_logps[idx : idx + num_remaining_beams[i]]
         sum_logp = sum_logp.repeat_interleave(num_remaining_beams[i])
@@ -255,13 +257,18 @@ def decode(
         topk_sum_logp, topk_sum_indices = sum_logp.topk(num_remaining_beams[i], dim=-1)
         remaining_requests[i].beam_state.sum_logps = topk_sum_logp
 
-        new_generated_ids = []
+        new_generated_ids = torch.empty(
+            (num_remaining_beams[i], len(remaining_requests[i].beam_state.generated_ids[0]) + 1), 
+            dtype=remaining_requests[i].beam_state.generated_ids.dtype,
+            device=remaining_requests[i].beam_state.generated_ids.device
+        )
         new_llm_cache = []
         beam_idx = topk_sum_indices // num_remaining_beams[i]
         for j in range(num_remaining_beams[i]):
             prev_ids = remaining_requests[i].beam_state.generated_ids[beam_idx[j]]
             new_id = topk_indices[topk_sum_indices[j]]
-            new_generated_ids.append(prev_ids.tolist() + [new_id.item()])
+            new_generated_ids[j, :-1] = prev_ids
+            new_generated_ids[j, -1] = new_id
 
             # TODO: share prefix kv cache
             cache_j = LLMCache()
@@ -283,8 +290,7 @@ def decode(
             )
         remaining_requests[i].llm_cache = new_llm_cache
             
-        remaining_requests[i].beam_state.generated_ids = \
-            torch.tensor(new_generated_ids).to(remaining_requests[i].beam_state.generated_ids)
+        remaining_requests[i].beam_state.generated_ids = new_generated_ids
         idx += num_remaining_beams[i]
     
     for i in range(len(remaining_requests)):

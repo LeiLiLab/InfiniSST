@@ -8,10 +8,11 @@
 #SBATCH --gres=gpu:L40S:1
 ##SBATCH --nodelist=babel-3-17
 ##SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,9,13],babel-11-25,babel-12-29,babel-13-[13,21,29],babel-14-[5,25]
+#SBATCH --exclude=babel-4-29
 #SBATCH --partition=general
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
-#SBATCH --array=16,32
+#SBATCH --array=1,2,4,8,16,32
 ##SBATCH --account=siqiouya
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=siqiouya@andrew.cmu.edu
@@ -53,16 +54,19 @@ no_repeat_ngram_size=5
 max_new_tokens=10
 max_latency_multiplier=12
 beam=4
+length_penalty=2.0
 ms=0
 
 pseudo_batch_size=$SLURM_ARRAY_TASK_ID
 
 # use your own path to repo
+export PATH="/home/siqiouya/work/ninja:$PATH"
 export PYTHONPATH=/home/siqiouya/work/sllama-flashinfer
+export TORCH_CUDA_ARCH_LIST="8.6;8.9"
 
 simuleval \
-    --agent agents/infinisst_fast.py \
-    --agent-class agents.InfiniSSTFast \
+    --agent agents/infinisst_faster.py \
+    --agent-class agents.InfiniSSTFaster \
     --source-segment-size ${src_segment_size} \
     --latency-multiplier ${latency_multiplier} \
     --max-latency-multiplier ${max_latency_multiplier} \
@@ -71,7 +75,7 @@ simuleval \
     --min-start-sec ${ms} \
     --source ${ROOT}/dev.source \
     --target ${ROOT}/dev.target.zh \
-    --output ${save_dir}/profile_fast/cache${max_llm_cache_size}_seg${src_segment_size}_beam${beam}_nrns${no_repeat_ngram_size}_bsz${pseudo_batch_size} \
+    --output ${save_dir}/profile_fasterx/cache${max_llm_cache_size}_seg${src_segment_size}_beam${beam}_nrns${no_repeat_ngram_size}_bsz${pseudo_batch_size} \
     --pseudo-batch-size ${pseudo_batch_size} \
     --model-type w2v2_qwen25 \
     --w2v2-path ${w2v2_path} \
@@ -87,10 +91,10 @@ simuleval \
     \
     --max-new-tokens ${max_new_tokens} \
     --beam ${beam} \
+    --length-penalty ${length_penalty} \
     --no-repeat-ngram-lookback ${no_repeat_ngram_lookback} \
     --no-repeat-ngram-size ${no_repeat_ngram_size} \
     --repetition-penalty 1.2 \
-    \
     --model-name ${llama_path} \
     --state-dict-path ${state_dict_path} \
     --lora-path ${lora_path} \
