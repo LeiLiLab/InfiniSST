@@ -1,16 +1,22 @@
 import json
 import random
 from tqdm import tqdm
+from transformers import pipeline
+from datasets import Dataset
 
 
 def load_gigaspeech_and_filter(input_path, output_path, max_samples=100):
-    samples = []
-
     with open(input_path, 'r') as f:
         raw = json.load(f)  # GigaSpeech.json是整个大JSON，不是jsonl
         data = raw.get("audios")
     print(f"Total documents: {len(data)}")
 
+    ner = pipeline("ner", model="Jean-Baptiste/roberta-large-ner-english", aggregation_strategy="simple", device=0)
+
+    def normalize(text):
+        return text.replace("<COMMA>", ",").replace("<PERIOD>", ".").replace("<QUESTIONMARK>", "?").title()
+
+    all_items = []
     for doc in tqdm(data, desc="Filtering samples"):
         segments = doc.get("segments", [])
         for item in segments:
@@ -20,12 +26,29 @@ def load_gigaspeech_and_filter(input_path, output_path, max_samples=100):
             duration = end_time - begin_time
 
             if text and 2 <= duration <= 10:
-                samples.append({
+                all_items.append({
                     "sid": item.get('sid', ''),
-                    "text": text,
+                    "text": normalize(text),
                     "begin_time": begin_time,
                     "end_time": end_time
                 })
+
+    all_items = random.sample(all_items, max_samples)
+
+    dataset = Dataset.from_list(all_items)
+
+    def extract_entities(batch):
+        results = ner(batch["text"])
+        batch_terms = []
+        for r in results:
+            terms = list({ent['word'] for ent in r})
+            batch_terms.append(terms)
+        return {"ground_truth_terms": batch_terms}
+
+    dataset = dataset.map(extract_entities, batched=True, batch_size=32)
+    samples = dataset.to_list()
+
+    samples = [s for s in samples if s.get("ground_truth_terms")]
 
     print(f"Found {len(samples)} valid samples.")
 
@@ -41,5 +64,5 @@ def load_gigaspeech_and_filter(input_path, output_path, max_samples=100):
 load_gigaspeech_and_filter(
     input_path="/mnt/taurus/data/siqiouyang/datasets/gigaspeech/GigaSpeech.json",
     output_path="gigaspeech_test_samples.json",
-    max_samples=100
+    max_samples=10000
 )
