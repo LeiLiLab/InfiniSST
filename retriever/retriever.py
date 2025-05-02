@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import signal
+import time
 
 from sentence_transformers import SentenceTransformer
 import faiss
@@ -9,6 +10,7 @@ import numpy as np
 from typing import List, Dict, Tuple
 #from clap import CLAP_Model  # Assuming you have a CLAP text encoder ready
 from transformers import ClapModel, ClapProcessor
+from concurrent.futures import ProcessPoolExecutor
 
 # ---------- CONFIG ----------
 TOP_K = 5
@@ -24,7 +26,7 @@ def load_glossary(glossary_path: str) -> List[Dict]:
 
 # ---------- BUILD INDEX ----------
 class Retriever:
-    def __init__(self, model_name: str = "laion/clap-htsat-unfused", fallback_mode: str = "safe", device: str = "cpu", max_gpus: int = None):
+    def __init__(self, model_name: str = "laion/clap-htsat-fused", fallback_mode: str = "safe", device: str = "cpu", max_gpus: int = None):
         self.fallback_mode = fallback_mode
         self.device = device
         self.processor = ClapProcessor.from_pretrained(model_name)
@@ -82,13 +84,33 @@ class Retriever:
         for i in range(0, len(embeddings), batch_size):
             cpu_index.add(embeddings[i:i + batch_size])
 
-        # ✅ 多卡 GPU 分布索引（将 CPU index 分 shard 拆到所有可用 GPU 上）
-        co = faiss.GpuClonerOptions()
-        co.shard = True
+        # ✅ 多卡 GPU 分布索引（手动分 shard 到所有可用 GPU 上）
         ngpu = self.max_gpus or faiss.get_num_gpus()
-        print(f"[INFO] FAISS using {ngpu} GPUs for indexing (shard mode enabled)")
-        gpu_index = faiss.index_cpu_to_all_gpus(cpu_index, ngpu=ngpu, co=co)
-        self.index = gpu_index
+        print(f"[INFO] FAISS using {ngpu} GPUs for indexing (manual sharding/merging)")
+        co = faiss.GpuClonerOptions()
+        co.shard = False
+        shard_index = faiss.IndexShards(dim, True, True)
+        per_gpu = (len(embeddings) + ngpu - 1) // ngpu
+
+        for i in range(ngpu):
+            start = i * per_gpu
+            end = min((i + 1) * per_gpu, len(embeddings))
+            if start >= end:
+                continue
+            sub_embeds = embeddings[start:end]
+            print(f"[DEBUG] Shard {i}: sub_embeds shape = {sub_embeds.shape}")
+
+            res = faiss.StandardGpuResources()
+            sub_cpu_index = faiss.IndexFlatL2(dim)
+            sub_cpu_index.add(sub_embeds)
+
+            try:
+                gpu_sub_index = faiss.index_cpu_to_gpu(res, i, sub_cpu_index, co)
+                shard_index.add_shard(gpu_sub_index)
+            except Exception as e:
+                print(f"[ERROR] Failed to build GPU shard {i}, range ({start}-{end}): {e}")
+
+        self.index = shard_index
 
     def query(self, text: str, top_k: int = TOP_K) -> List[str]:
         embedding = self.encode_texts([text])  # 这里是 (1, hidden_dim) 的 GPU tensor
@@ -98,8 +120,21 @@ class Retriever:
     def save_index(self):
         index_path = f"retriever_{self.fallback_mode}.index"
         terms_path = f"term_list_{self.fallback_mode}.json"
-        # 🔥 先把GPU index转成CPU index，然后保存
-        cpu_index = faiss.index_gpu_to_cpu(self.index)
+        # 🔥 提取 GPU shard 中的所有向量，构建统一 CPU index 保存
+        dim = self.index.d
+        xb = []
+        # Fix: IndexShards does not have a .shards attribute; use .at(i) and .count()
+        for shard in [self.index.at(i) for i in range(self.index.count())]:
+            try:
+                xb_shard = shard.reconstruct_n(0, shard.ntotal)
+                xb.append(xb_shard)
+            except Exception as e:
+                print(f"[ERROR] Failed to reconstruct shard: {e}")
+        if not xb:
+            raise RuntimeError("No vectors reconstructed from shards")
+        xb = np.vstack(xb)
+        cpu_index = faiss.IndexFlatL2(dim)
+        cpu_index.add(xb)
         faiss.write_index(cpu_index, index_path)
         with open(terms_path, "w", encoding="utf-8") as f:
             json.dump(self.term_list, f)
@@ -108,11 +143,31 @@ class Retriever:
         index_path = f"retriever_{self.fallback_mode}.index"
         terms_path = f"term_list_{self.fallback_mode}.json"
         cpu_index = faiss.read_index(index_path)
-        co = faiss.GpuClonerOptions()
-        co.shard = True
         ngpu = self.max_gpus or faiss.get_num_gpus()
         print(f"[INFO] Loading FAISS index onto {ngpu} GPUs (shard mode enabled)")
-        self.index = faiss.index_cpu_to_all_gpus(cpu_index, ngpu=ngpu, co=co)
+        dim = cpu_index.d
+        co = faiss.GpuClonerOptions()
+        co.shard = False
+        shard_index = faiss.IndexShards(dim, True, True)
+        per_gpu = (cpu_index.ntotal + ngpu - 1) // ngpu
+
+        xb = cpu_index.reconstruct_n(0, cpu_index.ntotal)
+
+        for i in range(ngpu):
+            start = i * per_gpu
+            end = min((i + 1) * per_gpu, cpu_index.ntotal)
+            if start >= end:
+                continue
+            sub_xb = xb[start:end]
+
+            sub_cpu_index = faiss.IndexFlatL2(dim)
+            sub_cpu_index.add(sub_xb)
+
+            res = faiss.StandardGpuResources()
+            gpu_index = faiss.index_cpu_to_gpu(res, i, sub_cpu_index, co)
+            shard_index.add_shard(gpu_index)
+
+        self.index = shard_index
 
         with open(terms_path, "r", encoding="utf-8") as f:
             self.term_list = json.load(f)
@@ -180,81 +235,112 @@ def load_audio(audio_path: str, start_time: float = None, end_time: float = None
 
 def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], device: str = "cuda",max_limit=None, filter_missing_gt=False):
     from tqdm import tqdm
+    from concurrent.futures import ThreadPoolExecutor
+
+    def load_audio_for_sample(sample):
+        try:
+            audio_path = get_audio_full_path(sample['sid'])
+            return load_audio(audio_path, sample.get('begin_time'), sample.get('end_time'))
+        except Exception as e:
+            print(f"[ERROR] Failed to load audio for {sample['sid']}: {e}")
+            return None
+
     top1, top5 = 0, 0
 
     # Prepare lowercase term set for efficient matching
     term_set = set([t.lower() for t in retriever.term_list])
     if max_limit is not None:
         test_samples = test_samples[:int(max_limit)]
-    for idx, sample in enumerate(tqdm(test_samples, desc="Extracting audio embeddings")):
-        sid = sample['sid']
-        audio_path = get_audio_full_path(sid)
-        ground_truth_text = sample['text']
-        # Load and process audio
-        start_time = sample.get('begin_time', None)
-        end_time = sample.get('end_time', None)
-        try:
-            audio_tensor = load_audio(audio_path, start_time=start_time, end_time=end_time)  # shape (1, T)
-            raw_tensor = audio_tensor.squeeze(0)
-            if raw_tensor is None or not torch.isfinite(raw_tensor).all():
-                print(f"[ERROR] Invalid audio input (NaN or None) for sample #{idx}: {sid}")
-                continue
 
-            print(f"[DEBUG] Processing audio input shape: {raw_tensor.shape}, dtype: {raw_tensor.dtype}")
+    batch_size = 8
+    output_dir = "./audio_embeddings"
+    for b in tqdm(range(0, len(test_samples), batch_size), desc="Extracting audio embeddings"):
+        batch_samples = test_samples[b:b + batch_size]
+        audio_start = time.time()
+        with ProcessPoolExecutor(max_workers=batch_size) as pool:
+            audio_batch = list(pool.map(load_audio_for_sample, batch_samples))
+        audio_end = time.time()
+        print(f"[TIME] Audio loading took {audio_end - audio_start:.2f} seconds for batch {b // batch_size}")
+
+        valid_indices = [i for i, a in enumerate(audio_batch) if a is not None]
+
+        if not valid_indices:
+            continue
+
+        audios_to_process = [audio_batch[i].squeeze().numpy() for i in valid_indices]
+
+        proc_start = time.time()
+        try:
+            inputs = retriever.processor(audios=audios_to_process, sampling_rate=48000, return_tensors="pt",
+                                         padding=True)
+            inputs = {k: v.to(device) for k, v in inputs.items()}
+            with torch.no_grad():
+                audio_emb_batch = retriever.model.get_audio_features(**inputs)
+        except Exception as e:
+            print(
+                f"[ERROR] Batch inference failed on samples {[(batch_samples[i]['sid']) for i in valid_indices]}: {e}")
+            continue
+        proc_end = time.time()
+        print(f"[TIME] Processor+embedding took {proc_end - proc_start:.2f} seconds for batch {b // batch_size}")
+
+        audio_emb_batch = audio_emb_batch.cpu().numpy()
+
+        query_start = time.time()
+        # Now do FAISS search and evaluation
+        for idx_in_batch, sample_idx in enumerate(valid_indices):
+            sample = batch_samples[sample_idx]
+            sid = sample['sid']
+            ground_truth_text = sample['text']
+
+            embedding_path = os.path.join(output_dir, f"{sid}.npy")
+            if os.path.exists(embedding_path):
+                query_emb = np.load(embedding_path)
+            else:
+                query_emb = audio_emb_batch[idx_in_batch]
+                np.save(embedding_path, query_emb)
 
             try:
-                print(f"[INFO] Running sample #{idx}: {sid}")
-                inputs = retriever.processor(audios=raw_tensor, sampling_rate=48000, return_tensors="pt")
-                inputs = {k: v.to(device) for k, v in inputs.items()}
-                with torch.no_grad():
-                    audio_emb = retriever.model.get_audio_features(**inputs)
-                #
-                # # Save to file
-                # torch.save(audio_emb, os.path.join(output_dir, f"{sid}.pt"))
-                # print(f"[✅] Saved {sid} embedding.")
-                # 🔍 FAISS 检索并评估当前样本
-                try:
-                    query_emb = audio_emb.squeeze(0).cpu().numpy()
-                    D, I = retriever.index.search(query_emb[None, :], TOP_K)
-                except Exception as faiss_e:
-                    print(f"[ERROR] FAISS search crash at sample #{idx}: {sid} | {faiss_e}")
-                    continue
-                retrieved_indices = I[0]
+                D, I = retriever.index.search(query_emb[None, :], TOP_K)
+            except Exception as faiss_e:
+                print(f"[ERROR] FAISS search crash at sample {sid}: {faiss_e}")
+                continue
 
-                # 🧠 Efficient ground-truth term matching using n-gram scan
-                text = ground_truth_text.lower()
-                words = text.split()
-                max_ngram = 8
-                found_terms = set()
-                for i in range(len(words)):
-                    for j in range(i + 1, min(len(words), i + max_ngram) + 1):
-                        sub = ' '.join(words[i:j])
-                        if sub in term_set:
-                            found_terms.add(sub)
+            query_end = time.time()
+            print(f"[TIME] Query took {query_end - query_start:.2f} seconds for batch {b // batch_size}")
 
-                gt_terms = []
-                if found_terms:
-                    for ft in found_terms:
-                        for t in retriever.term_list:
-                            if t.lower() == ft:
-                                gt_terms.append(t)
-                                break
-                elif filter_missing_gt:
-                    continue
+            retrieved_indices = I[0]
 
-                if gt_terms:
-                    retrieved_terms = [retriever.term_list[i] for i in retrieved_indices]
-                    if retrieved_terms[0] in gt_terms:
-                        top1 += 1
-                    if any(t in retrieved_terms for t in gt_terms):
-                        top5 += 1
-                del inputs
-                del audio_emb
-                torch.cuda.empty_cache()
-            except Exception as inner_e:
-                print(f"[ERROR] Exception during audio embedding extraction: {sid}: {inner_e}")
-        except BaseException as crash:
-            print(f"[CRITICAL] Low-level crash during audio embedding for sample #{idx}: {sid} | {crash}")
+            # 🧠 Efficient ground-truth term matching using n-gram scan
+            text = ground_truth_text.lower()
+            words = text.split()
+            max_ngram = 8
+            found_terms = set()
+            for i in range(len(words)):
+                for j in range(i + 1, min(len(words), i + max_ngram) + 1):
+                    sub = ' '.join(words[i:j])
+                    if sub in term_set:
+                        found_terms.add(sub)
+
+            gt_terms = []
+            if found_terms:
+                for ft in found_terms:
+                    for t in retriever.term_list:
+                        if t.lower() == ft:
+                            gt_terms.append(t)
+                            break
+            elif filter_missing_gt:
+                continue
+
+            if gt_terms:
+                retrieved_terms = [retriever.term_list[i] for i in retrieved_indices]
+                if retrieved_terms[0] in gt_terms:
+                    top1 += 1
+                if any(t in retrieved_terms for t in gt_terms):
+                    top5 += 1
+        evaluate_end = time.time()
+        print(f"[TIME] Evaluation took {evaluate_end - query_end:.2f} seconds for batch {b // batch_size}")
+
+        torch.cuda.empty_cache()
 
     print(f"Top-1 Accuracy: {top1}/{len(test_samples)} = {top1 / len(test_samples):.2%}")
     print(f"Top-5 Accuracy: {top5}/{len(test_samples)} = {top5 / len(test_samples):.2%}")
@@ -303,8 +389,9 @@ def generate(input_file, mode,max_gpu, max_terms=None):
     else:
         print("⚙️ Building new index...")
         retriever.build_index(parsed_glossary)
-        # TODO 暂时不保存index
-        #retriever.save_index()
+        print("⚙️ Building new index done!")
+        retriever.save_index()
+        print("⚙️ saved new index done!")
     return retriever
 
 
@@ -314,7 +401,7 @@ if __name__ == "__main__":
     parser.add_argument('--input', required=True)
     parser.add_argument('--mode', required=True)
     parser.add_argument('--max_limit', required=False)
-    parser.add_argument('--max_gpu', required=False)
+    parser.add_argument('--max_gpu', type=int, required=False)
     parser.add_argument('--max_terms', type=int, required=False)
     parser.add_argument('--filter_missing_gt', action="store_true")
     args = parser.parse_args()
