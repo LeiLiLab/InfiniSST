@@ -237,20 +237,21 @@ def load_audio(audio_path: str, start_time: float = None, end_time: float = None
 
     return audio_data
 
+def load_audio_for_sample(sample, audio_cache):
+    try:
+        audio_path = get_audio_full_path(sample['sid'])
+        return audio_cache.load_audio(audio_path, sample.get('begin_time'), sample.get('end_time'))
+    except Exception as e:
+        print(f"[ERROR] Failed to load audio for {sample['sid']}: {e}")
+        return None
+
 def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], device: str = "cuda",max_limit=None, filter_missing_gt=False):
     from tqdm import tqdm
     from concurrent.futures import ThreadPoolExecutor
 
     # 初始化音频缓存
     audio_cache = AudioCache()
-
-    def load_audio_for_sample(sample):
-        try:
-            audio_path = get_audio_full_path(sample['sid'])
-            return audio_cache.load_audio(audio_path, sample.get('begin_time'), sample.get('end_time'))
-        except Exception as e:
-            print(f"[ERROR] Failed to load audio for {sample['sid']}: {e}")
-            return None
+    load_func = functools.partial(load_audio_for_sample, audio_cache=audio_cache)
 
     top1, top5 = 0, 0
 
@@ -265,7 +266,7 @@ def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], dev
         batch_samples = test_samples[b:b + batch_size]
         audio_start = time.time()
         with ProcessPoolExecutor(max_workers=batch_size) as pool:
-            audio_batch = list(pool.map(load_audio_for_sample, batch_samples))
+            audio_batch = list(pool.map(load_func, batch_samples))
         audio_end = time.time()
         print(f"[TIME] Audio loading took {audio_end - audio_start:.2f} seconds for batch {b // batch_size}")
 
