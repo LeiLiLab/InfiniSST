@@ -1,0 +1,14 @@
+name: infinisst
+channels:
+  - defaults
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.10
+  - numpy
+  - scikit-learn
+  - tqdm
+  - pip
+  - pip:
+      - sentence-transformers
+      - faiss-gpu
