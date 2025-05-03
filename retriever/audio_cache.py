@@ -60,34 +60,6 @@ class AudioCache:
         torch.save(audio_data, cache_path)
         return audio_data
 
-    def _process_single_file(self, audio_path, target_sr):
-        """处理单个音频文件的辅助函数"""
-        try:
-            self.load_audio(audio_path, target_sr=target_sr)
-            return True, audio_path
-        except Exception as e:
-            return False, f"Error processing {audio_path}: {e}"
-
-    def preprocess_all(self, audio_files, target_sr=48000, max_workers=8):
-        """批量预处理所有音频文件，使用多线程加速"""
-        print(f"Starting preprocessing with {max_workers} workers...")
-        
-        # 使用 ThreadPoolExecutor 进行并行处理
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # 创建任务列表
-            futures = [executor.submit(self._process_single_file, audio_path, target_sr) 
-                      for audio_path in audio_files]
-            
-            # 使用 tqdm 显示进度
-            for future in tqdm(futures, total=len(audio_files), desc="Processing audio files"):
-                success, result = future.result()
-                if not success:
-                    print(result)  # 打印错误信息
-                else:
-                    print(f"Processed {result}")
-        
-        print("Preprocessing completed!")
-
     def preprocess_gigaspeech_samples(self, json_path='data/gigaspeech_test_samples.json', target_sr=48000, max_workers=8):
         """预处理 Gigaspeech 测试样本中的所有音频文件"""
         print(f"Loading test samples from {json_path}...")
@@ -99,8 +71,6 @@ class AudioCache:
         for sample in test_samples:
             try:
                 audio_path = get_audio_full_path(sample['sid'])
-                # 对于每个音频文件，我们需要处理完整版本和带时间戳的版本
-                audio_files.append((audio_path, None, None))  # 完整版本
                 if 'begin_time' in sample and 'end_time' in sample:
                     audio_files.append((audio_path, sample['begin_time'], sample['end_time']))  # 带时间戳的版本
             except Exception as e:
