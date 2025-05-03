@@ -64,5 +64,5 @@ def load_gigaspeech_and_filter(input_path, output_path, max_samples=100):
 load_gigaspeech_and_filter(
     input_path="/mnt/taurus/data/siqiouyang/datasets/gigaspeech/GigaSpeech.json",
     output_path="/home/jiaxuanluo/InfiniSST/retriever/data/gigaspeech_test_samples.json",
-    max_samples=1000
+    max_samples=10000
 )
