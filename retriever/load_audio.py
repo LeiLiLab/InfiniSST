@@ -92,12 +92,6 @@ def main():
 
     for sample in test_samples:
         sid = sample['sid']
-        if sid not in ['AUD0000001848_S0002003']:
-            continue
-
-        print("[DEBUG] Manually entering debugging mode for this SID")
-        # import IPython
-        # IPython.embed()
         print(f'test:{sid}')
         audio_path = get_audio_full_path(sid)
         start_time = sample['begin_time']

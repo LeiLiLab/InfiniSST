@@ -11,6 +11,8 @@ from typing import List, Dict, Tuple
 #from clap import CLAP_Model  # Assuming you have a CLAP text encoder ready
 from transformers import ClapModel, ClapProcessor
 from concurrent.futures import ProcessPoolExecutor
+from audio_cache import AudioCache
+from audio_utils import get_audio_full_path
 
 # ---------- CONFIG ----------
 TOP_K = 5
@@ -178,7 +180,7 @@ def get_audio_full_path(sid):
     source_prefix = doc_id[:3]  # POD, AUD, YOU
     id_num = int(doc_id[3:])  # 比如 '0000001165' -> 1165
     subdir_num = (id_num + 99) // 100  # ceil division for every 100 samples
-    subdir = f"P{subdir_num:04d}"  # 格式化成P0001这样
+    subdir = f"P{subdir_num:04d}"  # 格式化成P0001这样a
 
     # source到文件夹名字的映射
     source_map = {
@@ -209,6 +211,8 @@ def float32_to_int16(x):
     x = np.clip(x, a_min=-1., a_max=1.)
     return (x * 32767.).astype(np.int16)
 
+
+# TODO delete this function
 def load_audio(audio_path: str, start_time: float = None, end_time: float = None, target_sr: int = 48000) -> torch.Tensor:
     waveform, sr = torchaudio.load(audio_path)
     if sr != target_sr:
@@ -237,10 +241,13 @@ def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], dev
     from tqdm import tqdm
     from concurrent.futures import ThreadPoolExecutor
 
+    # 初始化音频缓存
+    audio_cache = AudioCache()
+
     def load_audio_for_sample(sample):
         try:
             audio_path = get_audio_full_path(sample['sid'])
-            return load_audio(audio_path, sample.get('begin_time'), sample.get('end_time'))
+            return audio_cache.load_audio(audio_path, sample.get('begin_time'), sample.get('end_time'))
         except Exception as e:
             print(f"[ERROR] Failed to load audio for {sample['sid']}: {e}")
             return None
@@ -252,8 +259,14 @@ def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], dev
     if max_limit is not None:
         test_samples = test_samples[:int(max_limit)]
 
+    # 预处理所有音频文件
+    print("Preprocessing all audio files...")
+    audio_files = [get_audio_full_path(sample['sid']) for sample in test_samples]
+    audio_cache.preprocess_all(audio_files)
+    print("Preprocessing completed!")
+
     batch_size = 8
-    output_dir = "./audio_embeddings"
+    output_dir = "./data/audio_embeddings"
     for b in tqdm(range(0, len(test_samples), batch_size), desc="Extracting audio embeddings"):
         batch_samples = test_samples[b:b + batch_size]
         audio_start = time.time()
@@ -407,8 +420,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     retriever = generate(input_file=args.input, mode=args.mode,max_gpu = args.max_gpu, max_terms=args.max_terms)
-    with open('gigaspeech_test_samples.json') as f:
+    with open('data/gigaspeech_test_samples.json') as f:
         test_samples = json.load(f)
-    output_dir = "./audio_embeddings"
-    os.makedirs(output_dir, exist_ok=True)
     evaluate_audio_retrieval(retriever, test_samples, max_limit=args.max_limit, filter_missing_gt=args.filter_missing_gt)

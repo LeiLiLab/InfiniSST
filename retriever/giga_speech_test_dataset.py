@@ -7,7 +7,7 @@ from datasets import Dataset
 
 def load_gigaspeech_and_filter(input_path, output_path, max_samples=100):
     with open(input_path, 'r') as f:
-        raw = json.load(f)  # GigaSpeech.json是整个大JSON，不是jsonl
+        raw = json.load(f)
         data = raw.get("audios")
     print(f"Total documents: {len(data)}")
 
@@ -25,7 +25,7 @@ def load_gigaspeech_and_filter(input_path, output_path, max_samples=100):
             end_time = item.get("end_time", 0)
             duration = end_time - begin_time
 
-            if text and 2 <= duration <= 10:
+            if text and 2 <= duration <= 5:
                 all_items.append({
                     "sid": item.get('sid', ''),
                     "text": normalize(text),
@@ -63,6 +63,6 @@ def load_gigaspeech_and_filter(input_path, output_path, max_samples=100):
 # 调用
 load_gigaspeech_and_filter(
     input_path="/mnt/taurus/data/siqiouyang/datasets/gigaspeech/GigaSpeech.json",
-    output_path="gigaspeech_test_samples.json",
-    max_samples=10000
+    output_path="/home/jiaxuanluo/InfiniSST/retriever/data/gigaspeech_test_samples.json",
+    max_samples=1000
 )
