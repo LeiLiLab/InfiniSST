@@ -259,12 +259,6 @@ def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], dev
     if max_limit is not None:
         test_samples = test_samples[:int(max_limit)]
 
-    # 预处理所有音频文件
-    print("Preprocessing all audio files...")
-    audio_files = [get_audio_full_path(sample['sid']) for sample in test_samples]
-    audio_cache.preprocess_all(audio_files)
-    print("Preprocessing completed!")
-
     batch_size = 8
     output_dir = "./data/audio_embeddings"
     for b in tqdm(range(0, len(test_samples), batch_size), desc="Extracting audio embeddings"):
