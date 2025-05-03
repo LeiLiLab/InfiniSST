@@ -13,3 +13,8 @@ slurm*
 profile/*
 debug*/
 debug.ipynb
+latest-truthy.nt.bz2
+retriever/data
+*.out
+*.err
+*.json
