@@ -23,7 +23,7 @@ source /mnt/taurus/home/jiaxuanluo/miniconda3/bin/activate infinisst
 
 ## Run your job
 
-INPUT_FILE="/home/jiaxuanluo/InfiniSST/retriever/final_split_terms/terms_part1.json"
+INPUT_FILE="/home/jiaxuanluo/InfiniSST/retriever/final_split_terms/"
 
 MODES=("flexible" "safe")
 MODE=${MODES[$SLURM_ARRAY_TASK_ID]}
@@ -31,7 +31,10 @@ MODE=${MODES[$SLURM_ARRAY_TASK_ID]}
 echo "Running mode: $MODE"
 
 
-# 执行python命令
-#srun python3 -c "import torch; print(torch.cuda.is_available())"
-
-srun python3 retriever.py --input "$INPUT_FILE" --mode "$MODE"
+srun python3 retriever.py \
+  --input "$INPUT_FILE" \
+  --mode "$MODE" \
+  --max_gpu 1 \
+  --max_limit 300 \
+  --max_terms 1000000 \
+  --filter_missing_gt

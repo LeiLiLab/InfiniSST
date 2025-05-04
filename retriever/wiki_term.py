@@ -55,12 +55,28 @@ def merge_results(results):
 
 import time
 
+import string
+from nltk.corpus import stopwords
+stop_words = set(stopwords.words("english"))
+punct_set = set(string.punctuation)
+
+def is_valid_term(term):
+    words = term.lower().split()
+    if term.lower().startswith("category:"):
+        return False
+    if all(w in stop_words or w in punct_set for w in words):
+        return False
+    return True
+
 def save_chunk(labels, descriptions, chunk_idx, output_dir):
     terms = []
     for qid, langs in labels.items():
         if "en" in langs and any(l in langs for l in ["zh", "de", "es"]):
+            term_en = langs["en"]
+            if not is_valid_term(term_en):
+                continue
             terms.append({
-                "term": langs["en"],
+                "term": term_en,
                 "target_translations": {lang: label for lang, label in langs.items() if lang != "en"},
                 "short_description": descriptions.get(qid, "")
             })
