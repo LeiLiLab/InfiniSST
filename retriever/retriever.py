@@ -2,6 +2,15 @@ from collections import OrderedDict
 import signal
 import time
 
+# Ensure NLTK stopwords are available
+import nltk
+try:
+    from nltk.corpus import stopwords
+    _ = stopwords.words("english")
+except LookupError:
+    nltk.download("stopwords")
+    from nltk.corpus import stopwords
+
 from sentence_transformers import SentenceTransformer
 import faiss
 import json
@@ -17,6 +26,8 @@ from audio_utils import get_audio_full_path
 # ---------- CONFIG ----------
 TOP_K = 5
 
+import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import functools
 print = functools.partial(print, flush=True)
@@ -33,11 +44,14 @@ class Retriever:
         self.device = device
         self.processor = ClapProcessor.from_pretrained(model_name)
         self.model = ClapModel.from_pretrained(model_name).to(device)
+        print(f"[INFO] Loaded CLAP model: {model_name}")
         self.index = None
         self.term_list = []
         self.max_gpus = max_gpus
+        self.return_summary = False
 
     def encode_texts(self, texts: List[str], batch_size: int = 512) -> np.ndarray:
+        print(f"[DEBUG] Encoding {len(texts)} texts using model: {self.model.name_or_path}")
         all_embeddings = []
         for i in range(0, len(texts), batch_size):
             batch = texts[i:i + batch_size]
@@ -49,14 +63,14 @@ class Retriever:
         return torch.cat(all_embeddings, dim=0).numpy()
 
     def build_index(self, glossary: List[Dict]):
-        # 🔁 Step 1: 去重 glossary（忽略大小写）
-        if self.fallback_mode == "safe":
-            unique_items = OrderedDict()
-            for item in glossary:
-                key = item['term'].strip().lower()
-                if key not in unique_items:
-                    unique_items[key] = item
-            glossary = list(unique_items.values())
+        # # 🔁 Step 1: 去重 glossary（忽略大小写）
+        # if self.fallback_mode == "safe":
+        #     unique_items = OrderedDict()
+        #     for item in glossary:
+        #         key = item['term'].strip().lower()
+        #         if key not in unique_items:
+        #             unique_items[key] = item
+        #     glossary = list(unique_items.values())
 
         # 🔍 Step 2: 用 term-only 构建 embedding
 
@@ -64,7 +78,7 @@ class Retriever:
             texts = [item["term"] for item in glossary]
         elif self.fallback_mode == "flexible":
             texts = [
-                f"{item['term']}  ({item['summary']})" if item["summary"]
+                f"{item['term']}, {item['summary']}" if item["summary"]
                 else item["term"]
                 for item in glossary
             ]
@@ -74,8 +88,7 @@ class Retriever:
         embeddings = self.encode_texts(texts)
         print(f"[DEBUG] encode_texts Embeddings: {embeddings.shape}")
 
-        # ✅ Step 3: 构建 FAISS index
-        self.term_list = [item["term"] for item in glossary]
+        self.term_list = glossary
         dim = embeddings.shape[1]
 
         # ✅ 构建 CPU index
@@ -114,14 +127,8 @@ class Retriever:
 
         self.index = shard_index
 
-    def query(self, text: str, top_k: int = TOP_K) -> List[str]:
-        embedding = self.encode_texts([text])  # 这里是 (1, hidden_dim) 的 GPU tensor
-        D, I = self.index.search(embedding, top_k)
-        return [self.term_list[i] for i in I[0]]
-
     def save_index(self):
         index_path = f"retriever_{self.fallback_mode}.index"
-        terms_path = f"term_list_{self.fallback_mode}.json"
         # 🔥 提取 GPU shard 中的所有向量，构建统一 CPU index 保存
         dim = self.index.d
         xb = []
@@ -138,12 +145,9 @@ class Retriever:
         cpu_index = faiss.IndexFlatL2(dim)
         cpu_index.add(xb)
         faiss.write_index(cpu_index, index_path)
-        with open(terms_path, "w", encoding="utf-8") as f:
-            json.dump(self.term_list, f)
 
     def load_index(self):
         index_path = f"retriever_{self.fallback_mode}.index"
-        terms_path = f"term_list_{self.fallback_mode}.json"
         cpu_index = faiss.read_index(index_path)
         ngpu = self.max_gpus or faiss.get_num_gpus()
         print(f"[INFO] Loading FAISS index onto {ngpu} GPUs (shard mode enabled)")
@@ -170,9 +174,6 @@ class Retriever:
             shard_index.add_shard(gpu_index)
 
         self.index = shard_index
-
-        with open(terms_path, "r", encoding="utf-8") as f:
-            self.term_list = json.load(f)
 
 # get auido full path
 def get_audio_full_path(sid):
@@ -245,7 +246,7 @@ def load_audio_for_sample(sample, audio_cache):
         print(f"[ERROR] Failed to load audio for {sample['sid']}: {e}")
         return None
 
-def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], device: str = "cuda",max_limit=None, filter_missing_gt=False):
+def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], device: str = "cuda",max_limit: int = None):
     from tqdm import tqdm
     from concurrent.futures import ThreadPoolExecutor
 
@@ -255,11 +256,6 @@ def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], dev
 
     top1, top5 = 0, 0
 
-    # Prepare lowercase term set for efficient matching
-    term_set = set([t.lower() for t in retriever.term_list])
-    if max_limit is not None:
-        test_samples = test_samples[:int(max_limit)]
-
     batch_size = 8
     output_dir = "./data/audio_embeddings"
     for b in tqdm(range(0, len(test_samples), batch_size), desc="Extracting audio embeddings"):
@@ -268,7 +264,7 @@ def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], dev
         with ProcessPoolExecutor(max_workers=batch_size) as pool:
             audio_batch = list(pool.map(load_func, batch_samples))
         audio_end = time.time()
-        print(f"[TIME] Audio loading took {audio_end - audio_start:.2f} seconds for batch {b // batch_size}")
+        # print(f"[TIME] Audio loading took {audio_end - audio_start:.2f} seconds for batch {b // batch_size}")
 
         valid_indices = [i for i, a in enumerate(audio_batch) if a is not None]
 
@@ -289,7 +285,7 @@ def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], dev
                 f"[ERROR] Batch inference failed on samples {[(batch_samples[i]['sid']) for i in valid_indices]}: {e}")
             continue
         proc_end = time.time()
-        print(f"[TIME] Processor+embedding took {proc_end - proc_start:.2f} seconds for batch {b // batch_size}")
+        # print(f"[TIME] Processor+embedding took {proc_end - proc_start:.2f} seconds for batch {b // batch_size}")
 
         audio_emb_batch = audio_emb_batch.cpu().numpy()
 
@@ -307,46 +303,57 @@ def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], dev
                 query_emb = audio_emb_batch[idx_in_batch]
                 np.save(embedding_path, query_emb)
 
+            # --- DEBUG: print SID, GT Text, embedding norm
+            print(f"[DEBUG] Evaluating SID: {sid}, GT Text: {ground_truth_text[:100]}...")  # Truncate long texts
+            print(f"[DEBUG] Embedding norm: {np.linalg.norm(query_emb):.4f}")
+
+            # --- DEBUG: print before FAISS search
+            print(f"[DEBUG] Running FAISS search using model: {retriever.model.name_or_path} for sid: {sid}")
             try:
                 D, I = retriever.index.search(query_emb[None, :], TOP_K)
             except Exception as faiss_e:
                 print(f"[ERROR] FAISS search crash at sample {sid}: {faiss_e}")
                 continue
 
+            # --- DEBUG: print retrieved top-K terms
+            retrieved_terms = [retriever.term_list[i] for i in I[0]]
+            # Get ground-truth terms directly from sample
+            gt_terms = sample.get("ground_truth_terms", [])
+            if not gt_terms:
+                continue
+            print(f"[DEBUG] Top-{TOP_K} Retrieved terms: {retrieved_terms}")
+            if b == 0 and idx_in_batch < 10:
+                print(f"[DEBUG] Text: {ground_truth_text}")
+                print(f"[DEBUG] GT Terms: {gt_terms}")
+                print(f"[DEBUG] Retrieved (Top-{TOP_K}): {retrieved_terms[:TOP_K]}")
+
             query_end = time.time()
-            print(f"[TIME] Query took {query_end - query_start:.2f} seconds for batch {b // batch_size}")
+            # print(f"[TIME] Query took {query_end - query_start:.2f} seconds for batch {b // batch_size}")
 
             retrieved_indices = I[0]
 
-            # 🧠 Efficient ground-truth term matching using n-gram scan
-            text = ground_truth_text.lower()
-            words = text.split()
-            max_ngram = 8
-            found_terms = set()
-            for i in range(len(words)):
-                for j in range(i + 1, min(len(words), i + max_ngram) + 1):
-                    sub = ' '.join(words[i:j])
-                    if sub in term_set:
-                        found_terms.add(sub)
-
-            gt_terms = []
-            if found_terms:
-                for ft in found_terms:
-                    for t in retriever.term_list:
-                        if t.lower() == ft:
-                            gt_terms.append(t)
-                            break
-            elif filter_missing_gt:
-                continue
-
             if gt_terms:
-                retrieved_terms = [retriever.term_list[i] for i in retrieved_indices]
-                if retrieved_terms[0] in gt_terms:
+                # Only match against the term part (before comma) in a case-insensitive way
+                def get_term_part(s):
+                    return s["term"]
+                gt_terms_lower = [gt.lower() for gt in gt_terms]
+                # Top-1: Only the first retrieved term
+                top1_match = any(
+                    gt == get_term_part(retrieved_terms[0])
+                    for gt in gt_terms_lower
+                )
+                # Top-5: Any of the top-K retrieved terms
+                top5_match = any(
+                    gt == get_term_part(retrieved_term)
+                    for gt in gt_terms_lower
+                    for retrieved_term in retrieved_terms
+                )
+                if top1_match:
                     top1 += 1
-                if any(t in retrieved_terms for t in gt_terms):
+                if top5_match:
                     top5 += 1
         evaluate_end = time.time()
-        print(f"[TIME] Evaluation took {evaluate_end - query_end:.2f} seconds for batch {b // batch_size}")
+        # print(f"[TIME] Evaluation took {evaluate_end - query_end:.2f} seconds for batch {b // batch_size}")
 
         torch.cuda.empty_cache()
 
@@ -368,32 +375,70 @@ def load_glossary_by_dir(input_file):
     return glossary
 
 
-def generate(input_file, mode,max_gpu, max_terms=None):
+def load_and_clean_glossary(input_file, max_terms=None):
+    """
+    Load glossary from file or directory, filter out unwanted terms, and return a cleaned list of dicts with 'term' and 'summary'.
+    """
     if input_file.endswith(".json"):
         glossary = load_glossary(input_file)
     else:
         glossary = load_glossary_by_dir(input_file)
 
-    glossary = glossary[:max_terms] if max_terms else glossary
+    import string
+    punct_set = set(string.punctuation)
 
+    def is_ascii(s):
+        return all(ord(c) < 128 for c in s)
+
+    def is_valid_term(term):
+        term = term.strip().lower()
+        if term.startswith("category:"):
+            return False
+        if ":" in term:
+            blacklist_prefixes = {
+                "talk", "user", "user talk", "wikipedia", "wikipedia talk",
+                "file", "file talk", "template", "template talk",
+                "category", "category talk", "portal", "module", "help",
+                "book", "draft", "timedtext", "mediawiki"
+            }
+            prefix = term.split(":", 1)[0]
+            if prefix in blacklist_prefixes:
+                return False
+        if not is_ascii(term):
+            return False
+        if len(term) < 3:
+            return False
+        if all(w in punct_set for w in term.split()):
+            return False
+        return True
+
+    glossary = [item for item in glossary if is_valid_term(item["term"])]
+    glossary = glossary[:max_terms] if max_terms else glossary
     parsed_glossary = []
     for item in glossary:
         parsed_glossary.append({
             "term": item["term"],
             "summary": item.get("short_description", "")
         })
+    return parsed_glossary
+
+
+def generate(input_file, mode, max_gpu, max_terms=None):
+    parsed_glossary = load_and_clean_glossary(input_file, max_terms)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     print(f"\n🔍 Running in {mode} mode on {device}")
     retriever = Retriever(fallback_mode=mode, device=device, max_gpus=max_gpu)
+    # Set return_summary if present in args (to be set after creation in __main__)
+    # (Handled in __main__ below)
     index_file = f"retriever_{mode}.index"
     terms_file = f"term_list_{mode}.json"
 
-    # TODO need fix
-    if False and os.path.exists(index_file) and os.path.exists(terms_file):
+    if os.path.exists(index_file) and os.path.exists(terms_file):
         print("✅ Loading existing index...")
         retriever.load_index()
+        print(f"[INFO] Loaded index with model: {retriever.model.name_or_path}")
     else:
         print("⚙️ Building new index...")
         retriever.build_index(parsed_glossary)
@@ -408,13 +453,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--input', required=True)
     parser.add_argument('--mode', required=True)
-    parser.add_argument('--max_limit', required=False)
+    parser.add_argument('--max_limit', type=int, required=False)
     parser.add_argument('--max_gpu', type=int, required=False)
     parser.add_argument('--max_terms', type=int, required=False)
-    parser.add_argument('--filter_missing_gt', action="store_true")
+    parser.add_argument('--return_summary', action="store_true")
     args = parser.parse_args()
 
     retriever = generate(input_file=args.input, mode=args.mode,max_gpu = args.max_gpu, max_terms=args.max_terms)
+    retriever.return_summary = args.return_summary
     with open('data/gigaspeech_test_samples.json') as f:
         test_samples = json.load(f)
-    evaluate_audio_retrieval(retriever, test_samples, max_limit=args.max_limit, filter_missing_gt=args.filter_missing_gt)
+    #evaluate_audio_retrieval(retriever, test_samples, max_limit=args.max_limit)
