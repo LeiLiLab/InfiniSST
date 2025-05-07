@@ -7,31 +7,31 @@
 #SBATCH --mem=500GB
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,9,13],babel-11-25,babel-12-29,babel-13-[13,21,29],babel-14-25
+#SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,9,13],babel-11-25,babel-12-29,babel-13-[1,13,21,29],babel-14-[21,25]
 #SBATCH --partition=general
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
 ##SBATCH --array=1-7
-##SBATCH --account=siqiouya
+##SBATCH --account=danielji
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=siqiouya@andrew.cmu.edu
+#SBATCH --mail-user=danielji@andrew.cmu.edu
 #SBATCH -e slurm_logs/%j.err
 #SBATCH -o slurm_logs/%j.out
 
-source /home/siqiouya/anaconda3/bin/activate infinisst
+source /home/danielji/anaconda3/bin/activate infinisst
 
-llama_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf
+llama_path=/mnt/taurus/data/siqiouyang/download/llama-3.1-8b-instruct-hf
 
-w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
+w2v2_path=/mnt/taurus/data/siqiouyang/download/wav2_vec_vox_960h_pl.pt
 w2v2_type=w2v2
 ctc_finetuned=True
 
-ROOT=/compute/babel-14-5/siqiouya
-lang_code=de
-lang=German
+ROOT=/mnt/taurus/data/siqiouyang/datasets/must-c-en-zh-daniel
+lang_code=zh
+lang=Chinese
 data_path=$ROOT/en-${lang_code}/
 
-save_dir=/compute/babel-5-23/siqiouya/runs/en-de/release
+save_dir=/mnt/taurus/data/danielji/must-cstage1release
 
 source_lang="English"
 target_lang=${lang} # e.g. German
@@ -42,7 +42,7 @@ mkdir -p ${save_path}
 
 export PYTHONPATH=$PYTHONPATH:$PWD
 export TOKENIZERS_PARALLELISM=false
-export WANDB_PROJECT="mustc_${lang_code}"
+export WANDB_PROJECT="danieljimustc_${lang_code}"
 export WANDB_ENTITY="streamllama"
 
 # disable P2P and InfiniBand for L40S 8-GPU nodes

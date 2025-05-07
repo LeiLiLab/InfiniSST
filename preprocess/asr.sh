@@ -12,13 +12,12 @@
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
 #SBATCH --array=0-7
-##SBATCH --account=siqiouya
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=siqiouya@andrew.cmu.edu
+#SBATCH --mail-user=danielji@andrew.cmu.edu
 #SBATCH -e slurm_logs/%A-%a.err
 #SBATCH -o slurm_logs/%A-%a.out
 
-source /home/siqiouya/anaconda3/bin/activate infinisst
+source /home/danielji/anaconda3/bin/activate infinisst
 
 tsv_path=$1
 python preprocess/asr.py --num_splits 8 --split_id $SLURM_ARRAY_TASK_ID --tsv_path $tsv_path
