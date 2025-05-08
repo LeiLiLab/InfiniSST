@@ -22,6 +22,43 @@ def load_glossary(glossary_path: str) -> List[Dict]:
     with open(glossary_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
+def gpu_worker(gpu_id, batch_list, ret_dict, cache_dir = "data/text_embeddings"):
+    import torch.nn.functional as F
+    from laion_clap import CLAP_Module
+
+    model = CLAP_Module(enable_fusion=False)
+    model.load_ckpt()
+    model = model.to(f'cuda:{gpu_id}')
+    model.load_state_dict(torch.load("data/clap_inbatch.pt", map_location=f'cuda:{gpu_id}'), strict=False)
+
+    results = []
+    with torch.no_grad():
+        import hashlib
+        import os
+
+        def hash_text(t):  # 用于文件名避免过长
+            return hashlib.md5(t.encode('utf-8')).hexdigest()
+
+        cached_results = []
+
+        for batch in batch_list:
+            for text in batch:
+                fname = os.path.join(cache_dir, f"{hash_text(text)}.npy")
+                if os.path.exists(fname):
+                    try:
+                        emb_arr = np.load(fname)
+                        cached_results.append(torch.from_numpy(emb_arr))
+                    except Exception as e:
+                        print(f"[WARN] Failed to load {fname}: {e}")
+                else:
+                    emb = model.get_text_embedding([text], use_tensor=True).to(f'cuda:{gpu_id}')
+                    emb = F.normalize(emb, dim=-1)
+                    emb_cpu = emb.cpu()
+                    np.save(fname, emb_cpu.numpy())
+                    cached_results.append(emb_cpu)
+
+        ret_dict[gpu_id] = torch.cat(cached_results, dim=0)
+
 def encode_on_gpu_clap(args):
     from laion_clap import CLAP_Module
     import torch
@@ -42,6 +79,8 @@ class Retriever:
     def __init__(self, model_name: str = "laion/clap-htsat-fused", fallback_mode: str = "safe", device: str = "cpu", max_gpus: int = None):
         self.fallback_mode = fallback_mode
         self.device = device
+        self.text_embedding_cache_dir = "data/text_embeddings"
+        os.makedirs(self.text_embedding_cache_dir, exist_ok=True)
         import laion_clap
         # self.processor = ClapProcessor.from_pretrained(model_name)
         self.model = laion_clap.CLAP_Module(enable_fusion=False)
@@ -66,43 +105,25 @@ class Retriever:
         num_gpus = torch.cuda.device_count()
         print(f"[INFO] Multi-GPU embedding: using {num_gpus} GPUs")
 
-        # 按 GPU 分配任务
         batches = [texts[i:i + batch_size] for i in range(0, len(texts), batch_size)]
         gpu_batches = [[] for _ in range(num_gpus)]
         for i, batch in enumerate(batches):
             gpu_batches[i % num_gpus].append(batch)
 
-        # 启动每个 GPU 一个进程，传入对应 batch 列表
         manager = Manager()
         return_dict = manager.dict()
-
-        def worker(gpu_id, batch_list, ret_dict):
-            import torch.nn.functional as F
-            from laion_clap import CLAP_Module
-
-            model = CLAP_Module(enable_fusion=False)
-            model.load_ckpt()
-            model = model.to(f'cuda:{gpu_id}')
-            model.load_state_dict(torch.load("data/clap_inbatch.pt", map_location=f'cuda:{gpu_id}'), strict=False)
-
-            results = []
-            with torch.no_grad():
-                for batch in batch_list:
-                    emb = model.get_text_embedding(batch, use_tensor=True).to(f'cuda:{gpu_id}')
-                    emb = F.normalize(emb, dim=-1)
-                    results.append(emb.cpu())
-            ret_dict[gpu_id] = torch.cat(results, dim=0)
+        cache_dir = "data/text_embeddings"
+        os.makedirs(cache_dir, exist_ok=True)
 
         processes = []
         for gpu_id in range(num_gpus):
-            p = mp.Process(target=worker, args=(gpu_id, gpu_batches[gpu_id], return_dict))
+            p = mp.Process(target=gpu_worker, args=(gpu_id, gpu_batches[gpu_id], return_dict, cache_dir))
             p.start()
             processes.append(p)
 
         for p in processes:
             p.join()
 
-        # 收集所有 embedding
         return torch.cat([return_dict[i] for i in range(num_gpus)], dim=0)
 
     def build_index(self, glossary: List[Dict]):
