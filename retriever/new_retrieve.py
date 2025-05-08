@@ -46,8 +46,32 @@ class Retriever:
         self.max_gpus = max_gpus
         self.return_summary = False
 
-    def encode_texts(self, texts: List[str], batch_size: int = 512) -> np.ndarray:
-        pass
+    def encode_texts_multi_gpu(self, texts, batch_size=512):
+        import torch.multiprocessing as mp
+        from torch.nn import functional as F
+        from laion_clap import CLAP_Module
+        mp.set_start_method('spawn', force=True)
+        num_gpus = torch.cuda.device_count()
+        print(f"[INFO] Multi-GPU embedding: using {num_gpus} GPUs")
+
+        def encode_on_gpu(args):
+            batch_texts, device_id = args
+            model = CLAP_Module(enable_fusion=False)
+            model.load_ckpt()
+            model = model.to(f'cuda:{device_id}')
+            model.load_state_dict(torch.load("data/clap_inbatch.pt", map_location=f'cuda:{device_id}'), strict=False)
+            with torch.no_grad():
+                emb = model.get_text_embedding(batch_texts, use_tensor=True).to(f'cuda:{device_id}')
+                emb = F.normalize(emb, dim=-1)
+                return emb.cpu()
+
+        batches = [texts[i:i + batch_size] for i in range(0, len(texts), batch_size)]
+        args_list = [(batch, i % num_gpus) for i, batch in enumerate(batches)]
+
+        with mp.Pool(processes=num_gpus) as pool:
+            results = pool.map(encode_on_gpu, args_list)
+
+        return torch.cat(results, dim=0)
 
     def build_index(self, glossary: List[Dict]):
         # # 🔁 Step 1: 去重 glossary（忽略大小写）
@@ -73,20 +97,9 @@ class Retriever:
             texts = [item["term"] for item in glossary]
 
         with torch.no_grad():
-            #TODO fix this
-            text_data = [item["term"] for item in glossary]
-            print(f"[DEBUG] Number of terms: {len(text_data)}")
-            batch_size = 512
-            text_embeds = []
-            for i in range(0, len(text_data), batch_size):
-                batch = text_data[i:i + batch_size]
-                emb = self.model.get_text_embedding(batch, use_tensor=True).to(self.device)
-                emb = F.normalize(emb, dim=-1)
-                text_embeds.append(emb.cpu())
-            text_emb = torch.cat(text_embeds, dim=0)
-            text_emb = text_emb.to(self.device)
-            text_emb = F.normalize(text_emb, dim=-1)
-            embeddings = text_emb.cpu().numpy()
+            print(f"[DEBUG] Number of terms: {len(texts)}")
+            embeddings = self.encode_texts_multi_gpu(texts, batch_size=512).numpy()
+            print(f"[DEBUG] encode_texts Embeddings: {embeddings.shape}")
 
         print(f"[DEBUG] encode_texts Embeddings: {embeddings.shape}")
 
