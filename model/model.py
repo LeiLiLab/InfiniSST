@@ -81,6 +81,12 @@ class SLlamaLightning(L.LightningModule):
         )
         self.tokenizer.pad_token = "<|finetune_right_pad_id|>"
 
+        self.fast_tokenizer = transformers.AutoTokenizer.from_pretrained(
+            self.model_args.llm_path,
+            padding_side="right",
+            use_fast=True,
+        )
+
         # load speech encoder
         logger.info("rope: {}".format(self.speech_args.rope))
         speech_encoder_args = [
@@ -92,7 +98,6 @@ class SLlamaLightning(L.LightningModule):
             self.speech_args.max_cache_size,
             1,
             None,
-            self.speech_args.xpos,
             self.speech_args.rope,
         ]
         if self.speech_args.w2v2_type == 'w2v2':
@@ -112,7 +117,7 @@ class SLlamaLightning(L.LightningModule):
         if self.model is not None:
             return
         
-        patch_w2v2(self.speech_args.xpos, self.speech_args.rope)
+        patch_w2v2(self.speech_args.rope)
         patch_llama31()
         patch_hf()
 
@@ -144,7 +149,6 @@ class SLlamaLightning(L.LightningModule):
             self.speech_args.max_cache_size,
             model.model.embed_tokens.embedding_dim,
             None,
-            self.speech_args.xpos,
             self.speech_args.rope,
         ]
         if self.speech_args.w2v2_type == 'w2v2':
@@ -221,7 +225,7 @@ class SLlamaLightning(L.LightningModule):
             min_ms=320,
             multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
             filter=True,
-            tokenizer=self.tokenizer,
+            tokenizer=self.fast_tokenizer,
         )
         train_dataloader = DataLoader(
             train_dataset, 
@@ -261,7 +265,7 @@ class SLlamaLightning(L.LightningModule):
             min_ms=320,
             multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
             filter=True,
-            tokenizer=self.tokenizer,
+            tokenizer=self.fast_tokenizer,
         )
         eval_dataloader = DataLoader(
             eval_dataset, 
@@ -359,7 +363,7 @@ class SQwen25Lightning(SLlamaLightning):
         if self.model is not None:
             return
         
-        patch_w2v2(self.speech_args.xpos, self.speech_args.rope)
+        patch_w2v2(self.speech_args.rope)
         patch_qwen25()
         patch_hf()
 
@@ -389,7 +393,6 @@ class SQwen25Lightning(SLlamaLightning):
             self.speech_args.max_cache_size,
             model.model.embed_tokens.embedding_dim,
             None,
-            self.speech_args.xpos,
             self.speech_args.rope,
         ]
         if self.speech_args.w2v2_type == 'w2v2':

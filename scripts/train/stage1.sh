@@ -62,7 +62,6 @@ srun python train/main.py \
     --length_shrink_cfg "[(1024,2,2)] * 2" \
     --block_size 48 \
     --max_cache_size 576 \
-    --xpos False \
     \
     --llm_path ${llama_path} \
     --llm_freeze True \

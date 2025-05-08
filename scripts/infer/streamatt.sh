@@ -70,7 +70,6 @@ simuleval \
   --w2v2-path ${w2v2_path} \
   --w2v2-type ${w2v2_type} \
   --ctc-finetuned ${ctc_finetuned} \
-  --xpos 0 \
   \
   --length-shrink-cfg "[(1024,2,2)] * 2" \
   --latency-multiplier 1 \

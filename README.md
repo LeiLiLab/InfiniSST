@@ -9,7 +9,7 @@ The link to the online demo is [here](https://c79b-128-111-28-80.ngrok-free.app/
 ## Installation
 
 ```bash
-conda create -n infinisst -y python=3.9
+conda create -n infinisst -y python=3.10
 conda activate infinisst
 
 # torch and related packages
@@ -24,6 +24,15 @@ cd fairseq-0.12.2
 git checkout 0.12.2-release
 pip install pip==23.3
 pip install -e .
+cd ..
+
+# flashinfer
+git clone git@github.com:siqiouya/flashinfer.git
+cd flashinfer
+# latest v2.5.0 version has numerical instability issue
+git checkout v0.2.0 
+pip install --no-build-isolation --verbose --editable .
+cd ..
 
 # serving
 pip install fastapi uvicorn python-multipart websockets
