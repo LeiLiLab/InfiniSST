@@ -1,11 +1,8 @@
 from datasets import load_dataset
 import os
-from collections import OrderedDict
-import signal
 import time
 from new_giga_speech import extract_array_from_sample, filter_train_set
 import faiss
-import numpy as np
 from typing import List, Dict, Tuple
 from concurrent.futures import ProcessPoolExecutor
 
@@ -24,6 +21,21 @@ import torch.nn.functional as F
 def load_glossary(glossary_path: str) -> List[Dict]:
     with open(glossary_path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+def encode_on_gpu_clap(args):
+    from laion_clap import CLAP_Module
+    import torch
+    import torch.nn.functional as F
+
+    batch_texts, device_id = args
+    model = CLAP_Module(enable_fusion=False)
+    model.load_ckpt()
+    model = model.to(f'cuda:{device_id}')
+    model.load_state_dict(torch.load("data/clap_inbatch.pt", map_location=f'cuda:{device_id}'), strict=False)
+    with torch.no_grad():
+        emb = model.get_text_embedding(batch_texts, use_tensor=True).to(f'cuda:{device_id}')
+        emb = F.normalize(emb, dim=-1)
+        return emb.cpu()
 
 # ---------- BUILD INDEX ----------
 class Retriever:
@@ -48,30 +60,50 @@ class Retriever:
 
     def encode_texts_multi_gpu(self, texts, batch_size=512):
         import torch.multiprocessing as mp
-        from torch.nn import functional as F
-        from laion_clap import CLAP_Module
-        mp.set_start_method('spawn', force=True)
+        from multiprocessing import Manager
+
+        mp.set_start_method("spawn", force=True)
         num_gpus = torch.cuda.device_count()
         print(f"[INFO] Multi-GPU embedding: using {num_gpus} GPUs")
 
-        def encode_on_gpu(args):
-            batch_texts, device_id = args
+        # 按 GPU 分配任务
+        batches = [texts[i:i + batch_size] for i in range(0, len(texts), batch_size)]
+        gpu_batches = [[] for _ in range(num_gpus)]
+        for i, batch in enumerate(batches):
+            gpu_batches[i % num_gpus].append(batch)
+
+        # 启动每个 GPU 一个进程，传入对应 batch 列表
+        manager = Manager()
+        return_dict = manager.dict()
+
+        def worker(gpu_id, batch_list, ret_dict):
+            import torch.nn.functional as F
+            from laion_clap import CLAP_Module
+
             model = CLAP_Module(enable_fusion=False)
             model.load_ckpt()
-            model = model.to(f'cuda:{device_id}')
-            model.load_state_dict(torch.load("data/clap_inbatch.pt", map_location=f'cuda:{device_id}'), strict=False)
+            model = model.to(f'cuda:{gpu_id}')
+            model.load_state_dict(torch.load("data/clap_inbatch.pt", map_location=f'cuda:{gpu_id}'), strict=False)
+
+            results = []
             with torch.no_grad():
-                emb = model.get_text_embedding(batch_texts, use_tensor=True).to(f'cuda:{device_id}')
-                emb = F.normalize(emb, dim=-1)
-                return emb.cpu()
+                for batch in batch_list:
+                    emb = model.get_text_embedding(batch, use_tensor=True).to(f'cuda:{gpu_id}')
+                    emb = F.normalize(emb, dim=-1)
+                    results.append(emb.cpu())
+            ret_dict[gpu_id] = torch.cat(results, dim=0)
 
-        batches = [texts[i:i + batch_size] for i in range(0, len(texts), batch_size)]
-        args_list = [(batch, i % num_gpus) for i, batch in enumerate(batches)]
+        processes = []
+        for gpu_id in range(num_gpus):
+            p = mp.Process(target=worker, args=(gpu_id, gpu_batches[gpu_id], return_dict))
+            p.start()
+            processes.append(p)
 
-        with mp.Pool(processes=num_gpus) as pool:
-            results = pool.map(encode_on_gpu, args_list)
+        for p in processes:
+            p.join()
 
-        return torch.cat(results, dim=0)
+        # 收集所有 embedding
+        return torch.cat([return_dict[i] for i in range(num_gpus)], dim=0)
 
     def build_index(self, glossary: List[Dict]):
         # # 🔁 Step 1: 去重 glossary（忽略大小写）
@@ -99,7 +131,6 @@ class Retriever:
         with torch.no_grad():
             print(f"[DEBUG] Number of terms: {len(texts)}")
             embeddings = self.encode_texts_multi_gpu(texts, batch_size=512).numpy()
-            print(f"[DEBUG] encode_texts Embeddings: {embeddings.shape}")
 
         print(f"[DEBUG] encode_texts Embeddings: {embeddings.shape}")
 
