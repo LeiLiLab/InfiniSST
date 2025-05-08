@@ -109,32 +109,29 @@ class AudioCache:
             audio_path, start, end = args
             start_time = time.time()
             try:
-                future = executor.submit(self.load_audio, audio_path, start, end, target_sr)
-                result = future.result(timeout=300)
+                result = self.load_audio(audio_path, start, end, target_sr)
                 duration = time.time() - start_time
                 durations.append(duration)
                 with open(stats_log_path, "a") as log_file:
                     log_file.write(f"{audio_path},{duration:.2f},0,0\n")
                 return result
-            except concurrent.futures.TimeoutError:
-                duration = time.time() - start_time
-                print(f"[TIMEOUT] Skipping audio: {audio_path}")
-                timeout_count += 1
-                with open(stats_log_path, "a") as log_file:
-                    log_file.write(f"{audio_path},{duration:.2f},1,0\n")
             except Exception as e:
                 duration = time.time() - start_time
-                print(f"[ERROR] Failed to load audio {audio_path}: {e}")
-                with open(stats_log_path, "a") as log_file:
-                    log_file.write(f"{audio_path},{duration:.2f},0,1\n")
-            durations.append(duration)
-            return None
+                if isinstance(e, concurrent.futures.TimeoutError):
+                    print(f"[TIMEOUT] Skipping audio: {audio_path}")
+                    timeout_count += 1
+                    with open(stats_log_path, "a") as log_file:
+                        log_file.write(f"{audio_path},{duration:.2f},1,0\n")
+                else:
+                    print(f"[ERROR] Failed to load audio {audio_path}: {e}")
+                    with open(stats_log_path, "a") as log_file:
+                        log_file.write(f"{audio_path},{duration:.2f},0,1\n")
+                durations.append(duration)
+                return None
 
         # 使用多线程处理所有音频文件
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(safe_load, args) for args in audio_files]
-            for _ in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc="Processing Gigaspeech audio files"):
-                pass
+            list(tqdm(executor.map(safe_load, audio_files), total=len(audio_files), desc="Processing Gigaspeech audio files"))
 
         if durations:
             print(f"[STATS] Max processing time: {max(durations):.2f}s")

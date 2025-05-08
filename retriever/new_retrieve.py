@@ -1,27 +1,13 @@
+from datasets import load_dataset
+
 from collections import OrderedDict
 import signal
 import time
-
-# Ensure NLTK stopwords are available
-import nltk
-try:
-    from nltk.corpus import stopwords
-    _ = stopwords.words("english")
-except LookupError:
-    nltk.download("stopwords")
-    from nltk.corpus import stopwords
-
-from sentence_transformers import SentenceTransformer
+from new_giga_speech import extract_array_from_sample, filter_train_set
 import faiss
-import json
-import torchaudio
 import numpy as np
 from typing import List, Dict, Tuple
-#from clap import CLAP_Model  # Assuming you have a CLAP text encoder ready
-from transformers import ClapModel, ClapProcessor
 from concurrent.futures import ProcessPoolExecutor
-from audio_cache import AudioCache
-from audio_utils import get_audio_full_path
 
 # ---------- CONFIG ----------
 TOP_K = 10
@@ -31,6 +17,9 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import functools
 print = functools.partial(print, flush=True)
+
+import torch
+import torch.nn.functional as F
 
 # ---------- LOAD GLOSSARY ----------
 def load_glossary(glossary_path: str) -> List[Dict]:
@@ -42,8 +31,16 @@ class Retriever:
     def __init__(self, model_name: str = "laion/clap-htsat-fused", fallback_mode: str = "safe", device: str = "cpu", max_gpus: int = None):
         self.fallback_mode = fallback_mode
         self.device = device
-        self.processor = ClapProcessor.from_pretrained(model_name)
-        self.model = ClapModel.from_pretrained(model_name).to(device)
+        import laion_clap
+        # self.processor = ClapProcessor.from_pretrained(model_name)
+        self.model = laion_clap.CLAP_Module(enable_fusion=False)
+        self.model.load_ckpt()
+        self.model = self.model.to(device)
+        try:
+            self.model.load_state_dict(torch.load("data/clap_inbatch.pt", map_location=device), strict=False)
+            print(f"[INFO] Loaded fine-tuned model from data/clap_inbatch.pt")
+        except Exception as e:
+            print(f"[WARN] Failed to load fine-tuned weights: {e}")
         print(f"[INFO] Loaded CLAP model: {model_name}")
         self.index = None
         self.term_list = []
@@ -51,16 +48,7 @@ class Retriever:
         self.return_summary = False
 
     def encode_texts(self, texts: List[str], batch_size: int = 512) -> np.ndarray:
-        print(f"[DEBUG] Encoding {len(texts)} texts using model: {self.model.name_or_path}")
-        all_embeddings = []
-        for i in range(0, len(texts), batch_size):
-            batch = texts[i:i + batch_size]
-            inputs = self.processor(text=batch, return_tensors="pt", padding=True, truncation=True)
-            inputs = {k: v.to(self.device) for k, v in inputs.items()}
-            with torch.no_grad():
-                embeddings = self.model.get_text_features(**inputs)
-            all_embeddings.append(embeddings.cpu())
-        return torch.cat(all_embeddings, dim=0).numpy()
+        pass
 
     def build_index(self, glossary: List[Dict]):
         # # 🔁 Step 1: 去重 glossary（忽略大小写）
@@ -85,7 +73,22 @@ class Retriever:
         else:
             texts = [item["term"] for item in glossary]
 
-        embeddings = self.encode_texts(texts)
+        with torch.no_grad():
+            #TODO fix this
+            text_data = [item["term"] for item in glossary]
+            print(f"[DEBUG] Number of terms: {len(text_data)}")
+            batch_size = 512
+            text_embeds = []
+            for i in range(0, len(text_data), batch_size):
+                batch = text_data[i:i + batch_size]
+                emb = self.model.get_text_embedding(batch, use_tensor=True).to(self.device)
+                emb = F.normalize(emb, dim=-1)
+                text_embeds.append(emb.cpu())
+            text_emb = torch.cat(text_embeds, dim=0)
+            text_emb = text_emb.to(self.device)
+            text_emb = F.normalize(text_emb, dim=-1)
+            embeddings = text_emb.cpu().numpy()
+
         print(f"[DEBUG] encode_texts Embeddings: {embeddings.shape}")
 
         dim = embeddings.shape[1]
@@ -211,89 +214,41 @@ def float32_to_int16(x):
     x = np.clip(x, a_min=-1., a_max=1.)
     return (x * 32767.).astype(np.int16)
 
-
-# TODO delete this function
-def load_audio(audio_path: str, start_time: float = None, end_time: float = None, target_sr: int = 48000) -> torch.Tensor:
-    waveform, sr = torchaudio.load(audio_path)
-    if sr != target_sr:
-        waveform = torchaudio.functional.resample(waveform, sr, target_sr)
-
-    if start_time is not None and end_time is not None:
-        start_sample = int(start_time * target_sr)
-        end_sample = int(end_time * target_sr)
-        waveform = waveform[:, start_sample:end_sample]
-
-    audio_data = waveform.mean(dim=0).numpy()
-
-    usable_length = (audio_data.shape[0] // target_sr) * target_sr
-    if usable_length < target_sr:
-        raise ValueError("Audio too short after processing.")
-    audio_data = audio_data[:usable_length]
-
-    audio_data = audio_data.reshape(1, -1)
-    audio_data = torch.from_numpy(
-        int16_to_float32(float32_to_int16(audio_data))
-    ).float()
-
-    return audio_data
-
-def load_audio_for_sample(sample, audio_cache):
-    try:
-        audio_path = get_audio_full_path(sample['sid'])
-        return audio_cache.load_audio(audio_path, sample.get('begin_time'), sample.get('end_time'))
-    except Exception as e:
-        print(f"[ERROR] Failed to load audio for {sample['sid']}: {e}")
-        return None
-
 def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], device: str = "cuda"):
     from tqdm import tqdm
-    from concurrent.futures import ThreadPoolExecutor
 
-    # 初始化音频缓存
-    audio_cache = AudioCache()
-    load_func = functools.partial(load_audio_for_sample, audio_cache=audio_cache)
-
-    top1, top5 = 0, 0
-    top1_exact, top5_exact = 0, 0
+    recall_scores = []
 
     batch_size = 8
-    output_dir = "./data/audio_embeddings"
+    output_dir = "./data/new_audio_embeddings"
     for b in tqdm(range(0, len(test_samples), batch_size), desc="Extracting audio embeddings"):
         batch_samples = test_samples[b:b + batch_size]
         audio_start = time.time()
         with ProcessPoolExecutor(max_workers=batch_size) as pool:
-            audio_batch = list(pool.map(load_func, batch_samples))
+            audio_batch = list(pool.map(extract_array_from_sample, batch_samples))
         audio_end = time.time()
         print(f"[TIME] Audio loading took {audio_end - audio_start:.2f} seconds for batch {b // batch_size}")
 
-        valid_indices = [i for i, a in enumerate(audio_batch) if a is not None]
+        # Replace padded_audio, valid_indices = get_valid_audio_embeddings(audio_batch, device)
+        # with the new block
+        with torch.no_grad():
+            max_len = max([a.shape[-1] for a in audio_batch])
+            padded_audio = torch.stack([
+                F.pad(torch.tensor(a).float(), (0, max_len - a.shape[-1])) for a in audio_batch
+            ]).to(device)
+            audio_emb_batch = retriever.model.get_audio_embedding_from_data(x=padded_audio, use_tensor=True)
+            audio_emb_batch = F.normalize(audio_emb_batch, dim=-1)
 
-        if not valid_indices:
-            continue
-
-        audios_to_process = [audio_batch[i].squeeze().numpy() for i in valid_indices]
-
-        proc_start = time.time()
-        try:
-            inputs = retriever.processor(audios=audios_to_process, sampling_rate=48000, return_tensors="pt",
-                                         padding=True)
-            inputs = {k: v.to(device) for k, v in inputs.items()}
-            with torch.no_grad():
-                audio_emb_batch = retriever.model.get_audio_features(**inputs)
-        except Exception as e:
-            print(
-                f"[ERROR] Batch inference failed on samples {[(batch_samples[i]['sid']) for i in valid_indices]}: {e}")
-            continue
         proc_end = time.time()
-        print(f"[TIME] Processor+embedding took {proc_end - proc_start:.2f} seconds for batch {b // batch_size}")
+        print(f"[TIME] Processor+embedding took {proc_end - audio_end:.2f} seconds for batch {b // batch_size}")
 
         audio_emb_batch = audio_emb_batch.cpu().numpy()
 
         query_start = time.time()
         # Now do FAISS search and evaluation
-        for idx_in_batch, sample_idx in enumerate(valid_indices):
+        for idx_in_batch, sample_idx in enumerate(range(len(batch_samples))):
             sample = batch_samples[sample_idx]
-            sid = sample['sid']
+            sid = sample['segment_id']
             ground_truth_text = sample['text']
 
             embedding_path = os.path.join(output_dir, f"{sid}.npy")
@@ -318,7 +273,7 @@ def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], dev
             # --- DEBUG: print retrieved top-K terms
             retrieved_terms = [retriever.term_list[i] for i in I[0]]
             # Get ground-truth terms directly from sample
-            gt_terms = sample.get("ground_truth_terms", [])
+            gt_terms = sample.get("ground_truth_term", [])
             if not gt_terms:
                 continue
             print(f"[DEBUG] Top-{TOP_K} Retrieved terms: {retrieved_terms}")
@@ -336,39 +291,21 @@ def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], dev
                 # Only match against the term part (before comma) in a case-insensitive way
                 def get_term_part(s):
                     return s["term"]
-                gt_types = sample.get("ground_truth_types", [])
-                # If ground_truth_types not provided, fallback to all "exact"
-                if not gt_types or len(gt_types) != len(gt_terms):
-                    gt_types = ["exact"] * len(gt_terms)
-
-                gt_terms_lower = [gt.lower() for gt in gt_terms]
-                gt_terms_exact_lower = [gt.lower() for gt, t in zip(gt_terms, gt_types) if t == "exact"]
-
                 retrieved_term_texts = [get_term_part(rt).lower() for rt in retrieved_terms]
-
-                top1_match = retrieved_term_texts[0] in gt_terms_lower
-                top5_match = any(rt in gt_terms_lower for rt in retrieved_term_texts)
-
-                top1_exact_match = retrieved_term_texts[0] in gt_terms_exact_lower
-                top5_exact_match = any(rt in gt_terms_exact_lower for rt in retrieved_term_texts)
-
-                if top1_match:
-                    top1 += 1
-                if top5_match:
-                    top5 += 1
-                if top1_exact_match:
-                    top1_exact += 1
-                if top5_exact_match:
-                    top5_exact += 1
+                matched_count = 0
+                for gt in gt_terms:
+                    if gt.lower() in retrieved_term_texts:
+                        matched_count += 1
+                recall = matched_count / len(gt_terms)
+                print(f"[RECALL] {sid}: Matched {matched_count}/{len(gt_terms)} terms, Recall@{TOP_K} = {recall:.2%}")
+                recall_scores.append(recall)
         evaluate_end = time.time()
         print(f"[TIME] Evaluation took {evaluate_end - query_end:.2f} seconds for batch {b // batch_size}")
 
         torch.cuda.empty_cache()
 
-    print(f"Top-1 Accuracy (all terms): {top1}/{len(test_samples)} = {top1 / len(test_samples):.2%}")
-    print(f"Top-5 Accuracy (all terms): {top5}/{len(test_samples)} = {top5 / len(test_samples):.2%}")
-    print(f"Top-1 Accuracy (exact terms): {top1_exact}/{len(test_samples)} = {top1_exact / len(test_samples):.2%}")
-    print(f"Top-5 Accuracy (exact terms): {top5_exact}/{len(test_samples)} = {top5_exact / len(test_samples):.2%}")
+    avg_recall = sum(recall_scores) / len(recall_scores) if recall_scores else 0.0
+    print(f"\n📊 Average Recall@{TOP_K}: {avg_recall:.2%} over {len(recall_scores)} evaluated samples")
 
 import glob
 import json
@@ -384,8 +321,6 @@ def generate(input_file, mode, max_gpu, max_terms=None):
     print(f"\n🔍 Running in {mode} mode on {device}")
     retriever = Retriever(fallback_mode=mode, device=device, max_gpus=max_gpu)
     retriever.term_list = parsed_glossary
-    # Set return_summary if present in args (to be set after creation in __main__)
-    # (Handled in __main__ below)
     index_file = f"retriever_{mode}.index"
 
     if os.path.exists(index_file):
@@ -409,13 +344,21 @@ if __name__ == "__main__":
     parser.add_argument('--max_limit', type=int, required=False)
     parser.add_argument('--max_gpu', type=int, required=False)
     parser.add_argument('--max_terms', type=int, required=False)
-    parser.add_argument('--return_summary', action="store_true")
     args = parser.parse_args()
 
     retriever = generate(input_file=args.input, mode=args.mode,max_gpu = args.max_gpu, max_terms=args.max_terms)
-    retriever.return_summary = args.return_summary
-    with open('data/gigaspeech_test_samples.json') as f:
-        test_samples = json.load(f)
+
+
+    gs = load_dataset(
+        path="speechcolab/gigaspeech",
+        name="xs",
+        trust_remote_code=True,
+        token="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"
+    )
+    eval_set = gs["dev"]
+
+    eval_set = filter_train_set(eval_set)
+
     if args.max_limit is not None:
-        test_samples = test_samples[:args.max_limit]
+        test_samples = eval_set[:args.max_limit]
     evaluate_audio_retrieval(retriever, test_samples)
