@@ -1,5 +1,5 @@
 from datasets import load_dataset
-
+import os
 from collections import OrderedDict
 import signal
 import time
@@ -12,7 +12,6 @@ from concurrent.futures import ProcessPoolExecutor
 # ---------- CONFIG ----------
 TOP_K = 10
 
-import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import functools
@@ -353,7 +352,7 @@ if __name__ == "__main__":
         path="speechcolab/gigaspeech",
         name="xs",
         trust_remote_code=True,
-        token="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"
+        token=os.getenv("HF_TOKEN")
     )
     eval_set = gs["dev"]
 
