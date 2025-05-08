@@ -71,7 +71,6 @@ simuleval \
     --length-shrink-cfg "[(1024,2,2)] * 2" \
     --block-size 48 \
     --max-cache-size 576 \
-    --xpos 0 \
     \
     --max-llm-cache-size ${max_llm_cache_size} \
     --always-cache-system-prompt \
