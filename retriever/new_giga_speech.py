@@ -121,7 +121,7 @@ def handle_giga_speech_train_samples():
         path="speechcolab/gigaspeech",
         name="s",
         trust_remote_code=True,
-        token="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"
+        token=os.getenv("HF_TOKEN")
     )
     train_set = gs["train"]
 
