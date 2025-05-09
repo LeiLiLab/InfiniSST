@@ -93,7 +93,7 @@ class Retriever:
         self.max_gpus = max_gpus
         self.return_summary = False
 
-    def encode_texts_multi_gpu(self, texts, batch_size=512):
+    def encode_texts_multi_gpu(self, texts,mode,enable_fusion, batch_size=512):
         import torch.multiprocessing as mp
         from multiprocessing import Manager
 
@@ -108,7 +108,7 @@ class Retriever:
 
         manager = Manager()
         return_dict = manager.dict()
-        cache_dir = "data/text_embeddings"
+        cache_dir = f"data/new_text_embeddings_{mode}_{enable_fusion}"
         os.makedirs(cache_dir, exist_ok=True)
 
         processes = []
@@ -147,7 +147,7 @@ class Retriever:
 
         with torch.no_grad():
             print(f"[DEBUG] Number of terms: {len(texts)}")
-            embeddings = self.encode_texts_multi_gpu(texts, batch_size=512).numpy()
+            embeddings = self.encode_texts_multi_gpu(texts,self.fallback_mode,self.enable_fusion, batch_size=512).numpy()
 
         print(f"[DEBUG] encode_texts Embeddings: {embeddings.shape}")
 
@@ -256,7 +256,7 @@ def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], dev
     recall_scores = []
 
     batch_size = 8
-    output_dir = "./data/new_audio_embeddings"
+    output_dir = f"./data/new_audio_embeddings_{retriever.fallback_mode}_{retriever.enable_fusion}"
 
     print(f"[DEBUG] Starting evaluation loop with {len(test_samples)} samples, batch size = {batch_size}")
 
