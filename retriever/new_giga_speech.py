@@ -18,7 +18,7 @@ def normalize(text):
     text = re.sub(r"<[^>]+>", "", text)  # remove all other <...> tags
     return text.lower()
 
-def filter_train_set(train_set, min_duration=2.1, max_duration=5.0, limit=10000):
+def filter_train_set(train_set, min_duration=2.1, max_duration=5.0, limit=None):
     filtered = []
     for item in train_set:
         duration = item["end_time"] - item["begin_time"]
@@ -111,7 +111,7 @@ def process_item(item, term_set):
     return item
 
 
-def handle_giga_speech_train_samples():
+def handle_giga_speech_train_samples(name="s", split="train",limit=None):
     # step1 处理glossary
     glossary = load_clean_glossary_from_file()
     term_set = set(item["term"].lower() for item in glossary)
@@ -119,13 +119,13 @@ def handle_giga_speech_train_samples():
 
     gs = load_dataset(
         path="speechcolab/gigaspeech",
-        name="s",
+        name=name,
         trust_remote_code=True,
         token=os.getenv("HF_TOKEN")
     )
-    train_set = gs["train"]
+    train_set = gs[split]
 
-    train_set = filter_train_set(train_set)
+    train_set = filter_train_set(train_set,limit=limit)
 
     results = list(tqdm(
         ThreadPoolExecutor(max_workers=os.cpu_count()).map(
