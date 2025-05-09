@@ -112,17 +112,18 @@ def train_step(model, batch, device, temperature=0.07):
     return loss.mean()
 
 def main():
+    enable_fusion = True
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argume nt('--epochs', type=int, default=10)
+    parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--lr', type=float, default=1e-5)
-    parser.add_argument('--save_path', type=str, default="data/clap_inbatch.pt")
+    parser.add_argument('--save_path', type=str, default=f"data/clap_inbatch_{enable_fusion}.pt")
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    model = laion_clap.CLAP_Module(enable_fusion=False)
+    model = laion_clap.CLAP_Module(enable_fusion=enable_fusion)
     model.load_ckpt()
 
     dataset = InBatchDataset()

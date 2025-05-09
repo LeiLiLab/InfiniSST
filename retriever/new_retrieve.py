@@ -6,6 +6,8 @@ import faiss
 from typing import List, Dict, Tuple
 from concurrent.futures import ProcessPoolExecutor
 
+
+from inbatch_clap_train import handle_giga_speech_train_samples
 # ---------- CONFIG ----------
 TOP_K = 10
 
@@ -17,6 +19,12 @@ print = functools.partial(print, flush=True)
 import torch
 import torch.nn.functional as F
 
+import datetime
+
+def log_with_time(message):
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{now}] {message}")
+
 # ---------- LOAD GLOSSARY ----------
 def load_glossary(glossary_path: str) -> List[Dict]:
     with open(glossary_path, "r", encoding="utf-8") as f:
@@ -25,13 +33,15 @@ def load_glossary(glossary_path: str) -> List[Dict]:
 def gpu_worker(gpu_id, batch_list, ret_dict, cache_dir = "data/text_embeddings"):
     import torch.nn.functional as F
     from laion_clap import CLAP_Module
-
-    model = CLAP_Module(enable_fusion=False)
+    enable_fusion = True
+    model = CLAP_Module(enable_fusion=enable_fusion)
     model.load_ckpt()
     model = model.to(f'cuda:{gpu_id}')
-    model.load_state_dict(torch.load("data/clap_inbatch.pt", map_location=f'cuda:{gpu_id}'), strict=False)
-
-    results = []
+    log_with_time(f"[GPU {gpu_id}] Start loading weights")
+    state_dict = torch.load(f"data/clap_inbatch_{enable_fusion}.pt", map_location=f'cuda:{gpu_id}')
+    log_with_time(f"[GPU {gpu_id}] Weights loaded from file, now applying to model")
+    model.load_state_dict(state_dict, strict=False)
+    log_with_time(f"[GPU {gpu_id}] Model weights loaded")
     with torch.no_grad():
         import hashlib
         import os
@@ -51,6 +61,7 @@ def gpu_worker(gpu_id, batch_list, ret_dict, cache_dir = "data/text_embeddings")
                     except Exception as e:
                         print(f"[WARN] Failed to load {fname}: {e}")
                 else:
+                    log_with_time(f"[GPU {gpu_id}] Computing embedding for: {text[:30]}...")
                     emb = model.get_text_embedding([text], use_tensor=True).to(f'cuda:{gpu_id}')
                     emb = F.normalize(emb, dim=-1)
                     emb_cpu = emb.cpu()
@@ -59,39 +70,24 @@ def gpu_worker(gpu_id, batch_list, ret_dict, cache_dir = "data/text_embeddings")
 
         ret_dict[gpu_id] = torch.cat(cached_results, dim=0)
 
-def encode_on_gpu_clap(args):
-    from laion_clap import CLAP_Module
-    import torch
-    import torch.nn.functional as F
-
-    batch_texts, device_id = args
-    model = CLAP_Module(enable_fusion=False)
-    model.load_ckpt()
-    model = model.to(f'cuda:{device_id}')
-    model.load_state_dict(torch.load("data/clap_inbatch.pt", map_location=f'cuda:{device_id}'), strict=False)
-    with torch.no_grad():
-        emb = model.get_text_embedding(batch_texts, use_tensor=True).to(f'cuda:{device_id}')
-        emb = F.normalize(emb, dim=-1)
-        return emb.cpu()
-
 # ---------- BUILD INDEX ----------
 class Retriever:
-    def __init__(self, model_name: str = "laion/clap-htsat-fused", fallback_mode: str = "safe", device: str = "cpu", max_gpus: int = None):
+    def __init__(self,enable_fusion = True, fallback_mode: str = "safe", device: str = "cpu", max_gpus: int = None):
         self.fallback_mode = fallback_mode
         self.device = device
+        self.enable_fusion = enable_fusion
         self.text_embedding_cache_dir = "data/text_embeddings"
         os.makedirs(self.text_embedding_cache_dir, exist_ok=True)
         import laion_clap
         # self.processor = ClapProcessor.from_pretrained(model_name)
-        self.model = laion_clap.CLAP_Module(enable_fusion=False)
+        self.model = laion_clap.CLAP_Module(enable_fusion=enable_fusion)
         self.model.load_ckpt()
         self.model = self.model.to(device)
         try:
-            self.model.load_state_dict(torch.load("data/clap_inbatch.pt", map_location=device), strict=False)
+            self.model.load_state_dict(torch.load(f"data/clap_inbatch_{enable_fusion}", map_location=device), strict=False)
             print(f"[INFO] Loaded fine-tuned model from data/clap_inbatch.pt")
         except Exception as e:
             print(f"[WARN] Failed to load fine-tuned weights: {e}")
-        print(f"[INFO] Loaded CLAP model: {model_name}")
         self.index = None
         self.term_list = []
         self.max_gpus = max_gpus
@@ -194,7 +190,7 @@ class Retriever:
         self.index = shard_index
 
     def save_index(self):
-        index_path = f"retriever_{self.fallback_mode}.index"
+        index_path = f"retriever_{self.fallback_mode}_{self.enable_fusion}.index"
         # 🔥 提取 GPU shard 中的所有向量，构建统一 CPU index 保存
         dim = self.index.d
         xb = []
@@ -213,7 +209,7 @@ class Retriever:
         faiss.write_index(cpu_index, index_path)
 
     def load_index(self):
-        index_path = f"retriever_{self.fallback_mode}.index"
+        index_path = f"retriever_{self.fallback_mode}_{self.enable_fusion}.index"
         cpu_index = faiss.read_index(index_path)
         ngpu = self.max_gpus or faiss.get_num_gpus()
         print(f"[INFO] Loading FAISS index onto {ngpu} GPUs (shard mode enabled)")
@@ -241,31 +237,6 @@ class Retriever:
 
         self.index = shard_index
 
-# get auido full path
-def get_audio_full_path(sid):
-    doc_id = sid.split("_")[0]  # 提取文档ID，比如 'POD0000001165'
-    source_prefix = doc_id[:3]  # POD, AUD, YOU
-    id_num = int(doc_id[3:])  # 比如 '0000001165' -> 1165
-    subdir_num = (id_num + 99) // 100  # ceil division for every 100 samples
-    subdir = f"P{subdir_num:04d}"  # 格式化成P0001这样a
-
-    # source到文件夹名字的映射
-    source_map = {
-        "POD": "podcast",
-        "YOU": "youtube",
-        "AUD": "audiobook"
-    }
-    source_folder = source_map.get(source_prefix)
-    if source_folder is None:
-        raise ValueError(f"Unknown source prefix: {source_prefix}")
-
-    return os.path.join(
-        "/mnt/taurus/data/siqiouyang/datasets/gigaspeech/audio",
-        source_folder,
-        subdir,
-        f"{doc_id}.opus"
-    )
-
 
 import librosa
 import torch
@@ -280,31 +251,40 @@ def float32_to_int16(x):
 
 def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], device: str = "cuda"):
     from tqdm import tqdm
+    import traceback
 
     recall_scores = []
 
     batch_size = 8
     output_dir = "./data/new_audio_embeddings"
+
+    print(f"[DEBUG] Starting evaluation loop with {len(test_samples)} samples, batch size = {batch_size}")
+
     for b in tqdm(range(0, len(test_samples), batch_size), desc="Extracting audio embeddings"):
         batch_samples = test_samples[b:b + batch_size]
-        audio_start = time.time()
-        with ProcessPoolExecutor(max_workers=batch_size) as pool:
-            audio_batch = list(pool.map(extract_array_from_sample, batch_samples))
-        audio_end = time.time()
-        print(f"[TIME] Audio loading took {audio_end - audio_start:.2f} seconds for batch {b // batch_size}")
+        print(f"[DEBUG] Processing batch {b // batch_size}: {len(batch_samples)} samples")
 
-        # Replace padded_audio, valid_indices = get_valid_audio_embeddings(audio_batch, device)
-        # with the new block
-        with torch.no_grad():
-            max_len = max([a.shape[-1] for a in audio_batch])
-            padded_audio = torch.stack([
-                F.pad(torch.tensor(a).float(), (0, max_len - a.shape[-1])) for a in audio_batch
-            ]).to(device)
-            audio_emb_batch = retriever.model.get_audio_embedding_from_data(x=padded_audio, use_tensor=True)
-            audio_emb_batch = F.normalize(audio_emb_batch, dim=-1)
+        audio_batch = [sample['audio_tensor'] for sample in batch_samples]
 
-        proc_end = time.time()
-        print(f"[TIME] Processor+embedding took {proc_end - audio_end:.2f} seconds for batch {b // batch_size}")
+        try:
+            audio_start = time.time()  # ✅ 补充这一行
+
+            with torch.no_grad():
+                max_len = max([a.shape[-1] for a in audio_batch])
+                padded_audio = torch.stack([
+                    F.pad(torch.tensor(a).squeeze(), (0, max_len - a.shape[-1])) for a in audio_batch
+                ]).to(device)  # shape: [B, T]
+
+                print(f"[DEBUG] Audio padded shape: {padded_audio.shape}")
+                audio_emb_batch = retriever.model.get_audio_embedding_from_data(x=padded_audio, use_tensor=True)
+                audio_emb_batch = F.normalize(audio_emb_batch, dim=-1)
+
+            proc_end = time.time()
+            print(f"[TIME] Processor+embedding took {proc_end - audio_start:.2f} seconds for batch {b // batch_size}")
+        except Exception as e:
+            print(f"[ERROR] Exception during embedding at batch {b // batch_size}: {e}")
+            traceback.print_exc()
+            continue
 
         audio_emb_batch = audio_emb_batch.cpu().numpy()
 
@@ -326,8 +306,6 @@ def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], dev
             print(f"[DEBUG] Evaluating SID: {sid}, GT Text: {ground_truth_text[:100]}...")  # Truncate long texts
             print(f"[DEBUG] Embedding norm: {np.linalg.norm(query_emb):.4f}")
 
-            # --- DEBUG: print before FAISS search
-            print(f"[DEBUG] Running FAISS search using model: {retriever.model.name_or_path} for sid: {sid}")
             try:
                 D, I = retriever.index.search(query_emb[None, :], TOP_K)
             except Exception as faiss_e:
@@ -339,6 +317,8 @@ def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], dev
             # Get ground-truth terms directly from sample
             gt_terms = sample.get("ground_truth_term", [])
             if not gt_terms:
+                print(f"[WARN] No ground_truth_term found in sample: {sample['segment_id']}")
+                print(f"[DEBUG] Sample keys: {sample.keys()}")
                 continue
             print(f"[DEBUG] Top-{TOP_K} Retrieved terms: {retrieved_terms}")
             if b == 0 and idx_in_batch < 10:
@@ -378,19 +358,19 @@ import torch
 from glossary_utils import load_and_clean_glossary
 
 
-def generate(input_file, mode, max_gpu, max_terms=None):
+def generate(enable_fusion,input_file, mode, max_gpu, max_terms=None):
     parsed_glossary = load_and_clean_glossary(input_file, max_terms)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     print(f"\n🔍 Running in {mode} mode on {device}")
-    retriever = Retriever(fallback_mode=mode, device=device, max_gpus=max_gpu)
+    retriever = Retriever(enable_fusion=enable_fusion, fallback_mode=mode, device=device, max_gpus=max_gpu)
     retriever.term_list = parsed_glossary
-    index_file = f"retriever_{mode}.index"
+    index_file = f"retriever_{mode}_{enable_fusion}.index"
 
     if os.path.exists(index_file):
         print("✅ Loading existing index...")
         retriever.load_index()
-        print(f"[INFO] Loaded index with model: {retriever.model.name_or_path}")
+        print("✅ Loading existing done!")
     else:
         print("⚙️ Building new index...")
         retriever.build_index(parsed_glossary)
@@ -410,19 +390,10 @@ if __name__ == "__main__":
     parser.add_argument('--max_terms', type=int, required=False)
     args = parser.parse_args()
 
-    retriever = generate(input_file=args.input, mode=args.mode,max_gpu = args.max_gpu, max_terms=args.max_terms)
+    retriever = generate(enable_fusion = True, input_file=args.input, mode=args.mode,max_gpu = args.max_gpu, max_terms=args.max_terms)
 
 
-    gs = load_dataset(
-        path="speechcolab/gigaspeech",
-        name="xs",
-        trust_remote_code=True,
-        token=os.getenv("HF_TOKEN")
-    )
-    eval_set = gs["dev"]
+    eval_set = handle_giga_speech_train_samples(name="dev",split="validation")
 
-    eval_set = filter_train_set(eval_set)
-
-    if args.max_limit is not None:
-        test_samples = eval_set[:args.max_limit]
-    evaluate_audio_retrieval(retriever, test_samples)
+    print(f'got eval_set: {len(eval_set)}')
+    evaluate_audio_retrieval(retriever, eval_set)
