@@ -257,7 +257,8 @@ def evaluate_audio_retrieval(retriever: Retriever, test_samples: List[Dict], dev
 
     batch_size = 8
     output_dir = f"./data/new_audio_embeddings_{retriever.fallback_mode}_{retriever.enable_fusion}"
-
+    import os
+    os.makedirs(output_dir, exist_ok=True)
     print(f"[DEBUG] Starting evaluation loop with {len(test_samples)} samples, batch size = {batch_size}")
 
     for b in tqdm(range(0, len(test_samples), batch_size), desc="Extracting audio embeddings"):
