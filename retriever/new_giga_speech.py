@@ -18,7 +18,7 @@ def normalize(text):
     text = re.sub(r"<[^>]+>", "", text)  # remove all other <...> tags
     return text.lower()
 
-def filter_train_set(train_set, min_duration=2.1, max_duration=5.0, limit=None):
+def filter_train_set(train_set, min_duration=2.0, max_duration=10.0, limit=None):
     filtered = []
     for item in train_set:
         duration = item["end_time"] - item["begin_time"]
