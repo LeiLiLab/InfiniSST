@@ -15,4 +15,3 @@ debug*
 debug.ipynb
 *.wav
 fairseq*
-retriver/*
