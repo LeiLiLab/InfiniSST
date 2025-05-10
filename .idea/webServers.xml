@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="d3d2c9a4-eef1-470b-bb7a-4af92291cefb" name="taurus.cs.ucsb.edu">
+        <fileTransfer accessType="SFTP" host="taurus.cs.ucsb.edu" port="22" sshConfigId="0d260ee2-3fff-407e-99dd-6222ff19b5cf" sshConfig="jiaxuanluo@taurus.cs.ucsb.edu:22 agent" authAgent="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" isUseRsync="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
