@@ -20,4 +20,4 @@ retriever/data
 *.err
 *.json
 *.index
-.auto_rsync.sh
+auto_rsync.sh
