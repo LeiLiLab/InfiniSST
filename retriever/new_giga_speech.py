@@ -36,7 +36,7 @@ def filter_train_set(train_set, min_duration=2.0, max_duration=10.0, limit=None)
     return filtered
 
 
-def extract_ground_truth_terms(text, term_set):
+def extract_ground_truth_terms(text, term_set,alt2main ,glossary):
     tokens = re.findall(r"\b[\w']+\b", text.lower())
     n = len(tokens)
     matched = []
@@ -47,49 +47,68 @@ def extract_ground_truth_terms(text, term_set):
             if phrase in term_set:
                 matched.append((phrase, i, j))  # 记录匹配项
 
-    # 贪心去重：优先保留长、不重叠的
     matched.sort(key=lambda x: -(x[2] - x[1]))  # 长度降序
     selected = []
     occupied = set()
     for phrase, start, end in matched:
         if not any(pos in occupied for pos in range(start, end)):
-            selected.append(phrase)
+            # 优先查 glossary，其次查 alt2main 再跳转
+            if phrase in glossary:
+                desc = glossary[phrase]["short_description"]
+            elif phrase in alt2main and alt2main[phrase] in glossary:
+                desc = glossary[alt2main[phrase]]["short_description"]
+            else:
+                print(f"error, {phrase} not in glossary")
+                desc = phrase  # fallback 到原 phrase（避免报错）
+            selected.append(desc)
             occupied.update(range(start, end))
 
     return selected if selected else None
 
 
 def extract_array_from_sample(sample):
+    segment_id = sample.get("segment_id")
+    save_path = f"data/audio_tensor/{segment_id}.pt"
+
+    if os.path.exists(save_path):
+        try:
+            tensor = torch.load(save_path)
+            return tensor
+        except Exception as e:
+            print(f"[WARNING] Failed to load cached tensor for {segment_id}: {e}")
+            # fallback to reprocessing below
+
     try:
         if "audio" in sample and "array" in sample["audio"]:
             arr = sample["audio"]["array"]
             sr = sample["audio"].get("sampling_rate", 16000)
 
-            # 保证为 float32 且在 [-1, 1]
             arr = np.asarray(arr, dtype=np.float32)
             arr = np.clip(arr, -1.0, 1.0)
-            tensor = torch.tensor(arr).unsqueeze(0)  # shape: (1, T)
+            tensor = torch.tensor(arr).unsqueeze(0)
 
             if sr != 48000:
                 tensor = AF.resample(tensor, orig_freq=sr, new_freq=48000)
 
-            if tensor.shape[-1] < 24000:  # 少于 0.5 秒就跳过
+            if tensor.shape[-1] < 24000:
                 return None
 
-            return tensor  # shape: (1, T)
+            # 保存 tensor
+            torch.save(tensor, save_path)
+            return tensor
 
         else:
             return None
     except Exception as e:
-        print(f"[ERROR] Failed to extract audio array for {sample.get('segment_id', 'unknown')}: {e}")
+        print(f"[ERROR] Failed to extract/save tensor for {segment_id}: {e}")
         return None
 
 
 # step2 构造{text, term}二元组
-def process_item(item, term_set):
+def process_item(item, term_set, alt2main ,glossary):
     speech_text = item["text"]
     speech_text = normalize(speech_text)
-    ground_truth_terms = extract_ground_truth_terms(speech_text, term_set)
+    ground_truth_terms = extract_ground_truth_terms(speech_text, term_set, alt2main ,glossary)
     if not ground_truth_terms:
         return None
 
@@ -111,11 +130,25 @@ def process_item(item, term_set):
     return item
 
 
-def handle_giga_speech_train_samples(name="s", split="train",limit=None):
-    # step1 处理glossary
-    glossary = load_clean_glossary_from_file()
-    term_set = set(item["term"].lower() for item in glossary)
-    print(f"Total terms: {len(glossary)}")
+# term_set, alt2main, glossary = process_named_entities(
+#         input_path=args.input,
+#         max_words_length=args.max_words_length,
+#         max_workers=args.max_workers
+#     )
+#
+#     # 可选：保存调试信息
+#     with open("data/alt2main.json", "w", encoding="utf-8") as f:
+#         json.dump(alt2main, f, indent=2, ensure_ascii=False)
+#     with open("data/glossary_filtered.json", "w", encoding="utf-8") as f:
+#         json.dump(glossary, f, indent=2, ensure_ascii=False)
+
+from multiprocessing import Pool
+
+def handle_giga_speech_train_samples(term_set_path, alt2main_path, glossary_path, name="s", split="train", sample_limit=None):
+    os.makedirs("data/audio_tensor", exist_ok=True)
+    # step1 处理 glossary
+    term_set, alt2main, glossary = load_clean_glossary_from_file(term_set_path, alt2main_path, glossary_path)
+    print(f"Total terms: {len(term_set)}, total entities: {len(glossary)}")
 
     gs = load_dataset(
         path="speechcolab/gigaspeech",
@@ -123,34 +156,68 @@ def handle_giga_speech_train_samples(name="s", split="train",limit=None):
         trust_remote_code=True,
         token=os.getenv("HF_TOKEN")
     )
-    train_set = gs[split]
+    train_set = filter_train_set(gs[split], limit=sample_limit)
 
-    train_set = filter_train_set(train_set,limit=limit)
+    # 为多进程构造全局变量，避免 pickle 问题
+    global _term_set_for_pool, _alt2main_for_pool, _glossary_for_pool
+    _term_set_for_pool = term_set
+    _alt2main_for_pool = alt2main
+    _glossary_for_pool = glossary
 
-    results = list(tqdm(
-        ThreadPoolExecutor(max_workers=os.cpu_count()).map(
-            lambda item: process_item(item, term_set), train_set
-        ),
-        total=len(train_set), desc="Processing"
-    ))
+    def _process_wrapper(item):
+        return process_item(item, _term_set_for_pool, _alt2main_for_pool, _glossary_for_pool)
 
-    # 过滤掉 None
-    results = [r for r in results if r is not None]
+    slurm_cpus = int(os.environ.get("SLURM_CPUS_PER_TASK", 1))
+    with Pool(processes=slurm_cpus) as pool:
+        results = list(tqdm(pool.imap(_process_wrapper, train_set), total=len(train_set), desc="Processing"))
 
     print(f"Total items: {len(results)}")
 
+    # 后处理过滤
     results = [
         item for item in results
         if item is not None and
-           isinstance(item.get("audio_tensor"), torch.Tensor) and item["audio_tensor"].numel() > 0 and
-           bool(item.get("ground_truth_term"))
+           isinstance(item.get("audio_tensor"), torch.Tensor) and item["audio_tensor"].numel() > 0
+           and item["audio_tensor"].shape[-1] >= 100000
+           and bool(item.get("ground_truth_term"))
     ]
     print(f"Total items after filter: {len(results)}")
-
-    # Filter out items whose audio_tensor is too short for patch embedding
-    results = [
-        item for item in results
-        if isinstance(item.get("audio_tensor"), torch.Tensor) and item["audio_tensor"].shape[-1] >= 100000
-    ]
-    print(f"Total items after length filter: {len(results)}")
+    # return samples
     return results
+
+
+import json
+
+def serialize_for_json(samples):
+    """
+    Remove non-serializable fields like 'audio_tensor'.
+    """
+    clean_samples = []
+    for item in samples:
+        item = dict(item)  # shallow copy
+        if "audio_tensor" in item:
+            del item["audio_tensor"]
+        clean_samples.append(item)
+    return clean_samples
+
+if __name__ == "__main__":
+    term_set_path = "data/terms/term_set.txt"
+    alt2main_path = "data/terms/alt2main.json"
+    glossary_path = "data/terms/glossary_filtered.json"
+
+    # You can change name="s" to other splits like "m", "l", "xl"
+    samples = handle_giga_speech_train_samples(
+        term_set_path=term_set_path,
+        alt2main_path=alt2main_path,
+        glossary_path=glossary_path,
+        name="s",
+        split="train",
+        sample_limit=10000,  # limit number for quick testing
+    )
+
+    json_ready = serialize_for_json(samples)
+
+    with open("test.json", "w", encoding="utf-8") as f:
+        json.dump(json_ready, f, indent=2, ensure_ascii=False)
+
+    print("✅ test.json written successfully with", len(json_ready), "samples.")

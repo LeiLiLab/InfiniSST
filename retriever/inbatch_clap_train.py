@@ -8,8 +8,8 @@ from tqdm import tqdm
 from new_giga_speech import handle_giga_speech_train_samples
 
 class InBatchDataset(Dataset):
-    def __init__(self):
-        self.samples = handle_giga_speech_train_samples()
+    def __init__(self,term_set_path, alt2main_path, glossary_path,name):
+        self.samples = handle_giga_speech_train_samples(term_set_path, alt2main_path, glossary_path, name="s")
 
     def __getitem__(self, idx):
         sample = self.samples[idx]
@@ -119,6 +119,9 @@ def main():
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--lr', type=float, default=1e-5)
     parser.add_argument('--save_path', type=str, default=f"data/clap_inbatch_{enable_fusion}.pt")
+    parser.add_argument('--term_set_path', type=str, default="data/terms/term_set.txt")
+    parser.add_argument('--alt2main_path', type=str, default="data/terms/alt2main.json")
+    parser.add_argument('--glossary_path', type=str, default="data/terms/glossary_filtered.json")
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -126,7 +129,7 @@ def main():
     model = laion_clap.CLAP_Module(enable_fusion=enable_fusion)
     model.load_ckpt()
 
-    dataset = InBatchDataset()
+    dataset = InBatchDataset(args.term_set_path, args.alt2main_path, args.glossary_path, name="s")
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, collate_fn=lambda x: x, drop_last=True)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)

@@ -6,10 +6,27 @@ from nltk.corpus import stopwords
 nltk.download('stopwords', quiet=True)
 stop_words = set(stopwords.words('english'))
 
-def load_clean_glossary_from_file(path="data/cleaned_glossary.json"):
-    with open(path, "r", encoding="utf-8") as f:
+# wikiterm path="data/cleaned_glossary.json"
+def load_clean_glossary_from_file(term_set_path, alt2main_path, glossary_path):
+    # 1. 加载 term_set
+    if term_set_path.endswith(".txt"):
+        with open(term_set_path, "r", encoding="utf-8") as f:
+            term_set = set(line.strip() for line in f if line.strip())
+    elif term_set_path.endswith(".json"):
+        with open(term_set_path, "r", encoding="utf-8") as f:
+            term_set = set(json.load(f))
+    else:
+        raise ValueError("term_set_path must be .txt or .json")
+
+    # 2. 加载 alt2main 映射
+    with open(alt2main_path, "r", encoding="utf-8") as f:
+        alt2main = json.load(f)
+
+    # 3. 加载 glossary
+    with open(glossary_path, "r", encoding="utf-8") as f:
         glossary = json.load(f)
-    return glossary
+
+    return term_set, alt2main, glossary
 
 
 def load_glossary_by_dir(input_file):
