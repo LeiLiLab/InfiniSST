@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./infinisst-web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - REACT_APP_API_BASE_URL=http://localhost:8080/api
+    volumes:
+      - ./infinisst-web:/app
+      - /app/node_modules
+    networks:
+      - infinisst-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - model
+    environment:
+      - MODEL_ENDPOINT=http://model:5000/translate
+    networks:
+      - infinisst-network
+
+  model:
+    build:
+      context: ./model
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    networks:
+      - infinisst-network
+
+networks:
+  infinisst-network:
+    driver: bridge 
