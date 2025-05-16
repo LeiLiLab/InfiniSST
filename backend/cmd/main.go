@@ -2,14 +2,12 @@ package main
 
 import (
 	"log"
-	"net/http"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 
-	"github.com/luojiaxuan/infinisst/internal/api"
-	"github.com/luojiaxuan/infinisst/internal/service"
+	"github.com/LeiLiLab/InfiniSST/backend/internal/api"
+	"github.com/LeiLiLab/InfiniSST/backend/internal/service"
 )
 
 func main() {

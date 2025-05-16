@@ -1,8 +1,6 @@
 package api
 
 import (
-	"bytes"
-	"encoding/json"
 	"io"
 	"log"
 	"net/http"
@@ -11,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
-	"github.com/luojiaxuan/infinisst/internal/service"
+	"github.com/LeiLiLab/InfiniSST/backend/internal/service"
 )
 
 var upgrader = websocket.Upgrader{

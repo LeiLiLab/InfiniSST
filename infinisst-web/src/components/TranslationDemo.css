@@ -16,6 +16,7 @@
   will-change: transform;
   overflow: hidden;
   position: relative;
+  user-select: none;
 }
 
 .drag-handle {
@@ -52,6 +53,9 @@
   letter-spacing: -0.01em;
   font-family: 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  height: 100%;
 }
 
 .language-selector {
@@ -74,4 +78,33 @@
 .language-selector button:hover {
   background-color: rgba(255, 255, 255, 0.2);
   transform: scale(1.05);
+}
+
+/* New styles for latency selector */
+.latency-selector {
+  padding: 0 16px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  min-width: 120px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+}
+
+.latency-selector:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Ensure dropdown text fits properly */
+.latency-selector .MuiInputLabel-root,
+.latency-selector .MuiSelect-root,
+.latency-selector .MuiMenuItem-root {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Ensure the entire bar is draggable */
+.translation-bar * {
+  pointer-events: auto;
+  user-select: none;
 } 

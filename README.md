@@ -1,123 +1,68 @@
-# InfiniSST - Real-time Speech Translation System
+# InfiniSST Project
 
-InfiniSST is a complete speech translation system with a React frontend, Go backend, and Python model service. The system allows users to upload video/audio, input YouTube links, or record from their microphone to get real-time translations displayed in a movable subtitle bar similar to QQ Music's lyrics display.
+InfiniSST is a real-time speech-to-text translation system that processes audio input and provides translations with minimal latency.
 
-## System Architecture
+## Project Structure
 
-The project consists of three main components:
+The project is organized into three main components:
 
-1. **React Frontend** - Provides a user-friendly interface for media input and displays translations in a draggable bar
-2. **Go Backend** - Handles API requests, manages WebSocket connections, and communicates with the translation model
-3. **Python Model Service** - Processes audio data and returns time-synced translations
+1. **infinisst-web/** - React frontend application
+   - User interface for uploading or recording audio
+   - Real-time display of translations
+   - WebSocket communication with the backend
 
-```
-┌────────────────┐     ┌────────────────┐     ┌────────────────┐
-│                │     │                │     │                │
-│  React         │ ──▶ │  Go            │ ──▶ │  Python        │
-│  Frontend      │ ◀── │  Backend       │ ◀── │  Model Service │
-│                │     │                │     │                │
-└────────────────┘     └────────────────┘     └────────────────┘
-```
+2. **infinisst-model/serve/** - Python FastAPI backend server
+   - API endpoints for managing translation sessions
+   - WebSocket server for streaming audio and receiving translations
+   - Serves as the backend for the React frontend
 
-## Features
-
-- **Multiple Media Inputs**: Upload video/audio files, enter YouTube URLs, or record audio directly from microphone
-- **Real-time Translation**: Translations appear synchronized with speech
-- **Movable Subtitle Bar**: Translations display in a QQ Music-style draggable bar
-- **Multi-language Support**: Translate to different target languages
-- **WebSocket Communication**: Real-time updates during recording
+3. **infinisst-model/** - Python translation model
+   - Neural network model for speech-to-text translation
+   - Audio processing and transcription
+   - Integrated with the FastAPI server
 
 ## Getting Started
 
 ### Prerequisites
 
-- Docker and Docker Compose (for containerized deployment)
-- Node.js 18+ (for development)
-- Go 1.21+ (for development)
-- Python 3.9+ (for development)
+- Node.js and npm for the frontend
+- Python 3.8+ with PyTorch and FastAPI for the backend and model
 
-### Running the Application
-
-You can run the application in two ways:
-
-#### Using Docker (Recommended)
+### Running the Frontend
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/infinisst.git
-cd infinisst
-
-# Start all services with Docker Compose
-./start.sh
+cd infinisst-web
+npm install
+npm start
 ```
 
-This will start all three services and make the application available at http://localhost:3000.
+This will start the React frontend on http://localhost:3000.
 
-#### Development Mode
+### Running the Backend
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/infinisst.git
-cd infinisst
-
-# Start all services in development mode
-./start.sh --dev
+cd infinisst-model/serve
+pip install -r requirements.txt
+python api.py
 ```
 
-### Manual Setup
+This will start the FastAPI server on http://localhost:8000.
 
-If you prefer to run the services individually:
+### Development Notes
 
-1. **Start the Python Model Service**:
-   ```bash
-   cd model
-   pip install -r requirements.txt
-   python server.py
-   ```
+The React frontend communicates with the FastAPI backend through HTTP endpoints and WebSockets. The model is integrated with the FastAPI server.
 
-2. **Start the Go Backend**:
-   ```bash
-   cd backend
-   go mod tidy
-   go run cmd/main.go
-   ```
+## API Endpoints
 
-3. **Start the React Frontend**:
-   ```bash
-   cd infinisst-web
-   npm install
-   npm start
-   ```
-
-## Usage
-
-1. Open the application in your browser (http://localhost:3000)
-2. Choose a target language
-3. Upload a video/audio file, enter a YouTube URL, or record audio from your microphone
-4. Play the media to see translations appear in the movable bar
-5. Drag the translation bar to reposition it on the screen
-
-## Development
-
-### Directory Structure
-
-```
-infinisst/
-├── backend/                 # Go backend API
-│   ├── cmd/                 # Entry point
-│   └── internal/            # Internal packages
-│       ├── api/             # API handlers
-│       └── service/         # Business logic
-├── infinisst-web/           # React frontend
-│   ├── public/              # Static assets
-│   └── src/                 # Source code
-│       ├── components/      # React components
-│       └── services/        # API communication
-├── model/                   # Python model service
-│   └── server.py            # Flask API server
-└── docker-compose.yml       # Docker Compose configuration
-```
+- **POST /init** - Initialize a new translation session
+- **WebSocket /wss/{session_id}** - Stream audio and receive translations
+- **POST /update_latency** - Update the latency multiplier
+- **POST /reset_translation** - Reset the translation state
+- **POST /delete_session** - Clean up a session
+- **POST /ping** - Keep a session alive
+- **GET /queue_status/{session_id}** - Check the status of a session
+- **GET /health** - Health check endpoint
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+[MIT License](LICENSE)
