@@ -3,9 +3,12 @@ import os
 import re
 import argparse
 from opencc import OpenCC
+from spacy.lang.en.stop_words import STOP_WORDS as EN_STOPWORDS
 
 # === 初始化繁简转换器 ===
 cc = OpenCC("t2s")
+
+BLACK_LIST_PATH = "data/terms/black_list.txt"
 
 
 
@@ -28,7 +31,7 @@ from collections import defaultdict
 term_occurrences = defaultdict(list)
 
 
-def clean_term(raw_term: str, max_words_length: int = 5):
+def clean_term(raw_term: str, max_words_length: int = 5, black_list_path=BLACK_LIST_PATH):
     """
     清洗一个原始术语字符串。返回 (清洗后的 term, 括号中的内容)，否则返回 None。
     """
@@ -78,7 +81,23 @@ def clean_term(raw_term: str, max_words_length: int = 5):
     if len(re.findall(r"[A-Za-z]", term)) < 3:
         return None
 
+    if all(w.lower() in EN_STOPWORDS for w in words):
+        return None
+    if len(words) == 1 and words[0].lower() in EN_STOPWORDS:
+        return None
+
+    black_list = load_black_list(black_list_path)
+    # black list
+    if black_list and term.lower() in black_list:
+        return None
+
     return term, bracket_content
+
+def load_black_list(filepath=BLACK_LIST_PATH):
+    if not os.path.exists(filepath):
+        return set()
+    with open(filepath, "r", encoding="utf-8") as f:
+        return set(line.strip().lower() for line in f if line.strip())
 
 def process_named_entities(input_path: str, max_words_length: int):
     raw_target_langs = {"zh", "zh-hans", "zh-hant", "de", "es"}
@@ -170,7 +189,7 @@ def process_named_entities(input_path: str, max_words_length: int):
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 
-def clean_single_file(filepath, max_words_length):
+def clean_single_file(filepath, max_words_length,black_list_path=BLACK_LIST_PATH):
     local_glossary = dict()
     local_term_occurrences = defaultdict(list)
 
@@ -191,6 +210,11 @@ def clean_single_file(filepath, max_words_length):
         term_clean, bracket_content = result
 
         term_key = term_clean.lower()
+
+        black_list = load_black_list(black_list_path)
+        if black_list and term_key in black_list:
+            continue
+
         local_term_occurrences[term_key].append(item)
 
         if len(local_term_occurrences[term_key]) > 1:
