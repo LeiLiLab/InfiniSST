@@ -1,9 +1,9 @@
-export PYTHONPATH=/home/siqiouya/work/sllama
+export PYTHONPATH=/home/xixu/work/InfiniSST
 
 python api.py \
     --latency-multiplier 2 \
     --min-start-sec 0 \
-    --w2v2-path /data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt \
+    --w2v2-path /mnt/data6/xixu/demo/wav2_vec_vox_960h_pl.pt \
     --w2v2-type w2v2 \
     --ctc-finetuned True \
     \
@@ -26,5 +26,5 @@ python api.py \
     --repetition-penalty 1.2 \
     --suppress-non-language \
     \
-    --model-name /compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf \
+    --model-name /mnt/data6/xixu/demo/llama3.1-8b-instruct-hf \
     --lora-rank 32

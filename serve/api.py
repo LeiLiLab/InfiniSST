@@ -44,8 +44,10 @@ LANGUAGE_PAIRS = {
 }
 
 # model_path = "/compute/babel-5-23/siqiouya/runs/{}-{}/8B-traj-s2-v3.6/last.ckpt/pytorch_model.bin"
-model_path = "/compute/babel-5-23/siqiouya/runs/gigaspeech/{}-{}/stage1/last.ckpt/pytorch_model.bin"
-lora_path = "/compute/babel-5-23/siqiouya/runs/gigaspeech/{}-{}/stage2_8b_lora_rank32/last.ckpt/lora_rank32.bin"
+model_path_de = "/mnt/data6/xixu/demo/en-de/pytorch_model.bin"
+model_path_es = "/mnt/data6/xixu/demo/en-es/pytorch_model.bin"
+model_path = "/mnt/data6/xixu/demo/gigaspeech/s1/pytorch_model.bin"
+lora_path = "/mnt/data6/xixu/demo/gigaspeech/lora/lora_rank32.bin"
 
 app = FastAPI()
 
@@ -112,8 +114,16 @@ def session_worker_process(
         
         args.source_lang = source_lang
         args.target_lang = target_lang
-        args.state_dict_path = model_path.format(src_code, tgt_code)
-        args.lora_path = lora_path.format(src_code, tgt_code)
+        # Conditional model and lora loading
+        if language_pair == "English -> German":
+            args.state_dict_path = model_path_de
+            args.lora_path = None  # or '' if preferred
+        elif language_pair == "English -> Spanish":
+            args.state_dict_path = model_path_es
+            args.lora_path = None  # or '' if preferred
+        else:
+            args.state_dict_path = model_path.format(src_code, tgt_code) if '{}' in model_path else model_path
+            args.lora_path = lora_path.format(src_code, tgt_code) if '{}' in lora_path else lora_path
         
         # Set the GPU device
         print(f"Worker process initializing on GPU {gpu_id}")
@@ -285,7 +295,8 @@ class TranslationSession:
         else:
             print(f"Timeout waiting for worker process on GPU {self.gpu_id} after {timeout}s")
             return False
-        
+    
+    # sends audio segment to worker process
     async def process_segment(self, segment: np.ndarray, is_last: bool = False) -> str:
         # 确保工作进程已准备就绪
         if not self.is_ready:
@@ -656,6 +667,7 @@ async def get_queue_status(session_id: str):
     # Session not found
     return {"session_id": session_id, "status": "not_found", "error": "Session not found in queue or active sessions"}
 
+# receives audio segment from webpage
 @app.websocket("/wss/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
     await websocket.accept()
@@ -714,22 +726,59 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
         
         # Process incoming audio data
         while True:
-            # Receive audio data
-            data = await websocket.receive_bytes()
+            # Receive data from the WebSocket
+            message = await websocket.receive()
             
             # Update activity timestamp
             update_session_activity(session_id)
             # Update ping timestamp when data is received
             update_session_ping(session_id)
             
-            # Convert bytes to numpy array
-            audio_data = np.frombuffer(data, dtype=np.float32)
-            chunk_count += 1
-            print(f"Received chunk {chunk_count}, size: {len(audio_data)}")
-            
-            # Process the segment (send to worker process)
-            await session.process_segment(audio_data)
+            # Check if this is a control message (text) or audio data (bytes)
+            if "text" in message:
+                # Handle control messages
+                control_message = message["text"]
+                print(f"Received control message for session {session_id}: {control_message}")
                 
+                if control_message == "EOF":
+                    # This is an explicit End-Of-File signal from the client
+                    # Process an empty segment with is_last=True to signal completion
+                    print(f"Received EOF signal for session {session_id}, marking processing as complete")
+                    
+                    # Send an empty audio segment with is_last=True to indicate completion
+                    empty_segment = np.array([], dtype=np.float32)
+                    await session.process_segment(empty_segment, is_last=True)
+                    
+                    # Send a confirmation message to the client
+                    await websocket.send_text("PROCESSING_COMPLETE: File processing finished")
+                    continue
+                
+                # Handle other potential control messages here
+                elif control_message.startswith("LATENCY:"):
+                    # Example of another control message to dynamically adjust latency
+                    try:
+                        latency_value = int(control_message.split(":")[1])
+                        session.control_queue.put(f"update_latency:{latency_value}")
+                        await websocket.send_text(f"LATENCY_UPDATED: Set to {latency_value}")
+                    except (ValueError, IndexError):
+                        await websocket.send_text("ERROR: Invalid latency format")
+                    continue
+                
+            elif "bytes" in message:
+                # This is audio data
+                data = message["bytes"]
+                
+                # Convert bytes to numpy array
+                audio_data = np.frombuffer(data, dtype=np.float32)
+                chunk_count += 1
+                print(f"Received chunk {chunk_count}, size: {len(audio_data)}")
+                
+                # Process the segment (send to worker process)
+                # For regular chunks, is_last is always False
+                await session.process_segment(audio_data, is_last=False)
+            
+    except starlette.websockets.WebSocketDisconnect:
+        print(f"WebSocket disconnected for session {session_id}")
     except Exception as e:
         print(f"Error in WebSocket connection: {str(e)}")
         import traceback
@@ -749,10 +798,99 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                 pass
 
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
-    contents = await file.read()
-    audio_data, sr = sf.read(io.BytesIO(contents))
-    return {"sample_rate": sr, "duration": len(audio_data) / sr}
+async def upload_file(file: UploadFile = File(...), session_id: str = None, background_tasks: BackgroundTasks = None):
+    """
+    Process an uploaded audio file and send it to the translation session.
+    
+    Args:
+        file: The uploaded audio file
+        session_id: The session ID to use for translation
+        background_tasks: FastAPI background tasks
+    
+    Returns:
+        Information about the file and processing status
+    """
+    if not session_id:
+        return {"error": "No session_id provided. Please create a session first."}
+    
+    if session_id not in active_sessions:
+        return {"error": "Invalid session ID. Please create a valid session."}
+    
+    session = active_sessions[session_id]
+    
+    # Ensure the worker process is ready
+    if not session.is_ready:
+        if not await session.wait_for_ready(timeout=10):
+            return {"error": "Worker process is not ready, please try again later."}
+    
+    try:
+        # Read the file contents
+        contents = await file.read()
+        
+        # Parse the audio data
+        audio_data, sample_rate = sf.read(io.BytesIO(contents))
+        
+        # Convert to mono if stereo
+        if len(audio_data.shape) > 1 and audio_data.shape[1] > 1:
+            audio_data = np.mean(audio_data, axis=1)
+        
+        # Resample to 16kHz if needed
+        if sample_rate != 16000:
+            # A proper resampling would be implemented here
+            # For simplicity, we'll just warn about it
+            print(f"Warning: Audio sample rate is {sample_rate}Hz, not 16kHz. Resampling needed.")
+        
+        # Convert to float32 if not already
+        if audio_data.dtype != np.float32:
+            audio_data = audio_data.astype(np.float32)
+        
+        # Define the function to process the file in the background
+        async def process_file_in_background():
+            try:
+                # Define a reasonable chunk size (e.g., 0.5 seconds of audio at 16kHz)
+                chunk_size = 8000  # 0.5 seconds at 16kHz
+                
+                # Process the audio in chunks
+                for i in range(0, len(audio_data), chunk_size):
+                    chunk = audio_data[i:i+chunk_size]
+                    # Process each chunk
+                    await session.process_segment(chunk, is_last=False)
+                    # Small delay to not overwhelm the system
+                    await asyncio.sleep(0.01)
+                
+                # Send a final empty segment with is_last=True to indicate completion
+                await session.process_segment(np.array([], dtype=np.float32), is_last=True)
+                
+                print(f"File processing complete for session {session_id}, length: {len(audio_data)} samples ({len(audio_data)/16000:.2f}s)")
+            except Exception as e:
+                print(f"Error processing file for session {session_id}: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        # Add the processing task to background tasks
+        if background_tasks:
+            background_tasks.add_task(process_file_in_background)
+            return {
+                "success": True,
+                "sample_rate": sample_rate, 
+                "duration": len(audio_data) / sample_rate,
+                "message": "File uploaded and processing started. Translation results will be available through the WebSocket."
+            }
+        else:
+            # Start processing immediately
+            asyncio.create_task(process_file_in_background())
+            return {
+                "success": True,
+                "sample_rate": sample_rate, 
+                "duration": len(audio_data) / sample_rate,
+                "message": "File uploaded and processing started. Translation results will be available through the WebSocket."
+            }
+            
+    except Exception as e:
+        print(f"Error processing uploaded file: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"error": f"Failed to process file: {str(e)}"}
 
 @app.post("/update_latency")
 async def update_latency(session_id: str, latency_multiplier: int):
