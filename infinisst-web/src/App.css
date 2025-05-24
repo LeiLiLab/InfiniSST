@@ -3,6 +3,7 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: #121620; /* Dark background for entire app */
 }
 
 .app-header {

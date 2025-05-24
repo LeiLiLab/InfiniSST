@@ -21,7 +21,9 @@ import {
   alpha,
   SelectChangeEvent,
   styled,
-  Menu
+  Menu,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import MicIcon from '@mui/icons-material/Mic';
 import StopIcon from '@mui/icons-material/Stop';
@@ -31,6 +33,7 @@ import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import LanguageIcon from '@mui/icons-material/Language';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
+import TuneIcon from '@mui/icons-material/Tune';
 import { motion, AnimatePresence } from 'framer-motion';
 import apiService, { Translation } from '../services/api';
 import './TranslationDemo.css';
@@ -173,6 +176,14 @@ const VisuallyHiddenInput = styled('input')({
   width: 1,
 });
 
+// Latency multiplier options
+const LATENCY_OPTIONS = [
+  { value: 1, label: '1x (Fastest)' },
+  { value: 2, label: '2x (Default)' },
+  { value: 3, label: '3x (More Accurate)' },
+  { value: 4, label: '4x (Most Accurate)' }
+];
+
 const TranslationDemo: React.FC = () => {
   const [mediaUrl, setMediaUrl] = useState<string>('');
   const [youtubeUrl, setYoutubeUrl] = useState<string>('');
@@ -184,16 +195,241 @@ const TranslationDemo: React.FC = () => {
     { time: 0, text: "Welcome to InfiniSST Translation Demo" }
   ]);
   const [currentTranslation, setCurrentTranslation] = useState<string>("Welcome to InfiniSST Translation Demo");
-  const [barPosition, setBarPosition] = useState<{ top: number, left: number }>({ top: 100, left: 20 });
+  const [barPosition, setBarPosition] = useState<{ top: number, left: number }>({ top: 0, left: 0 });
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [dragStartPos, setDragStartPos] = useState<{ x: number, y: number }>({ x: 0, y: 0 });
   const [targetLanguage, setTargetLanguage] = useState<string>('en');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   
+  // New state variables for new features
+  const [latencyMultiplier, setLatencyMultiplier] = useState<number>(2);
+  const [modelLoaded, setModelLoaded] = useState<boolean>(false);
+  const [modelLoading, setModelLoading] = useState<boolean>(false);
+  const [modelFeedback, setModelFeedback] = useState<{message: string, severity: 'success' | 'error' | 'info' | 'warning'} | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement | null>(null);
   const translationBarRef = useRef<HTMLDivElement>(null);
+  const mediaContainerRef = useRef<HTMLDivElement>(null);
+  
+  // State for managing the session
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  
+  // State for managing audio
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  
+  // State for managing the translation
+  const [translation, setTranslation] = useState<string>("");
+  const [isTranslating, setIsTranslating] = useState(false);
+  
+  // References
+  const wsRef = useRef<WebSocket | null>(null);
+  const pingIntervalRef = useRef<number | null>(null);
+  
+  // Auto-load model when component mounts
+  useEffect(() => {
+    loadModel();
+    initSession();
+  }, []);
+  
+  // Function to load the model
+  const loadModel = async () => {
+    try {
+      setModelLoading(true);
+      setModelFeedback({
+        message: 'Loading translation model...',
+        severity: 'info'
+      });
+      
+      // Simulate model loading with a delay (replace with actual API call)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Successfully loaded
+      setModelLoaded(true);
+      setModelLoading(false);
+      setModelFeedback({
+        message: 'Translation model loaded successfully',
+        severity: 'success'
+      });
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setModelFeedback(null);
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Error loading model:', error);
+      setModelLoading(false);
+      setModelFeedback({
+        message: 'Error loading translation model',
+        severity: 'error'
+      });
+    }
+  };
+
+  // Initialize WebSocket connection when session ID is available
+  useEffect(() => {
+    if (sessionId) {
+      connectWebSocket();
+    }
+    
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, [sessionId]);
+  
+  // Initialize translation session
+  const initSession = async () => {
+    setIsConnecting(true);
+    
+    try {
+      // Generate a unique client ID
+      const clientId = Math.random().toString(36).substring(2, 15);
+      
+      // Call the init API
+      const response = await fetch('http://localhost:8000/init', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          agent_type: 'InfiniSST',
+          language_pair: "English -> Chinese",
+          latency_multiplier: latencyMultiplier,
+          client_id: clientId,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        console.error('Failed to initialize session:', data.error);
+        alert(`Failed to initialize session: ${data.error}`);
+        setIsConnecting(false);
+        return;
+      }
+      
+      console.log('Session initialized:', data);
+      setSessionId(data.session_id);
+      
+      // Start ping interval to keep session alive
+      startPingInterval(data.session_id);
+      
+    } catch (error) {
+      console.error('Error initializing session:', error);
+      alert(`Error initializing session: ${error instanceof Error ? error.message : String(error)}`);
+      setIsConnecting(false);
+    }
+  };
+  
+  // Connect to WebSocket
+  const connectWebSocket = () => {
+    if (!sessionId) return;
+    
+    const ws = new WebSocket(`ws://localhost:8000/wss/${sessionId}`);
+    
+    ws.onopen = () => {
+      console.log('WebSocket connected');
+      setIsConnected(true);
+      setIsConnecting(false);
+    };
+    
+    ws.onmessage = (event) => {
+      const message = event.data;
+      
+      if (message.startsWith('INITIALIZING:')) {
+        console.log('Worker initializing:', message);
+      } else if (message.startsWith('READY:')) {
+        console.log('Worker ready:', message);
+        setIsConnecting(false);
+      } else if (message.startsWith('ERROR:')) {
+        console.error('Error from worker:', message);
+        alert(`Error from worker: ${message.substring(6)}`);
+      } else {
+        // Translation output
+        setTranslation(message);
+      }
+    };
+    
+    ws.onclose = () => {
+      console.log('WebSocket disconnected');
+      setIsConnected(false);
+      
+      // Try to reconnect after a delay
+      setTimeout(() => {
+        if (sessionId) {
+          connectWebSocket();
+        }
+      }, 3000);
+    };
+    
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      ws.close();
+    };
+    
+    wsRef.current = ws;
+  };
+  
+  // Start ping interval to keep session alive
+  const startPingInterval = (id: string) => {
+    // Clear any existing interval
+    if (pingIntervalRef.current) {
+      window.clearInterval(pingIntervalRef.current);
+    }
+    
+    // Send ping every 10 seconds to keep session alive
+    pingIntervalRef.current = window.setInterval(() => {
+      fetch('http://localhost:8000/ping', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: id,
+        }),
+      }).catch(error => {
+        console.error('Error sending ping:', error);
+      });
+    }, 10000);
+  };
+  
+  // Clean up session on component unmount
+  const cleanupSession = () => {
+    // Clear ping interval
+    if (pingIntervalRef.current) {
+      window.clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = null;
+    }
+    
+    // Close WebSocket
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    
+    // Delete session
+    if (sessionId) {
+      fetch('http://localhost:8000/delete_session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+        }),
+      }).catch(error => {
+        console.error('Error deleting session:', error);
+      });
+    }
+  };
   
   // Handle file uploads (video or audio)
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -358,7 +594,7 @@ const TranslationDemo: React.FC = () => {
     }
   }, [mediaUrl]);
   
-  // Handle translation bar dragging
+  // Handle translation bar dragging (make the entire bar draggable)
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (translationBarRef.current) {
       setIsDragging(true);
@@ -405,6 +641,157 @@ const TranslationDemo: React.FC = () => {
   const handleLanguageMenuSelect = (language: string) => {
     setTargetLanguage(language);
     setAnchorEl(null);
+  };
+
+  // Get and update the media container width for matching translation bar width
+  useEffect(() => {
+    const updateWidth = () => {
+      if (mediaContainerRef.current) {
+        const width = mediaContainerRef.current.offsetWidth;
+        setContainerWidth(width);
+      }
+    };
+
+    // Initial update
+    updateWidth();
+
+    // Update on window resize
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
+
+  // Center the translation bar initially
+  useEffect(() => {
+    const centerBar = () => {
+      if (translationBarRef.current && containerWidth > 0) {
+        const barWidth = translationBarRef.current.offsetWidth;
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        
+        setBarPosition({
+          left: (windowWidth - barWidth) / 2,
+          top: windowHeight / 2 - 100 // Position it a bit above center
+        });
+      }
+    };
+    
+    // Center when container width is known and on window resize
+    centerBar();
+    window.addEventListener('resize', centerBar);
+    return () => window.removeEventListener('resize', centerBar);
+  }, [containerWidth]);
+  
+  // Handle file selection
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    setSelectedFile(file);
+    
+    // Reset translation when new file is selected
+    setTranslation("");
+    
+    // Auto-upload the file if WebSocket is connected
+    if (file && isConnected) {
+      uploadFile(file);
+    }
+  };
+  
+  // Upload and process audio file
+  const uploadFile = async (file: File) => {
+    if (!file || !isConnected || !wsRef.current) {
+      alert("Please select a file and ensure WebSocket is connected");
+      return;
+    }
+    
+    setIsUploading(true);
+    setIsTranslating(true);
+    
+    try {
+      // Read the file as ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer();
+      
+      // Create an AudioContext
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Decode the audio data
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      
+      // Get the raw audio data
+      const rawData = audioBuffer.getChannelData(0);
+      
+      // Split the audio into chunks and send them over WebSocket
+      const chunkSize = 16000; // 1 second of audio at 16kHz
+      const numChunks = Math.ceil(rawData.length / chunkSize);
+      
+      for (let i = 0; i < numChunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize, rawData.length);
+        const chunk = rawData.slice(start, end);
+        
+        // Convert to Float32Array if it's not already
+        const chunkFloat32 = chunk instanceof Float32Array ? chunk : new Float32Array(chunk);
+        
+        // Send the chunk over WebSocket
+        wsRef.current.send(chunkFloat32.buffer);
+        
+        // Wait a short time between chunks
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      setIsUploading(false);
+      
+      // Tell the server this is the last chunk (special flag in worker.py)
+      // For now, we'll just wait for all chunks to be processed
+      setTimeout(() => {
+        setIsTranslating(false);
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error processing audio:', error);
+      alert(`Error processing audio: ${error instanceof Error ? error.message : String(error)}`);
+      setIsUploading(false);
+      setIsTranslating(false);
+    }
+  };
+  
+  // Reset translation
+  const resetTranslation = () => {
+    if (!isConnected || !wsRef.current) {
+      alert("WebSocket not connected");
+      return;
+    }
+    
+    // Send reset command
+    wsRef.current.send("RESET");
+    
+    // Clear translation
+    setTranslation("");
+  };
+  
+  // Update latency multiplier
+  const updateLatency = async (multiplier: number) => {
+    if (!sessionId) return;
+    
+    setLatencyMultiplier(multiplier);
+    
+    try {
+      // Call the update_latency API
+      const response = await fetch(`http://localhost:8000/update_latency?session_id=${sessionId}&latency_multiplier=${multiplier}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const data = await response.json();
+      
+      if (!data.success) {
+        console.error('Failed to update latency:', data.error);
+        alert(`Failed to update latency: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error updating latency:', error);
+      alert(`Error updating latency: ${error instanceof Error ? error.message : String(error)}`);
+    }
   };
   
   return (
@@ -502,7 +889,7 @@ const TranslationDemo: React.FC = () => {
                     startIcon={isRecording ? <StopIcon /> : <MicIcon />}
                     onClick={handleRecordToggle}
                     fullWidth
-                    disabled={isProcessing}
+                    disabled={isProcessing || !modelLoaded}
                   >
                     {isRecording ? "Stop Recording" : "Record Audio"}
                   </StyledRecordButton>
@@ -517,7 +904,7 @@ const TranslationDemo: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
-                <StyledMediaContainer>
+                <StyledMediaContainer ref={mediaContainerRef}>
                   {isProcessing && (
                     <Box 
                       sx={{ 
@@ -632,7 +1019,7 @@ const TranslationDemo: React.FC = () => {
           </motion.div>
         </Container>
         
-        {/* Movable translation bar */}
+        {/* Movable translation bar with enhanced features */}
         <AnimatePresence>
           <motion.div
             initial={{ opacity: 0, y: 50 }}
@@ -645,16 +1032,60 @@ const TranslationDemo: React.FC = () => {
               position: 'fixed',
               top: `${barPosition.top}px`,
               left: `${barPosition.left}px`,
+              width: containerWidth > 0 ? `${containerWidth}px` : 'auto',
+              height: '70px', // Increased height for better visibility
+              cursor: 'move',
+              caretColor: 'transparent' // Prevents text selection cursor
             }}
+            onMouseDown={handleMouseDown} // Make entire bar draggable
           >
-            <div 
-              className="drag-handle"
-              onMouseDown={handleMouseDown}
-            >
+            {/* Latency multiplier dropdown (new) */}
+            <div className="latency-selector">
+              <FormControl variant="standard" size="small" sx={{ minWidth: 130 }}>
+                <InputLabel id="latency-select-label" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '12px' }}>
+                  Latency
+                </InputLabel>
+                <Select
+                  labelId="latency-select-label"
+                  value={latencyMultiplier}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    updateLatency(value);
+                  }}
+                  sx={{ 
+                    color: 'white',
+                    '.MuiSelect-icon': { color: 'rgba(255, 255, 255, 0.7)' },
+                    '&:before': { borderColor: 'rgba(255, 255, 255, 0.3)' },
+                    fontSize: '12px'
+                  }}
+                  MenuProps={{
+                    sx: { 
+                      '& .MuiMenuItem-root': {
+                        fontSize: '12px'
+                      }
+                    }
+                  }}
+                >
+                  {LATENCY_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </div>
+            <div className="drag-handle">
               <DragIndicatorIcon />
             </div>
             <div className="translation-text">
-              {currentTranslation}
+              {modelLoading ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <CircularProgress size={20} thickness={4} color="inherit" />
+                  <span>Loading translation model...</span>
+                </Box>
+              ) : (
+                currentTranslation
+              )}
             </div>
             <div className="language-selector">
               <StyledIconButton 
@@ -683,6 +1114,23 @@ const TranslationDemo: React.FC = () => {
             </div>
           </motion.div>
         </AnimatePresence>
+        
+        {/* Toast notifications for model feedback */}
+        {modelFeedback && (
+          <Snackbar 
+            open={true}
+            autoHideDuration={6000}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          >
+            <Alert 
+              severity={modelFeedback.severity}
+              elevation={6}
+              variant="filled"
+            >
+              {modelFeedback.message}
+            </Alert>
+          </Snackbar>
+        )}
       </Box>
     </ThemeProvider>
   );

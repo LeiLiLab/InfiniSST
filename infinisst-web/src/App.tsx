@@ -6,9 +6,6 @@ import './App.css';
 const App: React.FC = () => {
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>InfiniSST Demo</h1>
-      </header>
       <main>
         <Routes>
           <Route path="/" element={<TranslationDemo />} />
