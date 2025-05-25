@@ -51,6 +51,16 @@ lora_path = "/mnt/data6/xixu/demo/gigaspeech/lora/lora_rank32.bin"
 
 app = FastAPI()
 
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Store active translation sessions with last activity timestamp
 active_sessions: Dict[str, dict] = {}
 session_last_activity: Dict[str, float] = {}
@@ -303,10 +313,19 @@ class TranslationSession:
             print(f"Warning: Trying to process segment before worker is ready on GPU {self.gpu_id}")
             if not await self.wait_for_ready(timeout=10):
                 return "ERROR: Worker process not ready"
-        
+
+        # Safety check: ensure process is alive before putting into queue
+        if not self.process.is_alive():
+            print(f"Worker process is not alive for session on GPU {self.gpu_id}")
+            return "ERROR: Worker process terminated"
+
         # Send the segment to the worker process
-        self.input_queue.put((segment, is_last))
-        
+        try:
+            self.input_queue.put((segment, is_last))
+        except ValueError as e:
+            print(f"Failed to put segment into input_queue: {e}")
+            return "ERROR: Input queue is closed"
+
         # Check for output (non-blocking)
         try:
             # Use asyncio to avoid blocking the event loop
@@ -316,52 +335,52 @@ class TranslationSession:
             return translation
         except Empty:
             return ""
-    
+
     def reset(self):
         """Reset the translation state without reloading the model"""
         # 确保工作进程已准备就绪
         if not self.is_ready:
             print(f"Warning: Trying to reset before worker is ready on GPU {self.gpu_id}")
             return False
-            
+
         self.control_queue.put("reset")
         print(f"Sent reset command to worker process for session with {self.agent_type} model")
         return True
-    
+
     def cleanup(self):
         """Clean up GPU resources used by this session"""
         try:
             # Send termination command to the worker process
             self.control_queue.put("terminate")
-            
+
             # Wait for the process to terminate (with timeout)
             self.process.join(timeout=5)
-            
+
             # If the process is still alive, terminate it forcefully
             if self.process.is_alive():
                 print(f"Worker process did not terminate gracefully, forcing termination")
                 self.process.terminate()
                 self.process.join(timeout=2)
-                
+
                 # If still alive, kill it
                 if self.process.is_alive():
                     print(f"Worker process still alive after terminate, killing it")
                     self.process.kill()
                     self.process.join(timeout=1)
-            
+
             # Close the queues
             self.input_queue.close()
             self.output_queue.close()
             self.control_queue.close()
-            
+
             # Remove from session_workers dictionary
             if id(self) in session_workers:
                 del session_workers[id(self)]
-            
+
             print(f"Cleaned up worker process for session with {self.agent_type} model")
         except Exception as e:
             print(f"Error cleaning up worker process: {e}")
-        
+
         # Force garbage collection
         gc.collect()
         if torch.cuda.is_available():
@@ -371,12 +390,12 @@ class TranslationSession:
 def find_free_gpu():
     # Get list of GPUs currently in use
     gpus_in_use = set(session_gpu_map.values())
-    
+
     # Find a free GPU
     for gpu_id in range(num_gpus):
         if gpu_id not in gpus_in_use:
             return gpu_id
-    
+
     # No free GPU found
     return None
 
@@ -397,7 +416,7 @@ async def process_queue():
                 if session_queue and len(session_queue) > 0:
                     # Find a free GPU
                     free_gpu = find_free_gpu()
-                    
+
                     if free_gpu is not None:
                         # Get the first session in the queue
                         next_session = session_queue.pop(0)
@@ -405,37 +424,37 @@ async def process_queue():
                         agent_type = next_session['agent_type']
                         language_pair = next_session['language_pair']
                         latency_multiplier = next_session['latency_multiplier']
-                        
+
                         print(f"Processing queued session {session_id} on GPU {free_gpu}")
-                        
+
                         try:
                             # Initialize the session on the free GPU
                             session_args = copy.deepcopy(args)
                             session_args.latency_multiplier = latency_multiplier
                             session_args.max_new_tokens = 10 * latency_multiplier
-                            
+
                             # Create the session with the specified GPU
                             print(f"Creating queued session {session_id} on GPU {free_gpu}")
                             session = TranslationSession(agent_type, language_pair, session_args, gpu_id=free_gpu)
-                            
+
                             # Add the session to active sessions immediately, but mark it as initializing
                             active_sessions[session_id] = session
                             session_last_activity[session_id] = time.time()
                             session_last_ping[session_id] = time.time()
-                            
+
                             # Map the session to the GPU
                             session_gpu_map[session_id] = free_gpu
-                            
+
                             # 异步等待工作进程准备就绪，但不阻塞队列处理
                             # 创建一个后台任务来等待工作进程准备就绪
                             asyncio.create_task(session.wait_for_ready())
-                            
+
                             print(f"Queued session {session_id} initialization started on GPU {free_gpu}")
                         except Exception as e:
                             print(f"Error initializing queued session {session_id} on GPU {free_gpu}: {e}")
                             import traceback
                             traceback.print_exc()
-                            
+
                             # Put the session back in the queue if initialization failed
                             session_queue.insert(0, next_session)
                             print(f"Session {session_id} put back in queue due to initialization failure")
@@ -443,7 +462,7 @@ async def process_queue():
             print(f"Error processing queue: {e}")
             import traceback
             traceback.print_exc()
-        
+
         # Check every 1 second
         await asyncio.sleep(1)
 
@@ -470,57 +489,57 @@ async def check_orphaned_sessions():
     while True:
         current_time = time.time()
         sessions_to_delete = []
-        
+
         # Check for sessions without recent pings (closed/refreshed webpages)
         for session_id in list(active_sessions.keys()):
             # Skip sessions that don't have a ping record yet (new sessions)
             if session_id not in session_last_ping:
                 continue
-                
+
             last_ping = session_last_ping[session_id]
             time_since_last_ping = current_time - last_ping
-            
+
             # If no ping received for WEBPAGE_DISCONNECT_TIMEOUT seconds, consider the webpage closed
             if time_since_last_ping > WEBPAGE_DISCONNECT_TIMEOUT:
                 print(f"Session {session_id} detected as orphaned: no ping for {time_since_last_ping:.1f}s (threshold: {WEBPAGE_DISCONNECT_TIMEOUT}s)")
                 sessions_to_delete.append(session_id)
-        
+
         # Delete orphaned sessions
         for session_id in sessions_to_delete:
             try:
                 if session_id in active_sessions:
                     session = active_sessions[session_id]
                     print(f"Cleaning up orphaned session {session_id} (webpage closed/refreshed)")
-                    
+
                     # Clean up GPU resources
                     session.cleanup()
-                    
+
                     # Remove from active sessions
                     del active_sessions[session_id]
-                    
+
                     # Remove from activity tracking
                     if session_id in session_last_activity:
                         del session_last_activity[session_id]
-                        
+
                     # Remove from ping tracking
                     if session_id in session_last_ping:
                         del session_last_ping[session_id]
-                    
+
                     # Remove from GPU mapping
                     if session_id in session_gpu_map:
                         gpu_id = session_gpu_map[session_id]
                         del session_gpu_map[session_id]
                         print(f"Released GPU {gpu_id} from session {session_id}")
-                    
+
                     # Force garbage collection
                     gc.collect()
             except Exception as e:
                 print(f"Error cleaning up orphaned session {session_id}: {e}")
-        
+
         # Log active sessions count periodically
         if active_sessions:
             print(f"Active sessions: {len(active_sessions)}")
-        
+
         # Check every 5 seconds
         await asyncio.sleep(DISCONNECT_CHECK_INTERVAL)
 
@@ -531,22 +550,22 @@ async def log_active_sessions():
             current_time = time.time()
             print(f"\n===== Active Sessions Report ({len(active_sessions)} sessions) =====")
             print(f"GPU Usage: {len(session_gpu_map)}/{num_gpus} GPUs in use")
-            
+
             # Print GPU allocation
             gpu_allocation = {}
             for gpu_id in range(num_gpus):
                 gpu_allocation[gpu_id] = []
-            
+
             for session_id, gpu_id in session_gpu_map.items():
                 if gpu_id in gpu_allocation:
                     gpu_allocation[gpu_id].append(session_id)
-            
+
             for gpu_id, sessions in gpu_allocation.items():
                 if sessions:
                     print(f"  GPU {gpu_id}: {len(sessions)} sessions - {', '.join(sessions)}")
                 else:
                     print(f"  GPU {gpu_id}: Free")
-            
+
             # Print active sessions
             print("\nActive Sessions:")
             for session_id, session in active_sessions.items():
@@ -554,11 +573,11 @@ async def log_active_sessions():
                 inactivity_time = current_time - last_activity
                 gpu_id = session_gpu_map.get(session_id, "Unknown")
                 process_id = session.process.pid if hasattr(session, 'process') else "Unknown"
-                
+
                 print(f"  - {session_id}: {session.agent_type} | {session.language_pair} | "
                       f"Latency: {session.args.latency_multiplier}x | GPU: {gpu_id} | "
                       f"Process: {process_id} | Inactive for: {inactivity_time:.1f}s")
-            
+
             # Print queue information
             if session_queue:
                 print(f"\nQueue: {len(session_queue)} sessions waiting")
@@ -566,9 +585,9 @@ async def log_active_sessions():
                     wait_time = current_time - queued_session['timestamp']
                     print(f"  {i+1}. {queued_session['session_id']}: {queued_session['agent_type']} | "
                           f"{queued_session['language_pair']} | Waiting for: {wait_time:.1f}s")
-            
+
             print("=============================================\n")
-        
+
         # Log every 30 seconds
         await asyncio.sleep(30)
 
@@ -582,42 +601,42 @@ async def startup_event():
 @app.post("/init")
 async def initialize_translation(agent_type: str, language_pair: str, latency_multiplier: int = 2, client_id: str = None):
     global args
-    
+
     # Generate a unique session ID that includes the client ID to ensure different browser tabs have independent sessions
     timestamp = int(time.time() * 1000)  # Use timestamp for uniqueness
     client_suffix = f"_{client_id}" if client_id else f"_{timestamp}"
     session_id = f"{agent_type}_{language_pair}_{len(active_sessions) + len(session_queue)}{client_suffix}"
-    
+
     print(f"Initializing new session {session_id} with {agent_type} model for {language_pair}, latency: {latency_multiplier}x")
-    
+
     # Check if there's a free GPU
     free_gpu = find_free_gpu()
-    
+
     if free_gpu is not None:
         # Initialize the session immediately on the free GPU
         session_args = copy.deepcopy(args)
         session_args.latency_multiplier = latency_multiplier
         session_args.max_new_tokens = 10 * latency_multiplier
-        
+
         try:
             # Create the session with the specified GPU
             print(f"Creating session {session_id} on GPU {free_gpu}")
             session = TranslationSession(agent_type, language_pair, session_args, gpu_id=free_gpu)
-            
+
             # Add the session to active sessions immediately, but mark it as initializing
             active_sessions[session_id] = session
             session_last_activity[session_id] = time.time()
             session_last_ping[session_id] = time.time()
-            
+
             # Map the session to the GPU
             session_gpu_map[session_id] = free_gpu
-            
+
             # 异步等待工作进程准备就绪，但不阻塞API响应
             # 创建一个后台任务来等待工作进程准备就绪
             asyncio.create_task(session.wait_for_ready())
-            
+
             print(f"Session {session_id} initialization started on GPU {free_gpu}")
-            
+
             return {"session_id": session_id, "queued": False, "queue_position": 0, "initializing": True}
         except Exception as e:
             print(f"Error initializing session {session_id} on GPU {free_gpu}: {e}")
@@ -637,9 +656,9 @@ async def initialize_translation(agent_type: str, language_pair: str, latency_mu
                 }
                 session_queue.append(queue_item)
                 queue_position = len(session_queue)
-                
+
                 print(f"Session {session_id} added to queue at position {queue_position} (no free GPUs available)")
-                
+
                 return {"session_id": session_id, "queued": True, "queue_position": queue_position}
         except Exception as e:
             print(f"Error adding session {session_id} to queue: {e}")
@@ -658,12 +677,12 @@ async def get_queue_status(session_id: str):
             return {"session_id": session_id, "status": "active", "queued": False, "queue_position": 0}
         else:
             return {"session_id": session_id, "status": "initializing", "queued": False, "queue_position": 0}
-    
+
     # Check if the session is in the queue
     queue_position = get_queue_position(session_id)
     if queue_position is not None:
         return {"session_id": session_id, "status": "queued", "queued": True, "queue_position": queue_position}
-    
+
     # Session not found
     return {"session_id": session_id, "status": "not_found", "error": "Session not found in queue or active sessions"}
 
@@ -671,28 +690,35 @@ async def get_queue_status(session_id: str):
 @app.websocket("/wss/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
     await websocket.accept()
-    
+
     if session_id not in active_sessions:
         await websocket.close(code=4000, reason="Invalid session ID")
         return
-        
+
     session = active_sessions[session_id]
     chunk_count = 0
     update_session_activity(session_id)
     # Update ping timestamp when WebSocket connection is established
     update_session_ping(session_id)
-    
+
     # 确保工作进程已准备就绪
     if not session.is_ready:
         print(f"WebSocket connected for session {session_id}, waiting for worker process to be ready...")
         await websocket.send_text("INITIALIZING: Worker process is starting, please wait...")
-        
-        # 等待工作进程准备就绪，最多等待60秒
-        if not await session.wait_for_ready(timeout=60):
+        # 等待工作进程准备就绪，最多等待180秒
+        if not await session.wait_for_ready(timeout=180):
+            # Guard: avoid sending WebSocket message if client disconnected
+            if websocket.client_state.name != "CONNECTED":
+                print(f"Client disconnected before worker ready for session {session_id}")
+                return
             await websocket.send_text("ERROR: Worker process initialization timeout")
             await websocket.close(code=4001, reason="Worker process initialization timeout")
             return
-        
+
+        # Guard: avoid sending WebSocket message if client disconnected
+        if websocket.client_state.name != "CONNECTED":
+            print(f"Client disconnected before worker ready for session {session_id}")
+            return
         await websocket.send_text("READY: Worker process is ready")
     
     try:
@@ -1036,4 +1062,4 @@ if __name__ == "__main__":
     print(f"Starting server with {num_gpus} GPUs available")
     print(f"Each translation session will run in its own worker process")
     
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run(app, host="0.0.0.0", port=8001)

@@ -1,106 +1,210 @@
 import axios from 'axios';
+import type { AxiosInstance } from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const axiosInstance: AxiosInstance = axios.create({
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8001',
+  timeout: 60000, // 60 second timeout for all requests
+});
+
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8001';
 
 export interface Translation {
   time: number;
   text: string;
 }
 
+export interface InitSessionResponse {
+  session_id: string;
+  queued: boolean;
+  queue_position: number;
+  initializing?: boolean;
+  error?: string;
+}
+
+export interface QueueStatusResponse {
+  session_id: string;
+  status: 'active' | 'initializing' | 'queued' | 'not_found';
+  queued: boolean;
+  queue_position: number;
+  error?: string;
+}
+
 class ApiService {
-  private webSocket: WebSocket | null = null;
+  private clientId: string;
+
+  constructor() {
+    // Generate a unique client ID for this browser tab
+    this.clientId = this.generateClientId();
+  }
+
+  private generateClientId(): string {
+    return 'client_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  }
+
+  // Initialize a translation session
+  async initSession(
+    agentType: string = 'InfiniSST',
+    languagePair: string = 'English -> Chinese',
+    latencyMultiplier: number = 2
+  ): Promise<InitSessionResponse> {
+    try {
+      const params = new URLSearchParams({
+        agent_type: agentType,
+        language_pair: languagePair,
+        latency_multiplier: latencyMultiplier.toString(),
+        client_id: this.clientId
+      });
+
+      const response = await axiosInstance.post(`/init?${params}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error initializing session:', error);
+      throw error;
+    }
+  }
+
+  // Check queue status for a session
+  async checkQueueStatus(sessionId: string): Promise<QueueStatusResponse> {
+    try {
+      const response = await axiosInstance.get(`/queue_status/${sessionId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error checking queue status:', error);
+      throw error;
+    }
+  }
+
+  // Send ping to keep session alive
+  async sendPing(sessionId: string): Promise<void> {
+    try {
+      const params = new URLSearchParams({
+        session_id: sessionId
+      });
+
+      await axiosInstance.post(`/ping?${params}`);
+    } catch (error) {
+      console.error('Error sending ping:', error);
+      // Don't throw error for ping failures
+    }
+  }
 
   // Upload audio file for translation
-  async translateAudio(audioFile: File, language: string = 'en'): Promise<Translation[]> {
+  async uploadFile(sessionId: string, file: File): Promise<any> {
     try {
       const formData = new FormData();
-      formData.append('audioFile', audioFile);
-      formData.append('language', language);
+      formData.append('file', file);
+      formData.append('session_id', sessionId);
 
-      const response = await axios.post(`${API_BASE_URL}/translate`, formData, {
+      const response = await axiosInstance.post(`/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
-      return response.data.translations;
-    } catch (error) {
-      console.error('Error translating audio:', error);
-      // For demo purposes, return mock data if API fails
-      return this.getMockTranslations();
-    }
-  }
-
-  // Request YouTube video translation
-  async translateYoutubeVideo(videoId: string, language: string = 'en'): Promise<{ message: string }> {
-    try {
-      const response = await axios.post(`${API_BASE_URL}/youtube`, {
-        videoId,
-        language,
-      });
-
       return response.data;
     } catch (error) {
-      console.error('Error processing YouTube video:', error);
-      return { message: 'Error processing YouTube video. Using mock translations.' };
+      console.error('Error uploading file:', error);
+      throw error;
     }
   }
 
-  // Start WebSocket connection for real-time translation
-  startRealtimeTranslation(
-    language: string = 'en',
-    onTranslation: (translation: Translation) => void,
-    onError: (error: any) => void
-  ): void {
-    this.webSocket = new WebSocket(`ws://localhost:8080/api/translate/stream?language=${language}`);
+  // Update latency multiplier
+  async updateLatency(sessionId: string, latencyMultiplier: number): Promise<any> {
+    try {
+      const params = new URLSearchParams({
+        session_id: sessionId,
+        latency_multiplier: latencyMultiplier.toString()
+      });
 
-    this.webSocket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        onTranslation(data);
-      } catch (error) {
-        // If not JSON, use the text directly
-        onTranslation({
-          time: Date.now() / 1000,
-          text: event.data as string,
-        });
-      }
-    };
-
-    this.webSocket.onerror = (event) => {
-      console.error('WebSocket error:', event);
-      onError(event);
-    };
-
-    this.webSocket.onclose = () => {
-      console.log('WebSocket connection closed');
-    };
-  }
-
-  // Send audio chunk through WebSocket
-  sendAudioChunk(audioChunk: Blob): void {
-    if (this.webSocket && this.webSocket.readyState === WebSocket.OPEN) {
-      this.webSocket.send(audioChunk);
+      const response = await axiosInstance.post(`/update_latency?${params}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating latency:', error);
+      throw error;
     }
   }
 
-  // Close WebSocket connection
-  stopRealtimeTranslation(): void {
-    if (this.webSocket) {
-      this.webSocket.close();
-      this.webSocket = null;
+  // Reset translation state
+  async resetTranslation(sessionId: string): Promise<any> {
+    try {
+      const params = new URLSearchParams({
+        session_id: sessionId
+      });
+
+      const response = await axiosInstance.post(`/reset_translation?${params}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error resetting translation:', error);
+      throw error;
     }
   }
 
-  // Fallback mock translations
-  private getMockTranslations(): Translation[] {
-    return [
-      { time: 1.5, text: "Hello, welcome to the demo" },
-      { time: 3.2, text: "This is an example of a translation" },
-      { time: 6.8, text: "The translation appears in sync with the audio" },
-      { time: 10.5, text: "You can drag this bar to reposition it" },
-      { time: 15.2, text: "Similar to lyrics display in music apps" }
-    ];
+  // Delete session
+  async deleteSession(sessionId: string): Promise<any> {
+    try {
+      const params = new URLSearchParams({
+        session_id: sessionId
+      });
+
+      const response = await axiosInstance.post(`/delete_session?${params}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      // Don't throw error for delete failures
+      return { success: false, error: error };
+    }
+  }
+
+  // Create WebSocket connection
+  createWebSocket(sessionId: string): WebSocket {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = API_BASE_URL.replace(/^https?:\/\//, '');
+    const wsUrl = `${protocol}//${host}/wss/${sessionId}`;
+    
+    return new WebSocket(wsUrl);
+  }
+
+  // Store session ID in localStorage
+  storeSessionId(sessionId: string): void {
+    localStorage.setItem(`translationSessionId_${this.clientId}`, sessionId);
+  }
+
+  // Get stored session ID
+  getStoredSessionId(): string | null {
+    return localStorage.getItem(`translationSessionId_${this.clientId}`);
+  }
+
+  // Remove stored session ID
+  removeStoredSessionId(): void {
+    localStorage.removeItem(`translationSessionId_${this.clientId}`);
+  }
+
+  // Store pending delete sessions
+  storePendingDeleteSession(sessionId: string): void {
+    const pendingSessions = JSON.parse(
+      localStorage.getItem(`pendingDeleteSessions_${this.clientId}`) || '{}'
+    );
+    pendingSessions[sessionId] = Date.now();
+    localStorage.setItem(`pendingDeleteSessions_${this.clientId}`, JSON.stringify(pendingSessions));
+  }
+
+  // Get pending delete sessions
+  getPendingDeleteSessions(): Record<string, number> {
+    return JSON.parse(
+      localStorage.getItem(`pendingDeleteSessions_${this.clientId}`) || '{}'
+    );
+  }
+
+  // Remove pending delete session
+  removePendingDeleteSession(sessionId: string): void {
+    const pendingSessions = this.getPendingDeleteSessions();
+    delete pendingSessions[sessionId];
+    localStorage.setItem(`pendingDeleteSessions_${this.clientId}`, JSON.stringify(pendingSessions));
+  }
+
+  // Get client ID
+  getClientId(): string {
+    return this.clientId;
   }
 }
 

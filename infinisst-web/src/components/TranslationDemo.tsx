@@ -35,7 +35,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import TuneIcon from '@mui/icons-material/Tune';
 import { motion, AnimatePresence } from 'framer-motion';
-import apiService, { Translation } from '../services/api';
+import apiService, { Translation, InitSessionResponse, QueueStatusResponse } from '../services/api';
 import './TranslationDemo.css';
 
 // Create a custom theme for the application
@@ -218,6 +218,8 @@ const TranslationDemo: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [queuePosition, setQueuePosition] = useState<number>(0);
+  const [isQueued, setIsQueued] = useState(false);
   
   // State for managing audio
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -230,11 +232,24 @@ const TranslationDemo: React.FC = () => {
   // References
   const wsRef = useRef<WebSocket | null>(null);
   const pingIntervalRef = useRef<number | null>(null);
+  const queueCheckIntervalRef = useRef<number | null>(null);
   
   // Auto-load model when component mounts
   useEffect(() => {
-    loadModel();
+    // Check for orphaned sessions and clean them up
+    const pendingSessions = apiService.getPendingDeleteSessions();
+    Object.keys(pendingSessions).forEach(async (orphanedSessionId) => {
+      await apiService.deleteSession(orphanedSessionId);
+      apiService.removePendingDeleteSession(orphanedSessionId);
+    });
+    
+    // Initialize session
     initSession();
+    
+    // Cleanup on unmount
+    return () => {
+      cleanupSession();
+    };
   }, []);
   
   // Function to load the model
@@ -290,42 +305,138 @@ const TranslationDemo: React.FC = () => {
     setIsConnecting(true);
     
     try {
-      // Generate a unique client ID
-      const clientId = Math.random().toString(36).substring(2, 15);
-      
       // Call the init API
-      const response = await fetch('http://localhost:8000/init', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          agent_type: 'InfiniSST',
-          language_pair: "English -> Chinese",
-          latency_multiplier: latencyMultiplier,
-          client_id: clientId,
-        }),
-      });
+      const response = await apiService.initSession(
+        'InfiniSST',
+        'English -> Chinese',
+        latencyMultiplier
+      );
       
-      const data = await response.json();
-      
-      if (data.error) {
-        console.error('Failed to initialize session:', data.error);
-        alert(`Failed to initialize session: ${data.error}`);
+      if (response.error) {
+        console.error('Failed to initialize session:', response.error);
+        setModelFeedback({
+          message: `Failed to initialize session: ${response.error}`,
+          severity: 'error'
+        });
         setIsConnecting(false);
         return;
       }
       
-      console.log('Session initialized:', data);
-      setSessionId(data.session_id);
+      console.log('Session initialized:', response);
+      setSessionId(response.session_id);
+      apiService.storeSessionId(response.session_id);
       
-      // Start ping interval to keep session alive
-      startPingInterval(data.session_id);
+      // Check if session is queued
+      if (response.queued) {
+        setIsQueued(true);
+        setQueuePosition(response.queue_position);
+        setModelFeedback({
+          message: `Waiting in queue... Position: ${response.queue_position}`,
+          severity: 'warning'
+        });
+        
+        // Start checking queue status
+        startQueueCheck(response.session_id);
+      } else if (response.initializing) {
+        setModelFeedback({
+          message: 'Model is initializing, please wait...',
+          severity: 'info'
+        });
+        
+        // Start checking queue status (same mechanism)
+        setIsQueued(true);
+        startQueueCheck(response.session_id);
+      } else {
+        // Session is ready
+        setIsQueued(false);
+        setModelLoaded(true);
+        setModelFeedback({
+          message: 'Model loaded successfully',
+          severity: 'success'
+        });
+        
+        // Start ping interval to keep session alive
+        startPingInterval(response.session_id);
+      }
       
     } catch (error) {
       console.error('Error initializing session:', error);
-      alert(`Error initializing session: ${error instanceof Error ? error.message : String(error)}`);
+      setModelFeedback({
+        message: `Error initializing session: ${error instanceof Error ? error.message : String(error)}`,
+        severity: 'error'
+      });
       setIsConnecting(false);
+    }
+  };
+  
+  // Start checking queue status
+  const startQueueCheck = (sessionId: string) => {
+    // Clear any existing interval
+    if (queueCheckIntervalRef.current) {
+      window.clearInterval(queueCheckIntervalRef.current);
+    }
+    
+    // Check queue status immediately
+    checkQueueStatus(sessionId);
+    
+    // Set up interval to check every 2 seconds
+    queueCheckIntervalRef.current = window.setInterval(() => {
+      checkQueueStatus(sessionId);
+    }, 2000);
+  };
+  
+  // Check queue status
+  const checkQueueStatus = async (sessionId: string) => {
+    try {
+      const status = await apiService.checkQueueStatus(sessionId);
+      
+      if (status.status === 'active') {
+        // Session is now active
+        setIsQueued(false);
+        setQueuePosition(0);
+        setModelLoaded(true);
+        setModelFeedback({
+          message: 'Model loaded successfully. Ready to translate.',
+          severity: 'success'
+        });
+        
+        // Stop checking queue status
+        if (queueCheckIntervalRef.current) {
+          window.clearInterval(queueCheckIntervalRef.current);
+          queueCheckIntervalRef.current = null;
+        }
+        
+        // Start ping interval
+        startPingInterval(sessionId);
+        
+        // Connect WebSocket
+        connectWebSocket();
+      } else if (status.status === 'initializing') {
+        setModelFeedback({
+          message: 'Model is initializing, please wait...',
+          severity: 'info'
+        });
+      } else if (status.status === 'queued') {
+        setQueuePosition(status.queue_position);
+        setModelFeedback({
+          message: `Waiting in queue... Position: ${status.queue_position}`,
+          severity: 'warning'
+        });
+      } else {
+        // Session not found
+        setModelFeedback({
+          message: 'Error: Session not found',
+          severity: 'error'
+        });
+        
+        // Stop checking
+        if (queueCheckIntervalRef.current) {
+          window.clearInterval(queueCheckIntervalRef.current);
+          queueCheckIntervalRef.current = null;
+        }
+      }
+    } catch (error) {
+      console.error('Error checking queue status:', error);
     }
   };
   
@@ -333,7 +444,7 @@ const TranslationDemo: React.FC = () => {
   const connectWebSocket = () => {
     if (!sessionId) return;
     
-    const ws = new WebSocket(`ws://localhost:8000/wss/${sessionId}`);
+    const ws = apiService.createWebSocket(sessionId);
     
     ws.onopen = () => {
       console.log('WebSocket connected');
@@ -346,15 +457,27 @@ const TranslationDemo: React.FC = () => {
       
       if (message.startsWith('INITIALIZING:')) {
         console.log('Worker initializing:', message);
+        setModelFeedback({
+          message: message.substring('INITIALIZING:'.length).trim(),
+          severity: 'info'
+        });
       } else if (message.startsWith('READY:')) {
         console.log('Worker ready:', message);
         setIsConnecting(false);
+        setModelFeedback({
+          message: 'Ready to translate',
+          severity: 'success'
+        });
       } else if (message.startsWith('ERROR:')) {
         console.error('Error from worker:', message);
-        alert(`Error from worker: ${message.substring(6)}`);
+        setModelFeedback({
+          message: `Error: ${message.substring(6)}`,
+          severity: 'error'
+        });
       } else {
         // Translation output
         setTranslation(message);
+        setCurrentTranslation(message);
       }
     };
     
@@ -362,12 +485,12 @@ const TranslationDemo: React.FC = () => {
       console.log('WebSocket disconnected');
       setIsConnected(false);
       
-      // Try to reconnect after a delay
-      setTimeout(() => {
-        if (sessionId) {
+      // Try to reconnect after a delay if session is still active
+      if (sessionId && modelLoaded && !isQueued) {
+        setTimeout(() => {
           connectWebSocket();
-        }
-      }, 3000);
+        }, 3000);
+      }
     };
     
     ws.onerror = (error) => {
@@ -385,20 +508,12 @@ const TranslationDemo: React.FC = () => {
       window.clearInterval(pingIntervalRef.current);
     }
     
-    // Send ping every 10 seconds to keep session alive
+    // Send ping every 5 seconds to keep session alive
     pingIntervalRef.current = window.setInterval(() => {
-      fetch('http://localhost:8000/ping', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          session_id: id,
-        }),
-      }).catch(error => {
+      apiService.sendPing(id).catch(error => {
         console.error('Error sending ping:', error);
       });
-    }, 10000);
+    }, 5000);
   };
   
   // Clean up session on component unmount
@@ -409,6 +524,12 @@ const TranslationDemo: React.FC = () => {
       pingIntervalRef.current = null;
     }
     
+    // Clear queue check interval
+    if (queueCheckIntervalRef.current) {
+      window.clearInterval(queueCheckIntervalRef.current);
+      queueCheckIntervalRef.current = null;
+    }
+    
     // Close WebSocket
     if (wsRef.current) {
       wsRef.current.close();
@@ -417,17 +538,104 @@ const TranslationDemo: React.FC = () => {
     
     // Delete session
     if (sessionId) {
-      fetch('http://localhost:8000/delete_session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          session_id: sessionId,
-        }),
+      // Store as pending delete in case the request fails
+      apiService.storePendingDeleteSession(sessionId);
+      
+      apiService.deleteSession(sessionId).then(response => {
+        if (response.success) {
+          apiService.removePendingDeleteSession(sessionId);
+        }
       }).catch(error => {
         console.error('Error deleting session:', error);
       });
+      
+      // Remove stored session ID
+      apiService.removeStoredSessionId();
+    }
+  };
+  
+  // Upload and process audio file
+  const uploadFile = async (file: File) => {
+    if (!file || !isConnected || !wsRef.current) {
+      setModelFeedback({
+        message: 'Please wait for the connection to be established',
+        severity: 'warning'
+      });
+      return;
+    }
+    
+    setIsUploading(true);
+    setIsTranslating(true);
+    
+    try {
+      // Read the file as ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer();
+      
+      // Create an AudioContext
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Decode the audio data
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      
+      // Get the raw audio data (mono channel)
+      const rawData = audioBuffer.getChannelData(0);
+      
+      // Resample to 16kHz if needed
+      const sampleRate = audioBuffer.sampleRate;
+      const targetSampleRate = 16000;
+      
+      let processedData: Float32Array;
+      if (sampleRate !== targetSampleRate) {
+        const resampleRatio = targetSampleRate / sampleRate;
+        const resampledLength = Math.floor(rawData.length * resampleRatio);
+        processedData = new Float32Array(resampledLength);
+        
+        for (let i = 0; i < resampledLength; i++) {
+          const originalIndex = Math.floor(i / resampleRatio);
+          processedData[i] = rawData[originalIndex];
+        }
+      } else {
+        processedData = rawData;
+      }
+      
+      // Split the audio into chunks and send them over WebSocket
+      const chunkSize = 16000 * latencyMultiplier; // Adjust chunk size based on latency
+      const numChunks = Math.ceil(processedData.length / chunkSize);
+      
+      for (let i = 0; i < numChunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize, processedData.length);
+        const chunk = processedData.slice(start, end);
+        
+        // Send the chunk over WebSocket
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(chunk.buffer);
+        }
+        
+        // Wait a short time between chunks to simulate real-time streaming
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      setIsUploading(false);
+      
+      // Send EOF signal after a short delay
+      setTimeout(() => {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          // Send an empty chunk to signal end of stream
+          const emptyChunk = new Float32Array(0);
+          wsRef.current.send(emptyChunk.buffer);
+        }
+        setIsTranslating(false);
+      }, 500);
+      
+    } catch (error) {
+      console.error('Error processing audio:', error);
+      setModelFeedback({
+        message: `Error processing audio: ${error instanceof Error ? error.message : String(error)}`,
+        severity: 'error'
+      });
+      setIsUploading(false);
+      setIsTranslating(false);
     }
   };
   
@@ -435,18 +643,16 @@ const TranslationDemo: React.FC = () => {
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setIsProcessing(true);
-      const url = URL.createObjectURL(file);
-      setMediaUrl(url);
+      setSelectedFile(file);
+      setMediaUrl(URL.createObjectURL(file));
       
-      try {
-        // Send to backend for translation
-        const translationResults = await apiService.translateAudio(file, targetLanguage);
-        setTranslations(translationResults);
-      } catch (error) {
-        console.error('Error processing file:', error);
-      } finally {
-        setIsProcessing(false);
+      // Reset translation when new file is selected
+      setTranslation("");
+      setCurrentTranslation("Ready to translate");
+      
+      // Auto-upload the file if WebSocket is connected
+      if (file && isConnected && sessionId) {
+        uploadFile(file);
       }
     }
   };
@@ -461,114 +667,133 @@ const TranslationDemo: React.FC = () => {
         const embedUrl = `https://www.youtube.com/embed/${videoId}?enablejsapi=1`;
         setMediaUrl(embedUrl);
         
-        try {
-          // Send to backend for processing
-          await apiService.translateYoutubeVideo(videoId, targetLanguage);
-          // For demo, we'll use mock translations since we can't easily get real-time 
-          // translations from the YouTube iframe
-          setTranslations([
-            { time: 1.5, text: "Hello, welcome to the YouTube translation demo" },
-            { time: 3.2, text: "This is an example of a YouTube video translation" },
-            { time: 6.8, text: "The translation appears as if in sync with the video" },
-            { time: 10.5, text: "You can drag this bar to reposition it" },
-            { time: 15.2, text: "Similar to lyrics display in music apps" }
-          ]);
-        } catch (error) {
-          console.error('Error processing YouTube video:', error);
-        } finally {
-          setIsProcessing(false);
-        }
+        // YouTube translation is not supported in the current backend
+        setModelFeedback({
+          message: 'YouTube translation is not yet supported. Please upload an audio/video file instead.',
+          severity: 'warning'
+        });
+        setIsProcessing(false);
       }
     }
   };
   
   // Handle microphone recording
-  const handleRecordToggle = () => {
+  const handleRecordToggle = async () => {
     if (!isRecording) {
-      // Start recording
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-          const mediaRecorder = new MediaRecorder(stream);
-          const audioChunks: BlobPart[] = [];
-          
-          // Initialize WebSocket connection for real-time translation
-          apiService.startRealtimeTranslation(
-            targetLanguage,
-            (translation) => {
-              // Add new translation to list
-              setTranslations(prev => {
-                const updatedTranslations = [...prev, translation];
-                updatedTranslations.sort((a, b) => a.time - b.time);
-                return updatedTranslations;
-              });
-            },
-            (error) => {
-              console.error('WebSocket error:', error);
-            }
-          );
-          
-          mediaRecorder.addEventListener('dataavailable', event => {
-            audioChunks.push(event.data);
-            
-            // Send audio chunk for real-time translation
-            const audioBlob = new Blob([event.data], { type: 'audio/webm' });
-            apiService.sendAudioChunk(audioBlob);
-          });
-          
-          mediaRecorder.addEventListener('stop', () => {
-            // Stop WebSocket connection
-            apiService.stopRealtimeTranslation();
-            
-            // Create audio blob and URL
-            const audioBlob = new Blob(audioChunks);
-            const audioUrl = URL.createObjectURL(audioBlob);
-            setMediaUrl(audioUrl);
-            setIsRecording(false);
-          });
-          
-          // Start recording with 1-second intervals for chunks
-          mediaRecorder.start(1000);
-          (window as any).mediaRecorder = mediaRecorder;
-          setIsRecording(true);
-        })
-        .catch(error => {
-          console.error('Error accessing microphone:', error);
+      // Check if session is ready
+      if (!sessionId || !isConnected || !modelLoaded) {
+        setModelFeedback({
+          message: 'Please wait for the model to load before recording',
+          severity: 'warning'
         });
+        return;
+      }
+      
+      try {
+        // Start recording
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        setIsRecording(true);
+        
+        // Create audio context for processing
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const source = audioContext.createMediaStreamSource(stream);
+        const processor = audioContext.createScriptProcessor(4096, 1, 1);
+        
+        // Store references for cleanup
+        (window as any).currentStream = stream;
+        (window as any).currentAudioContext = audioContext;
+        (window as any).currentProcessor = processor;
+        
+        processor.onaudioprocess = (e) => {
+          if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            const inputData = e.inputBuffer.getChannelData(0);
+            
+            // Resample to 16kHz if needed
+            const sampleRate = audioContext.sampleRate;
+            const targetSampleRate = 16000;
+            const resampleRatio = targetSampleRate / sampleRate;
+            
+            const resampledLength = Math.floor(inputData.length * resampleRatio);
+            const resampledData = new Float32Array(resampledLength);
+            
+            for (let i = 0; i < resampledLength; i++) {
+              const originalIndex = Math.floor(i / resampleRatio);
+              resampledData[i] = inputData[originalIndex];
+            }
+            
+            // Send audio data through WebSocket
+            wsRef.current.send(resampledData.buffer);
+          }
+        };
+        
+        source.connect(processor);
+        processor.connect(audioContext.destination);
+        
+        setModelFeedback({
+          message: 'Recording... Speak into your microphone',
+          severity: 'info'
+        });
+      } catch (error) {
+        console.error('Error accessing microphone:', error);
+        setModelFeedback({
+          message: 'Error accessing microphone. Please check permissions.',
+          severity: 'error'
+        });
+      }
     } else {
       // Stop recording
-      const mediaRecorder = (window as any).mediaRecorder;
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
+      setIsRecording(false);
+      
+      // Clean up audio resources
+      if ((window as any).currentStream) {
+        (window as any).currentStream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+        (window as any).currentStream = null;
       }
+      
+      if ((window as any).currentProcessor) {
+        (window as any).currentProcessor.disconnect();
+        (window as any).currentProcessor = null;
+      }
+      
+      if ((window as any).currentAudioContext) {
+        (window as any).currentAudioContext.close();
+        (window as any).currentAudioContext = null;
+      }
+      
+      setModelFeedback({
+        message: 'Recording stopped',
+        severity: 'success'
+      });
     }
   };
   
-  // Handle media playback time updates
+  // Handle time update for syncing translations
   const handleTimeUpdate = () => {
-    if (mediaRef.current) {
-      const currentMediaTime = mediaRef.current.currentTime;
-      setCurrentTime(currentMediaTime);
-      
-      // Find the current translation based on time
-      const currentTranslation = translations.find(
-        (t, index) => 
-          currentMediaTime >= t.time && 
-          (index === translations.length - 1 || currentMediaTime < translations[index + 1].time)
-      );
-      
-      if (currentTranslation) {
-        setCurrentTranslation(currentTranslation.text);
-      } else {
-        setCurrentTranslation('');
-      }
+    if (videoRef.current) {
+      setCurrentTime(videoRef.current.currentTime);
+      mediaRef.current = videoRef.current;
+    } else if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+      mediaRef.current = audioRef.current;
+    }
+    
+    // Find the current translation based on time
+    const current = translations.find((t, index) => {
+      const nextTranslation = translations[index + 1];
+      return t.time <= currentTime && (!nextTranslation || currentTime < nextTranslation.time);
+    });
+    
+    if (current) {
+      setCurrentTranslation(current.text);
     }
   };
   
-  // Handle media play state
+  // Handle play event
   const handlePlay = () => {
     setIsPlaying(true);
   };
   
+  // Handle pause event
   const handlePause = () => {
     setIsPlaying(false);
   };
@@ -695,76 +920,41 @@ const TranslationDemo: React.FC = () => {
     }
   };
   
-  // Upload and process audio file
-  const uploadFile = async (file: File) => {
-    if (!file || !isConnected || !wsRef.current) {
-      alert("Please select a file and ensure WebSocket is connected");
+  // Reset translation
+  const resetTranslation = async () => {
+    if (!sessionId) {
+      setModelFeedback({
+        message: 'No active session to reset',
+        severity: 'warning'
+      });
       return;
     }
-    
-    setIsUploading(true);
-    setIsTranslating(true);
     
     try {
-      // Read the file as ArrayBuffer
-      const arrayBuffer = await file.arrayBuffer();
+      const response = await apiService.resetTranslation(sessionId);
       
-      // Create an AudioContext
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
-      // Decode the audio data
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      
-      // Get the raw audio data
-      const rawData = audioBuffer.getChannelData(0);
-      
-      // Split the audio into chunks and send them over WebSocket
-      const chunkSize = 16000; // 1 second of audio at 16kHz
-      const numChunks = Math.ceil(rawData.length / chunkSize);
-      
-      for (let i = 0; i < numChunks; i++) {
-        const start = i * chunkSize;
-        const end = Math.min(start + chunkSize, rawData.length);
-        const chunk = rawData.slice(start, end);
+      if (response.success) {
+        // Clear translation
+        setTranslation("");
+        setCurrentTranslation("Translation reset. Ready for new input.");
         
-        // Convert to Float32Array if it's not already
-        const chunkFloat32 = chunk instanceof Float32Array ? chunk : new Float32Array(chunk);
-        
-        // Send the chunk over WebSocket
-        wsRef.current.send(chunkFloat32.buffer);
-        
-        // Wait a short time between chunks
-        await new Promise(resolve => setTimeout(resolve, 100));
+        setModelFeedback({
+          message: response.message || 'Translation reset successfully',
+          severity: 'success'
+        });
+      } else {
+        setModelFeedback({
+          message: `Failed to reset: ${response.error}`,
+          severity: 'error'
+        });
       }
-      
-      setIsUploading(false);
-      
-      // Tell the server this is the last chunk (special flag in worker.py)
-      // For now, we'll just wait for all chunks to be processed
-      setTimeout(() => {
-        setIsTranslating(false);
-      }, 2000);
-      
     } catch (error) {
-      console.error('Error processing audio:', error);
-      alert(`Error processing audio: ${error instanceof Error ? error.message : String(error)}`);
-      setIsUploading(false);
-      setIsTranslating(false);
+      console.error('Error resetting translation:', error);
+      setModelFeedback({
+        message: `Error resetting: ${error instanceof Error ? error.message : String(error)}`,
+        severity: 'error'
+      });
     }
-  };
-  
-  // Reset translation
-  const resetTranslation = () => {
-    if (!isConnected || !wsRef.current) {
-      alert("WebSocket not connected");
-      return;
-    }
-    
-    // Send reset command
-    wsRef.current.send("RESET");
-    
-    // Clear translation
-    setTranslation("");
   };
   
   // Update latency multiplier
@@ -774,23 +964,31 @@ const TranslationDemo: React.FC = () => {
     setLatencyMultiplier(multiplier);
     
     try {
-      // Call the update_latency API
-      const response = await fetch(`http://localhost:8000/update_latency?session_id=${sessionId}&latency_multiplier=${multiplier}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiService.updateLatency(sessionId, multiplier);
       
-      const data = await response.json();
-      
-      if (!data.success) {
-        console.error('Failed to update latency:', data.error);
-        alert(`Failed to update latency: ${data.error}`);
+      if (response.success) {
+        setModelFeedback({
+          message: `Latency updated to ${multiplier}x`,
+          severity: 'success'
+        });
+        
+        // Clear the message after 2 seconds
+        setTimeout(() => {
+          setModelFeedback(null);
+        }, 2000);
+      } else {
+        console.error('Failed to update latency:', response.error);
+        setModelFeedback({
+          message: `Failed to update latency: ${response.error}`,
+          severity: 'error'
+        });
       }
     } catch (error) {
       console.error('Error updating latency:', error);
-      alert(`Error updating latency: ${error instanceof Error ? error.message : String(error)}`);
+      setModelFeedback({
+        message: `Error updating latency: ${error instanceof Error ? error.message : String(error)}`,
+        severity: 'error'
+      });
     }
   };
   

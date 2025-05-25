@@ -1,6 +1,12 @@
-export PYTHONPATH=/home/xixu/work/InfiniSST
+#export PYTHONPATH=/home/xixu/work/InfiniSST
+export PYTHONPATH=/home/jiaxuanluo/InfiniSST
 
-python api.py \
+echo "Killing any process using port 8001..."
+fuser -k 8001/tcp || true
+#conda activate /mnt/data6/jiaxuanluo/infinisst
+
+#/usr/bin/python3 api.py \
+/mnt/data6/jiaxuanluo/infinisst/bin/python api.py \
     --latency-multiplier 2 \
     --min-start-sec 0 \
     --w2v2-path /mnt/data6/xixu/demo/wav2_vec_vox_960h_pl.pt \
@@ -27,4 +33,16 @@ python api.py \
     --suppress-non-language \
     \
     --model-name /mnt/data6/xixu/demo/llama3.1-8b-instruct-hf \
-    --lora-rank 32
+    --lora-rank 32 > backend.log 2>&1 &
+
+# 等待端口8001启动，最多等待10秒
+for i in {1..10}; do
+    if lsof -i:8001 &>/dev/null; then
+        break
+    fi
+    echo "Waiting for FastAPI to bind on port 8001..."
+    sleep 1
+done
+# 启动 ngrok
+echo "Starting ngrok tunnel..."
+ngrok http 8001
