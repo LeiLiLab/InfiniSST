@@ -220,20 +220,24 @@ const TranslationDemo: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [queuePosition, setQueuePosition] = useState<number>(0);
   const [isQueued, setIsQueued] = useState(false);
-  
+  // Ref to prevent duplicate session initialization
+  const isInitializingRef = useRef(false);
+  //check worker ready
+  const workerReadyRef = useRef(false);
+
   // State for managing audio
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  
+
   // State for managing the translation
   const [translation, setTranslation] = useState<string>("");
   const [isTranslating, setIsTranslating] = useState(false);
-  
+
   // References
   const wsRef = useRef<WebSocket | null>(null);
   const pingIntervalRef = useRef<number | null>(null);
   const queueCheckIntervalRef = useRef<number | null>(null);
-  
+
   // Auto-load model when component mounts
   useEffect(() => {
     // Check for orphaned sessions and clean them up
@@ -242,16 +246,16 @@ const TranslationDemo: React.FC = () => {
       await apiService.deleteSession(orphanedSessionId);
       apiService.removePendingDeleteSession(orphanedSessionId);
     });
-    
+
     // Initialize session
     initSession();
-    
+
     // Cleanup on unmount
     return () => {
       cleanupSession();
     };
   }, []);
-  
+
   // Function to load the model
   const loadModel = async () => {
     try {
@@ -260,10 +264,10 @@ const TranslationDemo: React.FC = () => {
         message: 'Loading translation model...',
         severity: 'info'
       });
-      
+
       // Simulate model loading with a delay (replace with actual API call)
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       // Successfully loaded
       setModelLoaded(true);
       setModelLoading(false);
@@ -271,12 +275,12 @@ const TranslationDemo: React.FC = () => {
         message: 'Translation model loaded successfully',
         severity: 'success'
       });
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => {
         setModelFeedback(null);
       }, 3000);
-      
+
     } catch (error) {
       console.error('Error loading model:', error);
       setModelLoading(false);
@@ -292,41 +296,43 @@ const TranslationDemo: React.FC = () => {
     if (sessionId) {
       connectWebSocket();
     }
-    
+
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
       }
     };
   }, [sessionId]);
-  
-  // Initialize translation session
+
+  // Initialize translation session with anti-reentry logic
   const initSession = async () => {
+    if (isInitializingRef.current || sessionId) {
+      console.log("Skipping duplicate initSession call.");
+      return;
+    }
+    isInitializingRef.current = true;
     setIsConnecting(true);
-    
+
     try {
-      // Call the init API
       const response = await apiService.initSession(
         'InfiniSST',
         'English -> Chinese',
         latencyMultiplier
       );
-      
+
       if (response.error) {
         console.error('Failed to initialize session:', response.error);
         setModelFeedback({
           message: `Failed to initialize session: ${response.error}`,
           severity: 'error'
         });
-        setIsConnecting(false);
         return;
       }
-      
+
       console.log('Session initialized:', response);
       setSessionId(response.session_id);
       apiService.storeSessionId(response.session_id);
-      
-      // Check if session is queued
+
       if (response.queued) {
         setIsQueued(true);
         setQueuePosition(response.queue_position);
@@ -334,37 +340,31 @@ const TranslationDemo: React.FC = () => {
           message: `Waiting in queue... Position: ${response.queue_position}`,
           severity: 'warning'
         });
-        
-        // Start checking queue status
         startQueueCheck(response.session_id);
       } else if (response.initializing) {
         setModelFeedback({
           message: 'Model is initializing, please wait...',
           severity: 'info'
         });
-        
-        // Start checking queue status (same mechanism)
         setIsQueued(true);
         startQueueCheck(response.session_id);
       } else {
-        // Session is ready
         setIsQueued(false);
         setModelLoaded(true);
         setModelFeedback({
           message: 'Model loaded successfully',
           severity: 'success'
         });
-        
-        // Start ping interval to keep session alive
         startPingInterval(response.session_id);
       }
-      
     } catch (error) {
       console.error('Error initializing session:', error);
       setModelFeedback({
         message: `Error initializing session: ${error instanceof Error ? error.message : String(error)}`,
         severity: 'error'
       });
+    } finally {
+      isInitializingRef.current = false;
       setIsConnecting(false);
     }
   };
@@ -463,6 +463,7 @@ const TranslationDemo: React.FC = () => {
         });
       } else if (message.startsWith('READY:')) {
         console.log('Worker ready:', message);
+        workerReadyRef.current = true;
         setIsConnecting(false);
         setModelFeedback({
           message: 'Ready to translate',
@@ -556,9 +557,9 @@ const TranslationDemo: React.FC = () => {
   
   // Upload and process audio file
   const uploadFile = async (file: File) => {
-    if (!file || !isConnected || !wsRef.current) {
+    if (!file || !isConnected || !wsRef.current || !workerReadyRef.current) {
       setModelFeedback({
-        message: 'Please wait for the connection to be established',
+        message: 'Please wait for the model to be ready',
         severity: 'warning'
       });
       return;
@@ -652,7 +653,10 @@ const TranslationDemo: React.FC = () => {
       
       // Auto-upload the file if WebSocket is connected
       if (file && isConnected && sessionId) {
+        console.log("File selected, waiting for playback to start");
         uploadFile(file);
+      }else{
+        console.log("File selected, but not connected",isConnected,sessionId);
       }
     }
   };

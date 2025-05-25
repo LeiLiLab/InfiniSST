@@ -84,7 +84,7 @@ print(f"Number of available GPUs: {num_gpus}")
 # Short timeout for detecting browser disconnections
 DISCONNECT_CHECK_INTERVAL = 5  # Check every 5 seconds
 # Timeout for detecting closed/refreshed webpages (15 seconds without a ping)
-WEBPAGE_DISCONNECT_TIMEOUT = 15  # Consider a webpage closed if no ping for 15 seconds
+WEBPAGE_DISCONNECT_TIMEOUT = 60  # Consider a webpage closed if no ping for 15 seconds
 # DISCONNECT_TIMEOUT is no longer used since orphaned sessions are now tracked client-side
 
 # Worker process function that runs the translation model
@@ -704,7 +704,11 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     # 确保工作进程已准备就绪
     if not session.is_ready:
         print(f"WebSocket connected for session {session_id}, waiting for worker process to be ready...")
-        await websocket.send_text("INITIALIZING: Worker process is starting, please wait...")
+        if websocket.client_state.name == "CONNECTED":
+            await websocket.send_text("INITIALIZING: Worker process is starting, please wait...")
+        else:
+            print(f"Client disconnected before INITIALIZING message for session {session_id}")
+            return
         # 等待工作进程准备就绪，最多等待180秒
         if not await session.wait_for_ready(timeout=180):
             # Guard: avoid sending WebSocket message if client disconnected
@@ -716,10 +720,10 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             return
 
         # Guard: avoid sending WebSocket message if client disconnected
-        if websocket.client_state.name != "CONNECTED":
-            print(f"Client disconnected before worker ready for session {session_id}")
-            return
-        await websocket.send_text("READY: Worker process is ready")
+        if websocket.client_state.name == "CONNECTED":
+            await websocket.send_text("READY: Worker process is ready")
+        else:
+            print(f"Client disconnected before READY message for session {session_id}")
     
     try:
         # Create a task to continuously check for translations from the worker process
