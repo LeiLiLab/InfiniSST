@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simultaneous Speech Translation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .panel {
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        select, button {
+            margin: 5px;
+            padding: 5px 10px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        #translationOutput {
+            height: 200px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        .success { background-color: #dff0d8; }
+        .error { background-color: #f2dede; }
+        .warning { background-color: #fcf8e3; }
+        .info { background-color: #d9edf7; }
+        .settings-panel {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        h2 {
+            margin-top: 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .input-options {
+            margin-bottom: 15px;
+        }
+        .input-option {
+            margin-bottom: 10px;
+        }
+        .mic-button {
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+        .mic-status {
+            margin-top: 10px;
+            font-style: italic;
+            color: #666;
+        }
+        .volume-indicator {
+            margin-top: 10px;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        .volume-level {
+            height: 100%;
+            width: 0%;
+            background-color: #4CAF50;
+            transition: width 0.1s ease;
+        }
+        .volume-text {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            line-height: 20px;
+            color: #333;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simultaneous Speech Translation</h1>
+    
+    <div class="controls">
+        <select id="agentType">
+            <option value="InfiniSST">InfiniSST</option>
+            <!-- 暂时禁用StreamAtt
+            <option value="StreamAtt">StreamAtt</option>
+            -->
+        </select>
+        
+        <select id="languagePair">
+            <option value="English -> Chinese">English -> Chinese</option>
+            <option value="English -> German">English -> German</option>
+            <option value="English -> Spanish">English -> Spanish</option>
+        </select>
+        
+        <button id="loadModel">Load Model</button>
+    </div>
+    
+    <div class="controls">
+        <select id="latencyMultiplier">
+            <option value="1">Latency: 1x (Fastest)</option>
+            <option value="2" selected>Latency: 2x (Default)</option>
+            <option value="3">Latency: 3x (More Accurate)</option>
+            <option value="4">Latency: 4x (Most Accurate)</option>
+        </select>
+        
+        <button id="updateLatency" disabled>Update Latency</button>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <h2>Model Status</h2>
+            <div id="currentSettings" class="settings-panel"></div>
+            <div id="audioStatus" class="status"></div>
+        </div>
+        
+        <div class="panel">
+            <h2>Audio Input</h2>
+            <div class="input-options">
+                <div class="input-option">
+                    <label><input type="radio" name="audioSource" value="file" checked> File Upload</label>
+                    <div id="fileInputContainer">
+                        <input type="file" id="audioFile" accept="audio/*" />
+                        <audio id="audioPlayer" controls style="width: 100%; margin-top: 10px;"></audio>
+                    </div>
+                </div>
+                <div class="input-option">
+                    <label><input type="radio" name="audioSource" value="mic"> Microphone</label>
+                    <div id="micInputContainer" style="display: none;">
+                        <button id="toggleMic" class="mic-button">Start Microphone</button>
+                        <div id="micStatus" class="mic-status"></div>
+                        <div class="volume-indicator">
+                            <div id="volumeLevel" class="volume-level"></div>
+                            <div class="volume-text">Microphone Level</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="button-group">
+                <button id="resetTranslation" disabled>Reset</button>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>Translation Output</h2>
+            <div id="translationOutput"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let sessionId = null;
+        let audioContext = null;
+        let audioSource = null;
+        let processor = null;
+        const segmentSize = 4096;  // 使用较大的buffer size以减少处理次数
+        const targetSampleRate = 16000;
+        const baseChunkSize = 960 * 16;  // 基础块大小
+        let currentLatencyMultiplier = 2; // 默认延迟倍数
+        let audioBuffer = new Float32Array();
+        let resampledBuffer = new Float32Array();
+        let firstChunkSent = false; // 添加标志，跟踪是否已发送第一个数据块
+        let translationPaused = true; // 初始设置为暂停状态，等待用户点击播放
+        
+        // 添加预缓冲延迟配置
+        const PRE_BUFFER_DELAY_MS = 300; // 预缓冲延迟，毫秒
+        
+        // 添加空闲计时器变量
+        let idleTimer = null;
+        const IDLE_TIMEOUT = 5 * 60 * 1000; // 5分钟，转换为毫秒
+        
+        // 添加ping机制变量
+        const PING_INTERVAL = 5000; // 5秒发送一次ping
+        let pingInterval = null;
+        
+        // 删除心跳机制变量，添加会话删除重试变量
+        const SESSION_DELETE_RETRY_INTERVAL = 10000; // 10秒重试一次会话删除
+        let deleteRetryInterval = null;
+        
+        // 添加队列状态检查变量
+        const QUEUE_CHECK_INTERVAL = 2000; // 2秒检查一次队列状态
+        let queueCheckInterval = null;
+        let isQueued = false;
+        
+        // 为每个浏览器标签页生成唯一的客户端ID
+        let clientId = null;
+        
+        // 生成唯一的客户端ID
+        function generateClientId() {
+            return 'client_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        }
+        
+        // 确保每个标签页有自己的客户端ID
+        function ensureClientId() {
+            if (!clientId) {
+                clientId = generateClientId();
+                console.log(`Generated new client ID: ${clientId} for this browser tab`);
+            }
+            return clientId;
+        }
+        
+        // UI Elements
+        const agentType = document.getElementById('agentType');
+        const languagePair = document.getElementById('languagePair');
+        const latencyMultiplier = document.getElementById('latencyMultiplier');
+        const loadModel = document.getElementById('loadModel');
+        const updateLatency = document.getElementById('updateLatency');
+        const audioFile = document.getElementById('audioFile');
+        let audioPlayer = document.getElementById('audioPlayer');
+        const resetTranslation = document.getElementById('resetTranslation');
+        const translationOutput = document.getElementById('translationOutput');
+        const audioStatus = document.getElementById('audioStatus');
+        const currentSettings = document.getElementById('currentSettings');
+        const audioSourceRadios = document.getElementsByName('audioSource');
+        const fileInputContainer = document.getElementById('fileInputContainer');
+        const micInputContainer = document.getElementById('micInputContainer');
+        const toggleMic = document.getElementById('toggleMic');
+        const micStatus = document.getElementById('micStatus');
+        const volumeLevel = document.getElementById('volumeLevel');
+        
+        // 翻译系统状态
+        let translationInitialized = false;
+
+        // 麦克风相关变量
+        let micStream = null;
+        let micRecorder = null;
+        let isMicRecording = false;
+
+        // Add a flag to track if the audio element has been connected
+        let audioElementConnected = false;
+
+        // 函数：滚动翻译输出框到底部，显示最新内容
+        function scrollTranslationToBottom() {
+            translationOutput.scrollTop = translationOutput.scrollHeight;
+            // 重置空闲计时器，因为有新的翻译内容
+            resetIdleTimer();
+        }
+
+        // 清理音频和WebSocket资源
+        function cleanupAudioResources() {
+            // 关闭WebSocket连接
+            if (ws) {
+                try {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.close();
+                    }
+                } catch (e) {
+                    console.error('Error closing WebSocket:', e);
+                }
+                ws = null;
+            }
+            
+            // 停止麦克风流
+            if (micStream) {
+                micStream.getTracks().forEach(track => {
+                    track.stop();
+                    console.log('Microphone track stopped');
+                });
+                micStream = null;
+            }
+            
+            // 断开并清理音频处理节点
+            if (processor) {
+                try {
+                    processor.disconnect();
+                } catch (e) {
+                    console.error('Error disconnecting processor:', e);
+                }
+                processor = null;
+            }
+            
+            // Properly disconnect audioSource
+            if (audioSource) {
+                try {
+                    audioSource.disconnect();
+                    console.log('Audio source disconnected');
+                } catch (e) {
+                    console.error('Error disconnecting audio source:', e);
+                }
+                audioSource = null;
+            }
+            
+            // Close the audio context completely
+            if (audioContext) {
+                try {
+                    audioContext.close().then(() => {
+                        console.log('AudioContext closed successfully');
+                        audioContext = null;
+                    }).catch(e => {
+                        console.error('Error closing audio context:', e);
+                    });
+                } catch (e) {
+                    console.error('Error in audio context cleanup:', e);
+                }
+            }
+            
+            // Reset buffers
+            resampledBuffer = new Float32Array();
+            audioBuffer = new Float32Array();
+            firstChunkSent = false;
+            
+            // 重置麦克风状态
+            if (isMicRecording) {
+                isMicRecording = false;
+                toggleMic.textContent = 'Start Microphone';
+                micStatus.textContent = '';
+            }
+            
+            // Reset the audio element connection flag
+            audioElementConnected = false;
+        }
+
+        // 删除心跳相关函数
+        // 替换为检查未删除会话的函数
+        function checkForUndeletedSessions() {
+            // 从localStorage获取待删除的会话信息
+            // 这些是在浏览器关闭/刷新时未能成功删除的会话（即真正的"孤儿"会话）
+            const pendingDeleteSessions = JSON.parse(localStorage.getItem('pendingDeleteSessions_' + clientId) || '{}');
+            const currentTime = Date.now();
+            let hasSessionsToDelete = false;
+            
+            // 检查每个待删除的会话
+            for (const [sessionId, timestamp] of Object.entries(pendingDeleteSessions)) {
+                hasSessionsToDelete = true;
+                console.log(`Attempting to delete orphaned session: ${sessionId} (orphaned during page close/refresh)`);
+                
+                // 发送删除请求
+                const formData = new FormData();
+                formData.append('session_id', sessionId);
+                
+                // 使用fetch而不是sendBeacon，因为我们需要知道请求是否成功
+                fetch('/delete_session', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log(`Successfully deleted orphaned session: ${sessionId}`);
+                        // 从待删除列表中移除
+                        delete pendingDeleteSessions[sessionId];
+                        localStorage.setItem('pendingDeleteSessions_' + clientId, JSON.stringify(pendingDeleteSessions));
+                    } else {
+                        console.warn(`Failed to delete orphaned session: ${sessionId}, will retry in 10 seconds`);
+                    }
+                })
+                .catch(error => {
+                    console.error(`Error deleting orphaned session: ${sessionId}`, error);
+                });
+            }
+            
+            // 如果没有待删除的会话，停止重试
+            if (!hasSessionsToDelete) {
+                if (deleteRetryInterval) {
+                    clearInterval(deleteRetryInterval);
+                    deleteRetryInterval = null;
+                    console.log('No more orphaned sessions to delete, stopping retry interval');
+                }
+            }
+        }
+        
+        // 启动会话删除重试
+        function startSessionDeleteRetry() {
+            // 如果已经有重试间隔，先停止它
+            if (deleteRetryInterval) {
+                clearInterval(deleteRetryInterval);
+            }
+            
+            // 立即检查一次
+            checkForUndeletedSessions();
+            
+            // 设置重试间隔
+            deleteRetryInterval = setInterval(checkForUndeletedSessions, SESSION_DELETE_RETRY_INTERVAL);
+            console.log(`Started orphaned session cleanup retry interval (${SESSION_DELETE_RETRY_INTERVAL}ms) for sessions not properly deleted during browser close/refresh`);
+        }
+
+        // 开始发送ping
+        function startPinging() {
+            // 如果已经有ping间隔，先停止它
+            if (pingInterval) {
+                clearInterval(pingInterval);
+            }
+            
+            // 如果没有会话ID，不需要发送ping
+            if (!sessionId) {
+                return;
+            }
+            
+            // 立即发送一次ping
+            sendPing();
+            
+            // 设置ping间隔
+            pingInterval = setInterval(sendPing, PING_INTERVAL);
+            console.log(`Started ping interval (${PING_INTERVAL}ms) to indicate webpage is still open`);
+        }
+        
+        // 停止发送ping
+        function stopPinging() {
+            if (pingInterval) {
+                clearInterval(pingInterval);
+                pingInterval = null;
+                console.log('Stopped ping interval');
+            }
+        }
+        
+        // 发送ping
+        async function sendPing() {
+            if (!sessionId) {
+                stopPinging();
+                return;
+            }
+            
+            try {
+                const response = await fetch('/ping?' + new URLSearchParams({
+                    session_id: sessionId
+                }), {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (!data.success) {
+                    console.warn('Failed to send ping:', data.error);
+                    // 如果会话ID无效，停止发送ping
+                    if (data.error === 'Invalid session ID') {
+                        stopPinging();
+                        sessionId = null;
+                        localStorage.removeItem('translationSessionId_' + clientId);
+                    }
+                }
+            } catch (error) {
+                console.error('Error sending ping:', error);
+            }
+        }
+
+        // 清理会话资源
+        async function cleanupSession() {
+            try {
+                // 停止发送ping
+                stopPinging();
+                
+                // 停止检查队列状态
+                stopQueueCheck();
+                
+                // 如果麦克风正在录制，停止它（传入false表示不是手动暂停）
+                if (isMicRecording) {
+                    stopMicrophone(false);
+                } else {
+                    // 确保音量指示器被重置，即使麦克风没有在录制
+                    volumeLevel.style.width = '0%';
+                }
+                
+                // 清空麦克风状态消息
+                micStatus.textContent = '';
+                
+                // 停止当前的音频播放
+                if (audioPlayer) {
+                    audioPlayer.pause();
+                    audioPlayer.currentTime = 0;
+                    // 不清除音频源，允许用户在加载新模型后继续使用相同的音频文件
+                }
+                
+                // 不重置文件输入，允许用户在加载新模型后继续使用相同的音频文件
+                
+                // 清理音频和WebSocket资源
+                cleanupAudioResources();
+                
+                // Now fully close the AudioContext
+                if (audioContext) {
+                    try {
+                        if (audioContext.state !== 'closed') {
+                            await audioContext.close();
+                            console.log('AudioContext fully closed');
+                        }
+                        audioContext = null;
+                    } catch (e) {
+                        console.error('Error closing AudioContext:', e);
+                    }
+                }
+                
+                // 删除后端会话
+                if (sessionId) {
+                    console.log(`Deleting session ${sessionId} from client side`);
+                    try {
+                        const response = await fetch('/delete_session?' + new URLSearchParams({
+                            session_id: sessionId
+                        }), {
+                            method: 'POST'
+                        });
+                        
+                        const data = await response.json();
+                        if (!data.success) {
+                            console.error('Failed to delete session:', data.error);
+                        } else {
+                            console.log('Session successfully deleted from server');
+                        }
+                    } catch (e) {
+                        console.error('Error deleting session:', e);
+                    }
+                    
+                    // 从localStorage中移除会话ID
+                    localStorage.removeItem('translationSessionId_' + clientId);
+                    
+                    // 清空会话ID
+                    sessionId = null;
+                    
+                    // 重置队列状态
+                    isQueued = false;
+                }
+                
+                // 清空翻译输出
+                translationOutput.textContent = '';
+                
+                // 重置UI状态
+                updateLatency.disabled = true;
+                resetTranslation.disabled = true;
+                toggleMic.textContent = 'Start Microphone';
+                
+            } catch (error) {
+                console.error('Error cleaning up session:', error);
+            }
+        }
+
+        // 重置空闲计时器
+        function resetIdleTimer() {
+            // 清除现有计时器
+            if (idleTimer) {
+                clearTimeout(idleTimer);
+                console.log('Idle timer reset due to user activity');
+            }
+            
+            // 如果有活跃会话，则设置新的计时器
+            if (sessionId) {
+                idleTimer = setTimeout(async () => {
+                    // 检查是否正在进行翻译，如果是则不关闭会话
+                    if (translationInitialized && !translationPaused) {
+                        console.log('Translation is active, not closing session due to inactivity');
+                        resetIdleTimer(); // 重新设置计时器
+                        return;
+                    }
+                    
+                    console.log('Application idle for 5 minutes (no user activity), releasing resources...');
+                    // 客户端主动清理空闲会话，不依赖服务器端检测
+                    await cleanupSession();
+                    audioStatus.textContent = 'Session closed due to inactivity (5 minutes without user interaction)';
+                    audioStatus.className = 'status';
+                }, IDLE_TIMEOUT);
+            }
+        }
+
+        // 监听用户交互事件以重置空闲计时器
+        function setupIdleDetection() {
+            // 监听用户交互事件
+            const userEvents = ['mousedown', 'keypress', 'scroll', 'touchstart'];
+            userEvents.forEach(eventType => {
+                document.addEventListener(eventType, resetIdleTimer);
+            });
+            
+            // 监听音频播放和暂停事件
+            audioPlayer.addEventListener('play', resetIdleTimer);
+            audioPlayer.addEventListener('pause', resetIdleTimer);
+            
+            // 初始设置计时器
+            resetIdleTimer();
+        }
+
+        // 在文档加载完成后初始化空闲检测
+        document.addEventListener('DOMContentLoaded', () => {
+            // 生成唯一的客户端ID
+            ensureClientId();
+            
+            setupIdleDetection();
+            
+            // 检查是否有存储的会话ID（例如从localStorage）
+            const storedSessionId = localStorage.getItem('translationSessionId_' + clientId);
+            if (storedSessionId) {
+                // 验证会话是否仍然有效
+                checkSessionStatus(storedSessionId);
+            }
+            
+            // 检查是否有未删除的会话（孤儿会话），并开始重试删除
+            // 孤儿会话是指在浏览器关闭/刷新时未能成功删除的会话
+            const pendingDeleteSessions = JSON.parse(localStorage.getItem('pendingDeleteSessions_' + clientId) || '{}');
+            if (Object.keys(pendingDeleteSessions).length > 0) {
+                console.log(`Found ${Object.keys(pendingDeleteSessions).length} orphaned sessions to delete (from previous browser close/refresh)`);
+                startSessionDeleteRetry();
+            }
+            
+            // Add event listeners to the initial audio player
+            addAudioPlayerEventListeners();
+            
+            // Perform an initial reset to ensure everything is properly initialized
+            if (resetTranslation) {
+                // We'll trigger a "silent reset" that doesn't show any messages
+                // but ensures the audio system is properly initialized
+                const silentReset = async () => {
+                    try {
+                        // Reset the audio element connection flag
+                        audioElementConnected = false;
+                        
+                        // Ensure the audio player is properly set up
+                        const audioPlayerParent = document.getElementById('fileInputContainer');
+                        const oldAudioPlayer = document.getElementById('audioPlayer');
+                        
+                        if (oldAudioPlayer) {
+                            // Make sure event listeners are properly attached
+                            addAudioPlayerEventListeners();
+                        }
+                        
+                        // Reset translation initialization state
+                        translationInitialized = false;
+                    } catch (error) {
+                        console.error('Error during silent reset:', error);
+                    }
+                };
+                
+                silentReset();
+            }
+        });
+        
+        // 检查会话状态
+        async function checkSessionStatus(checkSessionId) {
+            try {
+                // 使用 /delete_session 端点检查会话是否存在
+                const response = await fetch('/delete_session?' + new URLSearchParams({
+                    session_id: checkSessionId
+                }), {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    console.log('Session exists and was deleted:', checkSessionId);
+                    // 会话已被删除，清除localStorage
+                    localStorage.removeItem('translationSessionId_' + clientId);
+                } else if (data.error && data.error.includes('Invalid session ID')) {
+                    console.log('Stored session no longer exists:', checkSessionId);
+                    // 会话不存在，清除localStorage
+                    localStorage.removeItem('translationSessionId_' + clientId);
+                } else {
+                    console.error('Unexpected error checking session:', data.error);
+                    // 出现意外错误，清除localStorage
+                    localStorage.removeItem('translationSessionId_' + clientId);
+                }
+            } catch (error) {
+                console.error('Error checking session status:', error);
+                // 清除可能无效的会话ID
+                localStorage.removeItem('translationSessionId_' + clientId);
+            }
+        }
+        
+        // 检查队列状态
+        async function checkQueueStatus(sessionId) {
+            if (!sessionId || !isQueued) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/queue_status/${sessionId}`);
+                const data = await response.json();
+                
+                if (data.status === 'active') {
+                    // Session is now active, stop checking queue status
+                    isQueued = false;
+                    if (queueCheckInterval) {
+                        clearInterval(queueCheckInterval);
+                        queueCheckInterval = null;
+                    }
+                    
+                    audioStatus.textContent = 'Model loaded successfully. Upload audio and press play to start translation.';
+                    audioStatus.className = 'status success';
+                    
+                    // Enable buttons
+                    updateLatency.disabled = false;
+                    resetTranslation.disabled = false;
+                    
+                    // Update settings display
+                    updateSettingsDisplay();
+                    
+                    // Start pinging
+                    startPinging();
+                    
+                    // Reset idle timer
+                    resetIdleTimer();
+                } else if (data.status === 'initializing') {
+                    // 会话正在初始化中
+                    audioStatus.textContent = 'Model is initializing, please wait...';
+                    audioStatus.className = 'status warning';
+                } else if (data.status === 'queued') {
+                    // Update queue position
+                    audioStatus.textContent = `Waiting in queue... Position: ${data.queue_position}`;
+                    audioStatus.className = 'status warning';
+                } else {
+                    // Session not found
+                    audioStatus.textContent = 'Error: Session not found in queue or active sessions';
+                    audioStatus.className = 'status error';
+                    isQueued = false;
+                    if (queueCheckInterval) {
+                        clearInterval(queueCheckInterval);
+                        queueCheckInterval = null;
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking queue status:', error);
+                audioStatus.textContent = 'Error checking queue status: ' + error;
+                audioStatus.className = 'status error';
+            }
+        }
+        
+        // 开始检查队列状态
+        function startQueueCheck(sessionId) {
+            // 如果已经有检查间隔，先停止它
+            if (queueCheckInterval) {
+                clearInterval(queueCheckInterval);
+            }
+            
+            // 立即检查一次
+            checkQueueStatus(sessionId);
+            
+            // 设置检查间隔
+            queueCheckInterval = setInterval(() => checkQueueStatus(sessionId), QUEUE_CHECK_INTERVAL);
+            console.log(`Started queue status check interval (${QUEUE_CHECK_INTERVAL}ms)`);
+        }
+        
+        // 停止检查队列状态
+        function stopQueueCheck() {
+            if (queueCheckInterval) {
+                clearInterval(queueCheckInterval);
+                queueCheckInterval = null;
+                console.log('Stopped queue status check interval');
+            }
+        }
+
+        // 修改loadModel函数，保存会话ID到localStorage
+        loadModel.addEventListener('click', async () => {
+            try {
+                // 清理现有会话和资源
+                await cleanupSession();
+                
+                // 显示加载状态
+                audioStatus.textContent = 'Loading model...';
+                audioStatus.className = 'status';
+                
+                currentLatencyMultiplier = parseInt(latencyMultiplier.value);
+                const response = await fetch('/init?' + new URLSearchParams({
+                    agent_type: agentType.value,
+                    language_pair: languagePair.value,
+                    latency_multiplier: currentLatencyMultiplier,
+                    client_id: clientId  // 添加客户端ID
+                }), {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                sessionId = data.session_id;
+                
+                // 保存会话ID到localStorage，使用客户端ID作为键的一部分
+                localStorage.setItem('translationSessionId_' + clientId, sessionId);
+
+                // 开始发送ping
+                startPinging();
+                
+                // 检查是否在队列中
+                if (data.queued) {
+                    isQueued = true;
+                    audioStatus.textContent = `Waiting in queue... Position: ${data.queue_position}`;
+                    audioStatus.className = 'status warning';
+                    
+                    // 开始检查队列状态
+                    startQueueCheck(sessionId);
+                    
+                    // 禁用按钮，直到会话准备好
+                    updateLatency.disabled = true;
+                    resetTranslation.disabled = true;
+                } else if (data.initializing) {
+                    // 会话正在初始化，但还没有准备就绪
+                    audioStatus.textContent = 'Model is initializing, please wait...';
+                    audioStatus.className = 'status warning';
+                    
+                    // 禁用按钮，直到会话准备好
+                    updateLatency.disabled = true;
+                    resetTranslation.disabled = true;
+                    
+                    // 开始检查会话状态
+                    isQueued = true; // 使用相同的队列检查机制
+                    startQueueCheck(sessionId);
+                } else {
+                    // 会话立即准备好
+                    isQueued = false;
+                    
+                    // 重置翻译初始化状态
+                    translationInitialized = false;
+                    
+                    // 启用重置按钮
+                    updateLatency.disabled = false;
+                    resetTranslation.disabled = false;
+                    audioStatus.textContent = 'Model loaded successfully. Upload audio and press play to start translation.';
+                    audioStatus.className = 'status success';
+                    
+                    updateSettingsDisplay();
+                    
+                    // 重置空闲计时器
+                    resetIdleTimer();
+                }
+            } catch (error) {
+                audioStatus.textContent = 'Error loading model: ' + error;
+                audioStatus.className = 'status error';
+            }
+        });
+
+        audioFile.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                audioPlayer.src = URL.createObjectURL(file);
+                // 重置翻译初始化状态，因为新的音频文件被上传
+                translationInitialized = false;
+                audioStatus.textContent = 'Audio loaded. Press play to start translation.';
+                audioStatus.className = 'status success';
+                
+                // 重置空闲计时器
+                resetIdleTimer();
+            }
+        });
+        
+        // 初始化翻译系统
+        async function initializeTranslation() {
+            if (!sessionId || translationInitialized) return;
+            
+            try {
+                // Clear previous translation
+                translationOutput.textContent = '';
+                // Explicitly set to false at initialization
+                translationPaused = false;
+                
+                // Initialize WebSocket connection
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                // Always use /wss/ path since that's what the server expects
+                const wsUrl = `${protocol}//${window.location.host}/wss/${sessionId}`;
+                console.log(`Connecting to WebSocket at: ${wsUrl}`);
+                ws = new WebSocket(wsUrl);
+                
+                ws.onmessage = (event) => {
+                    const message = event.data;
+                    
+                    // 检查是否是特殊状态消息
+                    if (typeof message === 'string' && message.startsWith('INITIALIZING:')) {
+                        audioStatus.textContent = message.substring('INITIALIZING:'.length).trim();
+                        audioStatus.className = 'status warning';
+                        return;
+                    } else if (typeof message === 'string' && message.startsWith('READY:')) {
+                        audioStatus.textContent = 'Model is ready. Processing audio...';
+                        audioStatus.className = 'status success';
+                        return;
+                    } else if (typeof message === 'string' && message.startsWith('ERROR:')) {
+                        audioStatus.textContent = message;
+                        audioStatus.className = 'status error';
+                        return;
+                    }
+                    
+                    // 只有在未暂停状态下才更新翻译
+                    if (!translationPaused) {
+                        translationOutput.textContent = message;
+                        // 自动滚动到底部，显示最新翻译内容
+                        scrollTranslationToBottom();
+                    }
+                };
+                
+                ws.onerror = (error) => {
+                    audioStatus.textContent = 'WebSocket error: ' + error;
+                    audioStatus.className = 'status error';
+                };
+                
+                return new Promise((resolve, reject) => {
+                    ws.onopen = async () => {
+                        try {
+                            // Check if we need to recreate the audio player
+                            if (audioElementConnected) {
+                                console.log('Audio element already connected, recreating it');
+                                
+                                // Close any existing AudioContext
+                                if (audioContext) {
+                                    try {
+                                        await audioContext.close();
+                                        console.log('Previous AudioContext closed');
+                                    } catch (e) {
+                                        console.error('Error closing previous AudioContext:', e);
+                                    }
+                                    audioContext = null;
+                                }
+                                
+                                // Recreate the audio player
+                                const audioPlayerParent = document.getElementById('fileInputContainer');
+                                const oldAudioPlayer = document.getElementById('audioPlayer');
+                                const audioSrc = oldAudioPlayer.src; // Save the current source
+                                const audioPaused = oldAudioPlayer.paused; // Save the paused state
+                                const audioCurrentTime = oldAudioPlayer.currentTime; // Save the current time
+                                
+                                // Remove the old player
+                                if (oldAudioPlayer) {
+                                    audioPlayerParent.removeChild(oldAudioPlayer);
+                                }
+                                
+                                // Create a new audio player
+                                const newAudioPlayer = document.createElement('audio');
+                                newAudioPlayer.id = 'audioPlayer';
+                                newAudioPlayer.controls = true;
+                                newAudioPlayer.style.width = '100%';
+                                newAudioPlayer.style.marginTop = '10px';
+                                newAudioPlayer.src = audioSrc; // Restore the source
+                                newAudioPlayer.currentTime = audioCurrentTime; // Restore the current time
+                                
+                                // Add the new player to the DOM
+                                audioPlayerParent.appendChild(newAudioPlayer);
+                                
+                                // Update the global reference
+                                audioPlayer = newAudioPlayer;
+                                
+                                // Re-add event listeners
+                                addAudioPlayerEventListeners();
+                                
+                                // Reset the connection flag
+                                audioElementConnected = false;
+                            }
+                            
+                            // Create a new AudioContext
+                            audioContext = new AudioContext();
+                            console.log('New AudioContext created with sample rate:', audioContext.sampleRate);
+                            
+                            // Create a new MediaElementSource
+                            audioSource = audioContext.createMediaElementSource(audioPlayer);
+                            console.log('New MediaElementSource created');
+                            
+                            // Mark the audio element as connected
+                            audioElementConnected = true;
+                            
+                            // 创建重采样节点
+                            const originalSampleRate = audioContext.sampleRate;
+                            const resampleRatio = targetSampleRate / originalSampleRate;
+                            
+                            // 创建ScriptProcessor节点
+                            processor = audioContext.createScriptProcessor(segmentSize, 1, 1);
+                            
+                            processor.onaudioprocess = (e) => {
+                                // 只有在未暂停状态下才处理音频
+                                if (ws && ws.readyState === WebSocket.OPEN && !translationPaused) {
+                                    const inputData = e.inputBuffer.getChannelData(0);
+                                    
+                                    // 对输入数据进行重采样
+                                    const resampledLength = Math.floor(inputData.length * resampleRatio);
+                                    const resampledChunk = new Float32Array(resampledLength);
+                                    
+                                    for (let i = 0; i < resampledLength; i++) {
+                                        const originalIndex = Math.floor(i / resampleRatio);
+                                        resampledChunk[i] = inputData[originalIndex];
+                                    }
+                                    
+                                    // 将重采样后的数据添加到缓冲区
+                                    const newBuffer = new Float32Array(resampledBuffer.length + resampledChunk.length);
+                                    newBuffer.set(resampledBuffer);
+                                    newBuffer.set(resampledChunk, resampledBuffer.length);
+                                    resampledBuffer = newBuffer;
+                                    
+                                    // 计算当前的目标块大小
+                                    const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
+                                    
+                                    // 当缓冲区达到目标大小时发送数据
+                                    while (resampledBuffer.length >= targetChunkSize) {
+                                        const chunk = resampledBuffer.slice(0, targetChunkSize);
+                                        ws.send(chunk.buffer);
+                                        resampledBuffer = resampledBuffer.slice(targetChunkSize);
+                                    }
+                                }
+                            };
+                            
+                            // 连接节点
+                            audioSource.connect(processor);
+                            processor.connect(audioContext.destination);
+                            audioSource.connect(audioContext.destination);
+                            
+                            // 标记翻译系统已初始化
+                            translationInitialized = true;
+                            audioStatus.textContent = 'Playing and translating...';
+                            audioStatus.className = 'status success';
+                            
+                            // 重置空闲计时器
+                            resetIdleTimer();
+                            
+                            // 设置音频结束事件
+                            audioPlayer.onended = () => {
+                                // 发送剩余的数据（如果有的话）
+                                if (resampledBuffer.length > 0) {
+                                    // 计算当前的目标块大小
+                                    const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
+                                    
+                                    // 用0填充最后一个块至目标大小
+                                    const finalChunk = new Float32Array(targetChunkSize);
+                                    finalChunk.set(resampledBuffer);
+                                    ws.send(finalChunk.buffer);
+                                }
+                                
+                                if (ws) ws.close();
+                                if (processor) {
+                                    processor.disconnect();
+                                }
+                                // Don't disconnect audioSource here, as we might reuse it
+                                if (audioContext) {
+                                    audioContext.suspend(); // Suspend instead of close
+                                }
+                                audioStatus.textContent = 'Translation completed';
+                                audioStatus.className = 'status success';
+                                translationInitialized = false;
+                            };
+                            
+                            resolve();
+                        } catch (error) {
+                            console.error('Error:', error);
+                            audioStatus.textContent = 'Error initializing audio: ' + error;
+                            audioStatus.className = 'status error';
+                            if (ws) ws.close();
+                            translationInitialized = false;
+                            reject(error);
+                        }
+                    };
+                });
+            } catch (error) {
+                audioStatus.textContent = 'Error: ' + error;
+                audioStatus.className = 'status error';
+                translationInitialized = false;
+                throw error;
+            }
+        }
+
+        // Function to add event listeners to the audio player
+        function addAudioPlayerEventListeners() {
+            audioPlayer.addEventListener('play', async () => {
+                // If translation system is not initialized, initialize it
+                if (!translationInitialized && sessionId) {
+                    try {
+                        // Store the current time before pausing
+                        const currentTime = audioPlayer.currentTime;
+                        
+                        // Pause the audio player while we initialize
+                        audioPlayer.pause();
+                        audioStatus.textContent = 'Initializing translation system...';
+                        audioStatus.className = 'status';
+                        
+                        // Initialize the translation system
+                        await initializeTranslation();
+                        
+                        // Set the current time back to where it was
+                        audioPlayer.currentTime = currentTime;
+                        
+                        // Make sure we're not paused
+                        translationPaused = false;
+                        
+                        // Resume the audio context if it's suspended
+                        if (audioContext && audioContext.state === 'suspended') {
+                            await audioContext.resume();
+                        }
+                        
+                        // Add a small delay before playing to ensure everything is ready
+                        setTimeout(() => {
+                            // Explicitly call play() after initialization is complete
+                            console.log('Initialization complete, playing audio now');
+                            audioPlayer.play().then(() => {
+                                console.log('Audio playback started successfully');
+                                audioStatus.textContent = 'Playing and translating...';
+                                audioStatus.className = 'status success';
+                                // 确保重置空闲计时器，因为翻译已经开始
+                                resetIdleTimer();
+                            }).catch(e => {
+                                console.error('Error playing audio after initialization:', e);
+                                audioStatus.textContent = 'Error playing audio: ' + e;
+                                audioStatus.className = 'status error';
+                            });
+                        }, 50); // 100ms delay to ensure audio context is fully ready
+                        
+                        resetIdleTimer();
+                    } catch (error) {
+                        console.error('Error initializing translation:', error);
+                        audioStatus.textContent = 'Error initializing translation: ' + error;
+                        audioStatus.className = 'status error';
+                    }
+                } else if (translationInitialized) {
+                    translationPaused = false;
+                    audioStatus.textContent = 'Playing and translating...';
+                    audioStatus.className = 'status success';
+                    
+                    if (audioContext && audioContext.state === 'suspended') {
+                        audioContext.resume().catch(e => {
+                            console.error('Error resuming audio context:', e);
+                        });
+                    }
+                    
+                    // 确保重置空闲计时器，因为翻译已经恢复
+                    resetIdleTimer();
+                }
+            });
+            
+            audioPlayer.addEventListener('pause', () => {
+                if (translationInitialized) {
+                    translationPaused = true;
+                    audioStatus.textContent = 'Translation paused';
+                    audioStatus.className = 'status';
+                    
+                    if (audioContext && audioContext.state === 'running') {
+                        audioContext.suspend().catch(e => {
+                            console.error('Error suspending audio context:', e);
+                        });
+                    }
+                }
+            });
+        }
+
+        // 切换音频输入源
+        audioSourceRadios.forEach(radio => {
+            radio.addEventListener('change', (event) => {
+                const source = event.target.value;
+                if (source === 'file') {
+                    fileInputContainer.style.display = 'block';
+                    micInputContainer.style.display = 'none';
+                    // 如果麦克风正在录制，停止它（传入false表示不是手动暂停）
+                    if (isMicRecording) {
+                        stopMicrophone(false);
+                    }
+                } else if (source === 'mic') {
+                    fileInputContainer.style.display = 'none';
+                    micInputContainer.style.display = 'block';
+                    // 如果有音频正在播放，暂停它
+                    if (audioPlayer) {
+                        audioPlayer.pause();
+                    }
+                }
+            });
+        });
+
+        // 切换麦克风录制状态
+        toggleMic.addEventListener('click', async () => {
+            if (isMicRecording) {
+                // 用户手动暂停，显示暂停消息
+                stopMicrophone(true); // true表示是手动暂停
+            } else {
+                startMicrophone();
+            }
+        });
+
+        // 开始麦克风录制
+        async function startMicrophone() {
+            if (!sessionId) {
+                micStatus.textContent = 'Please load a model first';
+                return;
+            }
+            
+            try {
+                // 不再清空翻译输出，保留之前的结果
+                // translationOutput.textContent = '';
+                
+                // 请求麦克风权限
+                micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // Initialize WebSocket connection
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                // Always use /wss/ path since that's what the server expects
+                const wsUrl = `${protocol}//${window.location.host}/wss/${sessionId}`;
+                console.log(`Connecting to WebSocket at: ${wsUrl}`);
+                ws = new WebSocket(wsUrl);
+                
+                ws.onmessage = (event) => {
+                    translationOutput.textContent = event.data;
+                    scrollTranslationToBottom();
+                };
+                
+                ws.onerror = (error) => {
+                    micStatus.textContent = 'WebSocket error: ' + error;
+                    stopMicrophone();
+                };
+                
+                ws.onopen = () => {
+                    // 创建音频上下文
+                    audioContext = new AudioContext();
+                    const micSource = audioContext.createMediaStreamSource(micStream);
+                    
+                    // 创建处理节点
+                    processor = audioContext.createScriptProcessor(4096, 1, 1);
+                    
+                    // 重采样率计算
+                    const originalSampleRate = audioContext.sampleRate;
+                    const resampleRatio = targetSampleRate / originalSampleRate;
+                    
+                    console.log('Microphone sample rate:', originalSampleRate);
+                    console.log('Target sample rate:', targetSampleRate);
+                    console.log('Resample ratio:', resampleRatio);
+                    
+                    processor.onaudioprocess = (e) => {
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            const inputData = e.inputBuffer.getChannelData(0);
+                            
+                            // 检查音频数据是否有声音
+                            let hasSound = false;
+                            let volumeSum = 0;
+                            for (let i = 0; i < inputData.length; i++) {
+                                const volume = Math.abs(inputData[i]);
+                                volumeSum += volume;
+                                if (volume > 0.01) {
+                                    hasSound = true;
+                                }
+                            }
+                            
+                            // 计算平均音量并更新音量指示器
+                            const averageVolume = volumeSum / inputData.length;
+                            const volumePercent = Math.min(100, Math.round(averageVolume * 1000));
+                            volumeLevel.style.width = volumePercent + '%';
+                            
+                            // 如果检测到声音，重置空闲计时器
+                            if (hasSound) {
+                                console.log('Sound detected in microphone input');
+                                resetIdleTimer();
+                            } else {
+                                console.log('No sound detected in microphone input');
+                            }
+                            
+                            // 对输入数据进行重采样
+                            const resampledLength = Math.floor(inputData.length * resampleRatio);
+                            const resampledChunk = new Float32Array(resampledLength);
+                            
+                            for (let i = 0; i < resampledLength; i++) {
+                                const originalIndex = Math.floor(i / resampleRatio);
+                                resampledChunk[i] = inputData[originalIndex];
+                            }
+                            
+                            // 将重采样后的数据添加到缓冲区
+                            const newBuffer = new Float32Array(resampledBuffer.length + resampledChunk.length);
+                            newBuffer.set(resampledBuffer);
+                            newBuffer.set(resampledChunk, resampledBuffer.length);
+                            resampledBuffer = newBuffer;
+                            
+                            // 计算当前的目标块大小
+                            const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
+                            
+                            // 当缓冲区达到目标大小时发送数据
+                            while (resampledBuffer.length >= targetChunkSize) {
+                                const chunk = resampledBuffer.slice(0, targetChunkSize);
+                                try {
+                                    ws.send(chunk.buffer);
+                                    console.log(`Sent audio chunk of size ${chunk.length} to server`);
+                                } catch (error) {
+                                    console.error('Error sending audio data:', error);
+                                }
+                                resampledBuffer = resampledBuffer.slice(targetChunkSize);
+                            }
+                        }
+                    };
+                    
+                    // 连接节点
+                    micSource.connect(processor);
+                    processor.connect(audioContext.destination);
+                    
+                    // 设置translationPaused为false，确保翻译处理正常进行
+                    translationPaused = false;
+                    
+                    // 更新UI状态
+                    toggleMic.textContent = 'Pause Microphone';
+                    micStatus.textContent = 'Microphone active. Speaking will be translated in real-time.';
+                    isMicRecording = true;
+                    audioStatus.textContent = 'Translating from microphone...';
+                    audioStatus.className = 'status success';
+                    
+                    // 重置空闲计时器
+                    resetIdleTimer();
+                    
+                    // 发送一个小的静音数据块，以初始化翻译系统
+                    const silentChunk = new Float32Array(baseChunkSize * currentLatencyMultiplier);
+                    try {
+                        ws.send(silentChunk.buffer);
+                        console.log('Sent initial silent chunk to server');
+                    } catch (error) {
+                        console.error('Error sending initial silent chunk:', error);
+                    }
+                };
+            } catch (error) {
+                micStatus.textContent = 'Error accessing microphone: ' + error;
+                console.error('Microphone error:', error);
+            }
+        }
+
+        function stopMicrophone(isManualPause = false) {
+            // 发送剩余的数据（如果有的话）
+            if (ws && ws.readyState === WebSocket.OPEN && resampledBuffer.length > 0) {
+                const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
+                const finalChunk = new Float32Array(targetChunkSize);
+                finalChunk.set(resampledBuffer);
+                try {
+                    ws.send(finalChunk.buffer);
+                    console.log('Sent final audio chunk to server');
+                } catch (error) {
+                    console.error('Error sending final audio chunk:', error);
+                }
+            }
+            
+            // 关闭WebSocket连接
+            if (ws) {
+                try {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.close();
+                        console.log('WebSocket connection closed');
+                    }
+                } catch (e) {
+                    console.error('Error closing WebSocket:', e);
+                }
+                ws = null;
+            }
+            
+            // 停止麦克风流
+            if (micStream) {
+                micStream.getTracks().forEach(track => {
+                    track.stop();
+                    console.log('Microphone track stopped');
+                });
+                micStream = null;
+            }
+            
+            // 断开并清理音频处理节点
+            if (processor) {
+                try {
+                    processor.disconnect();
+                    console.log('Audio processor disconnected');
+                } catch (e) {
+                    console.error('Error disconnecting processor:', e);
+                }
+                processor = null;
+            }
+            
+            // 关闭音频上下文
+            if (audioContext) {
+                try {
+                    if (audioContext.state !== 'closed') {
+                        audioContext.close().catch(e => {
+                            console.error('Error closing audio context:', e);
+                        });
+                        console.log('Audio context closed');
+                    }
+                } catch (e) {
+                    console.error('Error in audio context cleanup:', e);
+                }
+                audioContext = null;
+            }
+            
+            // 重置缓冲区
+            resampledBuffer = new Float32Array();
+            
+            // 重置音量指示器
+            volumeLevel.style.width = '0%';
+            
+            // 更新UI状态
+            toggleMic.textContent = 'Start Microphone';
+            
+            // 只有在手动暂停时才显示暂停消息
+            if (isManualPause) {
+                micStatus.textContent = 'Microphone paused.';
+            } else {
+                micStatus.textContent = '';
+            }
+            
+            isMicRecording = false;
+            
+            // 重置翻译状态
+            translationPaused = true;
+            translationInitialized = false;
+        }
+
+        // 修改重置函数，确保麦克风也被正确停止
+        resetTranslation.addEventListener('click', async () => {
+            if (!sessionId) return;
+            
+            try {
+                // 如果麦克风正在录制，停止它（传入false表示不是手动暂停）
+                if (isMicRecording) {
+                    stopMicrophone(false);
+                } else {
+                    // 确保音量指示器被重置，即使麦克风没有在录制
+                    volumeLevel.style.width = '0%';
+                    // 清空麦克风状态消息
+                    micStatus.textContent = '';
+                }
+                
+                // 清理音频和WebSocket资源
+                cleanupAudioResources();
+                
+                // Now fully close the AudioContext
+                if (audioContext) {
+                    try {
+                        if (audioContext.state !== 'closed') {
+                            await audioContext.close();
+                            console.log('AudioContext fully closed');
+                        }
+                        audioContext = null;
+                    } catch (e) {
+                        console.error('Error closing AudioContext:', e);
+                    }
+                }
+                
+                // Reset the audio element connection flag
+                audioElementConnected = false;
+                
+                // Completely recreate the audio player element
+                const audioPlayerParent = document.getElementById('fileInputContainer');
+                const oldAudioPlayer = document.getElementById('audioPlayer');
+                
+                // Remove the old player
+                if (oldAudioPlayer) {
+                    audioPlayerParent.removeChild(oldAudioPlayer);
+                }
+                
+                // Create a new audio player with the same attributes
+                const newAudioPlayer = document.createElement('audio');
+                newAudioPlayer.id = 'audioPlayer';
+                newAudioPlayer.controls = true;
+                newAudioPlayer.style.width = '100%';
+                newAudioPlayer.style.marginTop = '10px';
+                
+                // Add the new player to the DOM
+                audioPlayerParent.appendChild(newAudioPlayer);
+                
+                // Update the global reference
+                audioPlayer = newAudioPlayer;
+                
+                // Add event listeners to the new audio player
+                addAudioPlayerEventListeners();
+                
+                // 重置文件输入，强制用户重新选择文件
+                if (audioFile) {
+                    audioFile.value = '';
+                }
+                
+                // 重置音量指示器
+                volumeLevel.style.width = '0%';
+                
+                // 重置翻译初始化状态
+                translationInitialized = false;
+                
+                // 调用后端重置翻译状态
+                const response = await fetch('/reset_translation?' + new URLSearchParams({
+                    session_id: sessionId
+                }), {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    // 清空翻译输出
+                    translationOutput.textContent = '';
+                    audioStatus.textContent = data.message || 'Translation reset successfully. Please select an audio source.';
+                    audioStatus.className = 'status success';
+                    
+                    // 确保按钮状态正确
+                    updateLatency.disabled = false;
+                } else {
+                    audioStatus.textContent = 'Failed to reset translation: ' + data.error;
+                    audioStatus.className = 'status error';
+                }
+            } catch (error) {
+                audioStatus.textContent = 'Error resetting translation: ' + error;
+                audioStatus.className = 'status error';
+            }
+        });
+
+        // 更新延迟倍数
+        updateLatency.addEventListener('click', async () => {
+            if (!sessionId) return;
+            
+            try {
+                currentLatencyMultiplier = parseInt(latencyMultiplier.value);
+                const response = await fetch('/update_latency?' + new URLSearchParams({
+                    session_id: sessionId,
+                    latency_multiplier: currentLatencyMultiplier
+                }), {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    audioStatus.textContent = 'Latency updated successfully';
+                    audioStatus.className = 'status success';
+                    updateSettingsDisplay();
+                } else {
+                    audioStatus.textContent = 'Failed to update latency: ' + data.error;
+                    audioStatus.className = 'status error';
+                }
+            } catch (error) {
+                audioStatus.textContent = 'Error updating latency: ' + error;
+                audioStatus.className = 'status error';
+            }
+        });
+        
+        // 更新设置显示
+        function updateSettingsDisplay() {
+            currentSettings.innerHTML = `
+                <div style="margin-bottom: 10px; padding: 5px; background-color: #f8f9fa; border-radius: 3px;">
+                    <strong>Current Settings:</strong><br>
+                    Model: ${agentType.value}<br>
+                    Languages: ${languagePair.value}<br>
+                    Latency: ${latencyMultiplier.value}x
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html> 
