@@ -514,7 +514,7 @@
     <div class="container">
         <div class="header">
             <h1>InfiniSST Translation Demo</h1>
-            <p>Real-time speech translation powered by advanced AI</p>
+            <p>Simultaneous end-to-end speech translation powered by LLM</p>
         </div>
 
         <div class="main-panel">
@@ -814,7 +814,7 @@
             // Update panel header title
             const headerTitle = panelHeader.querySelector('h3');
             if (type === 'processing') {
-                headerTitle.textContent = 'Translating...';
+                headerTitle.textContent = 'Processing...';
                 loadingSpinner.classList.remove('hidden');
             } else if (type === 'error') {
                 headerTitle.textContent = 'Error';
@@ -1160,6 +1160,51 @@
                 }, IDLE_TIMEOUT);
             }
         }
+
+        // handle youtube player
+        playBtn.addEventListener("click", async () => {
+            if (!youtubeUrl || !youtubeUrl.value || !sessionId) {
+                alert("Please enter a YouTube URL and ensure a session is active.");
+                updateStatus("Please enter a YouTube URL and ensure a session is active",'error')
+                return;
+            }
+
+            // Show loading state before requesting backend
+            updateStatus("downloading audio first due to Youtube sandbox protection", "processing");
+
+            try {
+                const response = await fetch('/download_youtube?' + new URLSearchParams({
+                    url: youtubeUrl.value,
+                    session_id: sessionId
+                }), {
+                    method: 'POST'
+                });
+
+                //复用代码
+
+
+                const blob = await response.blob();
+                const fileType = blob.type;
+
+                if (!fileType.startsWith('video/')) {
+                    throw new Error('Expected video file, got: ' + fileType);
+                }
+
+                // Reuse upload logic
+                const file = new File([blob], 'youtube_video.mp4', { type: fileType });
+                createMediaElement(file);
+                translationInitialized = false;
+                updateStatus('Audio loaded from YouTube. Press play to start translation.', 'ready');
+                resetIdleTimer();
+
+                // Show translation panel
+                showPanel();
+                resetIdleTimer();
+            } catch (error) {
+                console.error('Error downloading or playing YouTube video:', error);
+                updateStatus('Failed to load YouTube video: ' + error, 'error');
+            }
+        });
 
         async function cleanupSession() {
             try {

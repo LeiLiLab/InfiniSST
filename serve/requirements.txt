@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+soundfile
+numpy
+torch
+yt-dlp

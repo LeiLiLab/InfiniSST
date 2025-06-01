@@ -9,7 +9,11 @@ except RuntimeError:
     print("Multiprocessing start method already set, using current context")
 
 from fastapi import FastAPI, WebSocket, UploadFile, File, BackgroundTasks, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
+import tempfile
+import os
+import yt_dlp
+from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
 import soundfile as sf
 import numpy as np
@@ -89,18 +93,18 @@ WEBPAGE_DISCONNECT_TIMEOUT = 60  # Consider a webpage closed if no ping for 15 s
 
 # Worker process function that runs the translation model
 def session_worker_process(
-    agent_type: str, 
-    language_pair: str, 
-    args_dict: dict, 
+    agent_type: str,
+    language_pair: str,
+    args_dict: dict,
     gpu_id: int,
-    input_queue: Queue, 
-    output_queue: Queue, 
+    input_queue: Queue,
+    output_queue: Queue,
     control_queue: Queue,
     ready_event: mp.Event
 ):
     """
     Worker process function that runs a translation model in a separate process.
-    
+
     Args:
         agent_type: Type of translation agent to use
         language_pair: Language pair for translation
@@ -115,13 +119,13 @@ def session_worker_process(
         # Set process name for better debugging
         import setproctitle
         setproctitle.setproctitle(f"sllama_worker_{agent_type}_{language_pair}_gpu{gpu_id}")
-        
+
         # Convert args_dict back to an argparse.Namespace
         args = argparse.Namespace(**args_dict)
-        
+
         # Parse language pair
         source_lang, target_lang, src_code, tgt_code = LANGUAGE_PAIRS[language_pair]
-        
+
         args.source_lang = source_lang
         args.target_lang = target_lang
         # Conditional model and lora loading
@@ -134,7 +138,7 @@ def session_worker_process(
         else:
             args.state_dict_path = model_path.format(src_code, tgt_code) if '{}' in model_path else model_path
             args.lora_path = lora_path.format(src_code, tgt_code) if '{}' in lora_path else lora_path
-        
+
         # Set the GPU device
         print(f"Worker process initializing on GPU {gpu_id}")
         with torch.cuda.device(gpu_id):
@@ -143,10 +147,10 @@ def session_worker_process(
             agent.update_multiplier(args.latency_multiplier)
             states = agent.build_states()
             states.reset()
-            
+
             # Signal that the worker is ready
             ready_event.set()
-            
+
             # Process commands from the control queue and audio segments from the input queue
             while True:
                 # Check for control commands (non-blocking)
@@ -178,19 +182,19 @@ def session_worker_process(
                     pass
                 except Exception as e:
                     print(f"Error processing control command on GPU {gpu_id}: {e}")
-                
+
                 # Process audio segments (blocking with timeout)
                 try:
                     segment_data = input_queue.get(timeout=0.1)
                     segment, is_last = segment_data
-                    
+
                     # Process the segment
                     states.source.extend(segment)
                     print(f"Worker on GPU {gpu_id} processing segment, total audio length: {len(states.source) / 16000}s")
-                    
+
                     if is_last:
                         states.source_finished = True
-                    
+
                     action = agent.policy(states)
                     if not action.is_read():
                         output = action.content
@@ -206,30 +210,30 @@ def session_worker_process(
                     traceback.print_exc()
                     # Send error message to main process
                     output_queue.put(("ERROR", f"Error processing audio: {str(e)}"))
-            
+
             # Clean up GPU resources
             if hasattr(agent, 'model'):
                 if hasattr(agent.model, 'to'):
                     agent.model.to('cpu')  # Move model to CPU first
-                
+
                 # Delete model attributes that might hold GPU tensors
                 for attr_name in dir(agent.model):
                     if not attr_name.startswith('__'):
                         attr = getattr(agent.model, attr_name)
                         if isinstance(attr, torch.Tensor) and attr.is_cuda:
                             delattr(agent.model, attr_name)
-            
+
             # Clear states
             if hasattr(states, 'clear'):
                 states.clear()
-            
+
             # Force garbage collection
             gc.collect()
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
-                
+
             print(f"Worker process for {agent_type} model on GPU {gpu_id} terminated")
-    
+
     except Exception as e:
         import traceback
         print(f"Error in worker process on GPU {gpu_id}: {e}")
@@ -252,16 +256,16 @@ class TranslationSession:
         self.args = copy.deepcopy(args)  # Store args in the session
         self.gpu_id = gpu_id
         self.is_ready = False
-        
+
         # Create queues for communication with the worker process
         self.input_queue = Queue()
         self.output_queue = Queue()
         self.control_queue = Queue()
         self.ready_event = mp.Event()
-        
+
         # Convert args to a dictionary for passing to the worker process
         args_dict = vars(self.args)
-        
+
         # Start the worker process
         self.process = Process(
             target=session_worker_process,
@@ -278,7 +282,7 @@ class TranslationSession:
         )
         self.process.daemon = True  # Ensure process terminates when main process exits
         self.process.start()
-        
+
         # Store the process and queues in the session_workers dictionary
         session_workers[id(self)] = {
             "process": self.process,
@@ -288,16 +292,16 @@ class TranslationSession:
             "ready_event": self.ready_event,
             "gpu_id": gpu_id
         }
-        
+
         print(f"Worker process started on GPU {gpu_id}, waiting for initialization...")
-        
+
     async def wait_for_ready(self, timeout=60):
         """异步等待工作进程准备就绪"""
         start_time = time.time()
         while not self.ready_event.is_set() and time.time() - start_time < timeout:
             # 使用asyncio.sleep让出控制权，允许其他任务执行
             await asyncio.sleep(0.1)
-            
+
         if self.ready_event.is_set():
             self.is_ready = True
             print(f"Worker process ready on GPU {self.gpu_id} after {time.time() - start_time:.1f}s")
@@ -305,7 +309,7 @@ class TranslationSession:
         else:
             print(f"Timeout waiting for worker process on GPU {self.gpu_id} after {timeout}s")
             return False
-    
+
     # sends audio segment to worker process
     async def process_segment(self, segment: np.ndarray, is_last: bool = False) -> str:
         # 确保工作进程已准备就绪
@@ -724,7 +728,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             await websocket.send_text("READY: Worker process is ready")
         else:
             print(f"Client disconnected before READY message for session {session_id}")
-    
+
     try:
         # Create a task to continuously check for translations from the worker process
         async def check_translations():
@@ -735,7 +739,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                         translation = await asyncio.get_event_loop().run_in_executor(
                             None, session.output_queue.get_nowait
                         )
-                        
+
                         # Check if it's an error message
                         if isinstance(translation, tuple) and translation[0] == "ERROR":
                             print(f"Error in worker process: {translation[1]}")
@@ -747,42 +751,42 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                     pass
                 except Exception as e:
                     print(f"Error checking translations: {e}")
-                
+
                 # Short sleep to avoid busy waiting
                 await asyncio.sleep(0.01)
-        
+
         # Start the translation checking task
         translation_task = asyncio.create_task(check_translations())
-        
+
         # Process incoming audio data
         while True:
             # Receive data from the WebSocket
             message = await websocket.receive()
-            
+
             # Update activity timestamp
             update_session_activity(session_id)
             # Update ping timestamp when data is received
             update_session_ping(session_id)
-            
+
             # Check if this is a control message (text) or audio data (bytes)
             if "text" in message:
                 # Handle control messages
                 control_message = message["text"]
                 print(f"Received control message for session {session_id}: {control_message}")
-                
+
                 if control_message == "EOF":
                     # This is an explicit End-Of-File signal from the client
                     # Process an empty segment with is_last=True to signal completion
                     print(f"Received EOF signal for session {session_id}, marking processing as complete")
-                    
+
                     # Send an empty audio segment with is_last=True to indicate completion
                     empty_segment = np.array([], dtype=np.float32)
                     await session.process_segment(empty_segment, is_last=True)
-                    
+
                     # Send a confirmation message to the client
                     await websocket.send_text("PROCESSING_COMPLETE: File processing finished")
                     continue
-                
+
                 # Handle other potential control messages here
                 elif control_message.startswith("LATENCY:"):
                     # Example of another control message to dynamically adjust latency
@@ -793,20 +797,20 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                     except (ValueError, IndexError):
                         await websocket.send_text("ERROR: Invalid latency format")
                     continue
-                
+
             elif "bytes" in message:
                 # This is audio data
                 data = message["bytes"]
-                
+
                 # Convert bytes to numpy array
                 audio_data = np.frombuffer(data, dtype=np.float32)
                 chunk_count += 1
                 print(f"Received chunk {chunk_count}, size: {len(audio_data)}")
-                
+
                 # Process the segment (send to worker process)
                 # For regular chunks, is_last is always False
                 await session.process_segment(audio_data, is_last=False)
-            
+
     except starlette.websockets.WebSocketDisconnect:
         print(f"WebSocket disconnected for session {session_id}")
     except Exception as e:
@@ -818,7 +822,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
         print(f"WebSocket connection closed for session {session_id}")
         # Don't immediately delete the session, let the idle cleanup handle it
         # This allows reconnection if the page is refreshed
-        
+
         # Cancel the translation checking task
         if 'translation_task' in locals():
             translation_task.cancel()
@@ -827,100 +831,59 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             except asyncio.CancelledError:
                 pass
 
-@app.post("/upload")
-async def upload_file(file: UploadFile = File(...), session_id: str = None, background_tasks: BackgroundTasks = None):
-    """
-    Process an uploaded audio file and send it to the translation session.
-    
-    Args:
-        file: The uploaded audio file
-        session_id: The session ID to use for translation
-        background_tasks: FastAPI background tasks
-    
-    Returns:
-        Information about the file and processing status
-    """
-    if not session_id:
-        return {"error": "No session_id provided. Please create a session first."}
-    
-    if session_id not in active_sessions:
-        return {"error": "Invalid session ID. Please create a valid session."}
-    
-    session = active_sessions[session_id]
-    
-    # Ensure the worker process is ready
-    if not session.is_ready:
-        if not await session.wait_for_ready(timeout=10):
-            return {"error": "Worker process is not ready, please try again later."}
-    
+
+
+@app.post("/download_youtube")
+async def download_youtube(request: Request, background_tasks: BackgroundTasks):
     try:
-        # Read the file contents
-        contents = await file.read()
-        
-        # Parse the audio data
-        audio_data, sample_rate = sf.read(io.BytesIO(contents))
-        
-        # Convert to mono if stereo
-        if len(audio_data.shape) > 1 and audio_data.shape[1] > 1:
-            audio_data = np.mean(audio_data, axis=1)
-        
-        # Resample to 16kHz if needed
-        if sample_rate != 16000:
-            # A proper resampling would be implemented here
-            # For simplicity, we'll just warn about it
-            print(f"Warning: Audio sample rate is {sample_rate}Hz, not 16kHz. Resampling needed.")
-        
-        # Convert to float32 if not already
-        if audio_data.dtype != np.float32:
-            audio_data = audio_data.astype(np.float32)
-        
-        # Define the function to process the file in the background
-        async def process_file_in_background():
-            try:
-                # Define a reasonable chunk size (e.g., 0.5 seconds of audio at 16kHz)
-                chunk_size = 8000  # 0.5 seconds at 16kHz
-                
-                # Process the audio in chunks
-                for i in range(0, len(audio_data), chunk_size):
-                    chunk = audio_data[i:i+chunk_size]
-                    # Process each chunk
-                    await session.process_segment(chunk, is_last=False)
-                    # Small delay to not overwhelm the system
-                    await asyncio.sleep(0.01)
-                
-                # Send a final empty segment with is_last=True to indicate completion
-                await session.process_segment(np.array([], dtype=np.float32), is_last=True)
-                
-                print(f"File processing complete for session {session_id}, length: {len(audio_data)} samples ({len(audio_data)/16000:.2f}s)")
-            except Exception as e:
-                print(f"Error processing file for session {session_id}: {e}")
-                import traceback
-                traceback.print_exc()
-        
-        # Add the processing task to background tasks
-        if background_tasks:
-            background_tasks.add_task(process_file_in_background)
-            return {
-                "success": True,
-                "sample_rate": sample_rate, 
-                "duration": len(audio_data) / sample_rate,
-                "message": "File uploaded and processing started. Translation results will be available through the WebSocket."
-            }
+        query_params = dict(request.query_params)
+        url = query_params.get("url")
+        session_id = query_params.get("session_id")
+
+        if not url:
+            return {"error": "Missing URL parameter"}
+
+        # (Optional) log session_id for debugging
+        if session_id:
+            print(f"Download request received for session: {session_id}")
+
+        output_path = f"/mnt/aries/data6/jiaxuanluo/tmp/video_{session_id}.mp4"
+
+        import subprocess
+        cmd = [
+            "yt-dlp",
+            #"--cookies-from-browser", "chrome",
+            "--cookies=/mnt/aries/data6/jiaxuanluo/cookies.txt",
+            #"-f", "best[ext=mp4]/best",
+            "-f", "bestvideo+bestaudio/best",
+            "--merge-output-format", "mp4",
+            "--no-continue",
+            "--no-part",
+            "-o", output_path,
+            url
+        ]
+
+        print("Running command:", " ".join(cmd))
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            print("yt-dlp failed:", result.stderr)
+            raise Exception(f"yt-dlp error: {result.stderr}")
         else:
-            # Start processing immediately
-            asyncio.create_task(process_file_in_background())
-            return {
-                "success": True,
-                "sample_rate": sample_rate, 
-                "duration": len(audio_data) / sample_rate,
-                "message": "File uploaded and processing started. Translation results will be available through the WebSocket."
-            }
-            
+            print("yt-dlp success:", result.stdout)
+
+        print("Download completed.")
+        print(f"Checking file after download: {output_path}")
+        if os.path.exists(output_path):
+            print(f"File exists. Size: {os.path.getsize(output_path)} bytes")
+        else:
+            print("Download failed: File not found.")
+
+        background_tasks.add_task(os.remove, output_path)
+        return FileResponse(output_path, media_type='video/mp4', filename=f'video_{session_id}.mp4')
     except Exception as e:
-        print(f"Error processing uploaded file: {e}")
-        import traceback
-        traceback.print_exc()
-        return {"error": f"Failed to process file: {str(e)}"}
+        return {"error": str(e)}
+
 
 @app.post("/update_latency")
 async def update_latency(session_id: str, latency_multiplier: int):
@@ -1059,11 +1022,12 @@ async def ping_session(session_id: str):
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser()
     InfiniSST.add_args(parser)
     args = parser.parse_args()
-    
+
     print(f"Starting server with {num_gpus} GPUs available")
     print(f"Each translation session will run in its own worker process")
-    
+
     uvicorn.run(app, host="0.0.0.0", port=8001)

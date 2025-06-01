@@ -3,10 +3,11 @@ export PYTHONPATH=/home/jiaxuanluo/InfiniSST
 
 echo "Killing any process using port 8001..."
 fuser -k 8001/tcp || true
-#conda activate /mnt/data6/jiaxuanluo/infinisst
+
+#conda activate /mnt/aries/data6/jiaxuanluo/infinisst
 
 #/usr/bin/python3 api.py \
-/mnt/data6/jiaxuanluo/infinisst/bin/python api.py \
+/mnt/aries/data6/jiaxuanluo/infinisst/bin/python api.py \
     --latency-multiplier 2 \
     --min-start-sec 0 \
     --w2v2-path /mnt/data6/xixu/demo/wav2_vec_vox_960h_pl.pt \
@@ -36,7 +37,7 @@ fuser -k 8001/tcp || true
     --lora-rank 32 > backend.log 2>&1 &
 
 # 等待端口8001启动，最多等待10秒
-for i in {1..10}; do
+for i in {1..100}; do
     if lsof -i:8001 &>/dev/null; then
         break
     fi
@@ -45,4 +46,4 @@ for i in {1..10}; do
 done
 # 启动 ngrok
 echo "Starting ngrok tunnel..."
-ngrok http 8001
+/mnt/aries/data6/jiaxuanluo/bin/ngrok http --url=radically-mutual-sailfish.ngrok-free.app 8001
