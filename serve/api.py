@@ -50,6 +50,7 @@ LANGUAGE_PAIRS = {
 # model_path = "/compute/babel-5-23/siqiouya/runs/{}-{}/8B-traj-s2-v3.6/last.ckpt/pytorch_model.bin"
 model_path_de = "/mnt/data6/xixu/demo/en-de/pytorch_model.bin"
 model_path_es = "/mnt/data6/xixu/demo/en-es/pytorch_model.bin"
+model_path_it = "/mnt/data6/jiaxuanluo/demo/en-it/pytorch_model.bin"
 model_path = "/mnt/data6/xixu/demo/gigaspeech/s1/pytorch_model.bin"
 lora_path = "/mnt/data6/xixu/demo/gigaspeech/lora/lora_rank32.bin"
 
@@ -134,6 +135,9 @@ def session_worker_process(
             args.lora_path = None  # or '' if preferred
         elif language_pair == "English -> Spanish":
             args.state_dict_path = model_path_es
+            args.lora_path = None  # or '' if preferred
+        elif language_pair == "English -> Italian":
+            args.state_dict_path = model_path_it
             args.lora_path = None  # or '' if preferred
         else:
             args.state_dict_path = model_path.format(src_code, tgt_code) if '{}' in model_path else model_path
