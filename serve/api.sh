@@ -46,4 +46,6 @@ for i in {1..100}; do
 done
 # 启动 ngrok
 echo "Starting ngrok tunnel..."
-/mnt/aries/data6/jiaxuanluo/bin/ngrok http --url=radically-mutual-sailfish.ngrok-free.app 8001
+#/mnt/aries/data6/jiaxuanluo/bin/ngrok http --url=radically-mutual-sailfish.ngrok-free.app 8001
+
+/mnt/aries/data6/jiaxuanluo/bin/ngrok http --url=wired-fluent-haddock.ngrok-free.app 8001
