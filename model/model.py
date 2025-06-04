@@ -26,15 +26,19 @@ from train.dataset import (
     DataCollatorForTrajectoryDataset,
     DataCollatorForTrajectoryInstructDataset,
     DataCollatorForTrajectoryInstructMultiLatencyDataset,
+    DataCollatorForTrajectoryInstructMultiLatencyQwenDataset,
     DataCollatorForOfflineQwen2ACDataset,
     DataCollatorForTrajectoryInstructMultiLatencyQwen2ACDataset,
     DataCollatorForOfflineSeamlessDataset,
     DataCollatorForTrajectoryInstructMultiLatencySeamlessDataset
 )
 from model.llama31 import SpeechLlamaForCausalLM
+from model.qwen25 import SpeechQwenForCausalLM
+
 from model.w2v2 import SpeechEncoderW2V2RoPE
 from model.patches.patch_w2v2 import patch_w2v2
 from model.patches.patch_llama31 import patch_llama31
+from model.patches.patch_qwen25 import patch_qwen25
 from model.patches.patch_hf import patch_hf
 
 from model.qwen2ac import Qwen2AudioForConditionalGeneration
@@ -53,7 +57,8 @@ collator_classes = {
     5: DataCollatorForOfflineQwen2ACDataset,
     6: DataCollatorForTrajectoryInstructMultiLatencyQwen2ACDataset,
     7: DataCollatorForOfflineSeamlessDataset,
-    8: DataCollatorForTrajectoryInstructMultiLatencySeamlessDataset
+    8: DataCollatorForTrajectoryInstructMultiLatencySeamlessDataset,
+    9: DataCollatorForTrajectoryInstructMultiLatencyQwenDataset,
 }
 
 class SLlamaLightning(L.LightningModule):
@@ -76,6 +81,12 @@ class SLlamaLightning(L.LightningModule):
         )
         self.tokenizer.pad_token = "<|finetune_right_pad_id|>"
 
+        self.fast_tokenizer = transformers.AutoTokenizer.from_pretrained(
+            self.model_args.llm_path,
+            padding_side="right",
+            use_fast=True,
+        )
+
         # load speech encoder
         logger.info("rope: {}".format(self.speech_args.rope))
         speech_encoder_args = [
@@ -87,7 +98,6 @@ class SLlamaLightning(L.LightningModule):
             self.speech_args.max_cache_size,
             1,
             None,
-            self.speech_args.xpos,
             self.speech_args.rope,
         ]
         if self.speech_args.w2v2_type == 'w2v2':
@@ -107,7 +117,7 @@ class SLlamaLightning(L.LightningModule):
         if self.model is not None:
             return
         
-        patch_w2v2(self.speech_args.xpos, self.speech_args.rope)
+        patch_w2v2(self.speech_args.rope)
         patch_llama31()
         patch_hf()
 
@@ -139,7 +149,6 @@ class SLlamaLightning(L.LightningModule):
             self.speech_args.max_cache_size,
             model.model.embed_tokens.embedding_dim,
             None,
-            self.speech_args.xpos,
             self.speech_args.rope,
         ]
         if self.speech_args.w2v2_type == 'w2v2':
@@ -216,7 +225,7 @@ class SLlamaLightning(L.LightningModule):
             min_ms=320,
             multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
             filter=True,
-            tokenizer=self.tokenizer,
+            tokenizer=self.fast_tokenizer,
         )
         train_dataloader = DataLoader(
             train_dataset, 
@@ -256,7 +265,7 @@ class SLlamaLightning(L.LightningModule):
             min_ms=320,
             multiplier=self.training_args.n_device * self.training_args.grad_acc_steps,
             filter=True,
-            tokenizer=self.tokenizer,
+            tokenizer=self.fast_tokenizer,
         )
         eval_dataloader = DataLoader(
             eval_dataset, 
@@ -297,7 +306,8 @@ class SLlamaLightning(L.LightningModule):
         lr = self.optimizer_params["lr"]
         warmup_updates = self.optimizer_params["warmup_updates"]
 
-        optimizer_cls = DeepSpeedCPUAdam if self.training_args.deepspeed_offload else FusedAdam
+        # optimizer_cls = DeepSpeedCPUAdam if self.training_args.deepspeed_offload else FusedAdam
+        optimizer_cls = torch.optim.Adam
         optimizer = optimizer_cls(self.parameters(), lr=lr, weight_decay=self.training_args.weight_decay)  
 
         if self.training_args.scheduler == "cosine":
@@ -337,6 +347,88 @@ class SLlamaLightning(L.LightningModule):
             return_dict=True
         )
         return output.loss
+
+
+class SQwen25Lightning(SLlamaLightning):
+    def __init__(
+            self, speech_args, model_args, data_args, training_args,
+            lr=2e-4, warmup_updates=4000, min_lr=0.
+        ):
+        super(SQwen25Lightning, self).__init__(
+            speech_args, model_args, data_args, training_args, 
+            lr, warmup_updates, min_lr
+        )
+    
+    def configure_model(self):
+        if self.model is not None:
+            return
+        
+        patch_w2v2(self.speech_args.rope)
+        patch_qwen25()
+        patch_hf()
+
+        logger.info("use_flash_attn: {}".format(self.model_args.use_flash_attn))
+        model = SpeechQwenForCausalLM.from_pretrained(
+            self.model_args.llm_path,
+            torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2"
+        )
+        model.config.use_cache = False
+
+        if self.model_args.llm_freeze:
+            model.model.requires_grad_(False)
+            model.model.embed_tokens.requires_grad_(True)
+        if self.model_args.llm_emb_freeze:
+            model.model.embed_tokens.requires_grad_(False)
+        if self.model_args.llm_head_freeze:
+            model.lm_head.requires_grad_(False)
+
+        # load speech encoder
+        speech_encoder_args = [
+            self.speech_args.w2v2_path,
+            self.speech_args.ctc_finetuned,
+            self.speech_args.length_shrink_cfg,
+            
+            self.speech_args.block_size,
+            self.speech_args.max_cache_size,
+            model.model.embed_tokens.embedding_dim,
+            None,
+            self.speech_args.rope,
+        ]
+        if self.speech_args.w2v2_type == 'w2v2':
+            speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args) 
+        else:
+            raise ValueError(f"Unsupported type: {self.speech_args.w2v2_type}")
+
+        speech_encoder.to(dtype=model.dtype, device=model.device)
+        model.model.speech_encoder = speech_encoder
+
+        if self.speech_args.w2v2_freeze:
+            model.model.speech_encoder.requires_grad_(False)
+
+        model.preprocess(tokenizer=self.tokenizer)
+
+        if self.model_args.sllm_weight_path is not None:
+            logger.info("Loading SLLM weights from {}".format(self.model_args.sllm_weight_path))
+            state_dict = torch.load(self.model_args.sllm_weight_path, map_location='cpu', weights_only=True)
+            if state_dict['model.speech_encoder.proj.weight'].size() != model.model.speech_encoder.proj.weight.size():
+                state_dict.pop('model.speech_encoder.proj.weight')
+                state_dict.pop('model.speech_encoder.proj.bias')
+            model.load_state_dict(state_dict, strict=False)
+
+        if self.model_args.lora_rank > 0:
+            lora_config = LoraConfig(
+                task_type="CAUSAL_LM",
+                inference_mode=False,
+                r=self.model_args.lora_rank,
+                target_modules='all-linear',
+                lora_alpha=16,
+                lora_dropout=0.1,
+            )
+            model = get_peft_model(model, lora_config, adapter_name='lora_adapter')
+            model.print_trainable_parameters()
+    
+        self.model = model
 
 
 class Qwen2ACLightning(SLlamaLightning):

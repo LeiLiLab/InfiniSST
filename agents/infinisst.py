@@ -1,4 +1,5 @@
 import os
+import re
 import contextlib
 from time import perf_counter
 
@@ -21,8 +22,10 @@ from peft import LoraConfig, get_peft_model
 
 from tqdm import tqdm
 from model.llama31 import SpeechLlamaForCausalLM
+from model.qwen25 import SpeechQwenForCausalLM
 from model.patches.patch_w2v2 import patch_w2v2
 from model.patches.patch_llama31 import patch_llama31
+from model.patches.patch_qwen25 import patch_qwen25
 from model.patches.patch_hf import patch_hf
 
 from agents.options import (
@@ -55,7 +58,6 @@ def synchronized_timer(description: str):
             torch.cuda.synchronize()
         elapsed_time = perf_counter() - start
         print(f"{description}: {elapsed_time:.4f} seconds")
-        return elapsed_time
     return timer_with_sync()
 
 @dataclass
@@ -66,8 +68,6 @@ class S2TAgentStates(AgentStates):
     target_ids: list
     segment_idx: int
     translations_list: list
-    generation_times: list
-    segment_indices: list
     MAX_SRC_LEN = 16000 * 30
 
     def reset(self):
@@ -78,8 +78,6 @@ class S2TAgentStates(AgentStates):
         self.target_ids = []
         self.segment_idx = 0
         self.translations_list = []
-        self.generation_times = []
-        self.segment_indices = []
 
 @entrypoint
 class InfiniSST(SpeechToTextAgent):
@@ -98,7 +96,7 @@ class InfiniSST(SpeechToTextAgent):
         
         # gen
         self.beam = args.beam
-        assert self.beam > 1
+        # assert self.beam > 1
         self.no_repeat_ngram_lookback = args.no_repeat_ngram_lookback
         self.no_repeat_ngram_size = args.no_repeat_ngram_size
         self.repetition_penalty = args.repetition_penalty
@@ -122,7 +120,7 @@ class InfiniSST(SpeechToTextAgent):
         
         # Add DPO sampling flag
         self.dpo_sampling = args.dpo_sampling
-        self.output_file = args.output_file if hasattr(args, 'output_file') else 'generation_times.json'
+        self.output_file = args.output_file if hasattr(args, 'output_file') else 'translations.json'
 
         self.audio_normalize = args.audio_normalize
         
@@ -143,8 +141,8 @@ class InfiniSST(SpeechToTextAgent):
         parser.add_argument("--max-latency-multiplier", type=int, default=4)
         parser.add_argument("--max-llm-cache-size", type=int, default=10000)
         parser.add_argument("--always-cache-system-prompt", action='store_true') # LLM-Inf
-        parser.add_argument("--dpo-sampling", action='store_true', help="Enable DPO sampling (generation times are always saved)")
-        parser.add_argument("--output-file", type=str, default="generation_times.json", help="Output JSON file for generation times")
+        parser.add_argument("--dpo-sampling", action='store_true', help="Enable storing sampling for DPO")
+        parser.add_argument("--output-file", type=str, default="translations.json", help="Output file for sampling")
         parser.add_argument("--pseudo-batch-size", type=int, default=1)
         parser.add_argument("--audio-normalize", type=int, default=0)
 
@@ -155,9 +153,7 @@ class InfiniSST(SpeechToTextAgent):
             past_key_values=None,
             target_ids=[],
             segment_idx=0,
-            translations_list=[],
-            generation_times=[],
-            segment_indices=[]
+            translations_list=[]
         )
     
     def update_multiplier(self, multiplier):
@@ -212,7 +208,7 @@ class InfiniSST(SpeechToTextAgent):
         self.llama31 = '3.1' in args.model_name
 
     def load_w2v2_llama31(self, args):
-        patch_w2v2(args.xpos, args.rope)
+        patch_w2v2(args.rope)
         patch_llama31()
         patch_hf()
 
@@ -225,7 +221,7 @@ class InfiniSST(SpeechToTextAgent):
 
         self.bad_words_ids = []
         if self.suppress_non_language:
-            bad_words = ['(', '（']
+            bad_words = ['(', '（', '"', '“']
             for idx in tqdm(range(len(self.tokenizer)), desc="Obtaining bad words ids"):
                 decoded_token = self.tokenizer.decode(idx, skip_special_tokens=True)
                 if any(bad_word in decoded_token for bad_word in bad_words):
@@ -234,6 +230,7 @@ class InfiniSST(SpeechToTextAgent):
         self.model = SpeechLlamaForCausalLM.from_pretrained(
             args.model_name,
             torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
             device_map='cuda',
         ).eval()
 
@@ -246,7 +243,6 @@ class InfiniSST(SpeechToTextAgent):
             args.max_cache_size,
             self.model.model.embed_tokens.embedding_dim,
             None,
-            bool(args.xpos),
             bool(args.rope)
         ]
         if args.w2v2_type == 'w2v2':
@@ -283,11 +279,85 @@ class InfiniSST(SpeechToTextAgent):
         self.model.model.inference = True
         self.llama31 = '3.1' in args.model_name
     
+    def load_w2v2_qwen25(self, args):
+        patch_w2v2(args.rope)
+        patch_qwen25()
+        patch_hf()
+
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(
+            args.model_name,
+            padding_side="right",
+            use_fast=False,
+        )
+        self.tokenizer.pad_token = "<|finetune_right_pad_id|>"
+
+        self.bad_words_ids = []
+        if self.suppress_non_language:
+            bad_words = ['(', '（']
+            for idx in tqdm(range(len(self.tokenizer)), desc="Obtaining bad words ids"):
+                decoded_token = self.tokenizer.decode(idx, skip_special_tokens=True)
+                if any(bad_word in decoded_token for bad_word in bad_words):
+                    self.bad_words_ids.append(idx)
+
+        self.model = SpeechQwenForCausalLM.from_pretrained(
+            args.model_name,
+            torch_dtype=torch.bfloat16,
+            attn_implementation="sdpa",
+            device_map='cuda',
+        ).eval()
+
+        speech_encoder_args = [
+            args.w2v2_path,
+            args.ctc_finetuned,
+            args.length_shrink_cfg,
+            
+            args.block_size,
+            args.max_cache_size,
+            self.model.model.embed_tokens.embedding_dim,
+            None,
+            bool(args.rope),
+            False,
+        ]
+        if args.w2v2_type == 'w2v2':
+            speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args)
+        else:
+            raise ValueError(f"Unsupported type: {args.w2v2_type}")
+        speech_encoder.eval()
+        speech_encoder.to(dtype=self.model.dtype, device=self.model.device)
+        self.length_shrink_func = speech_encoder._get_feat_extract_output_lengths
+        
+        self.model.model.speech_encoder = speech_encoder
+        self.model.preprocess(tokenizer=self.tokenizer, resize=False)
+
+        logger.info("Loading SLLM weights from {}".format(args.state_dict_path))
+        state_dict = torch.load(args.state_dict_path, map_location='cpu', weights_only=True)
+        self.model.load_state_dict(state_dict, strict=False)
+
+        if args.lora_path:
+            logger.info(f"Loading LORA weights from {args.lora_path}")
+            lora_config = LoraConfig(
+                task_type="CAUSAL_LM",
+                inference_mode=True,
+                r=args.lora_rank,
+                target_modules='all-linear',
+                lora_alpha=16,
+                lora_dropout=0.1,
+            )
+            self.model = get_peft_model(self.model, lora_config, adapter_name='lora_adapter')
+            
+            lora_state_dict = torch.load(args.lora_path, map_location='cpu', weights_only=True)
+            self.model.load_state_dict(lora_state_dict, strict=False)
+            self.model = self.model.merge_and_unload()
+
+        self.model.model.inference = True
+
     def load_model(self, args):
         if args.model_type == "w2v2_llama31":
             self.load_w2v2_llama31(args)
         elif args.model_type == "seamless_llama31":
             self.load_seamless_llama31(args)
+        elif args.model_type == 'w2v2_qwen25':
+            self.load_w2v2_qwen25(args)
         else:
             raise ValueError(f"Unsupported model type: {args.model_type}")
 
@@ -376,13 +446,21 @@ class InfiniSST(SpeechToTextAgent):
             padding=True, 
             truncation=False, 
             add_special_tokens=False
-        )[:, :-1]
+        )        
+        assert self.args.model_type in ["w2v2_llama31", "w2v2_qwen25"]
+        if self.args.model_type == "w2v2_llama31":
+            input_ids = input_ids[:, :-1]
+        elif self.args.model_type == "w2v2_qwen25":
+            input_ids = input_ids[:, :-2]
         # to remove system prompt and preserve last EOT
         if states.speech_cache is not None:
-            if self.llama31:
-                input_ids = input_ids[:, 25:] 
-            else:
-                input_ids[:, 0] = self.tokenizer.eos_token_id # llama-3-8B-instruct
+            if self.args.model_type == "w2v2_llama31":
+                if self.llama31:
+                    input_ids = input_ids[:, 25:] 
+                else:
+                    input_ids[:, 0] = self.tokenizer.eos_token_id # llama-3-8B-instruct
+            elif self.args.model_type == "w2v2_qwen25":
+                input_ids = input_ids[:, 19:]
         input_ids = input_ids.to(device=self.model.device)
         return input_ids
 
@@ -403,8 +481,7 @@ class InfiniSST(SpeechToTextAgent):
         if states.source_finished and length_in_seconds < 0.32:
             return WriteAction(content="", finished=True)
         
-        generation_time = 0.0
-        with synchronized_timer('generate') as timer_ctx:
+        with synchronized_timer('generate'):
             speech_batch = self._prepare_speech(states)
             input_ids = self._prepare_inputs(states)
 
@@ -482,42 +559,26 @@ class InfiniSST(SpeechToTextAgent):
                         v_cache = torch.cat([v[:, :, :self.system_prompt_size], v_cache], dim=2)
                     states.past_key_values.key_cache[i] = k_cache
                     states.past_key_values.value_cache[i] = v_cache
-            generation_time = timer_ctx
 
         output_ids = outputs.sequences[0, input_ids.size(1):-1].tolist()
         
         states.target_ids.extend(output_ids)
         translation = self.tokenizer.decode(output_ids, skip_special_tokens=True).strip()
-        translation = translation.replace('\ufffd', '')  # Unicode replacement character
-        
-        # Store the generation time and segment index
-        states.generation_times.append(generation_time)
-        states.segment_indices.append(states.segment_idx)
+        translation = re.sub(r'[（）()"“”�]', '', translation)
 
-        # Always store the translations for consistent handling
-        formatted_translation = f"'{translation}'" if translation else "''"
-        states.translations_list.append(formatted_translation)
-        
-        if states.source_finished:
-            try:
-                # Write generation times to file, regardless of dpo_sampling flag
-                import json
-                import datetime
-                output_data = {
-                    "timestamp": datetime.datetime.now().isoformat(),
-                    "audio_length_seconds": length_in_seconds,
-                    "segment_data": [
-                        {"segment_idx": idx, "generation_time": f"{time:.4f}"}
-                        for idx, time in zip(states.segment_indices, states.generation_times)
-                    ]
-                }
-                with open(self.output_file, 'a', encoding='utf-8') as f:
-                    f.write(json.dumps(output_data) + '\n')
-                states.translations_list = []
-                states.generation_times = []
-                states.segment_indices = []
-            except Exception as e:
-                print(f"Error writing generation times to file: {e}")
+        if self.dpo_sampling:
+            # Format translation with single quotes and proper UTF-8
+            formatted_translation = f"'{translation}'" if translation else "''"
+            states.translations_list.append(formatted_translation)
+            
+            if states.source_finished:
+                try:
+                    with open(self.output_file, 'a', encoding='utf-8') as f:
+                        formatted_list = f"[{', '.join(states.translations_list)}]"
+                        f.write(formatted_list + '\n')
+                    states.translations_list = []
+                except Exception as e:
+                    print(f"Error writing translations to file: {e}")
         # print(f"{length_in_seconds / 60:.2f}", ':', self.tokenizer.decode(states.target_ids))
         # print(f"Speech length in minutes: {length_in_seconds / 60:.2f}")
         print(states.past_key_values[0][0].size(2), ' '.join(states.target))

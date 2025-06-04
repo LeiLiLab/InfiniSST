@@ -18,7 +18,7 @@
 
 source /home/siqiouya/anaconda3/bin/activate infinisst
 
-checkpoint_dir=/compute/babel-5-23/siqiouya/runs/en-de/8B-s2-bi-v3.5.2/last.ckpt/
+checkpoint_dir=/compute/babel-5-23/siqiouya/runs/en-de/8B-s2-bi-v3.5/last.ckpt/
 llama_path=/compute/babel-4-1/siqiouya/llama-3.1-8b-instruct-hf
 
 w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
@@ -50,7 +50,7 @@ max_speech_duration=28.8
 export PYTHONPATH=/home/siqiouya/work/sllama
 
 simuleval \
-  --agent eval/agents/streamatt.py \
+  --agent agents/streamatt.py \
   --agent-class "agents.StreamAtt" \
   --source-segment-size ${src_segment_size} \
   --frame-num ${frame_num} \
@@ -70,7 +70,6 @@ simuleval \
   --w2v2-path ${w2v2_path} \
   --w2v2-type ${w2v2_type} \
   --ctc-finetuned ${ctc_finetuned} \
-  --xpos 0 \
   \
   --length-shrink-cfg "[(1024,2,2)] * 2" \
   --latency-multiplier 1 \
