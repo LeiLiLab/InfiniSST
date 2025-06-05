@@ -19,6 +19,25 @@
             padding: 20px;
         }
 
+        /* Electron 应用特定样式 */
+        body.electron-app {
+            user-select: none; /* 防止文本选择 */
+        }
+
+        body.electron-app .container {
+            max-width: none; /* 桌面应用不需要最大宽度限制 */
+        }
+
+        /* macOS 特定样式 */
+        body.platform-darwin {
+            padding-top: 40px; /* 为 macOS 标题栏留出空间 */
+        }
+
+        /* Windows 特定样式 */
+        body.platform-win32 .header h1 {
+            font-size: 2.5rem; /* Windows 上稍小的标题 */
+        }
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -43,6 +62,16 @@
             font-size: 1.1rem;
             color: #a0a0a0;
             font-weight: 300;
+        }
+
+        /* 桌面应用版本信息 */
+        .version-info {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            font-size: 0.8rem;
+            color: #666;
+            opacity: 0.7;
         }
 
         .main-panel {
@@ -639,7 +668,138 @@
         <div class="resize-handle" id="resizeHandle"></div>
     </div>
 
+    <!-- 版本信息 (仅在 Electron 中显示) -->
+    <div id="versionInfo" class="version-info hidden"></div>
+
     <script>
+        // Electron 集成检测和初始化
+        let isElectron = false;
+        let electronAPI = null;
+        let serverConfig = null; // 添加服务器配置
+
+        // 检测是否在 Electron 环境中运行
+        if (typeof window !== 'undefined' && window.electronAPI) {
+            isElectron = true;
+            electronAPI = window.electronAPI;
+            
+            // 从当前URL获取服务器配置
+            const currentUrl = new URL(window.location.href);
+            serverConfig = {
+                protocol: currentUrl.protocol.replace(':', ''),
+                host: currentUrl.hostname,
+                port: currentUrl.port || (currentUrl.protocol === 'https:' ? '443' : '80')
+            };
+            
+            console.log('Electron environment detected, server config:', serverConfig);
+            
+            // 显示版本信息
+            const versionInfo = document.getElementById('versionInfo');
+            if (versionInfo && electronAPI.versions) {
+                versionInfo.innerHTML = `
+                    Electron: ${electronAPI.versions.electron}<br>
+                    Node: ${electronAPI.versions.node}<br>
+                    Chrome: ${electronAPI.versions.chrome}
+                `;
+                versionInfo.classList.remove('hidden');
+            }
+            
+            // 监听菜单文件打开事件
+            electronAPI.onMenuOpenFile(() => {
+                handleMenuOpenFile();
+            });
+        }
+
+        // 获取WebSocket URL的辅助函数
+        function getWebSocketUrl(sessionId) {
+            if (isElectron && serverConfig) {
+                // 在Electron环境中，使用服务器配置构造WebSocket URL
+                const wsProtocol = serverConfig.protocol === 'https' ? 'wss' : 'ws';
+                const port = serverConfig.port ? `:${serverConfig.port}` : '';
+                return `${wsProtocol}://${serverConfig.host}${port}/wss/${sessionId}`;
+            } else {
+                // 在浏览器环境中，使用当前页面的协议和主机
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                return `${protocol}//${window.location.host}/wss/${sessionId}`;
+            }
+        }
+
+        // 处理菜单打开文件
+        async function handleMenuOpenFile() {
+            if (!electronAPI) return;
+            
+            try {
+                const result = await electronAPI.showOpenDialog();
+                if (!result.canceled && result.filePaths.length > 0) {
+                    const filePath = result.filePaths[0];
+                    console.log('Selected file path:', filePath);
+                    
+                    // 在 Electron 中，我们需要使用不同的方法来处理文件
+                    // 创建一个 input 元素来模拟文件选择
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'audio/*,video/*';
+                    
+                    // 创建一个 File 对象
+                    try {
+                        // 尝试使用 fetch 读取文件
+                        const response = await fetch(`file://${filePath}`);
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        const blob = await response.blob();
+                        const fileName = filePath.split('/').pop() || filePath.split('\\').pop();
+                        
+                        // 检测文件类型
+                        let mimeType = blob.type;
+                        if (!mimeType) {
+                            const extension = fileName.split('.').pop().toLowerCase();
+                            const mimeTypes = {
+                                'mp3': 'audio/mpeg',
+                                'wav': 'audio/wav',
+                                'flac': 'audio/flac',
+                                'm4a': 'audio/mp4',
+                                'aac': 'audio/aac',
+                                'mp4': 'video/mp4',
+                                'avi': 'video/x-msvideo',
+                                'mov': 'video/quicktime',
+                                'mkv': 'video/x-matroska',
+                                'webm': 'video/webm'
+                            };
+                            mimeType = mimeTypes[extension] || 'application/octet-stream';
+                        }
+                        
+                        const file = new File([blob], fileName, { type: mimeType });
+                        console.log('Created file object:', { name: file.name, type: file.type, size: file.size });
+                        
+                        // 创建媒体元素
+                        createMediaElement(file);
+                        translationInitialized = false;
+                        updateStatus('Audio loaded. Press play to start translation.', 'ready');
+                        resetIdleTimer();
+                        
+                    } catch (fetchError) {
+                        console.warn('Fetch failed, trying alternative method:', fetchError);
+                        
+                        // 备用方法：提示用户手动选择文件
+                        updateStatus('Please use the Upload button to select the file manually.', 'error');
+                        
+                        // 自动触发文件选择对话框
+                        setTimeout(() => {
+                            audioFile.click();
+                        }, 1000);
+                    }
+                }
+            } catch (error) {
+                console.error('Error opening file from menu:', error);
+                updateStatus('Error opening file: ' + error.message, 'error');
+                
+                // 备用方案：触发常规文件选择
+                setTimeout(() => {
+                    audioFile.click();
+                }, 1000);
+            }
+        }
+
         let ws = null;
         let sessionId = null;
         let audioContext = null;
@@ -708,58 +868,6 @@
         const closeBtn = document.getElementById('closeBtn');
         const resizeHandle = document.getElementById('resizeHandle');
 
-        // Electron 集成检测和初始化
-        let isElectron = false;
-        let electronAPI = null;
-        let serverConfig = null; // 添加服务器配置
-
-        // 检测是否在 Electron 环境中运行
-        if (typeof window !== 'undefined' && window.electronAPI) {
-            isElectron = true;
-            electronAPI = window.electronAPI;
-            
-            // 从当前URL获取服务器配置
-            const currentUrl = new URL(window.location.href);
-            serverConfig = {
-                protocol: currentUrl.protocol.replace(':', ''),
-                host: currentUrl.hostname,
-                port: currentUrl.port || (currentUrl.protocol === 'https:' ? '443' : '80')
-            };
-            
-            console.log('Electron environment detected, server config:', serverConfig);
-            
-            // 显示版本信息
-            const versionInfo = document.getElementById('versionInfo');
-            if (versionInfo && electronAPI.versions) {
-                versionInfo.innerHTML = `
-                    Electron: ${electronAPI.versions.electron}<br>
-                    Node: ${electronAPI.versions.node}<br>
-                    Chrome: ${electronAPI.versions.chrome}
-                `;
-                versionInfo.classList.remove('hidden');
-            }
-            
-            // 监听菜单文件打开事件
-            electronAPI.onMenuOpenFile(() => {
-                handleMenuOpenFile();
-            });
-        }
-
-        // 获取WebSocket URL的辅助函数
-        function getWebSocketUrl(sessionId) {
-            if (isElectron && serverConfig) {
-                // 在Electron环境中，使用服务器配置构造WebSocket URL
-                const wsProtocol = serverConfig.protocol === 'https' ? 'wss' : 'ws';
-                const port = serverConfig.port ? `:${serverConfig.port}` : '';
-                return `${wsProtocol}://${serverConfig.host}${port}/wss/${sessionId}`;
-            } else {
-                // 在浏览器环境中，使用当前页面的协议和主机
-                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                return `${protocol}//${window.location.host}/wss/${sessionId}`;
-            }
-        }
-
-        // Panel drag functionality
         function initializePanelDragging() {
             panelHeader.addEventListener('mousedown', startDragging);
             resizeHandle.addEventListener('mousedown', startResizing);
@@ -846,7 +954,6 @@
             translationPanel.style.display = 'block';
         }
 
-        // Generate unique client ID
         function generateClientId() {
             return 'client_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
         }
@@ -859,7 +966,6 @@
             return clientId;
         }
 
-        // Update status display
         function updateStatus(text, type = 'ready') {
             statusText.textContent = text;
             statusIndicator.className = `status-indicator ${type}`;
@@ -878,48 +984,94 @@
             }
         }
 
-        // Scroll translation to bottom
         function scrollTranslationToBottom() {
             translationOutput.scrollTop = translationOutput.scrollHeight;
             resetIdleTimer();
         }
 
-        // Create media element (audio or video)
         function createMediaElement(file) {
-            // Remove existing media
-            const existingMedia = mediaContainer.querySelector('audio, video');
-            if (existingMedia) {
-                existingMedia.remove();
-            }
+            console.log('Creating media element for file:', { 
+                name: file.name, 
+                type: file.type, 
+                size: file.size 
+            });
+            
+            try {
+                // Remove existing media
+                const existingMedia = mediaContainer.querySelector('audio, video');
+                if (existingMedia) {
+                    console.log('Removing existing media element');
+                    existingMedia.remove();
+                }
 
-            // Determine if it's video or audio
-            const isVideo = file.type.startsWith('video/');
-            const mediaElement = document.createElement(isVideo ? 'video' : 'audio');
-            
-            mediaElement.controls = true;
-            mediaElement.style.width = '100%';
-            mediaElement.style.height = '100%';
-            mediaElement.src = URL.createObjectURL(file);
-            
-            // Hide placeholder
-            const placeholder = mediaContainer.querySelector('.video-placeholder');
-            if (placeholder) {
-                placeholder.style.display = 'none';
+                // Determine if it's video or audio
+                const isVideo = file.type.startsWith('video/');
+                const mediaElement = document.createElement(isVideo ? 'video' : 'audio');
+                console.log('Created', isVideo ? 'video' : 'audio', 'element');
+                
+                mediaElement.controls = true;
+                mediaElement.style.width = '100%';
+                mediaElement.style.height = '100%';
+                
+                // Create object URL and set as source
+                const objectURL = URL.createObjectURL(file);
+                console.log('Created object URL:', objectURL);
+                mediaElement.src = objectURL;
+                
+                // Add error handling for media element
+                mediaElement.addEventListener('error', (e) => {
+                    console.error('Media element error:', e);
+                    console.error('Media error details:', {
+                        error: mediaElement.error,
+                        networkState: mediaElement.networkState,
+                        readyState: mediaElement.readyState
+                    });
+                    updateStatus('Error loading media file: ' + (mediaElement.error ? mediaElement.error.message : 'Unknown error'), 'error');
+                });
+                
+                mediaElement.addEventListener('loadstart', () => {
+                    console.log('Media loading started');
+                });
+                
+                mediaElement.addEventListener('loadedmetadata', () => {
+                    console.log('Media metadata loaded:', {
+                        duration: mediaElement.duration,
+                        videoWidth: mediaElement.videoWidth,
+                        videoHeight: mediaElement.videoHeight
+                    });
+                });
+                
+                mediaElement.addEventListener('canplay', () => {
+                    console.log('Media can start playing');
+                });
+                
+                // Hide placeholder
+                const placeholder = mediaContainer.querySelector('.video-placeholder');
+                if (placeholder) {
+                    console.log('Hiding placeholder');
+                    placeholder.style.display = 'none';
+                }
+                
+                console.log('Appending media element to container');
+                mediaContainer.appendChild(mediaElement);
+                currentMediaElement = mediaElement;
+                
+                // Add event listeners
+                addMediaEventListeners(mediaElement);
+                
+                // Show translation panel
+                showPanel();
+                console.log('Media element creation completed successfully');
+                
+                return mediaElement;
+                
+            } catch (error) {
+                console.error('Error in createMediaElement:', error);
+                updateStatus('Error creating media element: ' + error.message, 'error');
+                throw error;
             }
-            
-            mediaContainer.appendChild(mediaElement);
-            currentMediaElement = mediaElement;
-            
-            // Add event listeners
-            addMediaEventListeners(mediaElement);
-            
-            // Show translation panel
-            showPanel();
-            
-            return mediaElement;
         }
 
-        // Add event listeners to media element
         function addMediaEventListeners(mediaElement) {
             mediaElement.addEventListener('play', async () => {
                 if (!translationInitialized && sessionId) {
@@ -995,7 +1147,6 @@
             });
         }
 
-        // Initialize translation system
         async function initializeTranslation(mediaElement = currentMediaElement) {
             if (!sessionId || translationInitialized) return;
             
@@ -1118,7 +1269,6 @@
             }
         }
 
-        // Clean up audio resources
         function cleanupAudioResources() {
             if (ws) {
                 try {
@@ -1191,7 +1341,6 @@
             audioElementConnected = false;
         }
 
-        // Session management functions (keeping existing logic)
         function resetIdleTimer() {
             if (idleTimer) {
                 clearTimeout(idleTimer);
@@ -1213,7 +1362,6 @@
             }
         }
 
-        // handle youtube player
         playBtn.addEventListener("click", async () => {
             if (!youtubeUrl || !youtubeUrl.value || !sessionId) {
                 alert("Please enter a YouTube URL and ensure a session is active.");
@@ -1323,7 +1471,6 @@
             }
         }
 
-        // Ping and queue management (keeping existing logic)
         function startPinging() {
             if (pingInterval) {
                 clearInterval(pingInterval);
@@ -1435,7 +1582,6 @@
             }
         }
 
-        // Event Listeners
         loadModel.addEventListener('click', async () => {
             try {
                 await cleanupSession();
@@ -1466,473 +1612,4 @@
                 
                 if (data.queued) {
                     isQueued = true;
-                    updateStatus(`Waiting in queue... Position: ${data.queue_position}`, 'processing');
-                    startQueueCheck(sessionId);
-                    updateLatency.disabled = true;
-                    resetTranslation.disabled = true;
-                } else if (data.initializing) {
-                    updateStatus('Model is initializing, please wait...', 'processing');
-                    updateLatency.disabled = true;
-                    resetTranslation.disabled = true;
-                    isQueued = true;
-                    startQueueCheck(sessionId);
-                } else {
-                    isQueued = false;
-                    translationInitialized = false;
-                    updateLatency.disabled = false;
-                    resetTranslation.disabled = false;
-                    updateStatus('Model loaded successfully. Upload audio and press play to start translation.', 'ready');
-                    console.log('Model loaded successfully:', {
-                        model: agentType.value,
-                        languagePair: languagePair.value,
-                        latency: latencyMultiplier.value + 'x'
-                    });
-                    startPinging();
-                    resetIdleTimer();
-                }
-            } catch (error) {
-                updateStatus('Error loading model: ' + error, 'error');
-                console.error('Error loading model:', error);
-            }
-        });
-
-        audioFile.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                createMediaElement(file);
-                translationInitialized = false;
-                updateStatus('Audio loaded. Press play to start translation.', 'ready');
-                resetIdleTimer();
-            }
-        });
-
-        // Upload button click handler
-        uploadBtn.addEventListener('click', () => {
-            audioFile.click();
-        });
-
-        // Microphone functionality
-        toggleMic.addEventListener('click', async () => {
-            if (isMicRecording) {
-                stopMicrophone(true);
-            } else {
-                startMicrophone();
-            }
-        });
-
-        async function startMicrophone() {
-            if (!sessionId) {
-                micStatus.textContent = 'Please load a model first';
-                console.warn('Microphone access attempted without loaded model');
-                updateStatus('Please load a model first', 'error');
-                return;
-            }
-            
-            console.log('Starting microphone with session ID:', sessionId);
-            
-            // Show translation panel
-            showPanel();
-            
-            try {
-                console.log('Requesting microphone access...');
-                updateStatus('Requesting microphone access...', 'processing');
-                
-                micStream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true
-                    }
-                });
-                
-                console.log('Microphone access granted, stream obtained:', micStream);
-                updateStatus('Microphone access granted, connecting...', 'processing');
-                
-                const wsUrl = getWebSocketUrl(sessionId);
-                console.log(`Connecting to WebSocket at: ${wsUrl}`);
-                
-                ws = new WebSocket(wsUrl);
-                
-                ws.onmessage = (event) => {
-                    console.log('WebSocket message received:', event.data);
-                    translationOutput.textContent = event.data;
-                    scrollTranslationToBottom();
-                };
-                
-                ws.onerror = (error) => {
-                    console.error('WebSocket error:', error);
-                    const errorMsg = 'WebSocket connection error';
-                    micStatus.textContent = errorMsg;
-                    updateStatus(errorMsg, 'error');
-                    stopMicrophone(false);
-                };
-                
-                ws.onclose = (event) => {
-                    console.log('WebSocket closed:', event.code, event.reason);
-                    if (event.code !== 1000) { // Not a normal closure
-                        updateStatus('Connection lost: ' + (event.reason || 'Unknown error'), 'error');
-                    }
-                };
-                
-                ws.onopen = () => {
-                    console.log('WebSocket connected successfully');
-                    
-                    try {
-                        console.log('Creating AudioContext...');
-                        audioContext = new AudioContext();
-                        console.log('AudioContext created with sample rate:', audioContext.sampleRate);
-                        
-                        console.log('Creating MediaStreamSource...');
-                        const micSource = audioContext.createMediaStreamSource(micStream);
-                        console.log('MediaStreamSource created');
-                        
-                        console.log('Creating ScriptProcessor...');
-                        processor = audioContext.createScriptProcessor(4096, 1, 1);
-                        console.log('ScriptProcessor created');
-                        
-                        const originalSampleRate = audioContext.sampleRate;
-                        const resampleRatio = targetSampleRate / originalSampleRate;
-                        console.log('Resample ratio:', resampleRatio);
-                        
-                        processor.onaudioprocess = (e) => {
-                            if (ws && ws.readyState === WebSocket.OPEN) {
-                                const inputData = e.inputBuffer.getChannelData(0);
-                                
-                                let hasSound = false;
-                                let volumeSum = 0;
-                                for (let i = 0; i < inputData.length; i++) {
-                                    const volume = Math.abs(inputData[i]);
-                                    volumeSum += volume;
-                                    if (volume > 0.01) {
-                                        hasSound = true;
-                                    }
-                                }
-                                
-                                const averageVolume = volumeSum / inputData.length;
-                                const volumePercent = Math.min(100, Math.round(averageVolume * 1000));
-                                volumeLevel.style.width = volumePercent + '%';
-                                
-                                if (hasSound) {
-                                    resetIdleTimer();
-                                }
-                                
-                                const resampledLength = Math.floor(inputData.length * resampleRatio);
-                                const resampledChunk = new Float32Array(resampledLength);
-                                
-                                for (let i = 0; i < resampledLength; i++) {
-                                    const originalIndex = Math.floor(i / resampleRatio);
-                                    resampledChunk[i] = inputData[originalIndex];
-                                }
-                                
-                                const newBuffer = new Float32Array(resampledBuffer.length + resampledChunk.length);
-                                newBuffer.set(resampledBuffer);
-                                newBuffer.set(resampledChunk, resampledBuffer.length);
-                                resampledBuffer = newBuffer;
-                                
-                                const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
-                                
-                                while (resampledBuffer.length >= targetChunkSize) {
-                                    const chunk = resampledBuffer.slice(0, targetChunkSize);
-                                    try {
-                                        if (ws.readyState === WebSocket.OPEN) {
-                                            ws.send(chunk.buffer);
-                                        }
-                                    } catch (error) {
-                                        console.error('Error sending audio data:', error);
-                                        updateStatus('Error sending audio data: ' + error.message, 'error');
-                                        stopMicrophone(false);
-                                        return;
-                                    }
-                                    resampledBuffer = resampledBuffer.slice(targetChunkSize);
-                                }
-                            }
-                        };
-                        
-                        console.log('Connecting audio nodes...');
-                        micSource.connect(processor);
-                        processor.connect(audioContext.destination);
-                        console.log('Audio nodes connected');
-                        
-                        translationPaused = false;
-                        
-                        toggleMic.innerHTML = `
-                            <svg class="icon" viewBox="0 0 24 24">
-                                <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>
-                            </svg>
-                            Pause Microphone
-                        `;
-                        toggleMic.classList.add('recording');
-                        micStatus.textContent = 'Microphone active. Speaking will be translated in real-time.';
-                        volumeIndicator.classList.remove('hidden');
-                        isMicRecording = true;
-                        updateStatus('Translating from microphone...', 'processing');
-                        resetIdleTimer();
-                        
-                        console.log('Sending initial silent chunk...');
-                        const silentChunk = new Float32Array(baseChunkSize * currentLatencyMultiplier);
-                        try {
-                            if (ws.readyState === WebSocket.OPEN) {
-                                ws.send(silentChunk.buffer);
-                                console.log('Initial silent chunk sent successfully');
-                            }
-                        } catch (error) {
-                            console.error('Error sending initial silent chunk:', error);
-                            updateStatus('Error initializing audio stream: ' + error.message, 'error');
-                            stopMicrophone(false);
-                        }
-                        
-                    } catch (audioError) {
-                        console.error('Error setting up audio processing:', audioError);
-                        updateStatus('Error setting up audio processing: ' + audioError.message, 'error');
-                        stopMicrophone(false);
-                    }
-                };
-                
-            } catch (error) {
-                console.error('Microphone access error:', error);
-                let errorMessage = 'Error accessing microphone: ';
-                
-                if (error.name === 'NotAllowedError') {
-                    errorMessage += 'Permission denied. Please allow microphone access and try again.';
-                } else if (error.name === 'NotFoundError') {
-                    errorMessage += 'No microphone found. Please connect a microphone and try again.';
-                } else if (error.name === 'NotReadableError') {
-                    errorMessage += 'Microphone is already in use by another application.';
-                } else {
-                    errorMessage += error.message;
-                }
-                
-                micStatus.textContent = errorMessage;
-                updateStatus(errorMessage, 'error');
-                console.error('Full error details:', error);
-            }
-        }
-
-        function stopMicrophone(isManualPause = false) {
-            if (ws && ws.readyState === WebSocket.OPEN && resampledBuffer.length > 0) {
-                const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
-                const finalChunk = new Float32Array(targetChunkSize);
-                finalChunk.set(resampledBuffer);
-                try {
-                    ws.send(finalChunk.buffer);
-                } catch (error) {
-                    console.error('Error sending final audio chunk:', error);
-                }
-            }
-            
-            if (ws) {
-                try {
-                    if (ws.readyState === WebSocket.OPEN) {
-                        ws.close();
-                    }
-                } catch (e) {
-                    console.error('Error closing WebSocket:', e);
-                }
-                ws = null;
-            }
-            
-            if (micStream) {
-                micStream.getTracks().forEach(track => {
-                    track.stop();
-                });
-                micStream = null;
-            }
-            
-            if (processor) {
-                try {
-                    processor.disconnect();
-                } catch (e) {
-                    console.error('Error disconnecting processor:', e);
-                }
-                processor = null;
-            }
-            
-            if (audioContext) {
-                try {
-                    if (audioContext.state !== 'closed') {
-                        audioContext.close().catch(e => {
-                            console.error('Error closing audio context:', e);
-                        });
-                    }
-                } catch (e) {
-                    console.error('Error in audio context cleanup:', e);
-                }
-                audioContext = null;
-            }
-            
-            resampledBuffer = new Float32Array();
-            volumeLevel.style.width = '0%';
-            volumeIndicator.classList.add('hidden');
-            
-            toggleMic.innerHTML = `
-                <svg class="icon" viewBox="0 0 24 24">
-                    <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>
-                </svg>
-                Record Audio
-            `;
-            toggleMic.classList.remove('recording');
-            
-            if (isManualPause) {
-                micStatus.textContent = 'Microphone paused.';
-            } else {
-                micStatus.textContent = '';
-            }
-            
-            isMicRecording = false;
-            translationPaused = true;
-            translationInitialized = false;
-        }
-
-        // Reset translation
-        resetTranslation.addEventListener('click', async () => {
-            if (!sessionId) return;
-            
-            try {
-                if (isMicRecording) {
-                    stopMicrophone(false);
-                } else {
-                    volumeLevel.style.width = '0%';
-                    volumeIndicator.classList.add('hidden');
-                    micStatus.textContent = '';
-                }
-                
-                cleanupAudioResources();
-                
-                if (audioContext) {
-                    try {
-                        if (audioContext.state !== 'closed') {
-                            await audioContext.close();
-                        }
-                        audioContext = null;
-                    } catch (e) {
-                        console.error('Error closing AudioContext:', e);
-                    }
-                }
-                
-                audioElementConnected = false;
-                
-                // Reset media container
-                const existingMedia = mediaContainer.querySelector('audio, video');
-                if (existingMedia) {
-                    existingMedia.remove();
-                }
-                
-                const placeholder = mediaContainer.querySelector('.video-placeholder');
-                if (placeholder) {
-                    placeholder.style.display = 'block';
-                }
-                
-                currentMediaElement = null;
-                
-                if (audioFile) {
-                    audioFile.value = '';
-                }
-                
-                if (youtubeUrl) {
-                    youtubeUrl.value = '';
-                }
-                
-                volumeLevel.style.width = '0%';
-                volumeIndicator.classList.add('hidden');
-                translationInitialized = false;
-                
-                const response = await fetch('/reset_translation?' + new URLSearchParams({
-                    session_id: sessionId
-                }), {
-                    method: 'POST'
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    translationOutput.textContent = 'Translation will appear here...';
-                    updateStatus(data.message || 'Translation reset successfully. Please select an audio source.', 'ready');
-                    updateLatency.disabled = false;
-                    console.log('Translation reset successfully');
-                } else {
-                    updateStatus('Failed to reset translation: ' + data.error, 'error');
-                    console.error('Failed to reset translation:', data.error);
-                }
-            } catch (error) {
-                updateStatus('Error resetting translation: ' + error, 'error');
-                console.error('Error resetting translation:', error);
-            }
-        });
-
-        // Update latency
-        updateLatency.addEventListener('click', async () => {
-            if (!sessionId) return;
-            
-            try {
-                currentLatencyMultiplier = parseInt(latencyMultiplier.value);
-                const response = await fetch('/update_latency?' + new URLSearchParams({
-                    session_id: sessionId,
-                    latency_multiplier: currentLatencyMultiplier
-                }), {
-                    method: 'POST'
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    updateStatus('Latency updated successfully', 'ready');
-                    console.log('Latency updated to:', latencyMultiplier.value + 'x');
-                } else {
-                    updateStatus('Failed to update latency: ' + data.error, 'error');
-                    console.error('Failed to update latency:', data.error);
-                }
-            } catch (error) {
-                updateStatus('Error updating latency: ' + error, 'error');
-                console.error('Error updating latency:', error);
-            }
-        });
-
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            ensureClientId();
-            initializePanelDragging();
-            
-            const userEvents = ['mousedown', 'keypress', 'scroll', 'touchstart'];
-            userEvents.forEach(eventType => {
-                document.addEventListener(eventType, resetIdleTimer);
-            });
-            
-            resetIdleTimer();
-            
-            const storedSessionId = localStorage.getItem('translationSessionId_' + clientId);
-            if (storedSessionId) {
-                checkSessionStatus(storedSessionId);
-            }
-            
-            const pendingDeleteSessions = JSON.parse(localStorage.getItem('pendingDeleteSessions_' + clientId) || '{}');
-            if (Object.keys(pendingDeleteSessions).length > 0) {
-                console.log(`Found ${Object.keys(pendingDeleteSessions).length} orphaned sessions to delete`);
-                // Add session cleanup logic here if needed
-            }
-        });
-
-        async function checkSessionStatus(checkSessionId) {
-            try {
-                const response = await fetch('/delete_session?' + new URLSearchParams({
-                    session_id: checkSessionId
-                }), {
-                    method: 'POST'
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    console.log('Session exists and was deleted:', checkSessionId);
-                    localStorage.removeItem('translationSessionId_' + clientId);
-                } else if (data.error && data.error.includes('Invalid session ID')) {
-                    console.log('Stored session no longer exists:', checkSessionId);
-                    localStorage.removeItem('translationSessionId_' + clientId);
-                } else {
-                    console.error('Unexpected error checking session:', data.error);
-                    localStorage.removeItem('translationSessionId_' + clientId);
-                }
-            } catch (error) {
-                console.error('Error checking session status:', error);
-                localStorage.removeItem('translationSessionId_' + clientId);
-            }
-        }
-    </script>
-</body>
-</html> 
+                    updateStatus(`

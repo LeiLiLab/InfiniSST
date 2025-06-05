@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>File Upload Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .upload-btn {
+            background: #007AFF;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .media-container {
+            margin: 20px 0;
+            min-height: 200px;
+            background: #f8f8f8;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .log {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>File Upload Test</h1>
+        
+        <div class="upload-area">
+            <p>Select an audio or video file to test</p>
+            <input type="file" id="fileInput" accept="audio/*,video/*" style="display: none;">
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                Choose File
+            </button>
+        </div>
+        
+        <div id="mediaContainer" class="media-container">
+            <p>No file selected</p>
+        </div>
+        
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const mediaContainer = document.getElementById('mediaContainer');
+        const log = document.getElementById('log');
+
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            log.innerHTML += `[${timestamp}] ${message}<br>`;
+            log.scrollTop = log.scrollHeight;
+            console.log(message);
+        }
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            addLog(`File selected: ${file.name}`);
+            addLog(`File type: ${file.type}`);
+            addLog(`File size: ${file.size} bytes`);
+
+            try {
+                // Clear previous content
+                mediaContainer.innerHTML = '';
+
+                // Determine if it's video or audio
+                const isVideo = file.type.startsWith('video/');
+                const mediaElement = document.createElement(isVideo ? 'video' : 'audio');
+                
+                addLog(`Creating ${isVideo ? 'video' : 'audio'} element`);
+                
+                mediaElement.controls = true;
+                mediaElement.style.width = '100%';
+                mediaElement.style.height = '100%';
+                
+                // Create object URL
+                const objectURL = URL.createObjectURL(file);
+                addLog(`Created object URL: ${objectURL}`);
+                mediaElement.src = objectURL;
+                
+                // Add event listeners
+                mediaElement.addEventListener('loadstart', () => {
+                    addLog('Media loading started');
+                });
+                
+                mediaElement.addEventListener('loadedmetadata', () => {
+                    addLog(`Media metadata loaded - Duration: ${mediaElement.duration}s`);
+                });
+                
+                mediaElement.addEventListener('canplay', () => {
+                    addLog('Media can start playing');
+                });
+                
+                mediaElement.addEventListener('error', (e) => {
+                    addLog(`Media error: ${mediaElement.error ? mediaElement.error.message : 'Unknown error'}`);
+                });
+                
+                mediaContainer.appendChild(mediaElement);
+                addLog('Media element added to container');
+                
+            } catch (error) {
+                addLog(`Error: ${error.message}`);
+            }
+        });
+
+        addLog('Test page loaded');
+    </script>
+</body>
+</html> 

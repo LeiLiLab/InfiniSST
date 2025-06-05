@@ -770,56 +770,78 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
         
         # Process incoming audio data
         while True:
-            # Receive data from the WebSocket
-            message = await websocket.receive()
+            try:
+                # Receive data from the WebSocket
+                message = await websocket.receive()
 
-            # Update activity timestamp
-            update_session_activity(session_id)
-            # Update ping timestamp when data is received
-            update_session_ping(session_id)
+                # Update activity timestamp
+                update_session_activity(session_id)
+                # Update ping timestamp when data is received
+                update_session_ping(session_id)
 
-            # Check if this is a control message (text) or audio data (bytes)
-            if "text" in message:
-                # Handle control messages
-                control_message = message["text"]
-                print(f"Received control message for session {session_id}: {control_message}")
+                # Check if this is a control message (text) or audio data (bytes)
+                if "text" in message:
+                    # Handle control messages
+                    control_message = message["text"]
+                    print(f"Received control message for session {session_id}: {control_message}")
 
-                if control_message == "EOF":
-                    # This is an explicit End-Of-File signal from the client
-                    # Process an empty segment with is_last=True to signal completion
-                    print(f"Received EOF signal for session {session_id}, marking processing as complete")
+                    if control_message == "EOF":
+                        # This is an explicit End-Of-File signal from the client
+                        # Process an empty segment with is_last=True to signal completion
+                        print(f"Received EOF signal for session {session_id}, marking processing as complete")
 
-                    # Send an empty audio segment with is_last=True to indicate completion
-                    empty_segment = np.array([], dtype=np.float32)
-                    await session.process_segment(empty_segment, is_last=True)
+                        # Send an empty audio segment with is_last=True to indicate completion
+                        empty_segment = np.array([], dtype=np.float32)
+                        await session.process_segment(empty_segment, is_last=True)
 
-                    # Send a confirmation message to the client
-                    await websocket.send_text("PROCESSING_COMPLETE: File processing finished")
-                    continue
+                        # Send a confirmation message to the client
+                        await websocket.send_text("PROCESSING_COMPLETE: File processing finished")
+                        continue
 
-                # Handle other potential control messages here
-                elif control_message.startswith("LATENCY:"):
-                    # Example of another control message to dynamically adjust latency
-                    try:
-                        latency_value = int(control_message.split(":")[1])
-                        session.control_queue.put(f"update_latency:{latency_value}")
-                        await websocket.send_text(f"LATENCY_UPDATED: Set to {latency_value}")
-                    except (ValueError, IndexError):
-                        await websocket.send_text("ERROR: Invalid latency format")
-                    continue
+                    # Handle other potential control messages here
+                    elif control_message.startswith("LATENCY:"):
+                        # Example of another control message to dynamically adjust latency
+                        try:
+                            latency_value = int(control_message.split(":")[1])
+                            session.control_queue.put(f"update_latency:{latency_value}")
+                            await websocket.send_text(f"LATENCY_UPDATED: Set to {latency_value}")
+                        except (ValueError, IndexError):
+                            await websocket.send_text("ERROR: Invalid latency format")
+                        continue
 
-            elif "bytes" in message:
-                # This is audio data
-                data = message["bytes"]
+                elif "bytes" in message:
+                    # This is audio data
+                    data = message["bytes"]
 
-                # Convert bytes to numpy array
-                audio_data = np.frombuffer(data, dtype=np.float32)
-                chunk_count += 1
-                print(f"Received chunk {chunk_count}, size: {len(audio_data)}")
+                    # Convert bytes to numpy array
+                    audio_data = np.frombuffer(data, dtype=np.float32)
+                    chunk_count += 1
+                    print(f"Received chunk {chunk_count}, size: {len(audio_data)}")
 
-                # Process the segment (send to worker process)
-                # For regular chunks, is_last is always False
-                await session.process_segment(audio_data, is_last=False)
+                    # Process the segment (send to worker process)
+                    # For regular chunks, is_last is always False
+                    await session.process_segment(audio_data, is_last=False)
+                    
+            except starlette.websockets.WebSocketDisconnect:
+                print(f"WebSocket disconnected for session {session_id}")
+                break
+            except RuntimeError as e:
+                if "disconnect message has been received" in str(e):
+                    print(f"WebSocket already disconnected for session {session_id}")
+                    break
+                else:
+                    print(f"Runtime error in WebSocket: {str(e)}")
+                    break
+            except Exception as e:
+                print(f"Error processing WebSocket message for session {session_id}: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                # Send error message to client if connection is still open
+                try:
+                    await websocket.send_text(f"ERROR: {str(e)}")
+                except:
+                    pass
+                break
 
     except starlette.websockets.WebSocketDisconnect:
         print(f"WebSocket disconnected for session {session_id}")
@@ -1032,11 +1054,26 @@ async def ping_session(session_id: str):
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="InfiniSST Translation API Server")
     InfiniSST.add_args(parser)
+    
+    # Add server-specific arguments
+    parser.add_argument("--host", type=str, default="0.0.0.0", 
+                       help="Host to bind the server to (default: 0.0.0.0)")
+    parser.add_argument("--port", type=int, default=8001, 
+                       help="Port to bind the server to (default: 8001)")
+    parser.add_argument("--reload", action="store_true", 
+                       help="Enable auto-reload for development")
+    
     args = parser.parse_args()
     
     print(f"Starting server with {len(gpus)} GPUs available")
     print(f"Each translation session will run in its own worker process")
+    print(f"Server will be available at http://{args.host}:{args.port}")
 
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(
+        app, 
+        host=args.host, 
+        port=args.port,
+        reload=args.reload if hasattr(args, 'reload') else False
+    )
