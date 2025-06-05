@@ -15,5 +15,5 @@ debug*
 debug.ipynb
 *.wav
 fairseq*
-infinisst-web/node_modules
 .idea
+node_modules
