@@ -1,25 +1,37 @@
-#export PYTHONPATH=/home/xixu/work/InfiniSST
-export PYTHONPATH=/home/jiaxuanluo/InfiniSST
+#!/bin/bash
+#SBATCH --job-name=infinisst_api
+#SBATCH --output=logs/infinisst_api_%j.log
+#SBATCH --error=logs/infinisst_api_%j.err
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --gres=gpu:2
+#SBATCH --partition=taurus
+#SBATCH --mem=64GB
+
+export PYTHONPATH=/home/jiaxuanluo/infinisst-demo-v2
+
+echo "[INFO] Killing existing ngrok..."
+pkill -f ngrok || true
 
 echo "Killing any process using port 8001..."
 fuser -k 8001/tcp || true
 
-#conda activate /mnt/aries/data6/jiaxuanluo/infinisst
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate infinisst
 
-#/usr/bin/python3 api.py \
-/mnt/aries/data6/jiaxuanluo/infinisst/bin/python api.py \
+PYTHONUNBUFFERED=1 python api.py \
     --latency-multiplier 2 \
     --min-start-sec 0 \
-    --w2v2-path /mnt/data6/xixu/demo/wav2_vec_vox_960h_pl.pt \
+    --w2v2-path /mnt/aries/data6/xixu/demo/wav2_vec_vox_960h_pl.pt \
     --w2v2-type w2v2 \
     --ctc-finetuned True \
     \
     --length-shrink-cfg "[(1024,2,2)] * 2" \
     --block-size 48 \
     --max-cache-size 576 \
-    --xpos 0 \
+    --model-type w2v2_qwen25 \
     --rope 1 \
-    --audio-normalize 1 \
+    --audio-normalize 0 \
     \
     --max-llm-cache-size 1000 \
     --always-cache-system-prompt \
@@ -33,8 +45,8 @@ fuser -k 8001/tcp || true
     --repetition-penalty 1.2 \
     --suppress-non-language \
     \
-    --model-name /mnt/data6/xixu/demo/llama3.1-8b-instruct-hf \
-    --lora-rank 32 > backend.log 2>&1 &
+    --model-name /mnt/aries/data6/jiaxuanluo/Qwen2.5-7B-Instruct \
+    --lora-rank 32 &
 
 # 等待端口8001启动，最多等待10秒
 for i in {1..100}; do
@@ -47,5 +59,5 @@ done
 # 启动 ngrok
 echo "Starting ngrok tunnel..."
 #/mnt/aries/data6/jiaxuanluo/bin/ngrok http --url=radically-mutual-sailfish.ngrok-free.app 8001
-
-/mnt/aries/data6/jiaxuanluo/bin/ngrok http --url=wired-fluent-haddock.ngrok-free.app 8001
+#https://infinisst.ngrok.app/ 2Ts31SiBXYaOwojWtym3lBJuZdI_2iNfttxoB6Psa5EA38aoH
+/mnt/aries/data6/jiaxuanluo/bin/ngrok http --url=infinisst.ngrok.app 8001

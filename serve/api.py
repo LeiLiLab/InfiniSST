@@ -48,15 +48,10 @@ LANGUAGE_PAIRS = {
     "English -> Spanish": ("English", "Spanish", "en", "es"),
 }
 
-# model_path = "/compute/babel-5-23/siqiouya/runs/{}-{}/8B-traj-s2-v3.6/last.ckpt/pytorch_model.bin"
-model_path = "/compute/babel-5-23/siqiouya/runs/gigaspeech/{}-{}/stage1_M=12/last.ckpt/pytorch_model.bin"
-lora_path = "/compute/babel-5-23/siqiouya/runs/gigaspeech/{}-{}/stage2_8b_lora_rank32_M=12/last.ckpt/pytorch_model.bin"
-model_path_de = "/mnt/data6/xixu/demo/en-de/pytorch_model.bin"
-model_path_es = "/mnt/data6/xixu/demo/en-es/pytorch_model.bin"
-model_path_it = "/mnt/data6/jiaxuanluo/demo/en-it/pytorch_model.bin"
-# model_path = "/mnt/data6/xixu/demo/gigaspeech/s1/pytorch_model.bin"
-# lora_path = "/mnt/data6/xixu/demo/gigaspeech/lora/lora_rank32.bin"
-lora_path_it = "/mnt/data6/jiaxuanluo/demo/en-it/lora.bin"
+model_path_de = "/mnt/aries/data6/xixu/demo/en-de/pytorch_model.bin"
+model_path_es = "/mnt/aries/data6/xixu/demo/en-es/pytorch_model.bin"
+model_path = "/mnt/aries/data6/jiaxuanluo/demo/{}-{}/pytorch_model.bin"
+lora_path = "/mnt/aries/data6/jiaxuanluo/demo/{}-{}/lora.bin"
 
 app = FastAPI()
 
@@ -87,8 +82,10 @@ queue_lock = asyncio.Lock()
 session_workers: Dict[str, Dict[str, Any]] = {}
 
 # Get the number of available GPUs
-num_gpus = torch.cuda.device_count()
-print(f"Number of available GPUs: {num_gpus}")
+#num_gpus = torch.cuda.device_count()
+gpus = [int(x.strip()) for x in os.environ.get("CUDA_VISIBLE_DEVICES", "").split(",") if x.strip().isdigit()]
+
+print(f"Number of available GPUs: {len(gpus)}")
 
 # Short timeout for detecting browser disconnections
 DISCONNECT_CHECK_INTERVAL = 5  # Check every 5 seconds
@@ -140,16 +137,13 @@ def session_worker_process(
         elif language_pair == "English -> Spanish":
             args.state_dict_path = model_path_es
             args.lora_path = None  # or '' if preferred
-        elif language_pair == "English -> Italian":
-            args.state_dict_path = model_path_it
-            args.lora_path = lora_path_it  # or '' if preferred
         else:
             args.state_dict_path = model_path.format(src_code, tgt_code) if '{}' in model_path else model_path
             args.lora_path = lora_path.format(src_code, tgt_code) if '{}' in lora_path else lora_path
 
         # Set the GPU device
         print(f"Worker process initializing on GPU {gpu_id}")
-        with torch.cuda.device(gpu_id):
+        with torch.cuda.device(get_logical_index_from_physical_id(gpu_id)):
             # Initialize the agent
             agent = TRANSLATION_AGENTS[agent_type](args)
             agent.update_multiplier(args.latency_multiplier)
@@ -404,7 +398,7 @@ def find_free_gpu():
     gpus_in_use = set(session_gpu_map.values())
     
     # Find a free GPU
-    for gpu_id in range(num_gpus):
+    for gpu_id in gpus:
         if gpu_id not in gpus_in_use:
             return gpu_id
     
@@ -561,11 +555,11 @@ async def log_active_sessions():
         if active_sessions:
             current_time = time.time()
             print(f"\n===== Active Sessions Report ({len(active_sessions)} sessions) =====")
-            print(f"GPU Usage: {len(session_gpu_map)}/{num_gpus} GPUs in use")
+            print(f"GPU Usage: {len(session_gpu_map)}/{len(gpus)} GPUs in use")
             
             # Print GPU allocation
             gpu_allocation = {}
-            for gpu_id in range(num_gpus):
+            for gpu_id in gpus:
                 gpu_allocation[gpu_id] = []
             
             for session_id, gpu_id in session_gpu_map.items():
@@ -602,6 +596,14 @@ async def log_active_sessions():
         
         # Log every 30 seconds
         await asyncio.sleep(30)
+
+def get_logical_index_from_physical_id(physical_id: int) -> int:
+    visible_devices = os.environ.get("CUDA_VISIBLE_DEVICES", "")
+    mapping = [int(x.strip()) for x in visible_devices.split(",") if x.strip().isdigit()]
+    if physical_id in mapping:
+        return mapping.index(physical_id)
+    else:
+        raise ValueError(f"GPU ID {physical_id} not in CUDA_VISIBLE_DEVICES: {mapping}")
 
 @app.on_event("startup")
 async def startup_event():
@@ -1034,7 +1036,7 @@ if __name__ == "__main__":
     InfiniSST.add_args(parser)
     args = parser.parse_args()
     
-    print(f"Starting server with {num_gpus} GPUs available")
+    print(f"Starting server with {len(gpus)} GPUs available")
     print(f"Each translation session will run in its own worker process")
 
     uvicorn.run(app, host="0.0.0.0", port=8001)
