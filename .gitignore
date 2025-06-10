@@ -13,3 +13,4 @@ slurm*
 profile/*
 debug*/
 debug.ipynb
+.idea
