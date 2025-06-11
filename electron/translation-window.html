@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InfiniSST Translation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: rgba(0, 0, 0, 0.9);
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(20px);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            user-select: none;
+            -webkit-app-region: drag;
+        }
+
+        .title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4caf50;
+            transition: background-color 0.3s ease;
+        }
+
+        .status-indicator.processing {
+            background: #ff9800;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.error {
+            background: #f44336;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .controls {
+            display: flex;
+            gap: 4px;
+            -webkit-app-region: no-drag;
+        }
+
+        .control-btn {
+            width: 20px;
+            height: 20px;
+            border: none;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: background-color 0.2s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .control-btn.close:hover {
+            background: #ff5722;
+        }
+
+        .content {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .translation-output {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            min-height: 100px;
+            color: #ffffff;
+        }
+
+        .translation-output:empty::before {
+            content: "翻译结果将在这里显示...";
+            color: #888;
+            font-style: italic;
+        }
+
+        /* 自定义滚动条 */
+        .translation-output::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .translation-output::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .translation-output::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        .translation-output::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* 透明度调节 */
+        .opacity-control {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        body:hover .opacity-control {
+            opacity: 1;
+        }
+
+        .opacity-slider {
+            width: 60px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .opacity-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4facfe;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="title">
+            <div class="status-indicator" id="statusIndicator"></div>
+            <span id="statusText">Ready</span>
+        </div>
+        <div class="controls">
+            <button class="control-btn" id="hideBtn" title="隐藏">−</button>
+            <button class="control-btn close" id="closeBtn" title="关闭">×</button>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="translation-output" id="translationOutput"></div>
+    </div>
+
+    <div class="opacity-control">
+        <span>透明度</span>
+        <input type="range" class="opacity-slider" id="opacitySlider" min="0.3" max="1" step="0.1" value="0.9">
+    </div>
+
+    <script>
+        const { electronAPI } = window;
+        
+        // DOM 元素
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const translationOutput = document.getElementById('translationOutput');
+        const hideBtn = document.getElementById('hideBtn');
+        const closeBtn = document.getElementById('closeBtn');
+        const opacitySlider = document.getElementById('opacitySlider');
+
+        // 监听翻译更新
+        electronAPI.onTranslationUpdate((event, translationData) => {
+            if (translationData && translationData.text) {
+                translationOutput.textContent = translationData.text;
+                // 自动滚动到底部
+                translationOutput.scrollTop = translationOutput.scrollHeight;
+            }
+        });
+
+        // 监听状态更新
+        electronAPI.onStatusUpdate((event, statusData) => {
+            if (statusData) {
+                statusText.textContent = statusData.text || 'Ready';
+                
+                // 更新状态指示器
+                statusIndicator.className = 'status-indicator';
+                if (statusData.type === 'processing') {
+                    statusIndicator.classList.add('processing');
+                } else if (statusData.type === 'error') {
+                    statusIndicator.classList.add('error');
+                }
+            }
+        });
+
+        // 控制按钮事件
+        hideBtn.addEventListener('click', () => {
+            electronAPI.hideTranslationWindow();
+        });
+
+        closeBtn.addEventListener('click', () => {
+            electronAPI.closeTranslationWindow();
+        });
+
+        // 透明度控制
+        opacitySlider.addEventListener('input', (e) => {
+            document.body.style.opacity = e.target.value;
+        });
+
+        // 设置初始透明度
+        document.body.style.opacity = opacitySlider.value;
+
+        // 防止窗口内容被选中时影响拖拽
+        document.addEventListener('selectstart', (e) => {
+            if (e.target.tagName !== 'INPUT') {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html> 

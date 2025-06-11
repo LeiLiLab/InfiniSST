@@ -85,7 +85,7 @@ session_workers: Dict[str, Dict[str, Any]] = {}
 #num_gpus = torch.cuda.device_count()
 gpus = [int(x.strip()) for x in os.environ.get("CUDA_VISIBLE_DEVICES", "").split(",") if x.strip().isdigit()]
 
-print(f"Number of available GPUs: {len(gpus)}")
+print(f"Number of available GPUs: gpus={gpus}, len(gpus)={len(gpus)}")
 
 # Short timeout for detecting browser disconnections
 DISCONNECT_CHECK_INTERVAL = 5  # Check every 5 seconds

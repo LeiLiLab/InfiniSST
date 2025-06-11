@@ -13,6 +13,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('menu-open-file', callback);
   },
   
+  // 翻译窗口控制
+  showTranslationWindow: () => ipcRenderer.invoke('show-translation-window'),
+  hideTranslationWindow: () => ipcRenderer.invoke('hide-translation-window'),
+  closeTranslationWindow: () => ipcRenderer.invoke('close-translation-window'),
+  
+  // 翻译数据更新
+  updateTranslation: (translationData) => ipcRenderer.invoke('update-translation', translationData),
+  updateTranslationStatus: (statusData) => ipcRenderer.invoke('update-translation-status', statusData),
+  
+  // 监听翻译窗口事件（用于翻译窗口）
+  onTranslationUpdate: (callback) => {
+    ipcRenderer.on('translation-update', callback);
+  },
+  onStatusUpdate: (callback) => {
+    ipcRenderer.on('status-update', callback);
+  },
+  
   // 移除监听器
   removeAllListeners: (channel) => {
     ipcRenderer.removeAllListeners(channel);

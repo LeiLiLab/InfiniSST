@@ -712,6 +712,7 @@
         let isElectron = false;
         let electronAPI = null;
         let serverConfig = null; // 添加服务器配置
+        let translationWindowShown = false; // 跟踪翻译窗口状态
 
         // 检测是否在 Electron 环境中运行
         if (typeof window !== 'undefined' && window.electronAPI) {
@@ -743,6 +744,27 @@
             electronAPI.onMenuOpenFile(() => {
                 handleMenuOpenFile();
             });
+        }
+
+        // Electron翻译窗口辅助函数
+        function showElectronTranslationWindow() {
+            if (isElectron && !translationWindowShown) {
+                electronAPI.showTranslationWindow();
+                translationWindowShown = true;
+                console.log('Electron translation window shown');
+            }
+        }
+
+        function updateElectronTranslation(text) {
+            if (isElectron && translationWindowShown) {
+                electronAPI.updateTranslation({ text: text });
+            }
+        }
+
+        function updateElectronStatus(text, type = 'ready') {
+            if (isElectron && translationWindowShown) {
+                electronAPI.updateTranslationStatus({ text: text, type: type });
+            }
         }
 
         // 获取WebSocket URL的辅助函数
@@ -844,6 +866,9 @@
 
         function showPanel() {
             translationPanel.style.display = 'block';
+            
+            // 在Electron环境中显示独立翻译窗口
+            showElectronTranslationWindow();
         }
 
         // Generate unique client ID
@@ -876,6 +901,9 @@
                 headerTitle.textContent = 'Ready to translate';
                 loadingSpinner.classList.add('hidden');
             }
+            
+            // 同步更新Electron翻译窗口状态
+            updateElectronStatus(text, type);
         }
 
         // Scroll translation to bottom
@@ -1024,6 +1052,9 @@
                     if (!translationPaused) {
                         translationOutput.textContent = message;
                         scrollTranslationToBottom();
+                        
+                        // 同步更新Electron翻译窗口
+                        updateElectronTranslation(message);
                     }
                 };
                 
@@ -1557,6 +1588,9 @@
                     console.log('WebSocket message received:', event.data);
                     translationOutput.textContent = event.data;
                     scrollTranslationToBottom();
+                    
+                    // 同步更新Electron翻译窗口
+                    updateElectronTranslation(event.data);
                 };
                 
                 ws.onerror = (error) => {

@@ -3,6 +3,7 @@ const path = require('path');
 const isDev = require('electron-is-dev');
 
 let mainWindow;
+let translationWindow;
 let backendUrl = null;
 
 // 配置选项
@@ -417,6 +418,36 @@ function createMenu() {
       ]
     },
     {
+      label: 'Translation',
+      submenu: [
+        {
+          label: 'Show Translation Window',
+          accelerator: 'CmdOrCtrl+T',
+          click: () => {
+            createTranslationWindow();
+          }
+        },
+        {
+          label: 'Hide Translation Window',
+          accelerator: 'CmdOrCtrl+Shift+T',
+          click: () => {
+            if (translationWindow) {
+              translationWindow.hide();
+            }
+          }
+        },
+        {
+          label: 'Close Translation Window',
+          click: () => {
+            if (translationWindow) {
+              translationWindow.close();
+              translationWindow = null;
+            }
+          }
+        }
+      ]
+    },
+    {
       label: 'Window',
       submenu: [
         { role: 'minimize' },
@@ -511,6 +542,93 @@ ipcMain.handle('show-open-dialog', async () => {
     ]
   });
   return result;
+});
+
+// 创建翻译窗口
+function createTranslationWindow() {
+  if (translationWindow) {
+    translationWindow.focus();
+    return;
+  }
+
+  translationWindow = new BrowserWindow({
+    width: 600,
+    height: 300,
+    minWidth: 400,
+    minHeight: 200,
+    maxWidth: 1000,
+    maxHeight: 600,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: true,
+    frame: true,
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    },
+    title: 'InfiniSST Translation',
+    show: false
+  });
+
+  // 加载翻译窗口页面
+  translationWindow.loadFile(path.join(__dirname, 'translation-window.html'));
+
+  // 窗口准备好后显示
+  translationWindow.once('ready-to-show', () => {
+    translationWindow.show();
+    
+    // 设置窗口位置到右下角
+    const { screen } = require('electron');
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width, height } = primaryDisplay.workAreaSize;
+    
+    translationWindow.setPosition(
+      width - translationWindow.getBounds().width - 20,
+      height - translationWindow.getBounds().height - 20
+    );
+  });
+
+  // 窗口关闭时的处理
+  translationWindow.on('closed', () => {
+    translationWindow = null;
+  });
+
+  // 防止窗口被最小化时失去置顶状态
+  translationWindow.on('minimize', () => {
+    translationWindow.restore();
+  });
+}
+
+// IPC 处理器
+ipcMain.handle('show-translation-window', () => {
+  createTranslationWindow();
+});
+
+ipcMain.handle('hide-translation-window', () => {
+  if (translationWindow) {
+    translationWindow.hide();
+  }
+});
+
+ipcMain.handle('close-translation-window', () => {
+  if (translationWindow) {
+    translationWindow.close();
+    translationWindow = null;
+  }
+});
+
+ipcMain.handle('update-translation', (event, translationData) => {
+  if (translationWindow && translationWindow.webContents) {
+    translationWindow.webContents.send('translation-update', translationData);
+  }
+});
+
+ipcMain.handle('update-translation-status', (event, statusData) => {
+  if (translationWindow && translationWindow.webContents) {
+    translationWindow.webContents.send('status-update', statusData);
+  }
 });
 
 // 处理未捕获的异常
