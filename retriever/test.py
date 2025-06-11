@@ -119,6 +119,8 @@ def extract_array_from_sample(sample):
     segment_id = sample.get("segment_id")
     save_path = f"data/audio_tensor/{segment_id}.pt"
 
+    start_time = time.time()
+
     try:
         if os.path.exists(save_path):
             try:
@@ -143,15 +145,15 @@ def extract_array_from_sample(sample):
             #     print(f"[SKIP] Too long tensor: {segment_id} with {tensor.shape[-1]} samples")
             #     return None
 
-            # if sr != 48000:
-            #     print(f"[ERROR] Audio array has different sampling rate for {segment_id}")
-            #     tensor = safe_resample(tensor, orig_freq=sr, new_freq=48000)
-            #     if tensor is None:
-            #         print(f"[ERROR] Resample failed or timed out for {segment_id}, sample: {sample}")
-            #         # 将失败的样本记录下来
-            #         with open("data/resample_blacklist.txt", "a") as f:
-            #             f.write(segment_id + "\n")
-            #         return None
+            if sr != 48000:
+                print(f"[ERROR] Audio array has different sampling rate for {segment_id}")
+                tensor = safe_resample(tensor, orig_freq=sr, new_freq=48000)
+                if tensor is None:
+                    print(f"[ERROR] Resample failed or timed out for {segment_id}, sample: {sample}")
+                    # 将失败的样本记录下来
+                    with open("data/resample_blacklist.txt", "a") as f:
+                        f.write(segment_id + "\n")
+                    return None
 
             if tensor.shape[-1] < 24000:
                 print(f"[INFO] Skipping too short tensor: {segment_id}")
@@ -177,17 +179,17 @@ def process_item(item, phrase2desc, return_tensor=True,named_entities=None):
     item["has_target"] = bool(ground_truth_terms)  # True / False 标志
 
     # For JSON serialization: remove array, keep path
-    json_safe_item = item.copy()
-    if "audio" in json_safe_item and isinstance(json_safe_item["audio"], dict):
-        json_safe_item["audio"] = json_safe_item["audio"].get("path")
+    # json_safe_item = item.copy()
+    # if "audio" in json_safe_item and isinstance(json_safe_item["audio"], dict):
+    #     json_safe_item["audio"] = json_safe_item["audio"].get("path")
 
     # resample to 48000
-    # tensor = extract_array_from_sample(item)
-    # if tensor is None:
-    #     print(f"[ERROR] tensor None, Failed to extract audio arrays for {item['segment_id']}")
-    #     return None
-    # if return_tensor:
-    #     item["audio_tensor"] = tensor
+    tensor = extract_array_from_sample(item)
+    if tensor is None:
+        print(f"[ERROR] tensor None, Failed to extract audio arrays for {item['segment_id']}")
+        return None
+    if return_tensor:
+        item["audio_tensor"] = tensor
     return item
 
 
@@ -272,24 +274,11 @@ def handle_giga_speech_train_samples(term_set_path, alt2main_path, glossary_path
     # 注意：这里统一传 False，确保子进程不携带 tensor
 
     phrase2desc = build_phrase_desc_index(term_set, alt2main, glossary,text_field)
-
-    args_list = []
-    for sample, named_entities in zip(train_set, named_entities_list):
-        segment_id = sample["segment_id"]
-        if segment_id in blacklist:
-            continue
-        audio_path = sample.get("audio", {}).get("path")
-        if audio_path and not os.path.exists(audio_path):
-            print(f"[SKIP] Audio path not found: {audio_path}")
-            continue
-        if audio_path:
-            try:
-                import torchaudio
-                torchaudio.load(audio_path)  # 尝试加载
-            except Exception as e:
-                print(f"[SKIP] Failed to load audio {audio_path}: {e}")
-                continue
-        args_list.append((sample, named_entities, False, phrase2desc))
+    args_list = [
+        (sample, named_entities, False, phrase2desc)
+        for sample, named_entities in zip(train_set, named_entities_list)
+        if sample["segment_id"] not in blacklist
+    ]
 
     results = []
     for args in tqdm(args_list, desc="Processing"):
