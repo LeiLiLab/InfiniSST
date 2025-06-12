@@ -20,9 +20,9 @@ const CONFIG = {
   },
   // 开发模式下的默认配置
   DEV_SERVER: {
-    host: 'localhost',
-    port: 8001,
-    protocol: 'http'
+    host: 'infinisst.ngrok.app',
+    port: 443,
+    protocol: 'https'
   }
 };
 

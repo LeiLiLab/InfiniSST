@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AudioContext测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #1a1a2e; color: white; }
+        button { padding: 10px 20px; margin: 10px; font-size: 16px; }
+        .status { margin: 10px 0; padding: 10px; background: #333; border-radius: 5px; }
+        .success { background: #4caf50; }
+        .error { background: #f44336; }
+    </style>
+</head>
+<body>
+    <h1>AudioContext测试</h1>
+    <p>测试AudioContext和MediaStreamSource的创建</p>
+    
+    <button onclick="testAudioContext()">测试AudioContext</button>
+    <button onclick="testWithMicrophone()">测试麦克风+AudioContext</button>
+    <button onclick="cleanup()">清理资源</button>
+    
+    <div id="status" class="status">等待测试...</div>
+    
+    <script>
+        let audioContext = null;
+        let micStream = null;
+        let micSource = null;
+        
+        function updateStatus(message, type = '') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + type;
+            console.log(message);
+        }
+        
+        async function testAudioContext() {
+            try {
+                updateStatus('创建AudioContext...', '');
+                
+                audioContext = new AudioContext();
+                updateStatus(`✅ AudioContext创建成功！采样率: ${audioContext.sampleRate}Hz`, 'success');
+                console.log('AudioContext:', audioContext);
+                
+            } catch (error) {
+                updateStatus('❌ AudioContext创建失败: ' + error.message, 'error');
+                console.error('AudioContext错误:', error);
+            }
+        }
+        
+        async function testWithMicrophone() {
+            try {
+                updateStatus('获取麦克风权限...', '');
+                
+                micStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+                
+                updateStatus('创建AudioContext...', '');
+                if (!audioContext) {
+                    audioContext = new AudioContext();
+                }
+                
+                updateStatus('创建MediaStreamSource...', '');
+                micSource = audioContext.createMediaStreamSource(micStream);
+                
+                updateStatus('✅ 麦克风+AudioContext测试成功！', 'success');
+                console.log('麦克风流:', micStream);
+                console.log('AudioContext:', audioContext);
+                console.log('MediaStreamSource:', micSource);
+                
+            } catch (error) {
+                updateStatus('❌ 测试失败: ' + error.message, 'error');
+                console.error('测试错误:', error);
+            }
+        }
+        
+        function cleanup() {
+            if (micStream) {
+                micStream.getTracks().forEach(track => track.stop());
+                micStream = null;
+            }
+            
+            if (micSource) {
+                try {
+                    micSource.disconnect();
+                } catch (e) {
+                    console.log('断开micSource时出错:', e);
+                }
+                micSource = null;
+            }
+            
+            if (audioContext) {
+                try {
+                    audioContext.close();
+                } catch (e) {
+                    console.log('关闭AudioContext时出错:', e);
+                }
+                audioContext = null;
+            }
+            
+            updateStatus('资源已清理', '');
+        }
+        
+        // 页面卸载时清理
+        window.addEventListener('beforeunload', cleanup);
+    </script>
+</body>
+</html> 

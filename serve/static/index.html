@@ -1084,6 +1084,7 @@
                 
                 ws.onmessage = (event) => {
                     const message = event.data;
+                    console.log(`websocket message: ${message}`);
                     
                     if (typeof message === 'string' && message.startsWith('INITIALIZING:')) {
                         updateStatus(message.substring('INITIALIZING:'.length).trim(), 'processing');
@@ -1736,31 +1737,49 @@
                         if (isElectron && window.ElectronAudioProcessor) {
                             console.log('🎵 Using Electron-specific audio processor...');
                             
-                            // 确保没有其他音频处理在运行
-                            if (audioContext) {
-                                try {
-                                    await audioContext.close();
-                                    audioContext = null;
-                                    console.log('🧹 Closed existing AudioContext');
-                                } catch (e) {
-                                    console.warn('⚠️ Error closing existing AudioContext:', e);
+                            try {
+                                // 确保没有其他音频处理在运行
+                                if (audioContext) {
+                                    try {
+                                        await audioContext.close();
+                                        audioContext = null;
+                                        console.log('🧹 Closed existing AudioContext');
+                                    } catch (e) {
+                                        console.warn('⚠️ Error closing existing AudioContext:', e);
+                                    }
                                 }
+                                
+                                // 禁用全局音频处理标志
+                                audioProcessingActive = false;
+                                
+                                electronAudioProcessor = new window.ElectronAudioProcessor();
+                                await electronAudioProcessor.initializeAudio(micStream, ws);
+                                
+                                // 设置UI状态
+                                translationPaused = false;
+                                updateMicrophoneUI(true);
+                                updateStatus('Translating from microphone...', 'processing');
+                                resetIdleTimer();
+                                
+                                console.log('✅ Electron audio processor initialized, skipping traditional processing');
+                                return; // 使用Electron处理器，完全跳过传统处理
+                            } catch (electronError) {
+                                console.error('❌ Electron audio processor failed:', electronError);
+                                updateStatus('Electron audio processor failed, using fallback...', 'processing');
+                                
+                                // 清理失败的Electron处理器
+                                if (electronAudioProcessor) {
+                                    try {
+                                        electronAudioProcessor.stop();
+                                        electronAudioProcessor = null;
+                                    } catch (cleanupError) {
+                                        console.error('Error cleaning up failed Electron processor:', cleanupError);
+                                    }
+                                }
+                                
+                                // 继续使用传统浏览器处理方式作为备用方案
+                                console.log('🔄 Falling back to traditional browser audio processing...');
                             }
-                            
-                            // 禁用全局音频处理标志
-                            audioProcessingActive = false;
-                            
-                            electronAudioProcessor = new window.ElectronAudioProcessor();
-                            await electronAudioProcessor.initializeAudio(micStream, ws);
-                            
-                            // 设置UI状态
-                            translationPaused = false;
-                            updateMicrophoneUI(true);
-                            updateStatus('Translating from microphone...', 'processing');
-                            resetIdleTimer();
-                            
-                            console.log('✅ Electron audio processor initialized, skipping traditional processing');
-                            return; // 使用Electron处理器，完全跳过传统处理
                         }
                         
                         // 传统浏览器处理方式

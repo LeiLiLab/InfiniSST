@@ -1,290 +1,306 @@
-// Electron专用音频处理模块 - 安全版本
-// 避免音频反馈循环和内存泄漏
-
 class ElectronAudioProcessor {
     constructor() {
-        this.mediaRecorder = null;
+        this.audioContext = null;
+        this.workletNode = null;
         this.micStream = null;
+        this.sourceNode = null;
         this.ws = null;
         this.isProcessing = false;
-        this.audioChunks = [];
-        
-        // 调试计数器
-        this.dataAvailableCount = 0;
+        this.resampledBuffer = new Float32Array();
         this.chunksSentCount = 0;
-        this.lastLogTime = 0;
         this.errorCount = 0;
-        
-        // 安全配置
+
         this.config = {
-            mimeType: 'audio/webm;codecs=opus',
-            audioBitsPerSecond: 64000, // 降低比特率减少内存压力
-            timeslice: 200, // 增加时间片减少事件频率
             targetSampleRate: 16000,
             baseChunkSize: 960 * 16,
-            logInterval: 2000, // 每2秒打印一次状态
-            maxErrorCount: 5, // 最大错误次数
-            maxChunkSize: 1024 * 1024 // 最大块大小 1MB
+            maxErrorCount: 5
         };
-        
-        console.log('🎵 ElectronAudioProcessor (安全版本) created');
+
+        console.log('🎵 ElectronAudioProcessor with AudioWorklet created');
     }
-    
+
     async initializeAudio(micStream, websocket) {
         try {
-            console.log('🚀 Starting Electron audio processor (安全版本) initialization...');
-            
+            console.log('🚀 Initializing AudioWorklet-based processor...');
             this.micStream = micStream;
             this.ws = websocket;
+            this.isProcessing = true;
             this.errorCount = 0;
+            this.chunksSentCount = 0;
+            this.resampledBuffer = new Float32Array();
+
+            // 创建AudioContext并检查状态
+            this.audioContext = new AudioContext({ sampleRate: 48000 });
+            console.log('🎙️ AudioContext created, state:', this.audioContext.state);
             
-            // 检查MediaRecorder支持
-            if (!MediaRecorder.isTypeSupported(this.config.mimeType)) {
-                console.warn('⚠️ WebM/Opus not supported, trying fallback...');
-                this.config.mimeType = 'audio/webm';
-                if (!MediaRecorder.isTypeSupported(this.config.mimeType)) {
-                    this.config.mimeType = '';
-                    console.log('📝 Using default MediaRecorder format');
+            // 确保AudioContext处于运行状态
+            if (this.audioContext.state === 'suspended') {
+                console.log('▶️ Resuming suspended AudioContext...');
+                await this.audioContext.resume();
+            }
+            
+            // 在Electron环境中使用正确的模块路径
+            let audioProcessorUrl;
+            try {
+                // 尝试多种URL构建方式
+                if (window.location && window.location.origin) {
+                    audioProcessorUrl = window.location.origin + '/static/audio-processor.js';
+                } else {
+                    // 备用方案
+                    const protocol = window.location.protocol || 'http:';
+                    const host = window.location.host || 'localhost';
+                    audioProcessorUrl = `${protocol}//${host}/static/audio-processor.js`;
+                }
+            } catch (urlError) {
+                console.warn('⚠️ Error building URL, using relative path:', urlError);
+                audioProcessorUrl = '/static/audio-processor.js';
+            }
+            
+            console.log('📁 Loading AudioWorklet module from:', audioProcessorUrl);
+            
+            // 添加重试机制加载AudioWorklet模块
+            let retryCount = 0;
+            const maxRetries = 3;
+            
+            while (retryCount < maxRetries) {
+                try {
+                    await this.audioContext.audioWorklet.addModule(audioProcessorUrl);
+                    console.log('✅ AudioWorklet module loaded successfully');
+                    break;
+                } catch (moduleError) {
+                    retryCount++;
+                    console.warn(`⚠️ AudioWorklet module load attempt ${retryCount} failed:`, moduleError);
+                    
+                    if (retryCount >= maxRetries) {
+                        throw new Error(`Failed to load AudioWorklet module after ${maxRetries} attempts: ${moduleError.message}`);
+                    }
+                    
+                    // 等待一小段时间后重试
+                    await new Promise(resolve => setTimeout(resolve, 200));
                 }
             }
             
-            console.log(`🎵 MediaRecorder format: ${this.config.mimeType || 'default'}`);
-            
-            // 创建MediaRecorder with 安全配置
-            const options = {
-                audioBitsPerSecond: this.config.audioBitsPerSecond
+            console.log('🔧 Creating AudioWorkletNode...');
+            this.workletNode = new AudioWorkletNode(this.audioContext, 'pcm-processor');
+
+            this.sourceNode = this.audioContext.createMediaStreamSource(micStream);
+            this.sourceNode.connect(this.workletNode);
+            this.workletNode.connect(this.audioContext.destination);
+
+            const resampleRatio = this.config.targetSampleRate / this.audioContext.sampleRate;
+            // 使用全局延迟倍数（与传统浏览器方式保持一致）
+            const currentLatencyMultiplier = (typeof window !== 'undefined' && window.currentLatencyMultiplier) ? window.currentLatencyMultiplier : 2;
+            const targetChunkSize = this.config.baseChunkSize * currentLatencyMultiplier;
+            console.log(`🎯 AudioWorklet using latency multiplier: ${currentLatencyMultiplier}x, target chunk size: ${targetChunkSize}`);
+
+            // 添加本地缓冲区来模拟ScriptProcessor的行为
+            let localAudioBuffer = new Float32Array();
+            const SCRIPT_PROCESSOR_BUFFER_SIZE = 4096; // 与传统浏览器方式保持一致
+
+            this.workletNode.port.onmessage = (event) => {
+                if (!this.isProcessing || !event.data) return;
+
+                const input = event.data;
+                
+                // 将新数据添加到本地缓冲区
+                const newLocalBuffer = new Float32Array(localAudioBuffer.length + input.length);
+                newLocalBuffer.set(localAudioBuffer);
+                newLocalBuffer.set(input, localAudioBuffer.length);
+                localAudioBuffer = newLocalBuffer;
+
+                // 当本地缓冲区达到ScriptProcessor的大小时才处理
+                while (localAudioBuffer.length >= SCRIPT_PROCESSOR_BUFFER_SIZE) {
+                    const processingChunk = localAudioBuffer.slice(0, SCRIPT_PROCESSOR_BUFFER_SIZE);
+                    localAudioBuffer = localAudioBuffer.slice(SCRIPT_PROCESSOR_BUFFER_SIZE);
+
+                    // 保持与传统浏览器方式一致，处理所有音频数据
+
+                    // 重采样处理（与传统浏览器方式完全一致）
+                    const resampledLength = Math.floor(processingChunk.length * resampleRatio);
+                    const resampledChunk = new Float32Array(resampledLength);
+                    for (let i = 0; i < resampledLength; i++) {
+                        const originalIndex = Math.floor(i / resampleRatio);
+                        resampledChunk[i] = processingChunk[originalIndex];
+                    }
+
+                    const newBuffer = new Float32Array(this.resampledBuffer.length + resampledChunk.length);
+                    newBuffer.set(this.resampledBuffer);
+                    newBuffer.set(resampledChunk, this.resampledBuffer.length);
+                    this.resampledBuffer = newBuffer;
+
+                    while (this.resampledBuffer.length >= targetChunkSize) {
+                        const chunk = this.resampledBuffer.slice(0, targetChunkSize);
+                        try {
+                            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                                this.ws.send(chunk.buffer);
+                                this.chunksSentCount++;
+                                if (this.chunksSentCount % 5 === 0) {
+                                    console.log(`✅ Sent chunk #${this.chunksSentCount} (${chunk.byteLength} bytes) [BufferMode]`);
+                                }
+                            }
+                        } catch (err) {
+                            this.handleError('send_chunk', err);
+                        }
+                        this.resampledBuffer = this.resampledBuffer.slice(targetChunkSize);
+                    }
+                }
             };
-            
-            if (this.config.mimeType) {
-                options.mimeType = this.config.mimeType;
-            }
-            
-            this.mediaRecorder = new MediaRecorder(micStream, options);
-            console.log(`🔧 MediaRecorder created with safe options:`, options);
-            
-            // 设置事件处理器
-            this.setupMediaRecorderEvents();
-            
-            // 开始录制
-            this.mediaRecorder.start(this.config.timeslice);
-            console.log(`✅ MediaRecorder started with timeslice: ${this.config.timeslice}ms`);
-            
-            this.isProcessing = true;
-            console.log('🎉 Electron audio processor (安全版本) initialized successfully!');
-            
-            // 开始状态监控
-            this.startStatusMonitoring();
-            
+
+            console.log('🎉 AudioWorkletNode processor initialized!');
             return true;
         } catch (error) {
-            console.error('❌ Error initializing Electron audio processor:', error);
+            console.error('❌ Error initializing AudioWorklet processor:', error);
+            console.log('🔄 Attempting fallback to ScriptProcessor...');
+            
+            try {
+                return await this.initializeWithScriptProcessor(micStream, websocket);
+            } catch (fallbackError) {
+                console.error('❌ Fallback ScriptProcessor also failed:', fallbackError);
+                this.cleanup();
+                throw new Error(`Both AudioWorklet and ScriptProcessor failed. AudioWorklet: ${error.message}, ScriptProcessor: ${fallbackError.message}`);
+            }
+        }
+    }
+
+    async initializeWithScriptProcessor(micStream, websocket) {
+        console.log('🔧 Initializing with ScriptProcessor fallback...');
+        
+        try {
+            // 清理之前的AudioContext
+            if (this.audioContext) {
+                try {
+                    await this.audioContext.close();
+                } catch (e) {
+                    console.warn('⚠️ Error closing previous AudioContext:', e);
+                }
+            }
+            
+            this.micStream = micStream;
+            this.ws = websocket;
+            this.isProcessing = true;
+            this.errorCount = 0;
+            this.chunksSentCount = 0;
+            this.resampledBuffer = new Float32Array();
+
+            // 创建新的AudioContext
+            this.audioContext = new AudioContext({ sampleRate: 48000 });
+            console.log('🎙️ AudioContext created for ScriptProcessor, state:', this.audioContext.state);
+            
+            if (this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
+            }
+
+            // 使用ScriptProcessor代替AudioWorklet
+            const scriptProcessor = this.audioContext.createScriptProcessor(4096, 1, 1);
+            this.workletNode = scriptProcessor; // 保持接口一致性
+            
+            this.sourceNode = this.audioContext.createMediaStreamSource(micStream);
+            this.sourceNode.connect(scriptProcessor);
+            scriptProcessor.connect(this.audioContext.destination);
+
+            const resampleRatio = this.config.targetSampleRate / this.audioContext.sampleRate;
+            // 使用全局延迟倍数（与传统浏览器方式保持一致）
+            const currentLatencyMultiplier = (typeof window !== 'undefined' && window.currentLatencyMultiplier) ? window.currentLatencyMultiplier : 2;
+            const targetChunkSize = this.config.baseChunkSize * currentLatencyMultiplier;
+            console.log(`🎯 ScriptProcessor using latency multiplier: ${currentLatencyMultiplier}x, target chunk size: ${targetChunkSize}`);
+
+            // ScriptProcessor使用onaudioprocess而不是port.onmessage
+            scriptProcessor.onaudioprocess = (event) => {
+                if (!this.isProcessing) return;
+
+                const inputData = event.inputBuffer.getChannelData(0);
+                
+                // 重采样逻辑与AudioWorklet相同
+                const resampledLength = Math.floor(inputData.length * resampleRatio);
+                const resampledChunk = new Float32Array(resampledLength);
+                for (let i = 0; i < resampledLength; i++) {
+                    const originalIndex = Math.floor(i / resampleRatio);
+                    resampledChunk[i] = inputData[originalIndex];
+                }
+
+                const newBuffer = new Float32Array(this.resampledBuffer.length + resampledChunk.length);
+                newBuffer.set(this.resampledBuffer);
+                newBuffer.set(resampledChunk, this.resampledBuffer.length);
+                this.resampledBuffer = newBuffer;
+
+                while (this.resampledBuffer.length >= targetChunkSize) {
+                    const chunk = this.resampledBuffer.slice(0, targetChunkSize);
+                    try {
+                        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                            this.ws.send(chunk.buffer);
+                            this.chunksSentCount++;
+                            if (this.chunksSentCount % 5 === 0) {
+                                console.log(`✅ Sent chunk #${this.chunksSentCount} (${chunk.byteLength} bytes) via ScriptProcessor`);
+                            }
+                        }
+                    } catch (err) {
+                        this.handleError('send_chunk', err);
+                    }
+                    this.resampledBuffer = this.resampledBuffer.slice(targetChunkSize);
+                }
+            };
+
+            console.log('🎉 ScriptProcessor fallback initialized successfully!');
+            return true;
+        } catch (error) {
+            console.error('❌ Error initializing ScriptProcessor fallback:', error);
             this.cleanup();
             throw error;
         }
     }
-    
-    setupMediaRecorderEvents() {
-        console.log('🎵 Setting up MediaRecorder event handlers...');
-        
-        this.mediaRecorder.ondataavailable = (event) => {
-            try {
-                this.dataAvailableCount++;
-                
-                // 每2秒打印一次详细状态
-                const now = Date.now();
-                if (now - this.lastLogTime >= this.config.logInterval) {
-                    console.log(`🎵 MediaRecorder dataavailable event #${this.dataAvailableCount}`);
-                    console.log(`📡 WebSocket state: ${this.ws ? this.ws.readyState : 'null'} (1=OPEN)`);
-                    console.log(`🔧 MediaRecorder state: ${this.mediaRecorder ? this.mediaRecorder.state : 'null'}`);
-                    console.log(`❌ Error count: ${this.errorCount}/${this.config.maxErrorCount}`);
-                    this.lastLogTime = now;
-                }
-                
-                if (event.data && event.data.size > 0) {
-                    // 检查数据大小是否合理
-                    if (event.data.size > this.config.maxChunkSize) {
-                        console.warn(`⚠️ Audio chunk too large: ${event.data.size} bytes, skipping`);
-                        return;
-                    }
-                    
-                    console.log(`🎤 Got audio data: size=${event.data.size} bytes, type=${event.data.type}`);
-                    
-                    // 异步处理音频数据，避免阻塞
-                    this.processAudioBlobSafely(event.data);
-                } else {
-                    console.log(`🔇 No audio data in event (size: ${event.data ? event.data.size : 'null'})`);
-                }
-            } catch (error) {
-                this.handleError('ondataavailable', error);
-            }
-        };
-        
-        this.mediaRecorder.onstart = () => {
-            console.log('🎬 MediaRecorder started');
-            this.errorCount = 0; // 重置错误计数
-        };
-        
-        this.mediaRecorder.onstop = () => {
-            console.log('🛑 MediaRecorder stopped');
-        };
-        
-        this.mediaRecorder.onerror = (event) => {
-            this.handleError('MediaRecorder', event.error);
-        };
-        
-        this.mediaRecorder.onpause = () => {
-            console.log('⏸️ MediaRecorder paused');
-        };
-        
-        this.mediaRecorder.onresume = () => {
-            console.log('▶️ MediaRecorder resumed');
-        };
-        
-        console.log('✅ MediaRecorder event handlers configured');
-    }
-    
-    async processAudioBlobSafely(blob) {
-        try {
-            if (!this.isProcessing) {
-                console.log('🛑 Processing stopped, ignoring audio blob');
-                return;
-            }
-            
-            console.log(`🔧 Processing audio blob: size=${blob.size}, type=${blob.type}`);
-            
-            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                // 使用setTimeout确保异步处理，避免阻塞主线程
-                setTimeout(async () => {
-                    try {
-                        const arrayBuffer = await blob.arrayBuffer();
-                        console.log(`📦 Converted blob to ArrayBuffer: ${arrayBuffer.byteLength} bytes`);
-                        
-                        // 发送音频数据
-                        if (this.ws && this.ws.readyState === WebSocket.OPEN && this.isProcessing) {
-                            this.ws.send(arrayBuffer);
-                            this.chunksSentCount++;
-                            console.log(`✅ Sent audio blob #${this.chunksSentCount} (${arrayBuffer.byteLength} bytes)`);
-                        } else {
-                            console.warn(`⚠️ Cannot send audio: WebSocket state changed to ${this.ws ? this.ws.readyState : 'null'}`);
-                        }
-                    } catch (error) {
-                        this.handleError('processAudioBlob async', error);
-                    }
-                }, 0);
-            } else {
-                console.warn(`⚠️ Cannot send audio: WebSocket state is ${this.ws ? this.ws.readyState : 'null'}`);
-            }
-            
-        } catch (error) {
-            this.handleError('processAudioBlob', error);
-        }
-    }
-    
+
     handleError(source, error) {
         this.errorCount++;
         console.error(`❌ Error in ${source} (#${this.errorCount}):`, error);
-        
         if (this.errorCount >= this.config.maxErrorCount) {
             console.error(`🚨 Too many errors (${this.errorCount}), stopping audio processor`);
             this.stop();
-            
-            // 通知上层应用
             if (typeof window !== 'undefined' && window.updateStatus) {
                 window.updateStatus('Audio processing failed due to too many errors', 'error');
             }
         }
     }
-    
-    startStatusMonitoring() {
-        console.log('📊 Starting status monitoring...');
-        
-        const monitor = () => {
-            if (!this.isProcessing) {
-                console.log('📊 Status monitoring stopped');
-                return;
-            }
-            
-            try {
-                console.log(`📊 Status Report:`);
-                console.log(`   - Data available events: ${this.dataAvailableCount}`);
-                console.log(`   - Chunks sent: ${this.chunksSentCount}`);
-                console.log(`   - Errors: ${this.errorCount}/${this.config.maxErrorCount}`);
-                console.log(`   - WebSocket state: ${this.ws ? this.ws.readyState : 'null'}`);
-                console.log(`   - MediaRecorder state: ${this.mediaRecorder ? this.mediaRecorder.state : 'null'}`);
-                console.log(`   - Processing: ${this.isProcessing}`);
-                
-                // 检查是否有问题
-                if (this.dataAvailableCount === 0) {
-                    console.warn('⚠️ WARNING: No dataavailable events received! MediaRecorder may not be working.');
-                }
-                
-                if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
-                    console.warn(`⚠️ WARNING: WebSocket not open (state: ${this.ws.readyState})`);
-                }
-                
-                if (this.mediaRecorder && this.mediaRecorder.state !== 'recording') {
-                    console.warn(`⚠️ WARNING: MediaRecorder not recording (state: ${this.mediaRecorder.state})`);
-                }
-                
-                // 检查错误率
-                if (this.errorCount > 0) {
-                    console.warn(`⚠️ WARNING: ${this.errorCount} errors occurred`);
-                }
-                
-                // 5秒后再次检查
-                if (this.isProcessing) {
-                    setTimeout(monitor, 5000);
-                }
-            } catch (error) {
-                console.error('❌ Error in status monitoring:', error);
-            }
-        };
-        
-        // 3秒后开始监控，给初始化更多时间
-        setTimeout(monitor, 3000);
-    }
-    
+
     stop() {
         console.log('🛑 Stopping Electron audio processor...');
-        
         this.isProcessing = false;
-        
-        // 打印最终统计
-        console.log(`📊 Final Statistics:`);
-        console.log(`   - Total dataavailable events: ${this.dataAvailableCount}`);
-        console.log(`   - Total chunks sent: ${this.chunksSentCount}`);
-        console.log(`   - Total errors: ${this.errorCount}`);
-        
+
+        if (this.resampledBuffer && this.resampledBuffer.length > 0) {
+            const currentLatencyMultiplier = (typeof window !== 'undefined' && window.currentLatencyMultiplier) ? window.currentLatencyMultiplier : 2;
+            const finalChunkSize = this.config.baseChunkSize * currentLatencyMultiplier;
+            const finalChunk = new Float32Array(finalChunkSize);
+            finalChunk.set(this.resampledBuffer.slice(0, finalChunkSize));
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(finalChunk.buffer);
+                console.log(`✅ Sent final partial chunk (${finalChunk.byteLength} bytes)`);
+            }
+        }
+
         this.cleanup();
-        
         console.log('✅ Electron audio processor stopped');
     }
-    
+
     cleanup() {
         console.log('🧹 Cleaning up audio processor resources...');
-        
-        // 停止MediaRecorder
-        if (this.mediaRecorder) {
-            try {
-                if (this.mediaRecorder.state === 'recording') {
-                    this.mediaRecorder.stop();
-                    console.log('✅ MediaRecorder stopped');
-                }
-            } catch (e) {
-                console.error('❌ Error stopping MediaRecorder:', e);
-            }
-            this.mediaRecorder = null;
-        }
-        
-        // 清理资源
-        this.audioChunks = [];
         this.ws = null;
         this.micStream = null;
-        
+
+        if (this.sourceNode) {
+            try { this.sourceNode.disconnect(); } catch (e) {}
+            this.sourceNode = null;
+        }
+        if (this.workletNode) {
+            try { this.workletNode.disconnect(); } catch (e) {}
+            this.workletNode = null;
+        }
+        if (this.audioContext) {
+            try { this.audioContext.close(); } catch (e) {}
+            this.audioContext = null;
+        }
+
         console.log('✅ Audio processor cleanup completed');
     }
 }
 
-// 导出给全局使用
 window.ElectronAudioProcessor = ElectronAudioProcessor;
-console.log('🎵 ElectronAudioProcessor (安全版本) class loaded and available globally'); 
+console.log('🎵 ElectronAudioProcessor with AudioWorklet loaded globally');

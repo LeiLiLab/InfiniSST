@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>基础麦克风测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #1a1a2e; color: white; }
+        button { padding: 10px 20px; margin: 10px; font-size: 16px; }
+        .status { margin: 10px 0; padding: 10px; background: #333; border-radius: 5px; }
+        .success { background: #4caf50; }
+        .error { background: #f44336; }
+    </style>
+</head>
+<body>
+    <h1>基础麦克风测试</h1>
+    <p>这个测试只获取麦克风权限，不做任何音频处理</p>
+    
+    <button onclick="testMicAccess()">测试麦克风权限</button>
+    <button onclick="stopMic()">停止麦克风</button>
+    
+    <div id="status" class="status">等待测试...</div>
+    
+    <script>
+        let micStream = null;
+        
+        function updateStatus(message, type = '') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + type;
+            console.log(message);
+        }
+        
+        async function testMicAccess() {
+            try {
+                updateStatus('请求麦克风权限...', '');
+                
+                micStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+                
+                updateStatus('✅ 麦克风权限获取成功！', 'success');
+                console.log('麦克风流:', micStream);
+                console.log('音频轨道:', micStream.getAudioTracks());
+                
+                // 只是获取权限，不做任何处理
+                
+            } catch (error) {
+                updateStatus('❌ 麦克风权限获取失败: ' + error.message, 'error');
+                console.error('麦克风错误:', error);
+            }
+        }
+        
+        function stopMic() {
+            if (micStream) {
+                micStream.getTracks().forEach(track => {
+                    track.stop();
+                    console.log('停止音频轨道:', track);
+                });
+                micStream = null;
+                updateStatus('麦克风已停止', '');
+            } else {
+                updateStatus('没有活动的麦克风流', '');
+            }
+        }
+        
+        // 页面卸载时清理
+        window.addEventListener('beforeunload', stopMic);
+    </script>
+</body>
+</html> 

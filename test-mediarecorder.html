@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MediaRecorder测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #1a1a2e; color: white; }
+        button { padding: 10px 20px; margin: 10px; font-size: 16px; }
+        .status { margin: 10px 0; padding: 10px; background: #333; border-radius: 5px; }
+        .success { background: #4caf50; }
+        .error { background: #f44336; }
+    </style>
+</head>
+<body>
+    <h1>MediaRecorder测试</h1>
+    <p>使用现代MediaRecorder API替代ScriptProcessorNode</p>
+    
+    <button onclick="startRecording()">开始录音</button>
+    <button onclick="stopRecording()">停止录音</button>
+    
+    <div id="status" class="status">等待测试...</div>
+    
+    <script>
+        let micStream = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        
+        function updateStatus(message, type = '') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + type;
+            console.log(message);
+        }
+        
+        async function startRecording() {
+            try {
+                updateStatus('获取麦克风权限...', '');
+                
+                micStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        sampleRate: 16000  // 尝试设置目标采样率
+                    }
+                });
+                
+                updateStatus('创建MediaRecorder...', '');
+                
+                // 检查支持的MIME类型
+                const mimeTypes = [
+                    'audio/webm;codecs=opus',
+                    'audio/webm',
+                    'audio/mp4',
+                    'audio/wav'
+                ];
+                
+                let selectedMimeType = '';
+                for (const mimeType of mimeTypes) {
+                    if (MediaRecorder.isTypeSupported(mimeType)) {
+                        selectedMimeType = mimeType;
+                        break;
+                    }
+                }
+                
+                console.log('支持的MIME类型:', selectedMimeType);
+                
+                mediaRecorder = new MediaRecorder(micStream, {
+                    mimeType: selectedMimeType,
+                    audioBitsPerSecond: 128000
+                });
+                
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                        console.log('收到音频数据块:', event.data.size, 'bytes');
+                        updateStatus(`录音中... 已收集 ${audioChunks.length} 个数据块`, 'success');
+                    }
+                };
+                
+                mediaRecorder.onstop = () => {
+                    console.log('录音停止，总共收集了', audioChunks.length, '个数据块');
+                    updateStatus(`录音完成，收集了 ${audioChunks.length} 个数据块`, 'success');
+                };
+                
+                mediaRecorder.onerror = (error) => {
+                    console.error('MediaRecorder错误:', error);
+                    updateStatus('录音错误: ' + error.error, 'error');
+                };
+                
+                // 开始录音，每100ms产生一个数据块
+                mediaRecorder.start(100);
+                updateStatus('✅ 录音开始！', 'success');
+                
+            } catch (error) {
+                updateStatus('❌ 录音失败: ' + error.message, 'error');
+                console.error('录音错误:', error);
+            }
+        }
+        
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                updateStatus('正在停止录音...', '');
+            } else {
+                updateStatus('没有活动的录音', '');
+            }
+            
+            if (micStream) {
+                micStream.getTracks().forEach(track => track.stop());
+                micStream = null;
+            }
+        }
+        
+        // 页面卸载时清理
+        window.addEventListener('beforeunload', stopRecording);
+    </script>
+</body>
+</html> 
