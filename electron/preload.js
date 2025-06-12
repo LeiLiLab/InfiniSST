@@ -40,6 +40,10 @@ try {
     // 重置翻译
     resetTranslation: () => ipcRenderer.invoke('reset-translation-from-window'),
     
+    // 麦克风权限管理
+    checkMicrophonePermission: () => ipcRenderer.invoke('check-microphone-permission'),
+    requestMicrophonePermission: () => ipcRenderer.invoke('request-microphone-permission'),
+    
     // 监听翻译窗口事件（用于翻译窗口）
     onTranslationUpdate: (callback) => {
       ipcRenderer.on('translation-update', callback);

@@ -28,7 +28,10 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
-      webSecurity: false
+      webSecurity: false,
+      // 允许媒体访问
+      allowRunningInsecureContent: true,
+      experimentalFeatures: true
     },
     show: false
   });
@@ -191,6 +194,20 @@ ipcMain.handle('update-translation-status', (event, statusData) => {
   } else {
     console.log('Translation window not available for status update');
   }
+});
+
+// 处理媒体权限请求
+app.on('web-contents-created', (event, contents) => {
+  contents.on('media-access-permission-request', (event, origin, mediaType, callback) => {
+    console.log(`Media access permission requested: ${mediaType} from ${origin}`);
+    // 自动允许麦克风访问
+    if (mediaType === 'microphone') {
+      console.log('Granting microphone permission');
+      callback(true);
+    } else {
+      callback(false);
+    }
+  });
 });
 
 // 应用事件

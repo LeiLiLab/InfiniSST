@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, dialog, shell, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, dialog, shell, ipcMain, systemPreferences } = require('electron');
 const path = require('path');
 const isDev = process.env.ELECTRON_IS_DEV === 'true' || require('electron-is-dev');
 
@@ -381,6 +381,46 @@ async function showServerConfigDialog() {
   });
 }
 
+// 请求麦克风权限 (macOS)
+async function requestMicrophonePermission() {
+  if (process.platform === 'darwin') {
+    try {
+      console.log('Requesting microphone permission on macOS...');
+      const microphonePermission = await systemPreferences.askForMediaAccess('microphone');
+      console.log('Microphone permission granted:', microphonePermission);
+      
+      if (!microphonePermission) {
+        console.warn('Microphone permission denied by user');
+        const result = await dialog.showMessageBox(mainWindow, {
+          type: 'warning',
+          title: 'Microphone Permission Required',
+          message: 'InfiniSST needs microphone access to provide real-time translation.',
+          detail: 'Please grant microphone permission in System Preferences > Security & Privacy > Privacy > Microphone, then restart the application.',
+          buttons: ['Open System Preferences', 'Continue Without Microphone', 'Quit'],
+          defaultId: 0
+        });
+        
+        if (result.response === 0) {
+          // 打开系统偏好设置
+          shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone');
+        } else if (result.response === 2) {
+          app.quit();
+          return false;
+        }
+      }
+      
+      return microphonePermission;
+    } catch (error) {
+      console.error('Error requesting microphone permission:', error);
+      return false;
+    }
+  } else {
+    // 非macOS平台，假设权限已授予
+    console.log('Non-macOS platform, assuming microphone permission is available');
+    return true;
+  }
+}
+
 // 测试后端连接
 function testBackendConnection(url, maxAttempts = 3) {
   return new Promise((resolve) => {
@@ -580,7 +620,10 @@ function createMenu() {
 }
 
 // 应用准备就绪
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // 在创建窗口之前请求麦克风权限
+  await requestMicrophonePermission();
+  
   createWindow();
 
   app.on('activate', () => {
@@ -600,6 +643,27 @@ app.on('window-all-closed', () => {
 // IPC 处理
 ipcMain.handle('get-backend-url', () => {
   return backendUrl;
+});
+
+// 检查麦克风权限状态
+ipcMain.handle('check-microphone-permission', async () => {
+  if (process.platform === 'darwin') {
+    try {
+      const status = systemPreferences.getMediaAccessStatus('microphone');
+      console.log('Current microphone permission status:', status);
+      return status;
+    } catch (error) {
+      console.error('Error checking microphone permission:', error);
+      return 'unknown';
+    }
+  } else {
+    return 'granted'; // 非macOS平台假设已授权
+  }
+});
+
+// 请求麦克风权限
+ipcMain.handle('request-microphone-permission', async () => {
+  return await requestMicrophonePermission();
 });
 
 ipcMain.handle('show-open-dialog', async () => {

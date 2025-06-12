@@ -511,6 +511,8 @@
     </style>
 </head>
 <body>
+    <!-- Electron专用音频处理器 -->
+    <script src="/static/electron-audio-fix.js"></script>
     <div class="container">
         <div class="header">
             <h1>InfiniSST Translation Demo</h1>
@@ -672,6 +674,7 @@
         let isMicRecording = false;
         let audioElementConnected = false;
         let currentMediaElement = null;
+        let audioProcessingActive = false; // 全局音频处理状态标志
 
         // Panel dragging variables
         let isDragging = false;
@@ -712,6 +715,7 @@
         let isElectron = false;
         let serverConfig = null; // 添加服务器配置
         let translationWindowShown = false; // 跟踪翻译窗口状态
+        let electronAudioProcessor = null; // Electron专用音频处理器
 
         // 检测是否在 Electron 环境中运行
         if (typeof window !== 'undefined' && window.electronAPI) {
@@ -1622,6 +1626,33 @@
                 
                 console.log('Starting microphone with session ID:', sessionId);
                 
+                // 在Electron环境中检查麦克风权限
+                if (isElectron && window.electronAPI) {
+                    console.log('Checking microphone permission in Electron...');
+                    try {
+                        const permissionStatus = await window.electronAPI.checkMicrophonePermission();
+                        console.log('Microphone permission status:', permissionStatus);
+                        
+                        if (permissionStatus === 'denied') {
+                            updateStatus('Microphone permission denied. Please grant permission in System Preferences.', 'error');
+                            micStatus.textContent = 'Microphone permission denied. Please check System Preferences.';
+                            return;
+                        } else if (permissionStatus === 'unknown' || permissionStatus === 'not-determined') {
+                            console.log('Requesting microphone permission...');
+                            updateStatus('Requesting microphone permission...', 'processing');
+                            const granted = await window.electronAPI.requestMicrophonePermission();
+                            if (!granted) {
+                                updateStatus('Microphone permission denied. Please grant permission and restart the app.', 'error');
+                                micStatus.textContent = 'Microphone permission denied.';
+                                return;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error checking microphone permission:', error);
+                        // 继续执行，可能是旧版本的Electron或其他问题
+                    }
+                }
+                
                 // Show translation panel
                 showPanel();
                 
@@ -1652,13 +1683,28 @@
                 ws = new WebSocket(wsUrl);
                 
                 ws.onmessage = (event) => {
-                    console.log('WebSocket message received:', event.data);
+                    const message = event.data;
+                    console.log('WebSocket message received:', message);
+
+                    // 处理控制消息
+                    if (typeof message === 'string' && message.startsWith('INITIALIZING:')) {
+                        updateStatus(message.substring('INITIALIZING:'.length).trim(), 'processing');
+                        return;
+                    } else if (typeof message === 'string' && message.startsWith('READY:')) {
+                        updateStatus('Model is ready. Processing audio...', 'processing');
+                        return;
+                    } else if (typeof message === 'string' && message.startsWith('ERROR:')) {
+                        updateStatus(message, 'error');
+                        return;
+                    }
+                    
+                    // 处理翻译结果
                     if (isElectron) {
                         // 在Electron环境中只更新独立翻译窗口
-                        updateElectronTranslation(event.data);
+                        updateElectronTranslation(message);
                     } else {
                         // 在浏览器环境中更新主窗口面板
-                        translationOutput.textContent = event.data;
+                        translationOutput.textContent = message;
                         scrollTranslationToBottom();
                     }
                 };
@@ -1671,17 +1717,53 @@
                     stopMicrophone(false);
                 };
                 
-                ws.onclose = (event) => {
-                    console.log('WebSocket closed:', event.code, event.reason);
-                    if (event.code !== 1000) { // Not a normal closure
-                        updateStatus('Connection lost: ' + (event.reason || 'Unknown error'), 'error');
-                    }
-                };
+                // ws.onclose = (event) => {
+                //     console.log('WebSocket closed:', event.code, event.reason);
+                //     if (event.code !== 1000) { // Not a normal closure
+                //         const errorMsg = `Connection lost: ${event.code} - ${event.reason || 'Unknown error'}`;
+                //         updateStatus(errorMsg, 'error');
+                //         console.error('WebSocket connection error:', errorMsg);
+                //     } else {
+                //         console.log('WebSocket closed normally');
+                //     }
+                // };
                 
-                ws.onopen = () => {
+                ws.onopen = async () => {
                     console.log('WebSocket connected successfully');
                     
                     try {
+                        // 在Electron环境中使用专用音频处理器
+                        if (isElectron && window.ElectronAudioProcessor) {
+                            console.log('🎵 Using Electron-specific audio processor...');
+                            
+                            // 确保没有其他音频处理在运行
+                            if (audioContext) {
+                                try {
+                                    await audioContext.close();
+                                    audioContext = null;
+                                    console.log('🧹 Closed existing AudioContext');
+                                } catch (e) {
+                                    console.warn('⚠️ Error closing existing AudioContext:', e);
+                                }
+                            }
+                            
+                            // 禁用全局音频处理标志
+                            audioProcessingActive = false;
+                            
+                            electronAudioProcessor = new window.ElectronAudioProcessor();
+                            await electronAudioProcessor.initializeAudio(micStream, ws);
+                            
+                            // 设置UI状态
+                            translationPaused = false;
+                            updateMicrophoneUI(true);
+                            updateStatus('Translating from microphone...', 'processing');
+                            resetIdleTimer();
+                            
+                            console.log('✅ Electron audio processor initialized, skipping traditional processing');
+                            return; // 使用Electron处理器，完全跳过传统处理
+                        }
+                        
+                        // 传统浏览器处理方式
                         console.log('Creating AudioContext...');
                         audioContext = new AudioContext();
                         console.log('AudioContext created with sample rate:', audioContext.sampleRate);
@@ -1702,6 +1784,7 @@
                             if (ws && ws.readyState === WebSocket.OPEN) {
                                 const inputData = e.inputBuffer.getChannelData(0);
                                 
+                                // 音量检测
                                 let hasSound = false;
                                 let volumeSum = 0;
                                 for (let i = 0; i < inputData.length; i++) {
@@ -1720,6 +1803,7 @@
                                     resetIdleTimer();
                                 }
                                 
+                                // 重采样
                                 const resampledLength = Math.floor(inputData.length * resampleRatio);
                                 const resampledChunk = new Float32Array(resampledLength);
                                 
@@ -1816,7 +1900,54 @@
             }
         }
 
+        // 辅助函数：更新麦克风UI状态
+        function updateMicrophoneUI(isRecording) {
+            if (isRecording) {
+                toggleMic.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>
+                    </svg>
+                    Pause Microphone
+                `;
+                toggleMic.classList.add('recording');
+                micStatus.textContent = 'Microphone active. Speaking will be translated in real-time.';
+                volumeIndicator.classList.remove('hidden');
+                isMicRecording = true;
+            } else {
+                toggleMic.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>
+                    </svg>
+                    Record Audio
+                `;
+                toggleMic.classList.remove('recording');
+                micStatus.textContent = '';
+                volumeIndicator.classList.add('hidden');
+                isMicRecording = false;
+            }
+        }
+
         function stopMicrophone(isManualPause = false) {
+            console.log('🛑 Stopping microphone...');
+            
+            // 如果使用Electron音频处理器，优先停止它
+            if (electronAudioProcessor) {
+                console.log('🧹 Stopping Electron audio processor...');
+                try {
+                    electronAudioProcessor.stop();
+                    electronAudioProcessor = null;
+                    console.log('✅ Electron audio processor stopped');
+                } catch (error) {
+                    console.error('❌ Error stopping Electron audio processor:', error);
+                }
+            }
+            
+            // 立即停止音频处理
+            if (typeof audioProcessingActive !== 'undefined') {
+                audioProcessingActive = false;
+                console.log('🚫 Audio processing disabled');
+            }
+            
             if (ws && ws.readyState === WebSocket.OPEN && resampledBuffer.length > 0) {
                 const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
                 const finalChunk = new Float32Array(targetChunkSize);
@@ -1872,21 +2003,14 @@
             volumeLevel.style.width = '0%';
             volumeIndicator.classList.add('hidden');
             
-            toggleMic.innerHTML = `
-                <svg class="icon" viewBox="0 0 24 24">
-                    <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>
-                </svg>
-                Record Audio
-            `;
-            toggleMic.classList.remove('recording');
+            // 更新UI状态
+            updateMicrophoneUI(false);
             
             if (isManualPause) {
                 micStatus.textContent = 'Microphone paused.';
             } else {
                 micStatus.textContent = '';
             }
-            
-            isMicRecording = false;
             translationPaused = true;
             translationInitialized = false;
         }
