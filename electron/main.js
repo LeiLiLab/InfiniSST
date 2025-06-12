@@ -687,9 +687,9 @@ function createTranslationWindow() {
 
   translationWindow = new BrowserWindow({
     width: 600,
-    height: 300,
+    height: 180, // 缩短默认高度，约两行内容
     minWidth: 400,
-    minHeight: 200,
+    minHeight: 120, // 减小最小高度
     maxWidth: 1000,
     maxHeight: 600,
     alwaysOnTop: true,
@@ -727,7 +727,7 @@ function createTranslationWindow() {
     setTimeout(() => {
       console.log('Sending initial status to translation window');
       translationWindow.webContents.send('status-update', {
-        text: '翻译窗口已准备就绪，请加载模型开始翻译',
+        text: 'Translation window ready, please load model to start translation',
         type: 'ready'
       });
     }, 200);

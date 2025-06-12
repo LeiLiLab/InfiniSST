@@ -39,6 +39,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            margin-right: 60px; /* 为按钮留出空间，防止被遮挡 */
         }
 
         .status-indicator {
@@ -89,8 +90,16 @@
             background: rgba(255, 255, 255, 0.2);
         }
 
-        .control-btn.close:hover {
-            background: #ff5722;
+        .control-btn.reset {
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+            font-size: 10px;
+            font-weight: 600;
+            width: 40px;
+        }
+
+        .control-btn.reset:hover {
+            background: linear-gradient(45deg, #369ef7 0%, #00d4fe 100%);
+            transform: translateY(-1px);
         }
 
         .content {
@@ -111,12 +120,13 @@
             line-height: 1.5;
             white-space: pre-wrap;
             overflow-y: auto;
-            min-height: 100px;
+            min-height: 60px;
+            max-height: 80px; /* 限制默认高度，约两行内容 */
             color: #ffffff;
         }
 
         .translation-output:empty::before {
-            content: "翻译结果将在这里显示...";
+            content: "Translation will appear here...";
             color: #888;
             font-style: italic;
         }
@@ -187,8 +197,8 @@
             <span id="statusText">Ready</span>
         </div>
         <div class="controls">
-            <button class="control-btn" id="hideBtn" title="隐藏">−</button>
-            <button class="control-btn close" id="closeBtn" title="关闭">×</button>
+            <button class="control-btn reset" id="resetBtn" title="Reset Translation">Reset</button>
+            <button class="control-btn" id="hideBtn" title="Hide Window">−</button>
         </div>
     </div>
 
@@ -197,7 +207,7 @@
     </div>
 
     <div class="opacity-control">
-        <span>透明度</span>
+        <span>Opacity</span>
         <input type="range" class="opacity-slider" id="opacitySlider" min="0.3" max="1" step="0.1" value="0.9">
     </div>
 
@@ -206,8 +216,8 @@
          const statusIndicator = document.getElementById('statusIndicator');
          const statusText = document.getElementById('statusText');
          const translationOutput = document.getElementById('translationOutput');
+         const resetBtn = document.getElementById('resetBtn');
          const hideBtn = document.getElementById('hideBtn');
-         const closeBtn = document.getElementById('closeBtn');
          const opacitySlider = document.getElementById('opacitySlider');
 
          // 检查 electronAPI 是否可用
@@ -237,12 +247,17 @@
             });
 
             // 控制按钮事件
-            hideBtn.addEventListener('click', () => {
-                window.electronAPI.hideTranslationWindow();
+            resetBtn.addEventListener('click', () => {
+                // 清空翻译内容
+                translationOutput.textContent = '';
+                // 调用主窗口的重置函数
+                if (window.electronAPI && window.electronAPI.resetTranslation) {
+                    window.electronAPI.resetTranslation();
+                }
             });
 
-            closeBtn.addEventListener('click', () => {
-                window.electronAPI.closeTranslationWindow();
+            hideBtn.addEventListener('click', () => {
+                window.electronAPI.hideTranslationWindow();
             });
          } else {
              console.warn('electronAPI not available in translation window');
