@@ -19,10 +19,16 @@ class ElectronAudioProcessor {
         console.log('🎵 ElectronAudioProcessor with AudioWorklet created');
     }
 
-    async initializeAudio(micStream, websocket) {
+    async initializeAudio(audioSource, websocket, sourceType = 'microphone') {
         try {
-            console.log('🚀 Initializing AudioWorklet-based processor...');
-            this.micStream = micStream;
+            console.log('🚀 Initializing AudioWorklet-based processor for', sourceType, '...');
+            if (sourceType === 'microphone') {
+                this.micStream = audioSource;
+            } else if (sourceType === 'media') {
+                this.mediaElement = audioSource;
+            }
+            this.audioSource = audioSource;
+            this.sourceType = sourceType;
             this.ws = websocket;
             this.isProcessing = true;
             this.errorCount = 0;
@@ -75,6 +81,7 @@ class ElectronAudioProcessor {
                         throw new Error(`Failed to load AudioWorklet module after ${maxRetries} attempts: ${moduleError.message}`);
                     }
                     
+                    
                     // 等待一小段时间后重试
                     await new Promise(resolve => setTimeout(resolve, 200));
                 }
@@ -83,7 +90,15 @@ class ElectronAudioProcessor {
             console.log('🔧 Creating AudioWorkletNode...');
             this.workletNode = new AudioWorkletNode(this.audioContext, 'pcm-processor');
 
-            this.sourceNode = this.audioContext.createMediaStreamSource(micStream);
+            // Create appropriate source node based on source type
+            if (this.sourceType === 'microphone') {
+                this.sourceNode = this.audioContext.createMediaStreamSource(this.micStream);
+                console.log('📱 Created MediaStreamSource for microphone');
+            } else if (this.sourceType === 'media') {
+                this.sourceNode = this.audioContext.createMediaElementSource(this.mediaElement);
+                console.log('🎵 Created MediaElementSource for media file');
+            }
+            
             this.sourceNode.connect(this.workletNode);
             this.workletNode.connect(this.audioContext.destination);
 
@@ -153,7 +168,7 @@ class ElectronAudioProcessor {
             console.log('🔄 Attempting fallback to ScriptProcessor...');
             
             try {
-                return await this.initializeWithScriptProcessor(micStream, websocket);
+                return await this.initializeWithScriptProcessor(this.audioSource, websocket, this.sourceType);
             } catch (fallbackError) {
                 console.error('❌ Fallback ScriptProcessor also failed:', fallbackError);
                 this.cleanup();
@@ -162,8 +177,8 @@ class ElectronAudioProcessor {
         }
     }
 
-    async initializeWithScriptProcessor(micStream, websocket) {
-        console.log('🔧 Initializing with ScriptProcessor fallback...');
+    async initializeWithScriptProcessor(audioSource, websocket, sourceType = 'microphone') {
+        console.log('🔧 Initializing with ScriptProcessor fallback for', sourceType, '...');
         
         try {
             // 清理之前的AudioContext
@@ -175,7 +190,13 @@ class ElectronAudioProcessor {
                 }
             }
             
-            this.micStream = micStream;
+            if (sourceType === 'microphone') {
+                this.micStream = audioSource;
+            } else if (sourceType === 'media') {
+                this.mediaElement = audioSource;
+            }
+            this.audioSource = audioSource;
+            this.sourceType = sourceType;
             this.ws = websocket;
             this.isProcessing = true;
             this.errorCount = 0;
@@ -194,7 +215,15 @@ class ElectronAudioProcessor {
             const scriptProcessor = this.audioContext.createScriptProcessor(4096, 1, 1);
             this.workletNode = scriptProcessor; // 保持接口一致性
             
-            this.sourceNode = this.audioContext.createMediaStreamSource(micStream);
+            // Create appropriate source node based on source type
+            if (this.sourceType === 'microphone') {
+                this.sourceNode = this.audioContext.createMediaStreamSource(this.micStream);
+                console.log('📱 Created MediaStreamSource for microphone [ScriptProcessor]');
+            } else if (this.sourceType === 'media') {
+                this.sourceNode = this.audioContext.createMediaElementSource(this.mediaElement);
+                console.log('🎵 Created MediaElementSource for media file [ScriptProcessor]');
+            }
+            
             this.sourceNode.connect(scriptProcessor);
             scriptProcessor.connect(this.audioContext.destination);
 
@@ -284,6 +313,9 @@ class ElectronAudioProcessor {
         console.log('🧹 Cleaning up audio processor resources...');
         this.ws = null;
         this.micStream = null;
+        this.mediaElement = null;
+        this.audioSource = null;
+        this.sourceType = null;
 
         if (this.sourceNode) {
             try { this.sourceNode.disconnect(); } catch (e) {}

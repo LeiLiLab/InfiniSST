@@ -26,10 +26,17 @@
             justify-content: space-between;
             align-items: center;
             padding: 8px 16px;
+            padding-left: 80px; /* 为macOS窗口控件留出足够空间 */
             background: rgba(255, 255, 255, 0.1);
             border-bottom: 1px solid rgba(255, 255, 255, 0.2);
             user-select: none;
             -webkit-app-region: drag;
+        }
+
+        /* 在非macOS平台上减少左边距 */
+        body.platform-win32 .header,
+        body.platform-linux .header {
+            padding-left: 16px;
         }
 
         .title {
@@ -39,7 +46,9 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-right: 60px; /* 为按钮留出空间，防止被遮挡 */
+            margin-right: 80px; /* 为右侧按钮留出空间，防止被遮挡 */
+            flex: 1; /* 允许标题区域伸缩 */
+            min-width: 0; /* 防止文字溢出 */
         }
 
         .status-indicator {
@@ -108,6 +117,44 @@
             overflow-y: auto;
             display: flex;
             flex-direction: column;
+            transition: all 0.3s ease;
+        }
+
+        /* 最小化状态 */
+        body.minimized .content {
+            display: none;
+        }
+
+        body.minimized .opacity-control {
+            display: none;
+        }
+
+                /* 最小化时简化标题栏 */
+        body.minimized .header {
+            padding: 4px 16px;
+            padding-left: 80px;
+        }
+
+        /* 非macOS平台最小化时的边距调整 */
+        body.platform-win32.minimized .header,
+        body.platform-linux.minimized .header {
+            padding: 4px 16px;
+            padding-left: 16px;
+        }
+
+        body.minimized .status-indicator {
+            display: none; /* 隐藏状态指示器 */
+        }
+
+        body.minimized #statusText {
+            display: none; /* 隐藏状态文本 */
+        }
+
+        /* 最小化时只显示一个简洁的标题 */
+        body.minimized .title::before {
+            content: "InfiniSST Translation"; /* 显示固定的简洁标题 */
+            font-size: 12px;
+            color: #ffffff;
         }
 
         .translation-output {
@@ -210,6 +257,7 @@
         <span>Opacity</span>
         <input type="range" class="opacity-slider" id="opacitySlider" min="0.3" max="1" step="0.1" value="0.9">
     </div>
+    
 
          <script>
          // DOM 元素
@@ -219,6 +267,36 @@
          const resetBtn = document.getElementById('resetBtn');
          const hideBtn = document.getElementById('hideBtn');
          const opacitySlider = document.getElementById('opacitySlider');
+
+         // 最小化状态追踪
+         let isMinimized = false;
+
+         // 最小化/恢复切换函数
+         function toggleMinimize() {
+             isMinimized = !isMinimized;
+             
+             if (isMinimized) {
+                 // 最小化：隐藏内容，更改按钮
+                 document.body.classList.add('minimized');
+                 hideBtn.innerHTML = '+';
+                 hideBtn.title = 'Restore Window';
+                 
+                 // 调整窗口大小为只显示标题栏
+                 if (window.electronAPI && window.electronAPI.setWindowSize) {
+                     window.electronAPI.setWindowSize(600, 32);
+                 }
+             } else {
+                 // 恢复：显示内容，更改按钮
+                 document.body.classList.remove('minimized');
+                 hideBtn.innerHTML = '−';
+                 hideBtn.title = 'Minimize Window';
+                 
+                 // 恢复窗口大小
+                 if (window.electronAPI && window.electronAPI.setWindowSize) {
+                     window.electronAPI.setWindowSize(600, 180);
+                 }
+             }
+         }
 
          // 检查 electronAPI 是否可用
          if (typeof window !== 'undefined' && window.electronAPI) {
@@ -257,7 +335,7 @@
             });
 
             hideBtn.addEventListener('click', () => {
-                window.electronAPI.hideTranslationWindow();
+                toggleMinimize();
             });
          } else {
              console.warn('electronAPI not available in translation window');

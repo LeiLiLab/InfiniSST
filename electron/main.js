@@ -10,23 +10,15 @@ let mainWindow;
 let translationWindow;
 let backendUrl = null;
 
-// 配置选项
-const CONFIG = {
-  // 远程服务器配置
-  REMOTE_SERVER: {
-    host: process.env.INFINISST_HOST || 'localhost',
-    port: process.env.INFINISST_PORT || 8001,
-    protocol: process.env.INFINISST_PROTOCOL || 'http'
-  },
-  // 开发模式下的默认配置
-  DEV_SERVER: {
-    host: 'infinisst.ngrok.app',
-    port: 443,
-    protocol: 'https'
-  }
+// InfiniSST服务器配置（固定使用ngrok tunnel）
+const INFINISST_SERVER = {
+  protocol: 'https',
+  host: 'infinisst.ngrok.app',
+  port: 443
 };
 
-console.log('CONFIG:', CONFIG);
+console.log('InfiniSST Server:', INFINISST_SERVER);
+
 
 // 创建主窗口
 function createWindow() {
@@ -100,286 +92,52 @@ function createWindow() {
   connectToBackend();
 }
 
-// 连接到后端服务 - 简化版本用于调试
+// 连接到后端服务 - 直接使用ngrok tunnel
 async function connectToBackend() {
   console.log('Starting backend connection...');
   
   try {
-    // 开发模式下直接使用本地服务器配置，跳过对话框
-    if (isDev) {
-      const serverConfig = CONFIG.DEV_SERVER;
-      backendUrl = `${serverConfig.protocol}://${serverConfig.host}:${serverConfig.port}`;
-      console.log(`Using development server: ${backendUrl}`);
+    // 直接使用ngrok tunnel，无需配置对话框
+    backendUrl = `${INFINISST_SERVER.protocol}://${INFINISST_SERVER.host}:${INFINISST_SERVER.port}`;
+    console.log(`Connecting to InfiniSST server at: ${backendUrl}`);
+    
+    // 测试连接
+    console.log('Testing backend connection...');
+    const isConnected = await testBackendConnection(backendUrl);
+    
+    if (!isConnected) {
+      console.error('Backend connection failed');
+      const retry = await dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        title: 'Connection Failed',
+        message: 'Failed to connect to the InfiniSST server',
+        detail: `Could not connect to ${backendUrl}. Please check your internet connection and try again.`,
+        buttons: ['Retry', 'Continue Anyway', 'Quit'],
+        defaultId: 0
+      });
       
-      // 测试连接
-      console.log('Testing backend connection...');
-      const isConnected = await testBackendConnection(backendUrl);
-      
-      if (!isConnected) {
-        console.error('Backend connection failed');
-        const retry = await dialog.showMessageBox(mainWindow, {
-          type: 'error',
-          title: 'Connection Failed',
-          message: 'Failed to connect to the backend server',
-          detail: `Could not connect to ${backendUrl}. Please ensure the API server is running on port 8001.`,
-          buttons: ['Retry', 'Continue Anyway', 'Quit'],
-          defaultId: 0
-        });
-        
-        if (retry.response === 0) {
-          connectToBackend();
-          return;
-        } else if (retry.response === 2) {
-          app.quit();
-          return;
-        }
-        // Continue anyway (response === 1)
-      }
-      
-      // 加载前端页面
-      console.log('Loading main page...');
-      mainWindow.loadURL(backendUrl);
-      
-    } else {
-      // 生产模式显示配置对话框
-      const serverConfig = await showServerConfigDialog();
-      if (!serverConfig) {
+      if (retry.response === 0) {
+        connectToBackend();
+        return;
+      } else if (retry.response === 2) {
         app.quit();
         return;
       }
-
-      backendUrl = `${serverConfig.protocol}://${serverConfig.host}:${serverConfig.port}`;
-      console.log(`Connecting to backend server at: ${backendUrl}`);
-      
-      // 测试连接
-      const isConnected = await testBackendConnection(backendUrl);
-      if (!isConnected) {
-        const retry = await dialog.showMessageBox(mainWindow, {
-          type: 'error',
-          title: 'Connection Failed',
-          message: 'Failed to connect to the backend server',
-          detail: `Could not connect to ${backendUrl}. Please check if the server is running.`,
-          buttons: ['Retry', 'Quit'],
-          defaultId: 0
-        });
-        
-        if (retry.response === 0) {
-          connectToBackend();
-        } else {
-          app.quit();
-        }
-        return;
-      }
-      
-      // 连接成功，加载前端页面
-      mainWindow.loadURL(backendUrl);
+      // Continue anyway (response === 1)
     }
+    
+    // 加载前端页面
+    console.log('Loading main page...');
+    mainWindow.loadURL(backendUrl);
     
   } catch (error) {
     console.error('Error connecting to backend server:', error);
-    dialog.showErrorBox('Connection Error', `Failed to connect to backend server: ${error.message}`);
+    dialog.showErrorBox('Connection Error', `Failed to connect to InfiniSST server: ${error.message}`);
     app.quit();
   }
 }
 
-// 显示服务器配置对话框
-async function showServerConfigDialog() {
-  return new Promise((resolve) => {
-    const configWindow = new BrowserWindow({
-      width: 500,
-      height: 400,
-      modal: true,
-      parent: mainWindow,
-      resizable: false,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false
-      },
-      title: 'Server Configuration'
-    });
 
-    // 创建配置页面内容
-    const configHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Server Configuration</title>
-      <style>
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          padding: 30px;
-          background: #f5f5f5;
-          margin: 0;
-        }
-        .container {
-          background: white;
-          padding: 30px;
-          border-radius: 10px;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h2 {
-          color: #333;
-          margin-bottom: 20px;
-          text-align: center;
-        }
-        .form-group {
-          margin-bottom: 15px;
-        }
-        label {
-          display: block;
-          margin-bottom: 5px;
-          font-weight: 500;
-          color: #555;
-        }
-        input, select {
-          width: 100%;
-          padding: 10px;
-          border: 1px solid #ddd;
-          border-radius: 5px;
-          font-size: 14px;
-          box-sizing: border-box;
-        }
-        .button-group {
-          display: flex;
-          gap: 10px;
-          margin-top: 20px;
-        }
-        button {
-          flex: 1;
-          padding: 12px;
-          border: none;
-          border-radius: 5px;
-          font-size: 14px;
-          cursor: pointer;
-          font-weight: 500;
-        }
-        .btn-primary {
-          background: #007AFF;
-          color: white;
-        }
-        .btn-secondary {
-          background: #8E8E93;
-          color: white;
-        }
-        .btn-primary:hover {
-          background: #0056CC;
-        }
-        .btn-secondary:hover {
-          background: #6D6D70;
-        }
-        .preset-buttons {
-          display: flex;
-          gap: 10px;
-          margin-bottom: 20px;
-        }
-        .preset-btn {
-          padding: 8px 16px;
-          border: 1px solid #007AFF;
-          background: white;
-          color: #007AFF;
-          border-radius: 5px;
-          cursor: pointer;
-          font-size: 12px;
-        }
-        .preset-btn:hover {
-          background: #007AFF;
-          color: white;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <h2>InfiniSST Server Configuration</h2>
-        
-        <div class="preset-buttons">
-          <button class="preset-btn" onclick="setPreset('local')">Local Development</button>
-          <button class="preset-btn" onclick="setPreset('remote')">Remote Server</button>
-          <button class="preset-btn" onclick="setPreset('ngrok')">Ngrok Tunnel</button>
-        </div>
-        
-        <form id="configForm">
-          <div class="form-group">
-            <label for="protocol">Protocol:</label>
-            <select id="protocol">
-              <option value="http">HTTP</option>
-              <option value="https">HTTPS</option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label for="host">Host:</label>
-            <input type="text" id="host" value="${CONFIG.REMOTE_SERVER.host}" placeholder="e.g., your-server.com or 192.168.1.100">
-          </div>
-          
-          <div class="form-group">
-            <label for="port">Port:</label>
-            <input type="number" id="port" value="${CONFIG.REMOTE_SERVER.port}" min="1" max="65535">
-          </div>
-          
-          <div class="button-group">
-            <button type="button" class="btn-secondary" onclick="cancel()">Cancel</button>
-            <button type="submit" class="btn-primary">Connect</button>
-          </div>
-        </form>
-      </div>
-      
-      <script>
-        const { ipcRenderer } = require('electron');
-        
-        function setPreset(type) {
-          const protocolEl = document.getElementById('protocol');
-          const hostEl = document.getElementById('host');
-          const portEl = document.getElementById('port');
-          
-          if (type === 'local') {
-            protocolEl.value = 'http';
-            hostEl.value = 'localhost';
-            portEl.value = '8001';
-          } else if (type === 'remote') {
-            protocolEl.value = 'http';
-            hostEl.value = '';
-            portEl.value = '8001';
-            hostEl.focus();
-          } else if (type === 'ngrok') {
-            protocolEl.value = 'https';
-            hostEl.value = 'infinisst.ngrok.app';
-            portEl.value = '443';
-          }
-        }
-        
-        function cancel() {
-          ipcRenderer.send('config-result', null);
-        }
-        
-        document.getElementById('configForm').addEventListener('submit', (e) => {
-          e.preventDefault();
-          const config = {
-            protocol: document.getElementById('protocol').value,
-            host: document.getElementById('host').value,
-            port: parseInt(document.getElementById('port').value)
-          };
-          ipcRenderer.send('config-result', config);
-        });
-        
-        // 设置默认值
-        document.getElementById('protocol').value = '${CONFIG.REMOTE_SERVER.protocol}';
-      </script>
-    </body>
-    </html>
-    `;
-
-    configWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(configHtml));
-
-    ipcMain.once('config-result', (event, config) => {
-      configWindow.close();
-      resolve(config);
-    });
-
-    configWindow.on('closed', () => {
-      resolve(null);
-    });
-  });
-}
 
 // 请求麦克风权限 (macOS)
 async function requestMicrophonePermission() {
@@ -713,14 +471,15 @@ function createTranslationWindow() {
   translationWindow.once('ready-to-show', () => {
     translationWindow.show();
     
-    // 设置窗口位置到右下角
+    // 设置窗口位置到屏幕中央
     const { screen } = require('electron');
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width, height } = primaryDisplay.workAreaSize;
+    const windowBounds = translationWindow.getBounds();
     
     translationWindow.setPosition(
-      width - translationWindow.getBounds().width - 20,
-      height - translationWindow.getBounds().height - 20
+      Math.floor((width - windowBounds.width) / 2),
+      Math.floor((height - windowBounds.height) / 2)
     );
     
     // 窗口显示后发送初始状态
@@ -813,6 +572,28 @@ ipcMain.handle('reset-translation-from-window', (event) => {
   // 向翻译窗口发送重置确认
   if (translationWindow && translationWindow.webContents) {
     translationWindow.webContents.send('reset-translation');
+  }
+});
+
+// 设置翻译窗口大小
+ipcMain.handle('set-translation-window-size', (event, width, height) => {
+  console.log(`Setting translation window size to: ${width}x${height}`);
+  if (translationWindow) {
+    translationWindow.setSize(width, height);
+    
+    // 确保窗口保持在屏幕中央
+    const { screen } = require('electron');
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+    
+    translationWindow.setPosition(
+      Math.floor((screenWidth - width) / 2),
+      Math.floor((screenHeight - height) / 2)
+    );
+    
+    console.log(`Translation window resized and repositioned`);
+  } else {
+    console.warn('Translation window not available for resizing');
   }
 });
 

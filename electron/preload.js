@@ -32,6 +32,7 @@ try {
     showTranslationWindow: () => ipcRenderer.invoke('show-translation-window'),
     hideTranslationWindow: () => ipcRenderer.invoke('hide-translation-window'),
     closeTranslationWindow: () => ipcRenderer.invoke('close-translation-window'),
+    setWindowSize: (width, height) => ipcRenderer.invoke('set-translation-window-size', width, height),
     
     // 翻译数据更新
     updateTranslation: (translationData) => ipcRenderer.invoke('update-translation', translationData),

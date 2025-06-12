@@ -718,8 +718,15 @@
         let electronAudioProcessor = null; // Electron专用音频处理器
 
         // 检测是否在 Electron 环境中运行
+        console.log('🔍 Environment detection:', {
+            hasWindow: typeof window !== 'undefined',
+            hasElectronAPI: typeof window !== 'undefined' && !!window.electronAPI,
+            hasElectronAudioProcessor: typeof window !== 'undefined' && !!window.ElectronAudioProcessor
+        });
+        
         if (typeof window !== 'undefined' && window.electronAPI) {
             isElectron = true;
+            console.log('✅ Electron environment confirmed');
             
             // 在Electron环境中隐藏主窗口的翻译面板
             const mainTranslationPanel = document.getElementById('translationPanel');
@@ -736,6 +743,17 @@
             };
             
             console.log('Electron environment detected, server config:', serverConfig);
+            
+            // 等待ElectronAudioProcessor加载完成
+            const checkElectronAudioProcessor = () => {
+                if (window.ElectronAudioProcessor) {
+                    console.log('✅ ElectronAudioProcessor is now available');
+                } else {
+                    console.log('⏳ Waiting for ElectronAudioProcessor to load...');
+                    setTimeout(checkElectronAudioProcessor, 100);
+                }
+            };
+            checkElectronAudioProcessor();
             
             // 立即显示独立翻译窗口
             setTimeout(() => {
@@ -824,19 +842,30 @@
 
         // Panel drag functionality
         function initializePanelDragging() {
-            panelHeader.addEventListener('mousedown', startDragging);
-            resizeHandle.addEventListener('mousedown', startResizing);
+            // 检查元素是否存在，防止在Electron环境下出错
+            if (panelHeader) {
+                panelHeader.addEventListener('mousedown', startDragging);
+            }
+            if (resizeHandle) {
+                resizeHandle.addEventListener('mousedown', startResizing);
+            }
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', stopDragging);
 
-            minimizeBtn.addEventListener('click', toggleMinimize);
-            closeBtn.addEventListener('click', closePanel);
+            if (minimizeBtn) {
+                minimizeBtn.addEventListener('click', toggleMinimize);
+            }
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closePanel);
+            }
         }
 
         function startDragging(e) {
             if (e.target === minimizeBtn || e.target === closeBtn || e.target.closest('.panel-btn')) {
                 return;
             }
+            
+            if (!translationPanel) return;
             
             isDragging = true;
             translationPanel.classList.add('dragging');
@@ -855,7 +884,7 @@
         }
 
         function handleMouseMove(e) {
-            if (isDragging) {
+            if (isDragging && translationPanel) {
                 const x = e.clientX - dragOffset.x;
                 const y = e.clientY - dragOffset.y;
                 
@@ -870,7 +899,7 @@
                 translationPanel.style.top = boundedY + 'px';
                 translationPanel.style.bottom = 'auto';
                 translationPanel.style.transform = 'none';
-            } else if (isResizing) {
+            } else if (isResizing && translationPanel) {
                 const rect = translationPanel.getBoundingClientRect();
                 const newWidth = Math.max(300, e.clientX - rect.left);
                 const newHeight = Math.max(200, e.clientY - rect.top);
@@ -883,7 +912,9 @@
         function stopDragging() {
             if (isDragging) {
                 isDragging = false;
-                translationPanel.classList.remove('dragging');
+                if (translationPanel) {
+                    translationPanel.classList.remove('dragging');
+                }
             }
             if (isResizing) {
                 isResizing = false;
@@ -891,6 +922,8 @@
         }
 
         function toggleMinimize() {
+            if (!translationPanel || !minimizeBtn) return;
+            
             isMinimized = !isMinimized;
             translationPanel.classList.toggle('minimized', isMinimized);
             
@@ -902,7 +935,9 @@
         }
 
         function closePanel() {
-            translationPanel.style.display = 'none';
+            if (translationPanel) {
+                translationPanel.style.display = 'none';
+            }
         }
 
         function showPanel() {
@@ -935,27 +970,38 @@
                 updateElectronStatus(text, type);
             } else {
                 // 在浏览器环境中更新主窗口面板的状态
-                statusText.textContent = text;
-                statusIndicator.className = `status-indicator ${type}`;
+                if (statusText) {
+                    statusText.textContent = text;
+                }
+                if (statusIndicator) {
+                    statusIndicator.className = `status-indicator ${type}`;
+                }
                 
                 // Update panel header title
-                const headerTitle = panelHeader.querySelector('h3');
-                if (type === 'processing') {
-                    headerTitle.textContent = 'Processing...';
-                    loadingSpinner.classList.remove('hidden');
-                } else if (type === 'error') {
-                    headerTitle.textContent = 'Error';
-                    loadingSpinner.classList.add('hidden');
-                } else {
-                    headerTitle.textContent = 'Ready to translate';
-                    loadingSpinner.classList.add('hidden');
+                if (panelHeader) {
+                    const headerTitle = panelHeader.querySelector('h3');
+                    if (headerTitle) {
+                        if (type === 'processing') {
+                            headerTitle.textContent = 'Processing...';
+                            if (loadingSpinner) loadingSpinner.classList.remove('hidden');
+                        } else if (type === 'error') {
+                            headerTitle.textContent = 'Error';
+                            if (loadingSpinner) loadingSpinner.classList.add('hidden');
+                        } else {
+                            headerTitle.textContent = 'Ready to translate';
+                            if (loadingSpinner) loadingSpinner.classList.add('hidden');
+                        }
+                    }
                 }
             }
         }
 
         // Scroll translation to bottom
         function scrollTranslationToBottom() {
-            translationOutput.scrollTop = translationOutput.scrollHeight;
+            // 只在非Electron环境下滚动翻译输出
+            if (!isElectron && translationOutput) {
+                translationOutput.scrollTop = translationOutput.scrollHeight;
+            }
             resetIdleTimer();
         }
 
@@ -1054,17 +1100,32 @@
             });
 
             mediaElement.addEventListener('ended', () => {
-                if (resampledBuffer.length > 0) {
-                    const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
-                    const finalChunk = new Float32Array(targetChunkSize);
-                    finalChunk.set(resampledBuffer);
-                    if (ws) ws.send(finalChunk.buffer);
+                console.log('Media playback ended, cleaning up...');
+                
+                // 在Electron环境中停止专用音频处理器
+                if (isElectron && electronAudioProcessor) {
+                    console.log('🛑 Stopping Electron audio processor on media end...');
+                    try {
+                        electronAudioProcessor.stop();
+                        electronAudioProcessor = null;
+                        console.log('✅ Electron audio processor stopped on media end');
+                    } catch (error) {
+                        console.error('❌ Error stopping Electron audio processor on media end:', error);
+                    }
+                } else {
+                    // 传统浏览器处理方式
+                    if (resampledBuffer.length > 0) {
+                        const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
+                        const finalChunk = new Float32Array(targetChunkSize);
+                        finalChunk.set(resampledBuffer);
+                        if (ws) ws.send(finalChunk.buffer);
+                    }
+                    
+                    if (processor) processor.disconnect();
+                    if (audioContext) audioContext.suspend();
                 }
                 
                 if (ws) ws.close();
-                if (processor) processor.disconnect();
-                if (audioContext) audioContext.suspend();
-                
                 updateStatus('Translation completed', 'ready');
                 translationInitialized = false;
             });
@@ -1075,7 +1136,10 @@
             if (!sessionId || translationInitialized) return;
             
             try {
-                translationOutput.textContent = '';
+                // 只在非Electron环境下清空翻译输出
+                if (!isElectron && translationOutput) {
+                    translationOutput.textContent = '';
+                }
                 translationPaused = false;
                 
                 const wsUrl = getWebSocketUrl(sessionId);
@@ -1116,6 +1180,82 @@
                 return new Promise((resolve, reject) => {
                     ws.onopen = async () => {
                         try {
+                            // 在Electron环境中使用专用音频处理器处理媒体文件
+                            console.log('🔍 Checking Electron conditions:', {
+                                isElectron: isElectron,
+                                hasElectronAudioProcessor: !!window.ElectronAudioProcessor,
+                                hasMediaElement: !!mediaElement,
+                                mediaElementType: mediaElement ? mediaElement.tagName : 'null'
+                            });
+                            
+                            // 在Electron环境中等待ElectronAudioProcessor加载（如果需要）
+                            if (isElectron && !window.ElectronAudioProcessor) {
+                                console.log('⏳ ElectronAudioProcessor not yet loaded, waiting...');
+                                await new Promise((resolve) => {
+                                    const checkProcessor = () => {
+                                        if (window.ElectronAudioProcessor) {
+                                            console.log('✅ ElectronAudioProcessor loaded during wait');
+                                            resolve();
+                                        } else {
+                                            setTimeout(checkProcessor, 50);
+                                        }
+                                    };
+                                    checkProcessor();
+                                });
+                            }
+                            
+                            if (isElectron && window.ElectronAudioProcessor && mediaElement) {
+                                console.log('🎵 Using Electron-specific audio processor for media file...');
+                                
+                                try {
+                                    // 确保没有其他音频处理在运行
+                                    if (audioContext) {
+                                        try {
+                                            await audioContext.close();
+                                            audioContext = null;
+                                            console.log('🧹 Closed existing AudioContext for media file processing');
+                                        } catch (e) {
+                                            console.warn('⚠️ Error closing existing AudioContext:', e);
+                                        }
+                                    }
+                                    
+                                    // 禁用全局音频处理标志
+                                    audioProcessingActive = false;
+                                    
+                                    electronAudioProcessor = new window.ElectronAudioProcessor();
+                                    await electronAudioProcessor.initializeAudio(mediaElement, ws, 'media');
+                                    
+                                    // 设置状态
+                                    translationPaused = false;
+                                    translationInitialized = true;
+                                    updateStatus('Playing and translating...', 'processing');
+                                    resetIdleTimer();
+                                    
+                                    console.log('✅ Electron audio processor initialized for media file, skipping traditional processing');
+                                    resolve();
+                                    return; // 重要：直接返回，不执行后面的ScriptProcessor代码
+                                } catch (electronError) {
+                                    console.error('❌ Electron audio processor failed for media file:', electronError);
+                                    updateStatus('Electron audio processor failed, using fallback...', 'processing');
+                                    
+                                    // 清理失败的Electron处理器
+                                    if (electronAudioProcessor) {
+                                        try {
+                                            electronAudioProcessor.stop();
+                                            electronAudioProcessor = null;
+                                        } catch (cleanupError) {
+                                            console.error('Error cleaning up failed Electron processor:', cleanupError);
+                                        }
+                                    }
+                                    
+                                    // 继续使用传统浏览器处理方式作为备用方案
+                                    console.log('🔄 Falling back to traditional browser audio processing for media file...');
+                                }
+                            }
+                            
+                            // 传统浏览器处理方式（仅在非Electron环境或Electron备选方案失败时执行）
+                            console.log('Using traditional browser audio processing...');
+                            
                             if (audioElementConnected && mediaElement) {
                                 console.log('Audio element already connected, recreating it');
                                 
@@ -1202,6 +1342,18 @@
 
         // Clean up audio resources
         function cleanupAudioResources() {
+            // 停止Electron音频处理器（如果存在）
+            if (electronAudioProcessor) {
+                console.log('🧹 Stopping Electron audio processor...');
+                try {
+                    electronAudioProcessor.stop();
+                    electronAudioProcessor = null;
+                    console.log('✅ Electron audio processor stopped');
+                } catch (error) {
+                    console.error('❌ Error stopping Electron audio processor:', error);
+                }
+            }
+            
             if (ws) {
                 try {
                     if (ws.readyState === WebSocket.OPEN) {
@@ -1396,7 +1548,10 @@
                     isQueued = false;
                 }
                 
-                translationOutput.textContent = 'Translation will appear here...';
+                // 只在非Electron环境下重置翻译输出
+                if (!isElectron && translationOutput) {
+                    translationOutput.textContent = 'Translation will appear here...';
+                }
                 updateLatency.disabled = true;
                 resetTranslation.disabled = true;
                 
@@ -1753,7 +1908,7 @@
                                 audioProcessingActive = false;
                                 
                                 electronAudioProcessor = new window.ElectronAudioProcessor();
-                                await electronAudioProcessor.initializeAudio(micStream, ws);
+                                await electronAudioProcessor.initializeAudio(micStream, ws, 'microphone');
                                 
                                 // 设置UI状态
                                 translationPaused = false;
@@ -2213,27 +2368,66 @@
             }
         };
 
+        // 全局错误处理，防止白屏
+        window.addEventListener('error', (event) => {
+            console.error('Global error caught:', event.error);
+            if (isElectron) {
+                updateElectronStatus('Application error occurred: ' + event.error.message, 'error');
+            } else {
+                // 尝试恢复UI状态
+                try {
+                    updateStatus('Application error occurred: ' + event.error.message, 'error');
+                } catch (e) {
+                    console.error('Error in error handler:', e);
+                }
+            }
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('Unhandled promise rejection:', event.reason);
+            if (isElectron) {
+                updateElectronStatus('Promise rejection: ' + event.reason, 'error');
+            } else {
+                try {
+                    updateStatus('Promise rejection: ' + event.reason, 'error');
+                } catch (e) {
+                    console.error('Error in rejection handler:', e);
+                }
+            }
+        });
+
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', () => {
-            ensureClientId();
-            initializePanelDragging();
-            
-            const userEvents = ['mousedown', 'keypress', 'scroll', 'touchstart'];
-            userEvents.forEach(eventType => {
-                document.addEventListener(eventType, resetIdleTimer);
-            });
-            
-            resetIdleTimer();
-            
-            const storedSessionId = localStorage.getItem('translationSessionId_' + clientId);
-            if (storedSessionId) {
-                checkSessionStatus(storedSessionId);
-            }
-            
-            const pendingDeleteSessions = JSON.parse(localStorage.getItem('pendingDeleteSessions_' + clientId) || '{}');
-            if (Object.keys(pendingDeleteSessions).length > 0) {
-                console.log(`Found ${Object.keys(pendingDeleteSessions).length} orphaned sessions to delete`);
-                // Add session cleanup logic here if needed
+            try {
+                ensureClientId();
+                
+                // 只在非Electron环境下初始化面板拖拽
+                if (!isElectron) {
+                    initializePanelDragging();
+                }
+                
+                const userEvents = ['mousedown', 'keypress', 'scroll', 'touchstart'];
+                userEvents.forEach(eventType => {
+                    document.addEventListener(eventType, resetIdleTimer);
+                });
+                
+                resetIdleTimer();
+                
+                const storedSessionId = localStorage.getItem('translationSessionId_' + clientId);
+                if (storedSessionId) {
+                    checkSessionStatus(storedSessionId);
+                }
+                
+                const pendingDeleteSessions = JSON.parse(localStorage.getItem('pendingDeleteSessions_' + clientId) || '{}');
+                if (Object.keys(pendingDeleteSessions).length > 0) {
+                    console.log(`Found ${Object.keys(pendingDeleteSessions).length} orphaned sessions to delete`);
+                    // Add session cleanup logic here if needed
+                }
+            } catch (error) {
+                console.error('Error during initialization:', error);
+                if (isElectron) {
+                    updateElectronStatus('Initialization error: ' + error.message, 'error');
+                }
             }
         });
 
