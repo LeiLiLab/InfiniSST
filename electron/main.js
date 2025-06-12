@@ -1,6 +1,10 @@
 const { app, BrowserWindow, Menu, dialog, shell, ipcMain } = require('electron');
 const path = require('path');
-const isDev = require('electron-is-dev');
+const isDev = process.env.ELECTRON_IS_DEV === 'true' || require('electron-is-dev');
+
+console.log('=== Electron Main Process Starting ===');
+console.log('isDev:', isDev);
+console.log('__dirname:', __dirname);
 
 let mainWindow;
 let translationWindow;
@@ -22,8 +26,12 @@ const CONFIG = {
   }
 };
 
+console.log('CONFIG:', CONFIG);
+
 // 创建主窗口
 function createWindow() {
+  console.log('Creating main window...');
+  
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -41,69 +49,131 @@ function createWindow() {
     show: false // 先不显示，等加载完成后再显示
   });
 
+  console.log('Main window created');
+
   // 设置应用菜单
   createMenu();
 
   // 窗口准备好后显示
   mainWindow.once('ready-to-show', () => {
+    console.log('Main window ready to show');
     mainWindow.show();
     
     // 开发模式下打开开发者工具
     if (isDev) {
+      console.log('Opening DevTools in development mode');
       mainWindow.webContents.openDevTools();
     }
   });
 
   // 窗口关闭时的处理
   mainWindow.on('closed', () => {
+    console.log('Main window closed');
     mainWindow = null;
   });
 
   // 处理外部链接
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    console.log('Opening external URL:', url);
     shell.openExternal(url);
     return { action: 'deny' };
+  });
+
+  // 监听页面加载事件
+  mainWindow.webContents.on('did-start-loading', () => {
+    console.log('Page started loading');
+  });
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('Page finished loading');
+  });
+
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error('Page failed to load:', {
+      errorCode,
+      errorDescription,
+      validatedURL
+    });
   });
 
   // 连接到后端服务
   connectToBackend();
 }
 
-// 连接到后端服务
+// 连接到后端服务 - 简化版本用于调试
 async function connectToBackend() {
+  console.log('Starting backend connection...');
+  
   try {
-    // 显示连接对话框
-    const serverConfig = await showServerConfigDialog();
-    if (!serverConfig) {
-      app.quit();
-      return;
-    }
-
-    backendUrl = `${serverConfig.protocol}://${serverConfig.host}:${serverConfig.port}`;
-    console.log(`Connecting to backend server at: ${backendUrl}`);
-    
-    // 测试连接
-    const isConnected = await testBackendConnection(backendUrl);
-    if (!isConnected) {
-      const retry = await dialog.showMessageBox(mainWindow, {
-        type: 'error',
-        title: 'Connection Failed',
-        message: 'Failed to connect to the backend server',
-        detail: `Could not connect to ${backendUrl}. Please check if the server is running.`,
-        buttons: ['Retry', 'Quit'],
-        defaultId: 0
-      });
+    // 开发模式下直接使用本地服务器配置，跳过对话框
+    if (isDev) {
+      const serverConfig = CONFIG.DEV_SERVER;
+      backendUrl = `${serverConfig.protocol}://${serverConfig.host}:${serverConfig.port}`;
+      console.log(`Using development server: ${backendUrl}`);
       
-      if (retry.response === 0) {
-        connectToBackend();
-      } else {
-        app.quit();
+      // 测试连接
+      console.log('Testing backend connection...');
+      const isConnected = await testBackendConnection(backendUrl);
+      
+      if (!isConnected) {
+        console.error('Backend connection failed');
+        const retry = await dialog.showMessageBox(mainWindow, {
+          type: 'error',
+          title: 'Connection Failed',
+          message: 'Failed to connect to the backend server',
+          detail: `Could not connect to ${backendUrl}. Please ensure the API server is running on port 8001.`,
+          buttons: ['Retry', 'Continue Anyway', 'Quit'],
+          defaultId: 0
+        });
+        
+        if (retry.response === 0) {
+          connectToBackend();
+          return;
+        } else if (retry.response === 2) {
+          app.quit();
+          return;
+        }
+        // Continue anyway (response === 1)
       }
-      return;
+      
+      // 加载前端页面
+      console.log('Loading main page...');
+      mainWindow.loadURL(backendUrl);
+      
+    } else {
+      // 生产模式显示配置对话框
+      const serverConfig = await showServerConfigDialog();
+      if (!serverConfig) {
+        app.quit();
+        return;
+      }
+
+      backendUrl = `${serverConfig.protocol}://${serverConfig.host}:${serverConfig.port}`;
+      console.log(`Connecting to backend server at: ${backendUrl}`);
+      
+      // 测试连接
+      const isConnected = await testBackendConnection(backendUrl);
+      if (!isConnected) {
+        const retry = await dialog.showMessageBox(mainWindow, {
+          type: 'error',
+          title: 'Connection Failed',
+          message: 'Failed to connect to the backend server',
+          detail: `Could not connect to ${backendUrl}. Please check if the server is running.`,
+          buttons: ['Retry', 'Quit'],
+          defaultId: 0
+        });
+        
+        if (retry.response === 0) {
+          connectToBackend();
+        } else {
+          app.quit();
+        }
+        return;
+      }
+      
+      // 连接成功，加载前端页面
+      mainWindow.loadURL(backendUrl);
     }
-    
-    // 连接成功，加载前端页面
-    mainWindow.loadURL(backendUrl);
     
   } catch (error) {
     console.error('Error connecting to backend server:', error);
@@ -588,6 +658,15 @@ function createTranslationWindow() {
       width - translationWindow.getBounds().width - 20,
       height - translationWindow.getBounds().height - 20
     );
+    
+    // 窗口显示后发送初始状态
+    setTimeout(() => {
+      console.log('Sending initial status to translation window');
+      translationWindow.webContents.send('status-update', {
+        text: '翻译窗口已准备就绪，请加载模型开始翻译',
+        type: 'ready'
+      });
+    }, 200);
   });
 
   // 窗口关闭时的处理
@@ -620,14 +699,56 @@ ipcMain.handle('close-translation-window', () => {
 });
 
 ipcMain.handle('update-translation', (event, translationData) => {
+  console.log('Main process received translation update:', translationData?.text?.substring(0, 50) + '...');
   if (translationWindow && translationWindow.webContents) {
-    translationWindow.webContents.send('translation-update', translationData);
+    // 确保窗口已完全加载
+    if (translationWindow.webContents.isLoading()) {
+      console.log('Translation window still loading, waiting...');
+      translationWindow.webContents.once('did-finish-load', () => {
+        console.log('Translation window loaded, sending translation update');
+        translationWindow.webContents.send('translation-update', translationData);
+      });
+    } else {
+      console.log('Sending translation update to translation window');
+      translationWindow.webContents.send('translation-update', translationData);
+    }
+  } else {
+    console.log('Translation window not available for translation update');
   }
 });
 
 ipcMain.handle('update-translation-status', (event, statusData) => {
+  console.log('Main process received status update:', statusData);
   if (translationWindow && translationWindow.webContents) {
-    translationWindow.webContents.send('status-update', statusData);
+    // 确保窗口已完全加载
+    if (translationWindow.webContents.isLoading()) {
+      console.log('Translation window still loading, waiting...');
+      translationWindow.webContents.once('did-finish-load', () => {
+        console.log('Translation window loaded, sending status update');
+        translationWindow.webContents.send('status-update', statusData);
+      });
+    } else {
+      console.log('Sending status update to translation window');
+      translationWindow.webContents.send('status-update', statusData);
+    }
+  } else {
+    console.log('Translation window not available for status update');
+  }
+});
+
+ipcMain.handle('reset-translation-from-window', (event) => {
+  // 向主窗口发送重置翻译的请求
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.executeJavaScript(`
+      if (typeof resetTranslationFromElectron === 'function') {
+        resetTranslationFromElectron();
+      }
+    `);
+  }
+  
+  // 向翻译窗口发送重置确认
+  if (translationWindow && translationWindow.webContents) {
+    translationWindow.webContents.send('reset-translation');
   }
 });
 

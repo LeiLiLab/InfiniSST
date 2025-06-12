@@ -1051,7 +1051,13 @@ async def ping_session(session_id: str):
         return {"success": False, "error": str(e)}
 
 # Mount static files
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Explicit root path handling
+@app.get("/")
+async def read_index():
+    """Return index.html"""
+    return FileResponse('static/index.html')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="InfiniSST Translation API Server")

@@ -7,11 +7,13 @@
   "scripts": {
     "electron": "electron .",
     "electron-dev": "ELECTRON_IS_DEV=true electron .",
+    "electron-debug": "node start-debug.js",
+    "electron-simple": "ELECTRON_IS_DEV=true electron electron/main-simple.js",
     "build": "electron-builder",
     "dist": "electron-builder --publish=never",
     "pack": "electron-builder --dir",
     "postinstall": "electron-builder install-app-deps",
-    "start": "npm run electron-dev",
+    "start": "npm run electron-debug",
     "test-electron": "npm run electron-dev",
     "clean": "rm -rf dist node_modules/.cache"
   },
