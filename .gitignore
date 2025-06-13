@@ -18,4 +18,4 @@ fairseq*
 .idea
 node_modules
 env
-dist
+distdist/
