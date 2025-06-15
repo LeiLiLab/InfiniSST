@@ -453,8 +453,10 @@ function createTranslationWindow() {
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: true,
-    frame: true,
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    frame: false, // 完全无边框
+    transparent: true, // 透明背景
+    hasShadow: false, // 移除窗口阴影
+    autoHideMenuBar: true, // 自动隐藏菜单栏
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -463,6 +465,7 @@ function createTranslationWindow() {
     title: 'InfiniSST Translation',
     show: false
   });
+  translationWindow.setMenuBarVisibility(false);
 
   // 加载翻译窗口页面
   translationWindow.loadFile(path.join(__dirname, 'translation-window.html'));
@@ -486,7 +489,7 @@ function createTranslationWindow() {
     setTimeout(() => {
       console.log('Sending initial status to translation window');
       translationWindow.webContents.send('status-update', {
-        text: 'Translation window ready, please load model to start translation',
+        text: 'Ready - Load model',
         type: 'ready'
       });
     }, 200);
@@ -495,11 +498,6 @@ function createTranslationWindow() {
   // 窗口关闭时的处理
   translationWindow.on('closed', () => {
     translationWindow = null;
-  });
-
-  // 防止窗口被最小化时失去置顶状态
-  translationWindow.on('minimize', () => {
-    translationWindow.restore();
   });
 }
 
@@ -518,6 +516,12 @@ ipcMain.handle('close-translation-window', () => {
   if (translationWindow) {
     translationWindow.close();
     translationWindow = null;
+  }
+});
+
+ipcMain.handle('minimize-translation-window', () => {
+  if (translationWindow) {
+    translationWindow.minimize();
   }
 });
 

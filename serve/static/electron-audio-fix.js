@@ -9,11 +9,13 @@ class ElectronAudioProcessor {
         this.resampledBuffer = new Float32Array();
         this.chunksSentCount = 0;
         this.errorCount = 0;
+        this.lastIdleResetTime = 0;
 
         this.config = {
             targetSampleRate: 16000,
             baseChunkSize: 960 * 16,
-            maxErrorCount: 5
+            maxErrorCount: 5,
+            idleResetThrottleMs: 1000
         };
 
         console.log('🎵 ElectronAudioProcessor with AudioWorklet created');
@@ -101,6 +103,21 @@ class ElectronAudioProcessor {
             
             this.sourceNode.connect(this.workletNode);
             this.workletNode.connect(this.audioContext.destination);
+            
+            console.log('🔍 Audio connection debug:', {
+                sourceType: this.sourceType,
+                hasSourceNode: !!this.sourceNode,
+                hasWorkletNode: !!this.workletNode,
+                hasDestination: !!this.audioContext.destination
+            });
+            
+            // 添加直接连接，确保用户能听到音频（特别是对于媒体文件）
+            if (this.sourceType === 'media') {
+                this.sourceNode.connect(this.audioContext.destination);
+                console.log('🔊 Added direct audio connection for media playback');
+            } else {
+                console.log('🎵 Source type is not media, skipping direct connection. Source type:', this.sourceType);
+            }
 
             const resampleRatio = this.config.targetSampleRate / this.audioContext.sampleRate;
             // 使用全局延迟倍数（与传统浏览器方式保持一致）
@@ -116,6 +133,37 @@ class ElectronAudioProcessor {
                 if (!this.isProcessing || !event.data) return;
 
                 const input = event.data;
+                
+                // 音频活动检测（与传统浏览器方式保持一致）
+                let hasSound = false;
+                let volumeSum = 0;
+                for (let i = 0; i < input.length; i++) {
+                    const volume = Math.abs(input[i]);
+                    volumeSum += volume;
+                    if (volume > 0.01) {
+                        hasSound = true;
+                    }
+                }
+                
+                // 如果检测到声音，重置idle timer（使用节流机制）
+                if (hasSound && typeof window !== 'undefined' && window.resetIdleTimer) {
+                    const now = Date.now();
+                    if (now - this.lastIdleResetTime >= this.config.idleResetThrottleMs) {
+                        window.resetIdleTimer();
+                        this.lastIdleResetTime = now;
+                        console.log('🔄 Idle timer reset (throttled)');
+                    }
+                }
+                
+                // 更新音量指示器（主要用于麦克风模式）
+                if (this.sourceType === 'microphone' && typeof document !== 'undefined') {
+                    const volumeLevel = document.getElementById('volumeLevel');
+                    if (volumeLevel) {
+                        const averageVolume = volumeSum / input.length;
+                        const volumePercent = Math.min(100, Math.round(averageVolume * 1000));
+                        volumeLevel.style.width = volumePercent + '%';
+                    }
+                }
                 
                 // 将新数据添加到本地缓冲区
                 const newLocalBuffer = new Float32Array(localAudioBuffer.length + input.length);
@@ -226,6 +274,21 @@ class ElectronAudioProcessor {
             
             this.sourceNode.connect(scriptProcessor);
             scriptProcessor.connect(this.audioContext.destination);
+            
+            console.log('🔍 Audio connection debug [ScriptProcessor]:', {
+                sourceType: this.sourceType,
+                hasSourceNode: !!this.sourceNode,
+                hasScriptProcessor: !!scriptProcessor,
+                hasDestination: !!this.audioContext.destination
+            });
+            
+            // 添加直接连接，确保用户能听到音频（特别是对于媒体文件）
+            if (this.sourceType === 'media') {
+                this.sourceNode.connect(this.audioContext.destination);
+                console.log('🔊 Added direct audio connection for media playback [ScriptProcessor]');
+            } else {
+                console.log('🎵 Source type is not media, skipping direct connection [ScriptProcessor]. Source type:', this.sourceType);
+            }
 
             const resampleRatio = this.config.targetSampleRate / this.audioContext.sampleRate;
             // 使用全局延迟倍数（与传统浏览器方式保持一致）
@@ -238,6 +301,37 @@ class ElectronAudioProcessor {
                 if (!this.isProcessing) return;
 
                 const inputData = event.inputBuffer.getChannelData(0);
+                
+                // 音频活动检测（与传统浏览器方式保持一致）
+                let hasSound = false;
+                let volumeSum = 0;
+                for (let i = 0; i < inputData.length; i++) {
+                    const volume = Math.abs(inputData[i]);
+                    volumeSum += volume;
+                    if (volume > 0.01) {
+                        hasSound = true;
+                    }
+                }
+                
+                // 如果检测到声音，重置idle timer（使用节流机制）
+                if (hasSound && typeof window !== 'undefined' && window.resetIdleTimer) {
+                    const now = Date.now();
+                    if (now - this.lastIdleResetTime >= this.config.idleResetThrottleMs) {
+                        window.resetIdleTimer();
+                        this.lastIdleResetTime = now;
+                        console.log('🔄 Idle timer reset (throttled)');
+                    }
+                }
+                
+                // 更新音量指示器（主要用于麦克风模式）
+                if (this.sourceType === 'microphone' && typeof document !== 'undefined') {
+                    const volumeLevel = document.getElementById('volumeLevel');
+                    if (volumeLevel) {
+                        const averageVolume = volumeSum / inputData.length;
+                        const volumePercent = Math.min(100, Math.round(averageVolume * 1000));
+                        volumeLevel.style.width = volumePercent + '%';
+                    }
+                }
                 
                 // 重采样逻辑与AudioWorklet相同
                 const resampledLength = Math.floor(inputData.length * resampleRatio);

@@ -758,7 +758,7 @@
             // 立即显示独立翻译窗口
             setTimeout(() => {
                 showElectronTranslationWindow();
-                updateElectronStatus('欢迎使用InfiniSST翻译！请先加载模型。', 'ready');
+                updateElectronStatus('Ready - Load model', 'ready');
             }, 500);
             
             // 显示版本信息
@@ -1228,6 +1228,14 @@
                                     // 设置状态
                                     translationPaused = false;
                                     translationInitialized = true;
+                                    
+                                    console.log('🎯 Media file status set:', {
+                                        translationPaused: translationPaused,
+                                        translationInitialized: translationInitialized,
+                                        electronAudioProcessor: !!electronAudioProcessor,
+                                        mediaElement: !!mediaElement
+                                    });
+                                    
                                     updateStatus('Playing and translating...', 'processing');
                                     resetIdleTimer();
                                     
@@ -1434,13 +1442,20 @@
             
             if (sessionId) {
                 idleTimer = setTimeout(async () => {
+                    console.log('🔍 Idle timer triggered - checking translation status:', {
+                        translationInitialized: translationInitialized,
+                        translationPaused: translationPaused,
+                        sessionId: sessionId,
+                        condition: translationInitialized && !translationPaused
+                    });
+                    
                     if (translationInitialized && !translationPaused) {
                         console.log('Translation is active, not closing session due to inactivity');
                         resetIdleTimer();
                         return;
                     }
                     
-                    console.log('Application idle for 5 minutes, releasing resources...');
+                    console.log('Application idle for 1 minutes, releasing resources...');
                     await cleanupSession();
                     updateStatus('Session closed due to inactivity', 'error');
                 }, IDLE_TIMEOUT);
@@ -1627,7 +1642,7 @@
                     }
                     
                     updateStatus('Model loaded successfully. Upload audio and press play to start translation.', 'ready');
-                    updateElectronStatus('Model loaded successfully. Upload audio and press play to start translation.', 'ready');
+                    updateElectronStatus('Model loaded successfully. Use video or microphone to start', 'ready');
                     updateLatency.disabled = false;
                     resetTranslation.disabled = false;
                     console.log('Model loaded successfully:', {
@@ -1639,13 +1654,13 @@
                     resetIdleTimer();
                 } else if (data.status === 'initializing') {
                     updateStatus('Model is initializing, please wait...', 'processing');
-                    updateElectronStatus('Model is initializing, please wait...', 'processing');
+                    updateElectronStatus('Loading model...', 'processing');
                 } else if (data.status === 'queued') {
                     updateStatus(`Waiting in queue... Position: ${data.queue_position}`, 'processing');
-                    updateElectronStatus(`Waiting in queue... Position: ${data.queue_position}`, 'processing');
+                    updateElectronStatus(`Queue: ${data.queue_position}`, 'processing');
                 } else {
                     updateStatus('Error: Session not found in queue or active sessions', 'error');
-                    updateElectronStatus('Error: Session not found in queue or active sessions', 'error');
+                    updateElectronStatus('Session error', 'error');
                     isQueued = false;
                     if (queueCheckInterval) {
                         clearInterval(queueCheckInterval);
@@ -1721,7 +1736,7 @@
                     resetTranslation.disabled = true;
                 } else if (data.initializing) {
                     updateStatus('Model is initializing, please wait...', 'processing');
-                    updateElectronStatus('Model is initializing, please wait...', 'processing');
+                    updateElectronStatus('Loading model...', 'processing');
                     updateLatency.disabled = true;
                     resetTranslation.disabled = true;
                     isQueued = true;
@@ -1732,7 +1747,7 @@
                     updateLatency.disabled = false;
                     resetTranslation.disabled = false;
                     updateStatus('Model loaded successfully. Upload audio and press play to start translation.', 'ready');
-                    updateElectronStatus('Model loaded successfully. Upload audio and press play to start translation.', 'ready');
+                    updateElectronStatus('Model loaded. Ready to translate.', 'ready');
                     console.log('Model loaded successfully:', {
                         model: agentType.value,
                         languagePair: languagePair.value,
@@ -1912,6 +1927,14 @@
                                 
                                 // 设置UI状态
                                 translationPaused = false;
+                                translationInitialized = true; // 添加这一行，确保idle timer检查正确工作
+                                
+                                console.log('🎯 Microphone status set:', {
+                                    translationPaused: translationPaused,
+                                    translationInitialized: translationInitialized,
+                                    electronAudioProcessor: !!electronAudioProcessor
+                                });
+                                
                                 updateMicrophoneUI(true);
                                 updateStatus('Translating from microphone...', 'processing');
                                 resetIdleTimer();
@@ -2016,6 +2039,12 @@
                         console.log('Audio nodes connected');
                         
                         translationPaused = false;
+                        translationInitialized = true; // 修复：确保传统浏览器方式也正确设置状态
+                        
+                        console.log('🎯 Traditional browser microphone status set:', {
+                            translationPaused: translationPaused,
+                            translationInitialized: translationInitialized
+                        });
                         
                         toggleMic.innerHTML = `
                             <svg class="icon" viewBox="0 0 24 24">
@@ -2372,7 +2401,7 @@
         window.addEventListener('error', (event) => {
             console.error('Global error caught:', event.error);
             if (isElectron) {
-                updateElectronStatus('Application error occurred: ' + event.error.message, 'error');
+                updateElectronStatus('Error: ' + event.error.message, 'error');
             } else {
                 // 尝试恢复UI状态
                 try {
@@ -2386,7 +2415,7 @@
         window.addEventListener('unhandledrejection', (event) => {
             console.error('Unhandled promise rejection:', event.reason);
             if (isElectron) {
-                updateElectronStatus('Promise rejection: ' + event.reason, 'error');
+                updateElectronStatus('Error: ' + event.reason, 'error');
             } else {
                 try {
                     updateStatus('Promise rejection: ' + event.reason, 'error');
@@ -2426,7 +2455,7 @@
             } catch (error) {
                 console.error('Error during initialization:', error);
                 if (isElectron) {
-                    updateElectronStatus('Initialization error: ' + error.message, 'error');
+                    updateElectronStatus('Init error: ' + error.message, 'error');
                 }
             }
         });
