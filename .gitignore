@@ -21,3 +21,6 @@ retriever/data
 *.json
 *.index
 auto_rsync.sh
+node_modules
+env
+.DS_Store
