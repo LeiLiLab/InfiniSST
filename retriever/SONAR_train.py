@@ -17,6 +17,48 @@ from sonar.inference_pipelines.speech import SpeechToEmbeddingModelPipeline
 from sonar.inference_pipelines.text import TextToEmbeddingModelPipeline
 
 
+def getSamples():
+    import os
+    import csv
+    import json
+
+    tsv_path = "/mnt/aries/data/siqiouyang/datasets/gigaspeech/manifests/gigaspeech.tsv"
+    textgrid_dir = "/mnt/aries/data/siqiouyang/datasets/gigaspeech/textgrids"
+    output_json = "data/from_tsv_samples.json"
+
+    samples = []
+
+    with open(tsv_path, newline='') as tsvfile:
+        reader = csv.DictReader(tsvfile, delimiter="\t")
+        for row in reader:
+            segment_id = row["ID"]
+            audio_path = row["AudioPath"]
+            textgrid_path = os.path.join(textgrid_dir, f"{segment_id}.TextGrid")
+
+            if not os.path.exists(audio_path):
+                print(f"[SKIP] Missing audio: {audio_path}")
+                continue
+            if not os.path.exists(textgrid_path):
+                print(f"[SKIP] Missing TextGrid: {textgrid_path}")
+                continue
+
+            sample = {
+                "segment_id": segment_id,
+                "audio": audio_path,
+                "text": row["Text"],
+                "begin_time": float(row["BeginTime"]),
+                "end_time": float(row["EndTime"]),
+                "textgrid": textgrid_path,
+            }
+            samples.append(sample)
+
+    # 保存为 JSON
+    with open(output_json, "w") as f:
+        json.dump(samples, f, indent=2)
+
+    print(f"[INFO] Wrote {len(samples)} samples to {output_json}")
+
+
 class ContrastiveSpeechTextModel(nn.Module):
     def __init__(self, speech_encoder, text_encoder, hidden_dim=1024, proj_dim=512):
         super().__init__()
@@ -52,14 +94,19 @@ class ContrastiveSpeechTextModel(nn.Module):
 
 
 class InBatchDataset(Dataset):
-    def __init__(self,path = "data/preprocessed_samples_merged.json"):
+    def __init__(self, path="data/preprocessed_samples_merged.json"):
+        print(path)
         with open(path, "r") as f:
             self.samples = json.load(f)
         self.samples = [
             s for s in self.samples
             if s.get('ground_truth_term')
-               and any (len(t)>=5 for t in s["ground_truth_term"])
+               and any(
+                   len(t) >= 5 and sum(c.isdigit() for c in t) <= 4
+                   for t in s["ground_truth_term"]
+               )
                and 3.0 <= s['end_time'] - s['begin_time'] <= 30
+               and os.path.exists(s.get("audio", ""))
         ]
 
     def __getitem__(self, idx):
@@ -144,17 +191,18 @@ def rebuild_index_from_terms(model, retriever, term_subset, device, glossary_pat
 
     # === term -> text embedding 输入 ===
     if text_field=="short_description" and glossary_path and os.path.exists(glossary_path):
-        with open(glossary_path, "r", encoding="utf-8") as f:
-            glossary = json.load(f)
+        # with open(glossary_path, "r", encoding="utf-8") as f:
+        #     glossary = json.load(f)
 
         def get_term_text(term):
-            entry = glossary.get(term)
-            if not entry:
-                return term
-            desc = entry.get("short_description", "")
-            desc_first = desc.split(",", 1)[0].strip()
-            res =  f"{term}, {desc_first}" if desc_first and desc_first.lower() != term.lower() else term
-            return res
+            return term.lower()
+            # entry = glossary.get(term)
+            # if not entry:
+            #     return term
+            # desc = entry.get("short_description", "")
+            # desc_first = desc.split(",", 1)[1].strip()
+            # res =  f"{term}, {desc_first}" if desc_first and desc_first.lower() != term.lower() else term
+            # return res
 
         texts = [get_term_text(t) for t in term_subset]
         print(f"text samples:{texts[:5]}")
@@ -190,6 +238,7 @@ def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5,10, 20), m
     retriever.index.reset()
     retriever.index.add(text_emb)
 
+    print(f"len dataset:{len(dataset)}")
     import random
     eval_indices = random.sample(range(len(dataset)), min(max_eval, len(dataset)))
     valid_samples = []
@@ -323,20 +372,21 @@ def main():
         print(f"[INFO] Model saved to {ckpt_path}")
 
         # 全小写
-        rebuild_index_from_terms(
-            retriever.model,
-            retriever,
-            used_terms,
-            device,
-            glossary_path=args.glossary_path,
-            text_field=args.text_field
-        )
+        # rebuild_index_from_terms(
+        #     retriever.model,
+        #     retriever,
+        #     used_terms,
+        #     device,
+        #     glossary_path=args.glossary_path,
+        #     text_field=args.text_field
+        # )
+        retriever.term_list = [{'term': t} for t in used_terms]
 
 
         # 使用测试集评估 recall
         test_dataset = InBatchDataset("data/test_preprocessed_samples_merged.json")
         recall_results = evaluate_topk_recall(model, retriever, test_dataset, device, top_ks=(5, 10, 20), max_eval=1000)
-        recall = recall_results[20] and sum(recall_results[20]) / len(recall_results[20])  # 用 Recall@20 继续控制 Early Stop
+        recall = recall_results[10] and sum(recall_results[10]) / len(recall_results[10])  # 用 Recall@10 继续控制 Early Stop
         if recall > best_recall:
             best_recall = recall
             no_improve_epochs = 0

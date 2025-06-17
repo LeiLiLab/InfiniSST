@@ -7,6 +7,8 @@ from typing import List, Dict
 from new_giga_speech import load_preprocessed_samples
 import torch.nn.functional as F
 from laion_clap import CLAP_Module
+#from sentence_transformers import SentenceTransformer
+from transformers import WhisperModel, WhisperProcessor
 
 # ---------- CONFIG ----------
 top_ks = [5, 10, 50]
@@ -84,18 +86,23 @@ class Retriever:
     def __init__(self,enable_fusion = True, device: str = "cpu", max_gpus: int = None):
         self.device = device
         self.enable_fusion = enable_fusion
-        import laion_clap
-        self.model = laion_clap.CLAP_Module(enable_fusion=enable_fusion)
+        # whisper to encode audio and sonar to handle text embedding
+        # 加载 Whisper 模型
+        # self.whisper_model = whisper.load_model("medium.en")
+        # self.whisper_model.to(device)
+
+        # 加载 SONAR 模型（假设是句子嵌入模型）
+        # self.sonar_model = SentenceTransformer("SonarModel/checkpoints/sonar-base")
+        # self.sonar_model.to(device)
+
         # 启用
         sys.stdout = FilteredStdout(sys.__stdout__)
-        self.model.load_ckpt()
         sys.stdout = sys.__stdout__  # 恢复
-        self.model = self.model.to(device)
-        try:
-            self.model.load_state_dict(torch.load(f"data/clap_inbatch.pt", map_location=device), strict=False)
-            print(f"[INFO] Loaded fine-tuned model from data/clap_inbatch.pt")
-        except Exception as e:
-            print(f"[WARN] Failed to load fine-tuned weights: {e}")
+        # try:
+        #     self.model.load_state_dict(torch.load(f"data/clap_inbatch.pt", map_location=device), strict=False)
+        #     print(f"[INFO] Loaded fine-tuned model from data/clap_inbatch.pt")
+        # except Exception as e:
+        #     print(f"[WARN] Failed to load fine-tuned weights: {e}")
         self.index = None
         self.term_list = []
         self.max_gpus = max_gpus
@@ -300,6 +307,7 @@ import torch
 from glossary_utils import load_clean_glossary_from_file
 
 
+# generate retrieve model
 def generate(enable_fusion, max_gpu):
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -322,37 +330,105 @@ def generate(enable_fusion, max_gpu):
         raise FileNotFoundError("❌ FAISS index file not found. Please run build_glossary_index.py first.")
     return retriever
 
-
 if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--max_limit', type=int, required=False)
-    parser.add_argument('--max_gpu', type=int, required=False)
-    parser.add_argument('--max_terms', type=int, required=False)
-    parser.add_argument('--samples_path', type=str, default="data/test_preprocessed_samples_merged.json")
-    parser.add_argument('--term_set_path', type=str, default="data/terms/term_set.txt")
-    parser.add_argument('--alt2main_path', type=str, default="data/terms/alt2main.json")
-    parser.add_argument('--glossary_path', type=str, default="data/terms/glossary_filtered.json")
-    args = parser.parse_args()
+    # retriever = generate(
+    #         enable_fusion=True,
+    #         max_gpu=1
+    #     )
 
-    retriever = generate(
-        enable_fusion=True,
-        max_gpu=args.max_gpu
-    )
-    test =False
-    if test:
-        term_emb = retriever.model.get_text_embedding(
-            ["well , thank you so much , waldo ."],
-            use_tensor=True
-        ).to(retriever.device)
+    path = "data/test_preprocessed_samples_merged.json"
+    test_samples = load_preprocessed_samples(path)[:5]
 
-        term_emb = F.normalize(term_emb, dim=-1).detach().cpu().numpy()
-        D, I = retriever.index.search(term_emb, 10)
-        retrieved_terms = [retriever.term_list[i] for i in I[0]]
-        print(retrieved_terms)
+    # try medium
+    processor = WhisperProcessor.from_pretrained("openai/whisper-medium.en")
+    model = WhisperModel.from_pretrained("openai/whisper-medium.en")
+
+    # 重采样 audio_tensor 从 48k 到 16k
+    import torchaudio
+    orig_tensor = test_samples[0]["audio_tensor"]
+    if isinstance(orig_tensor, torch.Tensor):
+        orig_tensor = orig_tensor.squeeze()
     else:
-        #path = "data/preprocessed_samples_merged.json"
-        test_samples = load_preprocessed_samples(args.samples_path)
-        test_samples = [sample for sample in test_samples if sample.get('ground_truth_term')]
-        print(f'got eval_set: {len(test_samples)}')
-        evaluate_audio_retrieval(retriever, test_samples, device="cuda", text_field="term")
+        orig_tensor = torch.tensor(orig_tensor).squeeze()
+
+    resampler = torchaudio.transforms.Resample(orig_freq=48000, new_freq=16000)
+    sample = resampler(orig_tensor).numpy()
+
+    print(f'最大振幅 (resampled): {np.max(np.abs(sample)):.6f}')
+
+    print(sample)
+    inputs = processor(sample, language="en", sampling_rate=16000, return_tensors="pt")
+    with torch.no_grad():
+        encoder_outputs = model.encoder(inputs.input_features)
+        embeddings = encoder_outputs.last_hidden_state
+    print(embeddings.shape)
+    print(embeddings)
+
+    # Whisper 推理生成文本
+    from transformers import WhisperProcessor, WhisperForConditionalGeneration
+    import librosa
+
+    # 加载原始音频（非 audio_tensor）
+    audio_path = test_samples[0]["audio"]
+    waveform, _ = librosa.load(audio_path, sr=16000)
+
+    processor = WhisperProcessor.from_pretrained("openai/whisper-medium.en")
+    model_gen = WhisperForConditionalGeneration.from_pretrained("openai/whisper-medium.en")
+    model_gen.to("cuda" if torch.cuda.is_available() else "cpu")
+    model_gen.eval()
+
+    inputs = processor(
+        sample,
+        sampling_rate=16000,
+        language="en",
+        task="transcribe",
+        return_tensors="pt"
+    ).to(model_gen.device)
+
+    forced_decoder_ids = processor.get_decoder_prompt_ids(language="en", task="transcribe")
+
+    with torch.no_grad():
+        predicted_ids = model_gen.generate(
+            inputs["input_features"],
+            forced_decoder_ids=forced_decoder_ids,
+            max_new_tokens=128
+        )
+        transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
+        print(f"[TRANSCRIPTION] {transcription}")
+
+
+
+
+# if __name__ == "__main__":
+#     import argparse
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument('--max_limit', type=int, required=False)
+#     parser.add_argument('--max_gpu', type=int, required=False)
+#     parser.add_argument('--max_terms', type=int, required=False)
+#     parser.add_argument('--samples_path', type=str, default="data/test_preprocessed_samples_merged.json")
+#     parser.add_argument('--term_set_path', type=str, default="data/terms/term_set.txt")
+#     parser.add_argument('--alt2main_path', type=str, default="data/terms/alt2main.json")
+#     parser.add_argument('--glossary_path', type=str, default="data/terms/glossary_filtered.json")
+#     args = parser.parse_args()
+#
+#     retriever = generate(
+#         enable_fusion=True,
+#         max_gpu=args.max_gpu
+#     )
+#     test =False
+#     if test:
+#         term_emb = retriever.model.get_text_embedding(
+#             ["well , thank you so much , waldo ."],
+#             use_tensor=True
+#         ).to(retriever.device)
+#
+#         term_emb = F.normalize(term_emb, dim=-1).detach().cpu().numpy()
+#         D, I = retriever.index.search(term_emb, 10)
+#         retrieved_terms = [retriever.term_list[i] for i in I[0]]
+#         print(retrieved_terms)
+#     else:
+#         #path = "data/preprocessed_samples_merged.json"
+#         test_samples = load_preprocessed_samples(args.samples_path)
+#         test_samples = [sample for sample in test_samples if sample.get('ground_truth_term')]
+#         print(f'got eval_set: {len(test_samples)}')
+#         evaluate_audio_retrieval(retriever, test_samples, device="cuda", text_field="term")
