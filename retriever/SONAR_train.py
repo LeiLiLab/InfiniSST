@@ -384,7 +384,10 @@ def main():
 
 
         # 使用测试集评估 recall
-        test_dataset = InBatchDataset("data/test_preprocessed_samples_merged.json")
+        if args.text_field == "term":
+            test_dataset = InBatchDataset(f"data/{args.text_field}_test_preprocessed_samples_merged.json")
+        else:
+            test_dataset = InBatchDataset(f"data/test_preprocessed_samples_merged.json")
         recall_results = evaluate_topk_recall(model, retriever, test_dataset, device, top_ks=(5, 10, 20), max_eval=1000)
         recall = recall_results[10] and sum(recall_results[10]) / len(recall_results[10])  # 用 Recall@10 继续控制 Early Stop
         if recall > best_recall:

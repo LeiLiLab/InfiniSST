@@ -371,7 +371,7 @@ if __name__ == "__main__":
 
     json_ready = serialize_for_json(samples)
     if args.name == 'dev' or args.split == 'validation':
-        out_path = f"data/test_preprocessed_samples_merged.json"
+        out_path = f"data/{args.text_field}_test_preprocessed_samples_merged.json"
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(serialize_for_json(samples), f, indent=2, ensure_ascii=False)
     else:

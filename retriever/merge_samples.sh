@@ -33,8 +33,12 @@ for f in files:
        merged.extend(json.load(j))
 print(f'Merged total {len(merged)} samples')
 if name:
-  with open(f'data/{name}_preprocessed_samples_merged.json', 'w', encoding='utf-8') as f:
-     json.dump(merged, f, indent=2, ensure_ascii=False)
+  if text_field != 'term':
+    with open(f'data/{name}_preprocessed_samples_merged.json', 'w', encoding='utf-8') as f:
+       json.dump(merged, f, indent=2, ensure_ascii=False)
+  else:
+    with open(f'data/{name}_term_preprocessed_samples_merged.json', 'w', encoding='utf-8') as f:
+       json.dump(merged, f, indent=2, ensure_ascii=False)
 else:
   with open(f'data/preprocessed_samples_merged.json', 'w', encoding='utf-8') as f:
      json.dump(merged, f, indent=2, ensure_ascii=False)
