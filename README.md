@@ -4,7 +4,10 @@ This repository contains a demo and the implementation of our paper "InfiniSST: 
 
 ## Online Demo
 
-The link to the online demo is [here](https://radically-mutual-sailfish.ngrok-free.app/).
+The link to the online demo is [here](https://infinisst.ngrok.app/).
+
+## Macbook Desktop Demo
+
 
 ## Installation
 
