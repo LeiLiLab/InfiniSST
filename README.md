@@ -7,7 +7,7 @@ This repository contains a demo and the implementation of our paper "InfiniSST: 
 The link to the online demo is [here](https://infinisst.ngrok.app/).
 
 ## Macbook Desktop Demo
-Download the InfiniSST Translation-1.0.0-arm64.dmg.
+Download the ```InfiniSST Translation-1.0.0-arm64.dmg```.
 Run the xattr command to bypass certificate verification.
 ```
 xattr -d com.apple.quarantine /Applications/InfiniSST\ Translation.app
