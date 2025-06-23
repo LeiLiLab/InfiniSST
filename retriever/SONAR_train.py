@@ -22,8 +22,8 @@ def getSamples():
     import csv
     import json
 
-    tsv_path = "/mnt/aries/data/siqiouyang/datasets/gigaspeech/manifests/gigaspeech.tsv"
-    textgrid_dir = "/mnt/aries/data/siqiouyang/datasets/gigaspeech/textgrids"
+    tsv_path = "/mnt/data/siqiouyang/datasets/gigaspeech/manifests/gigaspeech.tsv"
+    textgrid_dir = "/mnt/data/siqiouyang/datasets/gigaspeech/textgrids"
     output_json = "data/from_tsv_samples.json"
 
     samples = []
