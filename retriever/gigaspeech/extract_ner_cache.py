@@ -51,7 +51,7 @@ def extract_named_entities(tsv_path):
     named_entities = []
     
     print("[INFO] 开始提取命名实体...")
-    for doc in tqdm(nlp.pipe(texts, batch_size=32, n_process=4), total=len(texts), ncols=100, dynamic_ncols=True, mininterval=1.0):
+    for doc in tqdm(nlp.pipe(texts, batch_size=32), total=len(texts), ncols=100, dynamic_ncols=True, mininterval=1.0):
         ents = set(ent.text.lower() for ent in doc.ents)
         named_entities.append(ents)
     

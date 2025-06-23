@@ -1,34 +1,35 @@
 #!/bin/bash
 
-# 总量 8282989，按 100000 一份切分，共 82 个任务
+# 总量 8282989，按 1000000 一份切分，共 9 个任务
 # 根据总数切分
 
 #SBATCH --job-name=extract_ner_cache
 #SBATCH --partition=taurus
-#SBATCH --array=0-82%6
-#SBATCH --mem=16GB
-#SBATCH --cpus-per-task=4
+#SBATCH --array=0-8%3
+#SBATCH --mem=64GB
+#SBATCH --cpus-per-task=1
 #SBATCH --ntasks=1
+#SBATCH --gres=gpu:1
 #SBATCH --output=logs/extract_ner_cache_%A_%a.out
 #SBATCH --error=logs/extract_ner_cache_%A_%a.err
 
 source ~/miniconda3/etc/profile.d/conda.sh
-conda activate infinisst
+conda activate spaCyEnv
 
 
 # Preprocessing: split train_xl.tsv into per-slice files, only if needed
 SPLIT_DIR="data/split_tsv"
 mkdir -p "$SPLIT_DIR"
 
-INPUT_TSV="/mnt/data/siqiouyang/datasets/gigaspeech/train_xl.tsv"
+INPUT_TSV="/mnt/data/siqiouyang/datasets/gigaspeech/manifests/train_xl.tsv"
 SPLIT_TSV="$SPLIT_DIR/train_xl_split_${SLURM_ARRAY_TASK_ID}.tsv"
 
 if [[ ! -f "$SPLIT_TSV" ]]; then
     echo "[INFO] Generating split TSV for task ID $SLURM_ARRAY_TASK_ID..."
 
     TOTAL_LINES=$(wc -l < "$INPUT_TSV")
-    START_LINE=$((SLURM_ARRAY_TASK_ID * 100000 + 1))  # +1 to skip header
-    END_LINE=$((START_LINE + 100000 - 1))
+    START_LINE=$((SLURM_ARRAY_TASK_ID * 1000000 + 1))  # +1 to skip header
+    END_LINE=$((START_LINE + 1000000 - 1))
     if (( END_LINE > TOTAL_LINES )); then
         END_LINE=$TOTAL_LINES
     fi
