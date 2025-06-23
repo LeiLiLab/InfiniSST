@@ -13,14 +13,14 @@
 #SBATCH --error=logs/extract_ner_cache_%A_%a.err
 
 source ~/miniconda3/etc/profile.d/conda.sh
-conda activate infinisst
+conda activate spaCyEnv
 
 
 # Preprocessing: split train_xl.tsv into per-slice files, only if needed
 SPLIT_DIR="data/split_tsv"
 mkdir -p "$SPLIT_DIR"
 
-INPUT_TSV="/mnt/data/siqiouyang/datasets/gigaspeech/train_xl.tsv"
+INPUT_TSV="/mnt/data/siqiouyang/datasets/gigaspeech/manifests/train_xl.tsv"
 SPLIT_TSV="$SPLIT_DIR/train_xl_split_${SLURM_ARRAY_TASK_ID}.tsv"
 
 if [[ ! -f "$SPLIT_TSV" ]]; then
