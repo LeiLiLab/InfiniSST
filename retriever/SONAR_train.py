@@ -17,48 +17,6 @@ from sonar.inference_pipelines.speech import SpeechToEmbeddingModelPipeline
 from sonar.inference_pipelines.text import TextToEmbeddingModelPipeline
 
 
-def getSamples():
-    import os
-    import csv
-    import json
-
-    tsv_path = "/mnt/data/siqiouyang/datasets/gigaspeech/manifests/gigaspeech.tsv"
-    textgrid_dir = "/mnt/data/siqiouyang/datasets/gigaspeech/textgrids"
-    output_json = "data/from_tsv_samples.json"
-
-    samples = []
-
-    with open(tsv_path, newline='') as tsvfile:
-        reader = csv.DictReader(tsvfile, delimiter="\t")
-        for row in reader:
-            segment_id = row["ID"]
-            audio_path = row["AudioPath"]
-            textgrid_path = os.path.join(textgrid_dir, f"{segment_id}.TextGrid")
-
-            if not os.path.exists(audio_path):
-                print(f"[SKIP] Missing audio: {audio_path}")
-                continue
-            if not os.path.exists(textgrid_path):
-                print(f"[SKIP] Missing TextGrid: {textgrid_path}")
-                continue
-
-            sample = {
-                "segment_id": segment_id,
-                "audio": audio_path,
-                "text": row["Text"],
-                "begin_time": float(row["BeginTime"]),
-                "end_time": float(row["EndTime"]),
-                "textgrid": textgrid_path,
-            }
-            samples.append(sample)
-
-    # 保存为 JSON
-    with open(output_json, "w") as f:
-        json.dump(samples, f, indent=2)
-
-    print(f"[INFO] Wrote {len(samples)} samples to {output_json}")
-
-
 class ContrastiveSpeechTextModel(nn.Module):
     def __init__(self, speech_encoder, text_encoder, hidden_dim=1024, proj_dim=512):
         super().__init__()
