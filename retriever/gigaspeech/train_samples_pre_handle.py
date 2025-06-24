@@ -239,7 +239,7 @@ def handle_split_samples(term_set_path, alt2main_path, glossary_path,
         named_entities_list = named_entities_list[:min_length]
         print(f"[INFO] 调整为处理 {min_length} 个样本")
 
-    blacklist_path = "data/resample_blacklist.txt"
+    blacklist_path = "data/terms/black_list.txt"
     blacklist = set()
     if os.path.exists(blacklist_path):
         with open(blacklist_path, "r") as f:
@@ -247,18 +247,36 @@ def handle_split_samples(term_set_path, alt2main_path, glossary_path,
 
     phrase2desc = build_phrase_desc_index(term_set, alt2main, glossary, text_field)
 
-    args_list = []
-    for sample, named_entities in zip(all_samples, named_entities_list):
+    # 保持样本和命名实体的正确对应关系
+    results = []
+    skipped_count = 0
+    
+    for i, sample in enumerate(all_samples):
         segment_id = sample["segment_id"]
         if segment_id in blacklist:
+            skipped_count += 1
             continue
-        args_list.append((sample, named_entities, False, phrase2desc))
-
-    results = []
-    for args in tqdm(args_list, desc="Processing"):
+        
+        # 使用正确的索引获取对应的命名实体
+        if i < len(named_entities_list):
+            named_entities = named_entities_list[i]
+        else:
+            print(f"[WARNING] No NER data for sample {i}, skipping")
+            skipped_count += 1
+            continue
+            
+        # 处理样本
+        args = (sample, named_entities, False, phrase2desc)
         result = _process_wrapper(args)
+        
         if result is not None:
+            # 添加原始索引信息用于调试
+            result["original_tsv_index"] = i
             results.append(result)
+        else:
+            skipped_count += 1
+    
+    print(f"Processed: {len(results)}, Skipped: {skipped_count}, Total: {len(all_samples)}")
 
     print(f"Total items: {len(results)}")
     return results
@@ -297,7 +315,8 @@ if __name__ == "__main__":
         text_field=args.text_field
     )
 
-    json_ready = serialize_for_json(samples)
+    # TODO 只保留有目标的样本
+    json_ready = [s for s in samples if s["has_target"]]
     
     # 输出文件命名
     sample_path = f'{args.text_field}_preprocessed_samples' if args.text_field == 'term' else f'preprocessed_samples'

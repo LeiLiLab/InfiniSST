@@ -13,7 +13,8 @@
 #SBATCH --error=logs/samples_split_%A_%a.err
 
 text_field=${1:-term}
-ner_json=${2:-data/named_entities_train_xl_split_0.json}
+# 使用对应的命名实体文件，而不是固定使用split_0
+ner_json=${2:-data/named_entities_train_xl_split_${SLURM_ARRAY_TASK_ID}.json}
 
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate infinisst
