@@ -28,56 +28,100 @@ def parse_textgrid(textgrid_path: str) -> List[Dict]:
         with open(textgrid_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
-        # 查找words层
+        # 查找words层的开始和结束位置
         words_tier_start = content.find('"words"')
         if words_tier_start == -1:
             print(f"[WARNING] No 'words' tier found in {textgrid_path}")
             return words
         
-        # 从words层开始解析
-        lines = content[words_tier_start:].split('\n')
+        # 查找下一个IntervalTier的开始位置（phones层）
+        phones_tier_start = content.find('"phones"', words_tier_start)
+        if phones_tier_start == -1:
+            # 如果没有phones层，使用整个文件的剩余部分
+            words_content = content[words_tier_start:]
+        else:
+            # 只处理words层的内容
+            words_content = content[words_tier_start:phones_tier_start]
+        
+        lines = words_content.split('\n')
         
         # 找到intervals数量
         interval_count = 0
-        for line in lines:
-            if line.strip().isdigit():
-                interval_count = int(line.strip())
-                break
+        start_parsing = False
+        parse_start_idx = 0
         
-        # 解析每个interval
-        i = 0
-        while i < len(lines):
+        # 在words层中查找格式: "words" -> 0 -> 19.98 -> 82 (intervals数量)
+        for i, line in enumerate(lines):
+            line = line.strip()
+            if line == '"words"' and i + 3 < len(lines):
+                # 检查接下来的几行是否符合预期格式
+                try:
+                    # 跳过 "words" 后面的起始时间(0)和结束时间(19.98)
+                    if (lines[i+1].strip().replace('.', '').isdigit() and 
+                        lines[i+2].strip().replace('.', '').isdigit() and
+                        lines[i+3].strip().isdigit()):
+                        interval_count = int(lines[i+3].strip())
+                        start_parsing = True
+                        parse_start_idx = i + 4  # 从intervals开始的位置
+                        break
+                except (ValueError, IndexError):
+                    continue
+        
+        if not start_parsing:
+            print(f"[WARNING] Could not find interval count in words tier")
+            return words
+        
+        # 解析每个interval（跳过前面的元信息）
+        i = parse_start_idx
+        parsed_intervals = 0
+        
+        while i < len(lines) and parsed_intervals < interval_count:
             line = lines[i].strip()
-            if line == '' or not line.replace('.', '').replace('-', '').isdigit():
+            
+            # 跳过空行
+            if not line:
                 i += 1
                 continue
                 
             try:
-                # 读取start time
-                start_time = float(line)
-                i += 1
-                
-                # 读取end time  
-                end_time = float(lines[i].strip())
-                i += 1
-                
-                # 读取word text
-                word_line = lines[i].strip()
-                word = word_line.strip('"')
-                i += 1
-                
-                if word and word != '':
-                    words.append({
-                        "word": word.lower(),
-                        "start": start_time,
-                        "end": end_time
-                    })
+                # 检查是否是时间数字
+                if line.replace('.', '').replace('-', '').isdigit():
+                    # 读取start time
+                    start_time = float(line)
+                    i += 1
                     
-            except (ValueError, IndexError):
+                    if i >= len(lines):
+                        break
+                        
+                    # 读取end time  
+                    end_time = float(lines[i].strip())
+                    i += 1
+                    
+                    if i >= len(lines):
+                        break
+                    
+                    # 读取word text
+                    word_line = lines[i].strip()
+                    word = word_line.strip('"')
+                    i += 1
+                    
+                    # 只添加非空单词
+                    if word and word != '':
+                        words.append({
+                            "word": word.lower(),
+                            "start": start_time,
+                            "end": end_time
+                        })
+                    
+                    parsed_intervals += 1
+                else:
+                    i += 1
+                    
+            except (ValueError, IndexError) as e:
                 i += 1
                 continue
                 
-        print(f"[INFO] Parsed {len(words)} words from {textgrid_path}")
+        print(f"[INFO] Parsed {len(words)} words from {textgrid_path} (expected {interval_count})")
         
     except Exception as e:
         print(f"[ERROR] Failed to parse TextGrid {textgrid_path}: {e}")
@@ -219,13 +263,13 @@ def get_covered_terms_in_chunks(chunks: List[Tuple[float, float]], start_idx: in
     chunk_start = chunks[start_idx][0]
     chunk_end = chunks[end_idx - 1][1]
     
-    covered_terms = []
+    covered_terms = set()  # 使用set来自动去重
     for term_span in term_spans:
         # 检查术语是否与chunk范围有重叠
         if not (chunk_end <= term_span["start"] or chunk_start >= term_span["end"]):
-            covered_terms.append(term_span["term"])
+            covered_terms.add(term_span["term"])
     
-    return covered_terms
+    return list(covered_terms)  # 转换回list返回
 
 
 def extract_chunk_text(words: List[Dict], chunk_start: float, chunk_end: float) -> str:
@@ -243,6 +287,41 @@ def extract_chunk_text(words: List[Dict], chunk_start: float, chunk_end: float) 
             chunk_words.append(word["word"])
     
     return " ".join(chunk_words)
+
+
+def extract_chunk_text_from_sample(original_text: str, chunk_start: float, chunk_end: float, total_duration: float) -> str:
+    """
+    从原始样本文本中按时间比例提取chunk对应的文本
+    """
+    if not original_text or total_duration <= 0:
+        return ""
+    
+    # 计算时间比例
+    start_ratio = chunk_start / total_duration
+    end_ratio = chunk_end / total_duration
+    
+    # 确保比例在有效范围内
+    start_ratio = max(0, min(1, start_ratio))
+    end_ratio = max(start_ratio, min(1, end_ratio))
+    
+    # 按字符位置截取文本
+    text_length = len(original_text)
+    start_pos = int(start_ratio * text_length)
+    end_pos = int(end_ratio * text_length)
+    
+    # 确保位置有效
+    start_pos = max(0, min(text_length, start_pos))
+    end_pos = max(start_pos, min(text_length, end_pos))
+    
+    chunk_text = original_text[start_pos:end_pos].strip()
+    
+    # 如果截取的文本太短或为空，尝试扩展一些
+    if len(chunk_text) < 10 and end_pos < text_length:
+        # 向后扩展一些字符
+        extended_end = min(text_length, end_pos + 20)
+        chunk_text = original_text[start_pos:extended_end].strip()
+    
+    return chunk_text
 
 
 def extract_chunk_audio(original_audio_path: str, chunk_start: float, chunk_end: float, 
@@ -367,8 +446,8 @@ def process_sample(sample: Dict, n: int = 3, chunk_len: float = 0.96) -> Optiona
     chunk_start_time_abs = chunk_start_time_rel + begin_time
     chunk_end_time_abs = chunk_end_time_rel + begin_time
     
-    # 提取chunk文本（使用相对时间，与TextGrid对应）
-    chunk_text = extract_chunk_text(words, chunk_start_time_rel, chunk_end_time_rel)
+    # 提取chunk文本（使用原始样本文本进行时间比例截取）
+    chunk_text = extract_chunk_text_from_sample(original_text, chunk_start_time_rel, chunk_end_time_rel, segment_duration)
     
     # 提取chunk音频（使用相对时间）
     chunk_audio_path = extract_chunk_audio(audio_path, chunk_start_time_rel, chunk_end_time_rel, segment_id)

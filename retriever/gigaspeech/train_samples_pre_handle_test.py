@@ -6,6 +6,7 @@ from tqdm import tqdm
 import soundfile as sf
 import nltk
 from nltk.corpus import stopwords
+import argparse
 
 from glossary_utils import load_clean_glossary_from_file
 
@@ -281,15 +282,15 @@ def process_item(item, phrase2desc, return_tensor=True, named_entities=None):
     return processed_item
 
 
-def handle_split_samples(term_set_path, alt2main_path, glossary_path, 
-                        tsv_path, ner_json_path, split_id, text_field="term"):
-    """处理分割的样本数据"""
+def handle_test_samples(term_set_path, alt2main_path, glossary_path, 
+                       tsv_path, ner_json_path, text_field="term"):
+    """处理测试样本数据"""
     term_set, alt2main, glossary = load_clean_glossary_from_file(term_set_path, alt2main_path, glossary_path)
     print(f"Total terms: {len(term_set)}, total entities: {len(glossary)}")
 
-    # 读取分片TSV文件（已经是分割好的文件）
+    # 读取测试TSV文件
     all_samples = read_tsv_samples(tsv_path)
-    print(f"[INFO] 处理分割 {split_id}: 共 {len(all_samples)} 个样本")
+    print(f"[INFO] 处理测试数据: 共 {len(all_samples)} 个样本")
     
     # 加载指定的命名实体文件
     if os.path.exists(ner_json_path):
@@ -322,7 +323,7 @@ def handle_split_samples(term_set_path, alt2main_path, glossary_path,
     results = []
     skipped_count = 0
     
-    for i, sample in enumerate(all_samples):
+    for i, sample in enumerate(tqdm(all_samples, desc="Processing test samples")):
         segment_id = sample["segment_id"]
         if segment_id in blacklist:
             skipped_count += 1
@@ -353,18 +354,9 @@ def handle_split_samples(term_set_path, alt2main_path, glossary_path,
     return results
 
 
-def serialize_for_json(samples):
-    """序列化样本为JSON格式"""
-    # 现在样本结构已经是最终格式，不需要额外处理
-    return samples
-
-
-import argparse
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--tsv_path", type=str, required=True, help="Path to the input TSV file")
-    parser.add_argument("--split_id", type=int, default=0, help="Split ID for processing (0-8)")
+    parser.add_argument("--tsv_path", type=str, required=True, help="Path to the test TSV file")
     parser.add_argument("--ner_json", type=str, required=True, help="Path to the named entities JSON file")
     parser.add_argument(
         '--text_field', type=str, default="term", choices=["term", "short_description"],
@@ -376,29 +368,26 @@ if __name__ == "__main__":
     alt2main_path = "data/terms/alt2main.json"
     glossary_path = "data/terms/glossary_filtered.json"
 
-    samples = handle_split_samples(
+    samples = handle_test_samples(
         term_set_path=term_set_path,
         alt2main_path=alt2main_path,
         glossary_path=glossary_path,
         tsv_path=args.tsv_path,
         ner_json_path=args.ner_json,
-        split_id=args.split_id,
         text_field=args.text_field
     )
 
-    # TODO 只保留有目标的样本
+    # 只保留有目标的样本
     json_ready = [s for s in samples if s["has_target"]]
     
     # 输出文件命名
     sample_path = f'{args.text_field}_preprocessed_samples' if args.text_field == 'term' else f'preprocessed_samples'
-    prefix = "data/samples/xl"
+    prefix = "data/samples/test"
     os.makedirs(prefix, exist_ok=True)
     
-    start_idx = args.split_id * 1000000
-    end_idx = start_idx + len(samples)
-    out_path = f"{prefix}/{sample_path}_{start_idx}_{end_idx}.json"
+    out_path = f"{prefix}/{sample_path}_test.json"
     
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(json_ready, f, indent=2, ensure_ascii=False)
 
-    print(f"✅ {out_path} written successfully with {len(json_ready)} samples.")
+    print(f"✅ {out_path} written successfully with {len(json_ready)} samples.") 

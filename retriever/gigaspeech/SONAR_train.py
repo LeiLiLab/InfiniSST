@@ -52,25 +52,51 @@ class ContrastiveSpeechTextModel(nn.Module):
 
 
 class InBatchDataset(Dataset):
-    def __init__(self, path="data/preprocessed_samples_merged.json"):
-        print(path)
+    def __init__(self, path="data/samples/xl/test_mfa_3chunks_samples_0_500000.json", split="train", train_ratio=0.99):
+        print(f"[INFO] Loading MFA chunk samples from {path}")
         with open(path, "r") as f:
-            self.samples = json.load(f)
-        self.samples = [
-            s for s in self.samples
-            if s.get('ground_truth_term')
-               and any(
-                   len(t) >= 5 and sum(c.isdigit() for c in t) <= 4
-                   for t in s["ground_truth_term"]
+            all_samples = json.load(f)
+        
+        # 过滤有效样本：必须有音频文件、chunk文本和ground truth terms
+        valid_samples = [
+            s for s in all_samples
+            if s.get('n_chunk_audio_ground_truth_terms')  # 必须有ground truth terms
+               and s.get('n_chunk_text', '').strip()  # 必须有chunk文本
+               and s.get('n_chunk_audio', '')  # 必须有音频路径
+               and os.path.exists(s.get("n_chunk_audio", ""))  # 音频文件必须存在
+               and any(  # 过滤掉过短或数字过多的术语
+                   len(t) >= 3 and sum(c.isdigit() for c in t) <= len(t) // 2
+                   for t in s["n_chunk_audio_ground_truth_terms"]
                )
-               and os.path.exists(s.get("audio", ""))
         ]
+        
+        print(f"[INFO] Filtered {len(valid_samples)} valid samples from {len(all_samples)} total samples")
+        
+        # 数据分割：99%训练，1%测试
+        import random
+        random.seed(42)  # 固定随机种子确保可复现
+        random.shuffle(valid_samples)
+        
+        split_idx = int(len(valid_samples) * train_ratio)
+        
+        if split == "train":
+            self.samples = valid_samples[:split_idx]
+            print(f"[INFO] Training split: {len(self.samples)} samples")
+        elif split == "test":
+            self.samples = valid_samples[split_idx:]
+            print(f"[INFO] Test split: {len(self.samples)} samples")
+        else:
+            raise ValueError(f"Invalid split: {split}. Must be 'train' or 'test'")
+        
+        print(f"[INFO] Loaded {len(self.samples)} samples for {split} split")
 
     def __getitem__(self, idx):
         sample = self.samples[idx]
-        audio_path = sample["audio"]
-        term_list = sample.get('ground_truth_term', None)
-        return term_list, audio_path, True  # 此时已确认 has_target == True
+        audio_path = sample["n_chunk_audio"]  # 使用chunk音频
+        chunk_text = sample["n_chunk_text"]   # 使用chunk文本
+        ground_truth_terms = sample.get('n_chunk_audio_ground_truth_terms', [])
+        
+        return ground_truth_terms, audio_path, chunk_text, True
 
     def __len__(self):
         return len(self.samples)
@@ -83,95 +109,45 @@ def train_step(model, batch, device, temperature=0.07):
         print("Batch has less than 2 non-None items, skipping...")
         return torch.tensor(0.0, requires_grad=True).to(device)
 
-    # 拆分成 term 列表和音频
-    term_lists, audio_paths, has_targets = zip(*batch)
-    # 全小写
-    term_lists = [[t.lower() for t in terms if isinstance(t, str)] for terms in term_lists]
+    # 拆分batch数据：ground_truth_terms, audio_path, chunk_text, has_target
+    ground_truth_terms_list, audio_paths, chunk_texts, has_targets = zip(*batch)
+    
+    # 全小写处理
+    ground_truth_terms_list = [[t.lower() for t in terms if isinstance(t, str)] for terms in ground_truth_terms_list]
+    chunk_texts = [text.lower() if isinstance(text, str) else "" for text in chunk_texts]
 
-    # === 去重术语构建 ===
-    term2index = dict()
-    all_terms = []
-    for terms in term_lists:
-        for t in terms:
-            if isinstance(t, str) and t.strip() and t not in term2index:
-                term2index[t] = len(all_terms)
-                all_terms.append(t)
+    # === 编码音频和文本 ===
+    audio_emb = raw_model.encode_audio(audio_paths)  # [B, proj_dim]
+    text_emb = raw_model.encode_text(chunk_texts)    # [B, proj_dim]
 
-    if not all_terms:
-        print("No valid terms in batch, skipping...")
-        return torch.tensor(0.0, requires_grad=True).to(device)
+    # === 计算音频-文本对比损失 ===
+    # 音频和对应的chunk文本应该相似
+    sim_matrix = (audio_emb @ text_emb.T) / temperature  # [B, B]
+    
+    # 创建正样本mask（对角线为1，表示音频i和文本i是正样本对）
+    batch_size = len(audio_paths)
+    labels = torch.arange(batch_size).to(device)
+    
+    # 计算对称的对比损失
+    loss_audio_to_text = F.cross_entropy(sim_matrix, labels)
+    loss_text_to_audio = F.cross_entropy(sim_matrix.T, labels)
+    
+    contrastive_loss = (loss_audio_to_text + loss_text_to_audio) / 2
 
-    # 每个 audio 对应的 positive term 索引
-    pos_mask = []
-    for terms in term_lists:
-        indices = []
-        for t in terms:
-            if t in term2index:
-                indices.append(term2index[t])
-        pos_mask.append(indices)
-    # === 处理 audio ===
-    audio_emb = raw_model.encode_audio(audio_paths)
-    # === 编码 text, 一个audio对应多个terms，去重后得到all_terms再embeddings ===
-    text_emb = raw_model.encode_text(all_terms)
-    # === 计算相似度 ===
-    sim = (audio_emb @ text_emb.T) / temperature  # shape: [B, T]
+    return contrastive_loss
 
-    # === 构造 multi-positive mask ===
-    pos_mask_tensor = torch.zeros_like(sim)
-    for i, indices in enumerate(pos_mask):
-        for j in indices:
-            pos_mask_tensor[i, j] = 1.0
-
-    if pos_mask_tensor.sum() == 0:
-        print("All audios have no valid term matches, skipping...")
-        return torch.tensor(0.0, requires_grad=True).to(device)
-
-    # === 计算 InfoNCE loss ===
-    log_prob = sim - torch.logsumexp(sim, dim=1, keepdim=True)
-    loss = - (log_prob * pos_mask_tensor).sum(dim=1) / pos_mask_tensor.sum(dim=1).clamp(min=1)
-
-    return loss.mean()
 
 def extract_all_used_terms(dataset):
+    """提取数据集中所有使用的术语"""
     used_terms = set()
     for sample in dataset:
         if sample is None:
             continue
-        term_list, audio_tensor, has_target = sample
-        if has_target and term_list:
-            used_terms.update(t.lower() for t in term_list if isinstance(t, str))
+        ground_truth_terms, audio_path, chunk_text, has_target = sample
+        if has_target and ground_truth_terms:
+            used_terms.update(t.lower() for t in ground_truth_terms if isinstance(t, str))
     return list(used_terms)
 
-
-def rebuild_index_from_terms(model, retriever, term_subset, device, glossary_path=None, text_field="term"):
-    model.eval()
-
-    # === term -> text embedding 输入 ===
-    if text_field=="short_description" and glossary_path and os.path.exists(glossary_path):
-        # with open(glossary_path, "r", encoding="utf-8") as f:
-        #     glossary = json.load(f)
-
-        def get_term_text(term):
-            return term.lower()
-            # entry = glossary.get(term)
-            # if not entry:
-            #     return term
-            # desc = entry.get("short_description", "")
-            # desc_first = desc.split(",", 1)[1].strip()
-            # res =  f"{term}, {desc_first}" if desc_first and desc_first.lower() != term.lower() else term
-            # return res
-
-        texts = [get_term_text(t) for t in term_subset]
-        print(f"text samples:{texts[:5]}")
-    else:
-        texts = term_subset
-
-    with torch.no_grad():
-        text_emb = model.encode_text(texts).cpu().numpy()
-
-    retriever.term_list = [{'term': t} for t in term_subset]
-    retriever.index.reset()
-    retriever.index.add(text_emb)
 
 def encode_texts_in_batches(model, texts, batch_size=512, device="cuda"):
     all_embeddings = []
@@ -182,7 +158,9 @@ def encode_texts_in_batches(model, texts, batch_size=512, device="cuda"):
             all_embeddings.append(emb)
     return torch.cat(all_embeddings, dim=0)
 
-def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5,10, 20), max_eval=1000, field="term"):
+
+def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), max_eval=1000, field="term"):
+    """评估top-k召回率，使用n_chunk_audio_ground_truth_terms作为目标"""
     model.eval()
     recall_dict = {k: [] for k in top_ks}
 
@@ -195,38 +173,43 @@ def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5,10, 20), m
     retriever.index.reset()
     retriever.index.add(text_emb)
 
-    print(f"len dataset:{len(dataset)}")
+    print(f"len dataset: {len(dataset)}")
     import random
     eval_indices = random.sample(range(len(dataset)), min(max_eval, len(dataset)))
     valid_samples = []
     valid_indices = []
+    
     for i in eval_indices:
         sample = dataset[i]
-        if sample is not None and sample[2] and sample[0]:
+        if sample is not None and sample[3] and sample[0]:  # has_target=True and has ground_truth_terms
             valid_samples.append(sample)
             valid_indices.append(i)
 
-    audio_paths = [sample[1] for sample in valid_samples]
+    # 使用chunk音频进行编码
+    audio_paths = [sample[1] for sample in valid_samples]  # n_chunk_audio paths
     with torch.no_grad():
         audio_embs = raw_model.encode_audio(audio_paths).cpu().numpy()
 
     for j, (i, sample) in enumerate(zip(valid_indices, valid_samples)):
-        term_list, audio_path, has_target = sample
+        ground_truth_terms, audio_path, chunk_text, has_target = sample
         audio_emb = audio_embs[j:j+1]  # shape: [1, 512]
 
         for top_k in top_ks:
             D, I = retriever.index.search(audio_emb, top_k)
             retrieved_terms = [retriever.term_list[idx][field].lower() for idx in I[0]]
-            gt_terms = [t.lower() for t in term_list]
+            gt_terms = [t.lower() for t in ground_truth_terms]  # 使用n_chunk_audio_ground_truth_terms
 
             matched = sum(gt in retrieved_terms for gt in gt_terms)
-            recall = matched / len(gt_terms)
+            recall = matched / len(gt_terms) if gt_terms else 0.0
             recall_dict[top_k].append(recall)
 
-            if j < 3 and top_k == top_ks[0]:  # 只打印一次
+            if j < 3 and top_k == top_ks[0]:  # 只打印前3个样本的详细信息
+                print(f"[DEBUG] Sample {i}:")
+                print(f"[DEBUG] Chunk text: {chunk_text[:100]}...")
                 print(f"[DEBUG] GT terms: {gt_terms}")
                 print(f"[DEBUG] Retrieved terms: {retrieved_terms}")
-                print(f"[DEBUG] Match count: {matched}")
+                print(f"[DEBUG] Match count: {matched}/{len(gt_terms)}")
+                print(f"[DEBUG] Recall: {recall:.2%}")
 
     # 打印统计结果
     for top_k in top_ks:
@@ -240,17 +223,16 @@ def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5,10, 20), m
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=30)
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--batch_size', type=int, default=32)  # 减小batch size因为使用chunk数据
     parser.add_argument('--lr', type=float, default=1e-4)
-    parser.add_argument('--patience', type=int, default=3)
-    parser.add_argument('--samples_path', type=str, default="data/preprocessed_samples_merged.json")
+    parser.add_argument('--patience', type=int, default=5)
+    parser.add_argument('--train_samples_path', type=str, 
+                       default="data/samples/xl/test_mfa_3chunks_samples_0_500000.json",
+                       help="Path to MFA chunk samples (will be split into 99% train, 1% test)")
+    parser.add_argument('--train_ratio', type=float, default=0.99,
+                       help="Ratio of samples to use for training (default: 0.99)")
     parser.add_argument('--glossary_path', type=str, default="data/terms/glossary_filtered.json")
-    parser.add_argument('--save_path', type=str, default="data/clap_inbatch.pt")
-    parser.add_argument(
-        '--text_field', type=str, default="short_description", choices=["term", "short_description"],
-        help="Which field to use as input text (term: comma-split title, short_description: full description)"
-    )
-
+    parser.add_argument('--save_path', type=str, default="data/clap_mfa_chunks.pt")
 
     args = parser.parse_args()
 
@@ -275,32 +257,43 @@ def main():
     if torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
 
-    dataset = InBatchDataset(args.samples_path)
-    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, collate_fn=lambda x: x)
-    # === 评估 recall（构建子集索引）===
-    print(f"[INFO] Rebuilding FAISS index from used terms...")
-    used_terms = extract_all_used_terms(dataset)
-    used_terms = [t.lower() for t in used_terms]
+    # === 加载数据集 ===
+    print(f"[INFO] Loading dataset from {args.train_samples_path}")
+    print(f"[INFO] Using train ratio: {args.train_ratio:.1%} train, {1-args.train_ratio:.1%} test")
+    train_dataset = InBatchDataset(args.train_samples_path, split="train", train_ratio=args.train_ratio)
+    test_dataset = InBatchDataset(args.train_samples_path, split="test", train_ratio=args.train_ratio)
+    
+    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=lambda x: x)
+    
+    print(f"[INFO] Training samples: {len(train_dataset)}")
+    print(f"[INFO] Test samples: {len(test_dataset)}")
+    
+    # === 构建术语词表用于评估 ===
+    print(f"[INFO] Building term vocabulary from training data...")
+    used_terms = extract_all_used_terms(train_dataset)
+    used_terms = list(set(t.lower() for t in used_terms))  # 去重并小写
+    print(f"[INFO] Found {len(used_terms)} unique terms")
 
-
-    # === 初始化 retriever，用于每轮动态构建索引 + recall 评估 ===
+    # === 初始化 retriever 用于评估 ===
     retriever = Retriever(enable_fusion=True, device=device)
     raw_model = model.module if isinstance(model, torch.nn.DataParallel) else model
     retriever.model = raw_model
-    # 初始化空 index（避免后续 reset() 报错）
-    retriever.index = faiss.IndexFlatL2(512)
+    retriever.index = faiss.IndexFlatL2(512)  # 初始化空索引
+    retriever.term_list = [{'term': t} for t in used_terms]
 
-    # 测试下是否冻结成功
+    # 打印模型参数信息
     print("[DEBUG] Trainable parameters:")
+    trainable_params = 0
     for name, param in model.named_parameters():
         if param.requires_grad:
             print(f" - {name}: {param.shape}")
+            trainable_params += param.numel()
 
-    # 打印被冻结的参数数量
     frozen = sum(p.numel() for p in model.parameters() if not p.requires_grad)
     total = sum(p.numel() for p in model.parameters())
-    print(f"[INFO] Frozen parameters: {frozen} / {total} ({frozen / total:.2%})")
-    print(f"[INFO] Training with {len(dataset)} samples")
+    print(f"[INFO] Frozen parameters: {frozen:,} / {total:,} ({frozen / total:.2%})")
+    print(f"[INFO] Trainable parameters: {trainable_params:,}")
+    print(f"[INFO] Training with {len(train_dataset)} MFA chunk samples")
 
     best_recall = 0.0
     no_improve_epochs = 0
@@ -308,57 +301,54 @@ def main():
     for epoch in range(args.epochs):
         model.train()
         total_loss = 0.0
-        # 在每轮训练开始前记录一组参数值
-        print("[DEBUG] proj_speech.weight norm (before):", raw_model.proj_speech.weight.norm().item())
-
-        for batch in tqdm(dataloader, desc=f"[Epoch {epoch}]"):
+        
+        # 训练循环
+        for batch in tqdm(train_dataloader, desc=f"[Epoch {epoch+1}/{args.epochs}]"):
             loss = train_step(model, batch, device)
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
-            total_loss += loss.item()
+            if loss.requires_grad:
+                loss.backward()
+                optimizer.step()
+                optimizer.zero_grad()
+                total_loss += loss.item()
 
-        print("[DEBUG] proj_speech.weight norm (after):", raw_model.proj_speech.weight.norm().item())
+        avg_loss = total_loss / len(train_dataloader) if len(train_dataloader) > 0 else 0.0
+        print(f"[INFO] Epoch {epoch+1} avg loss: {avg_loss:.4f}")
 
-        avg_loss = total_loss / len(dataloader)
-        print(f"[INFO] Epoch {epoch} avg loss: {avg_loss:.4f}")
-
-        # === 保存模型 ===
-        ckpt_path = f"data/clap_epoch{epoch}.pt"
+        # === 保存检查点 ===
+        ckpt_path = f"data/clap_mfa_epoch{epoch+1}.pt"
         torch.save(model.state_dict(), ckpt_path)
         print(f"[INFO] Model saved to {ckpt_path}")
 
-        # 全小写
-        # rebuild_index_from_terms(
-        #     retriever.model,
-        #     retriever,
-        #     used_terms,
-        #     device,
-        #     glossary_path=args.glossary_path,
-        #     text_field=args.text_field
-        # )
-        retriever.term_list = [{'term': t} for t in used_terms]
-
-
-        # 使用测试集评估 recall
-        if args.text_field == "term":
-            test_dataset = InBatchDataset(f"data/{args.text_field}_test_preprocessed_samples_merged.json")
-        else:
-            test_dataset = InBatchDataset(f"data/test_preprocessed_samples_merged.json")
-        recall_results = evaluate_topk_recall(model, retriever, test_dataset, device, top_ks=(5, 10, 20), max_eval=1000)
-        recall = recall_results[10] and sum(recall_results[10]) / len(recall_results[10])  # 用 Recall@10 继续控制 Early Stop
-        if recall > best_recall:
-            best_recall = recall
+        # === 评估 ===
+        # 使用内部分割的测试集进行评估
+        recall_results = evaluate_topk_recall(
+            model, retriever, test_dataset, device, 
+            top_ks=(5, 10, 20), max_eval=min(1000, len(test_dataset))  # 最多评估1000个样本
+        )
+        
+        # 使用 Recall@10 作为早停指标
+        current_recall = sum(recall_results[10]) / len(recall_results[10]) if recall_results[10] else 0.0
+        
+        if current_recall > best_recall:
+            best_recall = current_recall
             no_improve_epochs = 0
+            # 保存最佳模型
+            best_model_path = args.save_path.replace('.pt', '_best.pt')
+            torch.save(model.state_dict(), best_model_path)
+            print(f"[INFO] New best model saved to {best_model_path} (Recall@10: {best_recall:.2%})")
         else:
             no_improve_epochs += 1
+            print(f"[INFO] No improvement for {no_improve_epochs} epochs (best: {best_recall:.2%})")
+            
             if no_improve_epochs >= args.patience:
-                print(f"[EARLY STOPPING] No improvement in {args.patience} evals. Best Recall@10: {best_recall:.2%}")
+                print(f"[EARLY STOPPING] No improvement in {args.patience} epochs. Best Recall@10: {best_recall:.2%}")
                 break
 
     # === 最终保存 ===
     torch.save(model.state_dict(), args.save_path)
     print(f"[INFO] Final model saved to {args.save_path}")
+    print(f"[INFO] Training completed. Best Recall@10: {best_recall:.2%}")
+
 
 if __name__ == "__main__":
     main()
