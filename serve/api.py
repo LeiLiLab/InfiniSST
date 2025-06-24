@@ -8,8 +8,8 @@ except RuntimeError:
     # If the context has already been set, just use the current context
     print("Multiprocessing start method already set, using current context")
 
-from fastapi import FastAPI, WebSocket, UploadFile, File, BackgroundTasks, Request
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi import FastAPI, WebSocket, UploadFile, File, BackgroundTasks, Request, HTTPException
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 import tempfile
 import os
 import yt_dlp
@@ -65,6 +65,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 添加全局异常处理中间件
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Global exception handler to ensure all API responses are JSON"""
+    print(f"Global exception handler caught: {exc}")
+    import traceback
+    traceback.print_exc()
+    
+    # 对于API请求，返回JSON错误响应
+    if request.url.path.startswith("/ping") or request.url.path.startswith("/queue_status") or request.url.path.startswith("/init"):
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": f"Internal server error: {str(exc)}"}
+        )
+    
+    # 对于其他请求，抛出HTTP异常
+    raise HTTPException(status_code=500, detail=str(exc))
+
 # Store active translation sessions with last activity timestamp
 active_sessions: Dict[str, dict] = {}
 session_last_activity: Dict[str, float] = {}
@@ -90,7 +108,7 @@ print(f"Number of available GPUs: gpus={gpus}, len(gpus)={len(gpus)}")
 # Short timeout for detecting browser disconnections
 DISCONNECT_CHECK_INTERVAL = 5  # Check every 5 seconds
 # Timeout for detecting closed/refreshed webpages (15 seconds without a ping)
-WEBPAGE_DISCONNECT_TIMEOUT = 60  # Consider a webpage closed if no ping for 15 seconds
+WEBPAGE_DISCONNECT_TIMEOUT = 300  # Consider a webpage closed if no ping for 5 minutes (increased from 60s to handle 503 errors)
 # DISCONNECT_TIMEOUT is no longer used since orphaned sessions are now tracked client-side
 
 # Worker process function that runs the translation model
@@ -1034,21 +1052,85 @@ async def delete_session(request: Request, session_id: Optional[str] = None):
         print(f"Error deleting session: {e}")
         return {"success": False, "error": str(e)}
 
+@app.get("/health")
+async def health_check():
+    """Simple health check endpoint"""
+    try:
+        import psutil
+        memory = psutil.virtual_memory()
+        cpu = psutil.cpu_percent()
+        
+        return {
+            "status": "healthy",
+            "active_sessions": len(active_sessions),
+            "queued_sessions": len(session_queue),
+            "cpu_percent": cpu,
+            "memory_percent": memory.percent,
+            "available_gpus": len([gpu for gpu in gpus if gpu not in session_gpu_map.values()])
+        }
+    except Exception as e:
+        return {"status": "unhealthy", "error": str(e)}
+
 @app.post("/ping")
 async def ping_session(session_id: str):
     """Update the last ping timestamp for a session to indicate the webpage is still open."""
+    import time
+    start_time = time.time()
+    
     try:
+        # Log system resource usage occasionally
+        import psutil
+        import torch
+        
+        if hasattr(ping_session, '_call_count'):
+            ping_session._call_count += 1
+        else:
+            ping_session._call_count = 1
+        
+        # Log detailed system stats every 20 pings for debugging 503 errors
+        if ping_session._call_count % 20 == 0:
+            memory = psutil.virtual_memory()
+            cpu = psutil.cpu_percent()
+            disk = psutil.disk_usage('/')
+            
+            gpu_info = ""
+            if torch.cuda.is_available():
+                for i in range(torch.cuda.device_count()):
+                    gpu_mem = torch.cuda.memory_stats(i)
+                    allocated = gpu_mem.get('allocated_bytes.all.current', 0) / 1024**3
+                    reserved = gpu_mem.get('reserved_bytes.all.current', 0) / 1024**3
+                    gpu_info += f" GPU{i}: {allocated:.1f}GB allocated, {reserved:.1f}GB reserved"
+            
+            print(f"[PING-{ping_session._call_count}] System status - CPU: {cpu}%, Memory: {memory.percent}%, Disk: {disk.percent}%{gpu_info}")
+            print(f"[PING-{ping_session._call_count}] Active sessions: {len(active_sessions)}, Queue: {len(session_queue)}")
+        
+        # Check if session exists
         if session_id not in active_sessions:
+            print(f"[PING ERROR] Session {session_id} not found in active sessions")
             return {"success": False, "error": "Invalid session ID"}
+        
+        # Check if session worker process is still alive
+        session = active_sessions[session_id]
+        if hasattr(session, 'process') and not session.process.is_alive():
+            print(f"[PING ERROR] Worker process for session {session_id} is dead (PID: {session.process.pid})")
+            return {"success": False, "error": "Worker process terminated"}
             
         # Update the last ping timestamp
         update_session_ping(session_id)
-        print(f"Ping received for session {session_id}")
         
-        return {"success": True}
+        processing_time = (time.time() - start_time) * 1000  # Convert to milliseconds
+        
+        if ping_session._call_count % 10 == 0 or processing_time > 100:  # Log slow pings
+            print(f"[PING] Session {session_id} - Processing time: {processing_time:.1f}ms")
+        
+        return {"success": True, "processing_time_ms": round(processing_time, 1)}
+        
     except Exception as e:
-        print(f"Error updating ping: {e}")
-        return {"success": False, "error": str(e)}
+        processing_time = (time.time() - start_time) * 1000
+        print(f"[PING EXCEPTION] Session {session_id} - Error after {processing_time:.1f}ms: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e), "processing_time_ms": round(processing_time, 1)}
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -1081,5 +1163,10 @@ if __name__ == "__main__":
         app, 
         host=args.host, 
         port=args.port,
-        reload=args.reload if hasattr(args, 'reload') else False
+        reload=args.reload if hasattr(args, 'reload') else False,
+        workers=1,  # 单个worker避免进程间通信问题
+        limit_concurrency=100,  # 限制并发连接数
+        limit_max_requests=1000,  # 最大请求数后重启worker
+        timeout_keep_alive=30,  # Keep-alive超时
+        access_log=True,  # 启用访问日志
     )

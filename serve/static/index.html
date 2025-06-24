@@ -400,6 +400,7 @@
 
         .translation-output {
             min-height: 120px;
+            max-height: 260px; /* 添加最大高度限制 */
             padding: 16px;
             background: rgba(255, 255, 255, 0.05);
             border-radius: 12px;
@@ -408,6 +409,30 @@
             line-height: 1.5;
             white-space: pre-wrap;
             color: #ffffff;
+            overflow-y: auto; /* 当内容超出时显示滚动条 */
+            overflow-x: hidden; /* 隐藏横向滚动条 */
+            /* 自定义滚动条样式 */
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
+        }
+
+        /* Webkit浏览器的滚动条样式 */
+        .translation-output::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .translation-output::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .translation-output::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        .translation-output::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
         }
 
         .volume-indicator {
@@ -998,9 +1023,21 @@
 
         // Scroll translation to bottom
         function scrollTranslationToBottom() {
-            // 只在非Electron环境下滚动翻译输出
+            // 在浏览器环境下滚动翻译输出
             if (!isElectron && translationOutput) {
-                translationOutput.scrollTop = translationOutput.scrollHeight;
+                // 使用requestAnimationFrame确保DOM更新后再滚动
+                requestAnimationFrame(() => {
+                    // 现在直接滚动translationOutput元素（它现在有自己的滚动条）
+                    translationOutput.scrollTop = translationOutput.scrollHeight;
+                    
+                    // 如果以上不工作，也尝试滚动translationContent容器
+                    const translationContent = document.getElementById('translationContent');
+                    if (translationContent) {
+                        translationContent.scrollTop = translationContent.scrollHeight;
+                    }
+                    
+                    console.log(`Scrolled to bottom: scrollTop=${translationOutput.scrollTop}, scrollHeight=${translationOutput.scrollHeight}`);
+                });
             }
             resetIdleTimer();
         }
@@ -1168,7 +1205,10 @@
                         } else {
                             // 在浏览器环境中更新主窗口面板
                             translationOutput.textContent = message;
-                            scrollTranslationToBottom();
+                            // 确保在内容更新后立即滚动
+                            setTimeout(() => {
+                                scrollTranslationToBottom();
+                            }, 10); // 给DOM一点时间更新
                         }
                     }
                 };
@@ -1608,8 +1648,25 @@
                 const response = await fetch('/ping?' + new URLSearchParams({
                     session_id: sessionId
                 }), {
-                    method: 'POST'
+                    method: 'POST',
+                    timeout: 10000  // 10秒超时
                 });
+                
+                // 检查响应状态
+                if (!response.ok) {
+                    console.warn(`Ping failed with status ${response.status}: ${response.statusText}`);
+                    if (response.status === 503) {
+                        console.warn('Service unavailable, will retry next ping');
+                    }
+                    return;
+                }
+
+                // 检查响应类型
+                const contentType = response.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    console.warn('Ping response is not JSON, got:', contentType);
+                    return;
+                }
                 
                 const data = await response.json();
                 if (!data.success) {
@@ -1621,7 +1678,14 @@
                     }
                 }
             } catch (error) {
-                console.error('Error sending ping:', error);
+                // 区分不同类型的错误
+                if (error.name === 'TypeError' && error.message.includes('JSON')) {
+                    console.warn('Error parsing ping response as JSON:', error.message);
+                } else if (error.name === 'AbortError') {
+                    console.warn('Ping request timed out');
+                } else {
+                    console.error('Error sending ping:', error);
+                }
             }
         }
 
@@ -1632,6 +1696,23 @@
             
             try {
                 const response = await fetch(`/queue_status/${sessionId}`);
+                
+                // 检查响应状态
+                if (!response.ok) {
+                    console.warn(`Queue status check failed with status ${response.status}: ${response.statusText}`);
+                    if (response.status === 503) {
+                        console.warn('Service unavailable, will retry queue status check');
+                    }
+                    return;
+                }
+
+                // 检查响应类型
+                const contentType = response.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    console.warn('Queue status response is not JSON, got:', contentType);
+                    return;
+                }
+                
                 const data = await response.json();
                 
                 if (data.status === 'active') {
@@ -1668,8 +1749,13 @@
                     }
                 }
             } catch (error) {
-                console.error('Error checking queue status:', error);
-                updateStatus('Error checking queue status: ' + error, 'error');
+                // 区分不同类型的错误
+                if (error.name === 'TypeError' && error.message.includes('JSON')) {
+                    console.warn('Error parsing queue status response as JSON:', error.message);
+                } else {
+                    console.error('Error checking queue status:', error);
+                    updateStatus('Error checking queue status: ' + error, 'error');
+                }
             }
         }
         
@@ -1876,7 +1962,10 @@
                     } else {
                         // 在浏览器环境中更新主窗口面板
                         translationOutput.textContent = message;
-                        scrollTranslationToBottom();
+                        // 确保在内容更新后立即滚动
+                        setTimeout(() => {
+                            scrollTranslationToBottom();
+                        }, 10); // 给DOM一点时间更新
                     }
                 };
                 
