@@ -1,20 +1,12 @@
 import os
 import re
-from tkinter.font import names
-
-from datasets import load_dataset, Dataset
+import json
+import hashlib
 from tqdm import tqdm
-import numpy as np
-import torch
-import torchaudio.functional as AF
+import soundfile as sf
 
 from glossary_utils import load_clean_glossary_from_file
-#from preprocess.prep_mfa import split
 
-_term_set_for_pool = None
-_alt2main_for_pool = None
-_glossary_for_pool = None
-_return_tensor_for_pool = True
 
 def _process_wrapper(args):
     item, named_entities, return_tensor, phrase2desc = args
@@ -27,7 +19,7 @@ def normalize(text):
     return text.lower()
 
 
-def build_phrase_desc_index(term_set, alt2main, glossary,text_field):
+def build_phrase_desc_index(term_set, alt2main, glossary, text_field):
     phrase2desc = {}
     for phrase in term_set:
         if phrase in glossary:
@@ -35,6 +27,7 @@ def build_phrase_desc_index(term_set, alt2main, glossary,text_field):
         elif phrase in alt2main and alt2main[phrase] in glossary:
             phrase2desc[phrase] = glossary[alt2main[phrase]][text_field]
     return phrase2desc
+
 
 def extract_ground_truth_terms(text, phrase2desc, named_entities):
     if not named_entities:
@@ -68,201 +61,183 @@ def extract_ground_truth_terms(text, phrase2desc, named_entities):
     return filtered if filtered else None
 
 
-import time
-
-def safe_resample(tensor, orig_freq, new_freq, timeout=30):
-    result = {}
-
-    def run():
-        try:
-            result["tensor"] = AF.resample(tensor, orig_freq=orig_freq, new_freq=new_freq)
-        except Exception as e:
-            result["error"] = e
-
-    thread = threading.Thread(target=run)
-    thread.start()
-    thread.join(timeout)
-
-    if thread.is_alive():
-        print("[TIMEOUT] Resample operation exceeded timeout")
-        return None
-    if "error" in result:
-        print(f"[ERROR] Resample failed: {result['error']}")
-        return None
-    return result.get("tensor")
+def get_layered_audio_path(segment_id, base_dir="/mnt/data/jiaxuanluo/audio"):
+    """根据segment_id生成分层的音频文件路径"""
+    # 提取audio_id作为第二层目录（假设格式为 AUD0000000468_S0000084）
+    audio_id = segment_id.split('_')[0] if '_' in segment_id else segment_id
+    
+    # 使用audio_id的前3个字符作为第一层目录
+    layer1 = audio_id[:3] if len(audio_id) >= 3 else audio_id
+    # 使用完整的audio_id作为第二层目录
+    layer2 = audio_id
+    
+    audio_dir = os.path.join(base_dir, layer1, layer2)
+    os.makedirs(audio_dir, exist_ok=True)
+    
+    audio_file = os.path.join(audio_dir, f"{segment_id}.wav")
+    return audio_file
 
 
-import threading
+def parse_audio_path(audio_path_str):
+    """解析 opus:offset:duration 格式的音频路径"""
+    if ':' in audio_path_str:
+        parts = audio_path_str.split(':')
+        if len(parts) >= 3:
+            opus_file = parts[0]
+            offset_samples = int(parts[1])
+            duration_samples = int(parts[2])
+            return opus_file, offset_samples, duration_samples
+    
+    # 如果不是预期格式，返回原路径
+    return audio_path_str, 0, None
 
-def safe_resample(tensor, orig_freq, new_freq, timeout=30):
-    result = {}
 
-    def run():
-        try:
-            result["tensor"] = AF.resample(tensor, orig_freq=orig_freq, new_freq=new_freq)
-        except Exception as e:
-            result["error"] = e
-
-    thread = threading.Thread(target=run)
-    thread.start()
-    thread.join(timeout)
-
-    if thread.is_alive():
-        print("[TIMEOUT] Resample operation exceeded timeout")
-        return None
-    if "error" in result:
-        print(f"[ERROR] Resample failed: {result['error']}")
-        return None
-    return result.get("tensor")
-
-def extract_array_from_sample(sample):
-    segment_id = sample.get("segment_id")
-    save_path = f"data/audio_tensor/{segment_id}.pt"
-
+def extract_and_save_audio(audio_path_str, segment_id, sample_rate=16000):
+    """提取并保存音频片段"""
     try:
+        opus_file, offset_samples, duration_samples = parse_audio_path(audio_path_str)
+        
+        if duration_samples is None:
+            print(f"[WARNING] 无法解析音频路径格式: {audio_path_str}")
+            return None, None, None
+        
+        # 检查原始文件是否存在
+        if not os.path.exists(opus_file):
+            print(f"[SKIP] 原始音频文件不存在: {opus_file}")
+            return None, None, None
+        
+        # 生成保存路径
+        save_path = get_layered_audio_path(segment_id)
+        
+        # 如果文件已存在，直接返回路径和时间信息
         if os.path.exists(save_path):
-            try:
-                with open(save_path, "rb") as f:
-                    tensor = torch.load(f, weights_only=True)
-                return tensor
-            except Exception as e:
-                print(f"[WARNING] Failed to load cached tensor for {segment_id}: {e}")
-                # fallback to reprocess
-
-        start_time = time.time()
-        if "audio" in sample and "array" in sample["audio"]:
-            arr = sample["audio"]["array"]
-            sr = sample["audio"].get("sampling_rate", 16000)
-
-            arr = np.asarray(arr, dtype=np.float32)
-            arr = np.clip(arr, -1.0, 1.0)
-
-            tensor = torch.tensor(arr).unsqueeze(0)
-
-            # if tensor.shape[-1] > 480000:  # 超过 10 秒
-            #     print(f"[SKIP] Too long tensor: {segment_id} with {tensor.shape[-1]} samples")
-            #     return None
-
-            # if sr != 48000:
-            #     print(f"[ERROR] Audio array has different sampling rate for {segment_id}")
-            #     tensor = safe_resample(tensor, orig_freq=sr, new_freq=48000)
-            #     if tensor is None:
-            #         print(f"[ERROR] Resample failed or timed out for {segment_id}, sample: {sample}")
-            #         # 将失败的样本记录下来
-            #         with open("data/resample_blacklist.txt", "a") as f:
-            #             f.write(segment_id + "\n")
-            #         return None
-
-            if tensor.shape[-1] < 24000:
-                print(f"[INFO] Skipping too short tensor: {segment_id}")
-                return None
-            torch.save(tensor, save_path)
-            return tensor
-
-        else:
-            return None
+            begin_time = offset_samples / sample_rate
+            end_time = (offset_samples + duration_samples) / sample_rate
+            return save_path, begin_time, end_time
+        
+        # 读取音频片段
+        # soundfile以样本为单位进行读取
+        audio_data, sr = sf.read(opus_file, start=offset_samples, frames=duration_samples)
+        
+        # 如果采样率不匹配，可能需要重采样（这里假设已经是正确的采样率）
+        if sr != sample_rate:
+            print(f"[WARNING] 采样率不匹配: 期望{sample_rate}, 实际{sr}, segment_id: {segment_id}")
+        
+        # 保存音频文件
+        sf.write(save_path, audio_data, sr)
+        
+        # 计算时间信息（以秒为单位）
+        begin_time = offset_samples / sr
+        end_time = (offset_samples + duration_samples) / sr
+        
+        return save_path, begin_time, end_time
+        
     except Exception as e:
-        print(f"[ERROR] Failed to extract/save tensor for {segment_id}: {e}")
-        return None
+        print(f"[ERROR] 处理音频文件失败 {segment_id}: {e}")
+        return None, None, None
 
 
-# step2 构造{text, term}二元组
-def process_item(item, phrase2desc, return_tensor=True,named_entities=None):
+def read_tsv_samples(tsv_path):
+    """读取TSV文件，返回样本列表"""
+    print(f"[INFO] 从 {tsv_path} 读取数据...")
+    
+    all_samples = []
+    with open(tsv_path, "r", encoding="utf-8") as f:
+        for line_idx, line in enumerate(f):
+            line = line.strip()
+            if not line:  # 跳过空行
+                continue
+                
+            parts = line.split("\t")
+            
+            # 跳过表头行或无效行
+            if len(parts) < 5 or parts[0] == "id":
+                print(f"[INFO] 跳过表头或无效行: {parts[0] if parts else 'empty'}")
+                continue
+            
+            try:
+                # 结构: id	audio	n_frames	speaker	src_text	src_lang
+                segment_id, audio_path, n_frames, speaker, src_text = parts[:5]
+                src_lang = parts[5] if len(parts) > 5 else "en"
+                
+                # 只保留需要的字段，text进行全小写处理
+                all_samples.append({
+                    "segment_id": segment_id,
+                    "audio": {"path": audio_path},
+                    "text": src_text.lower(),  # 全小写处理
+                })
+            except Exception as e:
+                print(f"[WARNING] 跳过第 {line_idx + 1} 行，解析错误: {e}")
+                continue
+    
+    total_size = len(all_samples)
+    print(f"[INFO] 总共读取 {total_size} 个样本")
+    return all_samples
+
+
+def process_item(item, phrase2desc, return_tensor=True, named_entities=None):
+    """处理单个样本"""
     speech_text = item["text"]
+    # text在读取时已经转换为小写，这里只做标点符号规范化
     speech_text = normalize(speech_text)
-    ground_truth_terms = extract_ground_truth_terms(speech_text, phrase2desc,named_entities)
+    ground_truth_terms = extract_ground_truth_terms(speech_text, phrase2desc, named_entities)
 
-    item["text"] = speech_text
-    item["ground_truth_term"] = ground_truth_terms or []  # 保留空 term 列表
-    item["has_target"] = bool(ground_truth_terms)  # True / False 标志
+    segment_id = item["segment_id"]
+    audio_path_str = item.get("audio", {}).get("path") if isinstance(item.get("audio"), dict) else item.get("audio")
+    
+    # 处理音频文件
+    saved_audio_path, begin_time, end_time = extract_and_save_audio(audio_path_str, segment_id)
+    
+    if saved_audio_path is None:
+        print(f"[SKIP] 跳过音频处理失败的样本: {segment_id}")
+        return None
+    
+    # 提取audio_id（从segment_id中提取，假设格式为 AUD0000000468_S0000084）
+    audio_id = segment_id.split('_')[0] if '_' in segment_id else segment_id
+    
+    # 构建新的样本结构
+    processed_item = {
+        "segment_id": segment_id,
+        "text": speech_text,
+        "audio": saved_audio_path,
+        "begin_time": begin_time,
+        "end_time": end_time, 
+        "audio_id": audio_id,
+        "ground_truth_term": ground_truth_terms or [],
+        "has_target": bool(ground_truth_terms)
+    }
 
-    # For JSON serialization: remove array, keep path
-    json_safe_item = item.copy()
-    if "audio" in json_safe_item and isinstance(json_safe_item["audio"], dict):
-        json_safe_item["audio"] = json_safe_item["audio"].get("path")
-
-    # resample to 48000
-    # tensor = extract_array_from_sample(item)
-    # if tensor is None:
-    #     print(f"[ERROR] tensor None, Failed to extract audio arrays for {item['segment_id']}")
-    #     return None
-    # if return_tensor:
-    #     item["audio_tensor"] = tensor
-    return item
-
-
-# term_set, alt2main, glossary = process_named_entities(
-#         input_path=args.input,
-#         max_words_length=args.max_words_length,
-#         max_workers=args.max_workers
-#     )
-#
-#     # 可选：保存调试信息
-#     with open("data/alt2main.json", "w", encoding="utf-8") as f:
-#         json.dump(alt2main, f, indent=2, ensure_ascii=False)
-#     with open("data/glossary_filtered.json", "w", encoding="utf-8") as f:
-#         json.dump(glossary, f, indent=2, ensure_ascii=False)
-
-from concurrent.futures import ProcessPoolExecutor, as_completed
+    return processed_item
 
 
-def load_preprocessed_samples(json_path, with_tensor=True):
-    with open(json_path, "r") as f:
-        samples = json.load(f)
-
-    if with_tensor:
-        for item in samples:
-            seg_id = item.get("segment_id")
-            pt_path = f"data/audio_tensor/{seg_id}.pt"
-            if os.path.exists(pt_path):
-                try:
-                    item["audio_tensor"] = torch.load(pt_path)
-                except Exception as e:
-                    print(f"[WARNING] Failed to load tensor for {seg_id}: {e}")
-                    item["audio_tensor"] = None
-    return [
-        item for item in samples
-        if not with_tensor or (
-            isinstance(item.get("audio_tensor"), torch.Tensor)
-            and item["audio_tensor"].numel() > 0
-            and item["audio_tensor"].shape[-1] >= 48000
-        )
-    ]
-
-# 不主动返回tensor, 而是从文件中读取，等待子进程都处理完后，防止pickle错误
-def handle_giga_speech_train_samples(term_set_path, alt2main_path, glossary_path,
-                                     name="s", split="train", sample_limit=None,
-                                     return_tensor=False, start_offset=0, text_field = "term"):
-    os.makedirs("data/audio_tensor", exist_ok=True)
+def handle_split_samples(term_set_path, alt2main_path, glossary_path, 
+                        tsv_path, ner_json_path, split_id, text_field="term"):
+    """处理分割的样本数据"""
     term_set, alt2main, glossary = load_clean_glossary_from_file(term_set_path, alt2main_path, glossary_path)
     print(f"Total terms: {len(term_set)}, total entities: {len(glossary)}")
 
-    gs = load_dataset(
-        path="speechcolab/gigaspeech",
-        name=name,
-        trust_remote_code=True,
-        token=os.getenv("HF_TOKEN")
-    )
-
-    total_size = len(gs[split])
-    end = start_offset + sample_limit if sample_limit else total_size
-    train_set = gs[split].select(range(start_offset, min(end, total_size)))
-
-    slurm_cpus = int(os.environ.get("SLURM_CPUS_PER_TASK", 1))
-    print(f"slurm_cpus: {slurm_cpus}")
-    # 固定使用全量 NER 文件
-    # TODO fix
-    named_entities_path = f"data/named_entities_{name}_{split}_None.json"
-    if os.path.exists(named_entities_path):
-        print(f"[INFO] Loading full cached NER from {named_entities_path}")
-        with open(named_entities_path, "r", encoding="utf-8") as f:
-            all_named_entities = json.load(f)
-        named_entities_list = all_named_entities[start_offset: end]
+    # 读取分片TSV文件（已经是分割好的文件）
+    all_samples = read_tsv_samples(tsv_path)
+    print(f"[INFO] 处理分割 {split_id}: 共 {len(all_samples)} 个样本")
+    
+    # 加载指定的命名实体文件
+    if os.path.exists(ner_json_path):
+        print(f"[INFO] Loading NER from {ner_json_path}")
+        with open(ner_json_path, "r", encoding="utf-8") as f:
+            named_entities_list = json.load(f)
     else:
         raise FileNotFoundError(
-            f"[ERROR] {named_entities_path} not found. "
-            f"Please run extract_ner_cache.py in a spaCy-enabled environment first."
+            f"[ERROR] Named entity file not found: {ner_json_path}. "
+            f"Please ensure the file exists."
         )
+    
+    # 确保样本数量和命名实体数量一致
+    if len(all_samples) != len(named_entities_list):
+        print(f"[WARNING] 样本数量 ({len(all_samples)}) 与命名实体数量 ({len(named_entities_list)}) 不一致")
+        min_length = min(len(all_samples), len(named_entities_list))
+        all_samples = all_samples[:min_length]
+        named_entities_list = named_entities_list[:min_length]
+        print(f"[INFO] 调整为处理 {min_length} 个样本")
 
     blacklist_path = "data/resample_blacklist.txt"
     blacklist = set()
@@ -270,26 +245,13 @@ def handle_giga_speech_train_samples(term_set_path, alt2main_path, glossary_path
         with open(blacklist_path, "r") as f:
             blacklist = set(line.strip() for line in f)
 
-    # 注意：这里统一传 False，确保子进程不携带 tensor
-
-    phrase2desc = build_phrase_desc_index(term_set, alt2main, glossary,text_field)
+    phrase2desc = build_phrase_desc_index(term_set, alt2main, glossary, text_field)
 
     args_list = []
-    for sample, named_entities in zip(train_set, named_entities_list):
+    for sample, named_entities in zip(all_samples, named_entities_list):
         segment_id = sample["segment_id"]
         if segment_id in blacklist:
             continue
-        audio_path = sample.get("audio", {}).get("path")
-        if audio_path and not os.path.exists(audio_path):
-            print(f"[SKIP] Audio path not found: {audio_path}")
-            continue
-        if audio_path:
-            try:
-                import torchaudio
-                torchaudio.load(audio_path)  # 尝试加载
-            except Exception as e:
-                print(f"[SKIP] Failed to load audio {audio_path}: {e}")
-                continue
         args_list.append((sample, named_entities, False, phrase2desc))
 
     results = []
@@ -299,87 +261,54 @@ def handle_giga_speech_train_samples(term_set_path, alt2main_path, glossary_path
             results.append(result)
 
     print(f"Total items: {len(results)}")
-
-    # 主进程完成后，手动加载：
-    if return_tensor:
-        for item in results:
-            if item is None:
-                continue
-            segment_id = item.get("segment_id")
-            tensor_path = f"data/audio_tensor/{segment_id}.pt"
-            if os.path.exists(tensor_path):
-                try:
-                    item["audio_tensor"] = torch.load(tensor_path)
-                except Exception as e:
-                    print(f"[WARNING] Failed to load tensor for {segment_id}: {e}")
-                    item["audio_tensor"] = None  # 保底
-
-    results = [
-        item for item in results
-        if item is not None and
-           (not return_tensor or (
-                   isinstance(item.get("audio_tensor"), torch.Tensor) and
-                   item["audio_tensor"].numel() > 0 and
-                   item["audio_tensor"].shape[-1] >= 48000
-           ))
-    ]
-    print(f"Total items after filter: {len(results)}")
     return results
 
 
-import json
-
 def serialize_for_json(samples):
-    clean_samples = []
-    for item in samples:
-        item = dict(item)  # shallow copy
-        if "audio_tensor" in item:
-            del item["audio_tensor"]
-        if "audio" in item and isinstance(item["audio"], dict):
-            item["audio"] = item["audio"].get("path")  # ❗只保留路径字符串
-        clean_samples.append(item)
-    return clean_samples
+    """序列化样本为JSON格式"""
+    # 现在样本结构已经是最终格式，不需要额外处理
+    return samples
+
 
 import argparse
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--start", type=int, default=0)
-    parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--tsv_path", type=str, required=True, help="Path to the input TSV file")
+    parser.add_argument("--split_id", type=int, default=0, help="Split ID for processing (0-8)")
+    parser.add_argument("--ner_json", type=str, required=True, help="Path to the named entities JSON file")
     parser.add_argument(
         '--text_field', type=str, default="term", choices=["term", "short_description"],
         help="Which field to use as input text (term: comma-split title, short_description: full description)"
     )
     args = parser.parse_args()
+    
     term_set_path = "data/terms/term_set.txt"
     alt2main_path = "data/terms/alt2main.json"
     glossary_path = "data/terms/glossary_filtered.json"
 
-    # You can change name="s" to other splits like "m", "l", "xl"
-    samples = handle_giga_speech_train_samples(
+    samples = handle_split_samples(
         term_set_path=term_set_path,
         alt2main_path=alt2main_path,
         glossary_path=glossary_path,
-        name=args.name,
-        split=args.split,
-        sample_limit=args.limit,
-        return_tensor=False,
-        start_offset=args.start,
-        text_field = args.text_field
+        tsv_path=args.tsv_path,
+        ner_json_path=args.ner_json,
+        split_id=args.split_id,
+        text_field=args.text_field
     )
 
     json_ready = serialize_for_json(samples)
-    if args.name == 'dev' or args.split == 'validation':
-        out_path = f"data/test_preprocessed_samples_merged.json"
-        with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(serialize_for_json(samples), f, indent=2, ensure_ascii=False)
-    else:
-        sample_path = f'{args.text_field}_preprocessed_samples' if args.text_field == 'term' else f'preprocessed_samples'
-        prefix = f"data/samples/{args.name}"
-        import os
-        os.makedirs(prefix, exist_ok=True)
-        out_path = f"{prefix}/{sample_path}_{args.start}_{args.start + (args.limit or 'end')}.json"
-        with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(serialize_for_json(samples), f, indent=2, ensure_ascii=False)
+    
+    # 输出文件命名
+    sample_path = f'{args.text_field}_preprocessed_samples' if args.text_field == 'term' else f'preprocessed_samples'
+    prefix = "data/samples/xl"
+    os.makedirs(prefix, exist_ok=True)
+    
+    start_idx = args.split_id * 1000000
+    end_idx = start_idx + len(samples)
+    out_path = f"{prefix}/{sample_path}_{start_idx}_{end_idx}.json"
+    
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(json_ready, f, indent=2, ensure_ascii=False)
 
-    print("✅ test.json written successfully with", len(json_ready), "samples.")
+    print(f"✅ {out_path} written successfully with {len(json_ready)} samples.")

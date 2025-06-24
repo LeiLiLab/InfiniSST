@@ -9,6 +9,13 @@ nlp = spacy.load("en_core_web_trf")
 
 
 def extract_named_entities(tsv_path):
+    # TODO 最好还是覆盖重写
+    base_name = os.path.splitext(os.path.basename(tsv_path))[0]
+    output_path = f"data/named_entities_{base_name}.json"
+    if os.path.exists(output_path):
+        print(f"[INFO] 命名实体文件已存在: {output_path}，跳过处理")
+        return
+
     # 从本地TSV文件读取数据
     # 格式: id	audio	n_frames	speaker	src_text	src_lang
     # 示例: POD0000000001_S0000008	/mnt/taurus/data/siqiouyang/datasets/gigaspeech/audio/podcast/P0001/POD0000000001.opus:2544000:136320	136320	N/A	DOUGLAS MCGRAY IS GOING TO BE OUR GUIDE YOU WALK THROUGH THE DOOR, YOU SEE THE RED CARPETING, YOU SEE SOMEONE IN A SUIT. THEY MAY BE GREETING YOU.	en
@@ -58,8 +65,6 @@ def extract_named_entities(tsv_path):
     # 确保输出目录存在
     os.makedirs("data", exist_ok=True)
     
-    base_name = os.path.splitext(os.path.basename(tsv_path))[0]
-    output_path = f"data/named_entities_{base_name}.json"
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump([list(x) for x in named_entities], f, indent=2, ensure_ascii=False)
     

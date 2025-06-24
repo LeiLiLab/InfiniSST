@@ -105,7 +105,6 @@ class InBatchDataset(Dataset):
                    len(t) >= 5 and sum(c.isdigit() for c in t) <= 4
                    for t in s["ground_truth_term"]
                )
-               and 3.0 <= s['end_time'] - s['begin_time'] <= 30
                and os.path.exists(s.get("audio", ""))
         ]
 

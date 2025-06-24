@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# 总量 8282989，按 1000000 一份切分，共 9 个任务
+# 总量 8282989，按 500000 一份切分，共 17 个任务
 # 根据总数切分
 
 #SBATCH --job-name=extract_ner_cache
 #SBATCH --partition=taurus
-#SBATCH --array=0-8%3
+#SBATCH --array=0-16%3
 #SBATCH --mem=64GB
 #SBATCH --cpus-per-task=1
 #SBATCH --ntasks=1
@@ -28,8 +28,8 @@ if [[ ! -f "$SPLIT_TSV" ]]; then
     echo "[INFO] Generating split TSV for task ID $SLURM_ARRAY_TASK_ID..."
 
     TOTAL_LINES=$(wc -l < "$INPUT_TSV")
-    START_LINE=$((SLURM_ARRAY_TASK_ID * 1000000 + 1))  # +1 to skip header
-    END_LINE=$((START_LINE + 1000000 - 1))
+    START_LINE=$((SLURM_ARRAY_TASK_ID * 500000 + 2))  # +2 to skip header
+    END_LINE=$((START_LINE + 500000 - 1))
     if (( END_LINE > TOTAL_LINES )); then
         END_LINE=$TOTAL_LINES
     fi
