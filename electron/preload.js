@@ -34,10 +34,15 @@ try {
     closeTranslationWindow: () => ipcRenderer.invoke('close-translation-window'),
     minimizeTranslationWindow: () => ipcRenderer.invoke('minimize-translation-window'),
     setWindowSize: (width, height) => ipcRenderer.invoke('set-translation-window-size', width, height),
+    getWindowBounds: () => ipcRenderer.invoke('get-translation-window-bounds'),
+    setWindowBounds: (bounds) => ipcRenderer.invoke('set-translation-window-bounds', bounds),
     
     // 翻译数据更新
     updateTranslation: (translationData) => ipcRenderer.invoke('update-translation', translationData),
     updateTranslationStatus: (statusData) => ipcRenderer.invoke('update-translation-status', statusData),
+    
+    // 翻译窗口样式更新
+    updateTranslationStyle: (styleData) => ipcRenderer.invoke('update-translation-style', styleData),
     
     // 重置翻译
     resetTranslation: () => ipcRenderer.invoke('reset-translation-from-window'),
@@ -52,6 +57,9 @@ try {
     },
     onStatusUpdate: (callback) => {
       ipcRenderer.on('status-update', callback);
+    },
+    onTranslationStyleUpdate: (callback) => {
+      ipcRenderer.on('translation-style-update', callback);
     },
     onResetTranslation: (callback) => {
       ipcRenderer.on('reset-translation', callback);

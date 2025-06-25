@@ -439,6 +439,10 @@ ipcMain.handle('show-open-dialog', async () => {
 // 创建翻译窗口
 function createTranslationWindow() {
   if (translationWindow) {
+    // 如果窗口存在但被隐藏，显示它
+    if (!translationWindow.isVisible()) {
+      translationWindow.show();
+    }
     translationWindow.focus();
     return;
   }
@@ -446,25 +450,32 @@ function createTranslationWindow() {
   translationWindow = new BrowserWindow({
     width: 600,
     height: 180, // 缩短默认高度，约两行内容
-    minWidth: 400,
+    minWidth: 300,
     minHeight: 120, // 减小最小高度
-    maxWidth: 1000,
-    maxHeight: 600,
+    maxWidth: 1200,
+    maxHeight: 800,
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: true,
     frame: false, // 完全无边框
     transparent: true, // 透明背景
-    hasShadow: false, // 移除窗口阴影
+    hasShadow: true, // 保留窗口阴影以便更好地识别窗口边界
     autoHideMenuBar: true, // 自动隐藏菜单栏
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      backgroundThrottling: false // 防止后台时停止渲染
     },
     title: 'InfiniSST Translation',
-    show: false
+    show: false,
+    focusable: true,
+    fullscreenable: false,
+    maximizable: false,
+    movable: true
   });
+  
+  // 隐藏菜单栏
   translationWindow.setMenuBarVisibility(false);
 
   // 加载翻译窗口页面
@@ -492,6 +503,13 @@ function createTranslationWindow() {
         text: 'Ready - Load model',
         type: 'ready'
       });
+      
+      // 发送初始样式设置
+      translationWindow.webContents.send('translation-style-update', {
+        fontSize: 14,
+        backgroundOpacity: 95,
+        textColor: '#ffffff'
+      });
     }, 200);
   });
 
@@ -499,11 +517,25 @@ function createTranslationWindow() {
   translationWindow.on('closed', () => {
     translationWindow = null;
   });
+  
+  // 防止窗口失去焦点时隐藏
+  translationWindow.on('blur', () => {
+    // 不自动隐藏，保持显示状态
+  });
 }
 
 // IPC 处理器
 ipcMain.handle('show-translation-window', () => {
-  createTranslationWindow();
+  if (translationWindow) {
+    // 如果窗口存在但被隐藏，显示它
+    if (!translationWindow.isVisible()) {
+      translationWindow.show();
+    }
+    translationWindow.focus();
+  } else {
+    // 如果窗口不存在，创建新窗口
+    createTranslationWindow();
+  }
 });
 
 ipcMain.handle('hide-translation-window', () => {
@@ -563,6 +595,25 @@ ipcMain.handle('update-translation-status', (event, statusData) => {
   }
 });
 
+ipcMain.handle('update-translation-style', (event, styleData) => {
+  console.log('Main process received style update:', styleData);
+  if (translationWindow && translationWindow.webContents) {
+    // 确保窗口已完全加载
+    if (translationWindow.webContents.isLoading()) {
+      console.log('Translation window still loading, waiting...');
+      translationWindow.webContents.once('did-finish-load', () => {
+        console.log('Translation window loaded, sending style update');
+        translationWindow.webContents.send('translation-style-update', styleData);
+      });
+    } else {
+      console.log('Sending style update to translation window');
+      translationWindow.webContents.send('translation-style-update', styleData);
+    }
+  } else {
+    console.log('Translation window not available for style update');
+  }
+});
+
 ipcMain.handle('reset-translation-from-window', (event) => {
   // 向主窗口发送重置翻译的请求
   if (mainWindow && mainWindow.webContents) {
@@ -598,6 +649,43 @@ ipcMain.handle('set-translation-window-size', (event, width, height) => {
     console.log(`Translation window resized and repositioned`);
   } else {
     console.warn('Translation window not available for resizing');
+  }
+});
+
+// 获取翻译窗口边界
+ipcMain.handle('get-translation-window-bounds', (event) => {
+  if (translationWindow) {
+    return translationWindow.getBounds();
+  }
+  return null;
+});
+
+// 设置翻译窗口边界（位置和大小）
+ipcMain.handle('set-translation-window-bounds', (event, bounds) => {
+  console.log(`Setting translation window bounds to:`, bounds);
+  if (translationWindow && bounds) {
+    // 确保尺寸不小于最小值
+    const width = Math.max(300, bounds.width);
+    const height = Math.max(120, bounds.height);
+    
+    // 确保位置在屏幕范围内
+    const { screen } = require('electron');
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+    
+    const x = Math.max(0, Math.min(bounds.x, screenWidth - width));
+    const y = Math.max(0, Math.min(bounds.y, screenHeight - height));
+    
+    translationWindow.setBounds({
+      x: Math.round(x),
+      y: Math.round(y),
+      width: Math.round(width),
+      height: Math.round(height)
+    });
+    
+    console.log(`Translation window bounds updated to: ${x}, ${y}, ${width}x${height}`);
+  } else {
+    console.warn('Translation window not available for setting bounds');
   }
 });
 

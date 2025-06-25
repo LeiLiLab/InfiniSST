@@ -77,29 +77,19 @@
             gap: 8px;
         }
 
+        .control-group.buttons-group {
+            /* JavaScript会在Electron中动态调整位置 */
+        }
+
         .button-row {
             display: flex;
             gap: 12px;
-            align-items: stretch; /* 确保按钮与select高度一致 */
+            align-items: stretch;
         }
 
         .button-row .btn {
             flex: 1;
             min-width: 120px;
-        }
-
-        .control-group.buttons-group {
-            justify-content: flex-end;
-            align-self: stretch; /* 拉伸到与其他控件相同高度 */
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end; /* 内容底部对齐 */
-        }
-
-        /* Electron特定的修复 */
-        .electron-app .control-group.buttons-group {
-            margin-top: 20px !important; /* 继续往下调整 */
-            align-self: flex-start !important;
         }
 
         .control-group label {
@@ -108,42 +98,61 @@
             font-weight: 500;
         }
 
-        select, .btn {
-            padding: 12px 16px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
+        .control-group select, .control-group input {
+            height: 48px;
             background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
             color: white;
-            font-size: 0.95rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            height: 48px; /* 确保统一高度 */
-            box-sizing: border-box;
+            padding: 0 12px;
+            font-size: 0.9rem;
         }
 
-        select:focus, .btn:focus {
+        .control-group select:focus, .control-group input:focus {
             outline: none;
-            border-color: #4facfe;
-            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.2);
+            border-color: #00d4ff;
+            box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
         }
 
         .btn {
+            height: 48px;
             background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
             border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.9rem;
             font-weight: 600;
-            min-width: 140px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 12px 16px;
         }
 
         .btn:hover {
             transform: translateY(-1px);
-            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.3);
+            box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
         }
 
         .btn:disabled {
-            opacity: 0.5;
+            background: rgba(255, 255, 255, 0.1) !important;
+            color: rgba(255, 255, 255, 0.5) !important;
             cursor: not-allowed;
             transform: none;
-            box-shadow: none;
+        }
+
+        /* 强制确保按钮样式应用 */
+        .buttons-group .btn {
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%) !important;
+            color: white !important;
+            border: none !important;
+        }
+
+        .buttons-group .btn:disabled {
+            background: linear-gradient(45deg, rgba(79, 172, 254, 0.5) 0%, rgba(0, 242, 254, 0.4) 100%) !important;
+            color: rgba(255, 255, 255, 0.8) !important;
         }
 
         .input-section {
@@ -2958,9 +2967,17 @@
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', () => {
             try {
-                // 检测Electron环境并添加CSS类
-                if (isElectron || window.electronAPI || navigator.userAgent.includes('Electron')) {
-                    document.body.classList.add('electron-app');
+                // Electron环境下强制调整按钮位置
+                if (typeof window !== 'undefined' && window.electronAPI) {
+                    setTimeout(() => {
+                        const buttonsGroup = document.querySelector('.buttons-group');
+                        if (buttonsGroup) {
+                            buttonsGroup.style.transform = 'translateY(-25px)';
+                            buttonsGroup.style.position = 'relative';
+                            buttonsGroup.style.zIndex = '10';
+                            console.log('Electron: 按钮位置已调整到-25px');
+                        }
+                    }, 100);
                 }
                 
                 ensureClientId();
