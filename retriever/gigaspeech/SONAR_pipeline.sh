@@ -184,7 +184,7 @@ train_job=$(sbatch \
 cd /home/jiaxuanluo/InfiniSST/retriever/gigaspeech
 . ~/miniconda3/etc/profile.d/conda.sh
 conda activate infinisst
-python3 SONAR_train.py --train_samples_path=${final_samples} --epochs=50 --batch_size=32 --save_path=${model_save_path}" | awk '{print $4}')
+python3 SONAR_train.py --train_samples_path=${final_samples} --epochs=20 --batch_size=512 --save_path=${model_save_path}" | awk '{print $4}')
 
 echo "sonar_train: $train_job" | tee -a "$LOG_FILE"
 
