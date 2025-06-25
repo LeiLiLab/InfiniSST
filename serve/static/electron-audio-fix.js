@@ -49,43 +49,59 @@ class ElectronAudioProcessor {
             
             // 在Electron环境中使用正确的模块路径
             let audioProcessorUrl;
+            let urlBuildMethod = 'unknown';
             try {
                 // 尝试多种URL构建方式
                 if (window.location && window.location.origin) {
                     audioProcessorUrl = window.location.origin + '/static/audio-processor.js';
+                    urlBuildMethod = 'window.location.origin';
                 } else {
                     // 备用方案
                     const protocol = window.location.protocol || 'http:';
                     const host = window.location.host || 'localhost';
                     audioProcessorUrl = `${protocol}//${host}/static/audio-processor.js`;
+                    urlBuildMethod = 'manual construction';
                 }
             } catch (urlError) {
                 console.warn('⚠️ Error building URL, using relative path:', urlError);
                 audioProcessorUrl = '/static/audio-processor.js';
+                urlBuildMethod = 'relative path fallback';
             }
             
-            console.log('📁 Loading AudioWorklet module from:', audioProcessorUrl);
+            console.log('📁 Loading AudioWorklet module:', {
+                url: audioProcessorUrl,
+                method: urlBuildMethod,
+                currentLocation: window.location?.href,
+                isElectron: typeof window !== 'undefined' && !!window.electronAPI
+            });
             
             // 添加重试机制加载AudioWorklet模块
             let retryCount = 0;
-            const maxRetries = 3;
+            const maxRetries = 5; // 增加重试次数
             
             while (retryCount < maxRetries) {
                 try {
                     await this.audioContext.audioWorklet.addModule(audioProcessorUrl);
-                    console.log('✅ AudioWorklet module loaded successfully');
+                    console.log('✅ AudioWorklet module loaded successfully on attempt', retryCount + 1);
                     break;
                 } catch (moduleError) {
                     retryCount++;
-                    console.warn(`⚠️ AudioWorklet module load attempt ${retryCount} failed:`, moduleError);
+                    console.warn(`⚠️ AudioWorklet module load attempt ${retryCount}/${maxRetries} failed:`, {
+                        error: moduleError.message,
+                        name: moduleError.name,
+                        url: audioProcessorUrl,
+                        audioContextState: this.audioContext.state
+                    });
                     
                     if (retryCount >= maxRetries) {
+                        console.error('❌ All AudioWorklet attempts failed, will try ScriptProcessor fallback');
                         throw new Error(`Failed to load AudioWorklet module after ${maxRetries} attempts: ${moduleError.message}`);
                     }
                     
-                    
-                    // 等待一小段时间后重试
-                    await new Promise(resolve => setTimeout(resolve, 200));
+                    // 等待递增的时间后重试
+                    const waitTime = 200 * retryCount;
+                    console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
                 }
             }
             
@@ -227,6 +243,7 @@ class ElectronAudioProcessor {
 
     async initializeWithScriptProcessor(audioSource, websocket, sourceType = 'microphone') {
         console.log('🔧 Initializing with ScriptProcessor fallback for', sourceType, '...');
+        console.warn('⚠️ Using deprecated ScriptProcessor because AudioWorklet failed to load');
         
         try {
             // 清理之前的AudioContext

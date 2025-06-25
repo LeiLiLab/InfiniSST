@@ -27,6 +27,8 @@
         .header {
             text-align: center;
             margin-bottom: 40px;
+            -webkit-app-region: drag; /* 使header可拖拽 */
+            cursor: move;
         }
 
         .header h1 {
@@ -37,12 +39,14 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
             margin-bottom: 10px;
+            -webkit-app-region: no-drag; /* 标题文字不可拖拽，避免选择冲突 */
         }
 
         .header p {
             font-size: 1.1rem;
             color: #a0a0a0;
             font-weight: 300;
+            -webkit-app-region: no-drag; /* 副标题不可拖拽 */
         }
 
         .main-panel {
@@ -53,6 +57,7 @@
             padding: 40px;
             margin-bottom: 30px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            -webkit-app-region: no-drag; /* 主面板内容不可拖拽 */
         }
 
         .controls-section {
@@ -61,7 +66,7 @@
             padding: 20px;
             margin-bottom: 30px;
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: 1fr 1fr 1fr 2fr;
             gap: 20px;
             align-items: end;
         }
@@ -70,6 +75,31 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 12px;
+            align-items: stretch; /* 确保按钮与select高度一致 */
+        }
+
+        .button-row .btn {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .control-group.buttons-group {
+            justify-content: flex-end;
+            align-self: stretch; /* 拉伸到与其他控件相同高度 */
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end; /* 内容底部对齐 */
+        }
+
+        /* Electron特定的修复 */
+        .electron-app .control-group.buttons-group {
+            margin-top: 20px !important; /* 继续往下调整 */
+            align-self: flex-start !important;
         }
 
         .control-group label {
@@ -87,6 +117,8 @@
             font-size: 0.95rem;
             cursor: pointer;
             transition: all 0.3s ease;
+            height: 48px; /* 确保统一高度 */
+            box-sizing: border-box;
         }
 
         select:focus, .btn:focus {
@@ -533,11 +565,63 @@
             cursor: nw-resize;
             background: linear-gradient(-45deg, transparent 0%, transparent 40%, rgba(255,255,255,0.1) 40%, rgba(255,255,255,0.1) 60%, transparent 60%);
         }
+
+        /* Toast通知系统已移除 */
+
+        /* 状态栏在Electron环境中的样式调整 */
+        .electron-status-bar {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 16px;
+            font-size: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .electron-status-bar.ready {
+            border-left: 4px solid #4caf50;
+        }
+
+        .electron-status-bar.processing {
+            border-left: 4px solid #ff9800;
+        }
+
+        .electron-status-bar.error {
+            border-left: 4px solid #f44336;
+        }
+
+        .electron-status-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .electron-status-icon.ready {
+            background: #4caf50;
+        }
+
+        .electron-status-icon.processing {
+            background: #ff9800;
+            animation: pulse 2s infinite;
+        }
+
+        .electron-status-icon.error {
+            background: #f44336;
+        }
     </style>
 </head>
 <body>
     <!-- Electron专用音频处理器 -->
     <script src="/static/electron-audio-fix.js"></script>
+    
+    <!-- Toast通知容器已移除 -->
+    
     <div class="container">
         <div class="header">
             <h1>InfiniSST Translation Demo</h1>
@@ -575,14 +659,11 @@
                     </select>
                 </div>
                 
-                <div class="control-group">
-                    <label>&nbsp;</label>
-                    <button id="loadModel" class="btn">Load Model</button>
-                </div>
-                
-                <div class="control-group">
-                    <label>&nbsp;</label>
-                    <button id="updateLatency" class="btn" disabled>Update Latency</button>
+                <div class="control-group buttons-group">
+                    <div class="button-row">
+                        <button id="loadModel" class="btn">Load Model</button>
+                        <button id="updateLatency" class="btn" disabled>Update Latency</button>
+                    </div>
                 </div>
             </div>
 
@@ -742,6 +823,364 @@
         let translationWindowShown = false; // 跟踪翻译窗口状态
         let electronAudioProcessor = null; // Electron专用音频处理器
 
+        // Electron专用控制面板变量声明
+        let electronControlPanel = null;
+        let translationStyleSettings = {
+            fontSize: 14,
+            backgroundOpacity: 95,
+            textColor: '#ffffff'
+        };
+
+        // Electron专用控制面板函数
+        function createElectronControlPanel() {
+            if (electronControlPanel) return;
+
+            // 创建控制面板
+            electronControlPanel = document.createElement('div');
+            electronControlPanel.id = 'electronControlPanel';
+            electronControlPanel.innerHTML = `
+                <div class="electron-panel-header">
+                    <h3>Translation Window Control</h3>
+                    <button class="panel-toggle-btn" id="panelToggleBtn">−</button>
+                </div>
+                <div class="electron-panel-content" id="electronPanelContent">
+                    <!-- Electron状态栏 -->
+                    <div class="electron-status-bar ready" id="electronStatusBar">
+                        <div class="electron-status-icon ready" id="electronStatusIcon"></div>
+                        <div class="electron-status-text" id="electronStatusText">Ready - Load model</div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Font Size</label>
+                        <div class="font-controls">
+                            <button class="control-btn" id="electronFontDecrease">A−</button>
+                            <span class="font-size-display" id="electronFontSize">14px</span>
+                            <button class="control-btn" id="electronFontIncrease">A+</button>
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Background Opacity</label>
+                        <div class="opacity-controls">
+                            <input type="range" id="opacitySlider" min="0" max="100" value="95" class="opacity-slider">
+                            <span class="opacity-display" id="opacityDisplay">95%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Text Color</label>
+                        <div class="text-color-controls">
+                            <button class="color-btn active" id="whiteTextBtn" data-color="#ffffff">White</button>
+                            <button class="color-btn" id="blackTextBtn" data-color="#000000">Black</button>
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label>Window Control</label>
+                        <div class="window-controls">
+                            <button class="control-btn" id="electronShowWindow">Show Window</button>
+                            <button class="control-btn" id="electronHideWindow">Hide Window</button>
+                            <button class="control-btn reset-btn" id="electronResetTranslation">Reset Translation</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 添加样式
+            const style = document.createElement('style');
+            style.textContent = `
+                #electronControlPanel {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    width: 280px;
+                    background: rgba(0, 0, 0, 0.9);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 16px;
+                    padding: 0;
+                    z-index: 2000;
+                    backdrop-filter: blur(20px);
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                    transition: all 0.3s ease;
+                    -webkit-app-region: no-drag; /* 控制面板不可拖拽 */
+                }
+
+                .electron-panel-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 16px 20px;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                    background: rgba(255, 255, 255, 0.05);
+                    border-radius: 16px 16px 0 0;
+                }
+
+                .electron-panel-header h3 {
+                    color: #ffffff;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    margin: 0;
+                }
+
+                .panel-toggle-btn {
+                    width: 24px;
+                    height: 24px;
+                    border: none;
+                    background: rgba(255, 255, 255, 0.1);
+                    color: #ffffff;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s ease;
+                }
+
+                .panel-toggle-btn:hover {
+                    background: rgba(255, 255, 255, 0.2);
+                }
+
+                .electron-panel-content {
+                    padding: 20px;
+                    transition: all 0.3s ease;
+                    overflow: hidden;
+                }
+
+                #electronControlPanel.collapsed .electron-panel-content {
+                    max-height: 0;
+                    padding: 0 20px;
+                }
+
+                .control-group {
+                    margin-bottom: 20px;
+                }
+
+                .control-group:last-child {
+                    margin-bottom: 0;
+                }
+
+                .control-group label {
+                    display: block;
+                    color: #a0a0a0;
+                    font-size: 0.9rem;
+                    font-weight: 500;
+                    margin-bottom: 8px;
+                }
+
+                .font-controls {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .font-controls .control-btn {
+                    width: 32px;
+                    height: 28px;
+                    border: none;
+                    background: rgba(255, 255, 255, 0.1);
+                    color: #ffffff;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 0.8rem;
+                    font-weight: bold;
+                    transition: all 0.2s ease;
+                }
+
+                .font-controls .control-btn:hover {
+                    background: rgba(255, 255, 255, 0.2);
+                    transform: translateY(-1px);
+                }
+
+                .font-size-display {
+                    color: #ffffff;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    min-width: 40px;
+                    text-align: center;
+                }
+
+                .opacity-controls {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+
+                .opacity-slider {
+                    flex: 1;
+                    height: 6px;
+                    -webkit-appearance: none;
+                    background: rgba(255, 255, 255, 0.2);
+                    border-radius: 3px;
+                    outline: none;
+                }
+
+                .opacity-slider::-webkit-slider-thumb {
+                    -webkit-appearance: none;
+                    width: 16px;
+                    height: 16px;
+                    background: #4facfe;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+
+                .opacity-slider::-webkit-slider-thumb:hover {
+                    transform: scale(1.2);
+                }
+
+                .opacity-display {
+                    color: #ffffff;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    min-width: 40px;
+                    text-align: center;
+                }
+
+                .text-color-controls {
+                    display: flex;
+                    gap: 8px;
+                }
+
+                .color-btn {
+                    flex: 1;
+                    padding: 8px 12px;
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    background: rgba(255, 255, 255, 0.1);
+                    color: #ffffff;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    transition: all 0.2s ease;
+                }
+
+                .color-btn:hover {
+                    background: rgba(255, 255, 255, 0.2);
+                    transform: translateY(-1px);
+                }
+
+                .color-btn.active {
+                    background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+                    border-color: #4facfe;
+                }
+
+                .window-controls {
+                    display: flex;
+                    gap: 8px;
+                    flex-wrap: wrap;
+                }
+
+                .window-controls .control-btn {
+                    flex: 1;
+                    min-width: 70px;
+                    padding: 8px 12px;
+                    border: none;
+                    background: rgba(255, 255, 255, 0.1);
+                    color: #ffffff;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    transition: all 0.2s ease;
+                }
+
+                .window-controls .control-btn:hover {
+                    background: rgba(255, 255, 255, 0.2);
+                    transform: translateY(-1px);
+                }
+
+                .window-controls .reset-btn {
+                    background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+                    flex: 1;
+                    min-width: 90px;
+                    font-size: 0.75rem;
+                }
+
+                .window-controls .reset-btn:hover {
+                    background: linear-gradient(45deg, #369ef7 0%, #00d4fe 100%);
+                }
+            `;
+            document.head.appendChild(style);
+            document.body.appendChild(electronControlPanel);
+
+            // 绑定事件
+            setupElectronControlEvents();
+        }
+
+        function setupElectronControlEvents() {
+            // 面板收缩/展开
+            const panelToggleBtn = document.getElementById('panelToggleBtn');
+            panelToggleBtn.addEventListener('click', () => {
+                electronControlPanel.classList.toggle('collapsed');
+                panelToggleBtn.textContent = electronControlPanel.classList.contains('collapsed') ? '+' : '−';
+            });
+
+            // 字体大小控制
+            const fontDecreaseBtn = document.getElementById('electronFontDecrease');
+            const fontIncreaseBtn = document.getElementById('electronFontIncrease');
+            const fontSizeDisplay = document.getElementById('electronFontSize');
+
+            fontDecreaseBtn.addEventListener('click', () => {
+                translationStyleSettings.fontSize = Math.max(10, translationStyleSettings.fontSize - 2);
+                updateTranslationStyle();
+                fontSizeDisplay.textContent = translationStyleSettings.fontSize + 'px';
+            });
+
+            fontIncreaseBtn.addEventListener('click', () => {
+                translationStyleSettings.fontSize = Math.min(24, translationStyleSettings.fontSize + 2);
+                updateTranslationStyle();
+                fontSizeDisplay.textContent = translationStyleSettings.fontSize + 'px';
+            });
+
+            // 透明度控制
+            const opacitySlider = document.getElementById('opacitySlider');
+            const opacityDisplay = document.getElementById('opacityDisplay');
+
+            opacitySlider.addEventListener('input', (e) => {
+                translationStyleSettings.backgroundOpacity = parseInt(e.target.value);
+                updateTranslationStyle();
+                opacityDisplay.textContent = translationStyleSettings.backgroundOpacity + '%';
+            });
+
+            // 文字颜色控制
+            const colorBtns = document.querySelectorAll('.color-btn');
+            colorBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    colorBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    translationStyleSettings.textColor = btn.dataset.color;
+                    updateTranslationStyle();
+                });
+            });
+
+            // 窗口控制
+            const showWindowBtn = document.getElementById('electronShowWindow');
+            const hideWindowBtn = document.getElementById('electronHideWindow');
+            const resetTranslationBtn = document.getElementById('electronResetTranslation');
+
+            showWindowBtn.addEventListener('click', () => {
+                showElectronTranslationWindow();
+            });
+
+            hideWindowBtn.addEventListener('click', () => {
+                if (window.electronAPI && window.electronAPI.hideTranslationWindow) {
+                    window.electronAPI.hideTranslationWindow();
+                }
+            });
+
+            resetTranslationBtn.addEventListener('click', async () => {
+                if (typeof resetTranslationFromElectron === 'function') {
+                    await resetTranslationFromElectron();
+                }
+            });
+        }
+
+        function updateTranslationStyle() {
+            if (window.electronAPI && window.electronAPI.updateTranslationStyle) {
+                window.electronAPI.updateTranslationStyle(translationStyleSettings);
+            }
+        }
+
         // 检测是否在 Electron 环境中运行
         console.log('🔍 Environment detection:', {
             hasWindow: typeof window !== 'undefined',
@@ -785,6 +1224,9 @@
                 showElectronTranslationWindow();
                 updateElectronStatus('Ready - Load model', 'ready');
             }, 500);
+            
+            // 创建Electron专用控制面板
+            createElectronControlPanel();
             
             // 显示版本信息
             const versionInfo = document.getElementById('versionInfo');
@@ -837,11 +1279,10 @@
 
         function updateElectronStatus(text, type = 'ready') {
             if (isElectron) {
-                // 确保翻译窗口已显示
-                if (!translationWindowShown) {
-                    showElectronTranslationWindow();
-                }
-                // 发送状态更新
+                // 更新Electron控制面板中的状态栏
+                updateElectronStatusBar(text, type);
+                
+                // 发送到独立翻译窗口（但窗口不再显示状态）
                 try {
                     window.electronAPI.updateTranslationStatus({ text: text, type: type });
                     console.log('Status updated to Electron window:', text, type);
@@ -2517,6 +2958,11 @@
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', () => {
             try {
+                // 检测Electron环境并添加CSS类
+                if (isElectron || window.electronAPI || navigator.userAgent.includes('Electron')) {
+                    document.body.classList.add('electron-app');
+                }
+                
                 ensureClientId();
                 
                 // 只在非Electron环境下初始化面板拖拽
@@ -2571,6 +3017,22 @@
             } catch (error) {
                 console.error('Error checking session status:', error);
                 localStorage.removeItem('translationSessionId_' + clientId);
+            }
+        }
+
+        // Toast通知系统已移除
+        
+        // 更新Electron状态栏
+        function updateElectronStatusBar(text, type = 'ready') {
+            const statusBar = document.getElementById('electronStatusBar');
+            const statusIcon = document.getElementById('electronStatusIcon');
+            const statusText = document.getElementById('electronStatusText');
+            
+            if (statusBar && statusIcon && statusText) {
+                // 更新状态栏样式
+                statusBar.className = `electron-status-bar ${type}`;
+                statusIcon.className = `electron-status-icon ${type}`;
+                statusText.textContent = text;
             }
         }
     </script>
