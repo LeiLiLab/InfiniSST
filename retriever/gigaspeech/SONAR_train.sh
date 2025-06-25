@@ -15,8 +15,8 @@
 # $3: batch_size (可选，默认32)
 
 train_samples_path=${1:-"data/samples/xl/test_mfa_3chunks_samples_0_500000.json"}
-epochs=${2:-30}
-batch_size=${3:-32}
+epochs=${2:-10}
+batch_size=${3:-512}
 
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate infinisst
