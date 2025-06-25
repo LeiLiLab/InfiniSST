@@ -5,7 +5,7 @@
 # 例如: bash test_pipeline_batch.sh "1,3,5" term
 
 # 解析参数
-n_values=${1:-"1,3,5"}  # 默认测试n=1,3,5
+n_values=${1:-"1,2,3,5"}  # 默认测试n=1,2,3,5
 text_field=${2:-term}   # 默认使用term字段
 
 # 将n_values字符串转换为数组
