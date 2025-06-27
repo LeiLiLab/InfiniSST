@@ -1011,37 +1011,85 @@
                 .opacity-controls {
                     display: flex;
                     align-items: center;
-                    gap: 12px;
+                    gap: 8px;
+                    width: 100%;
+                    position: relative;
+                    z-index: 1;
                 }
 
                 .opacity-slider {
                     flex: 1;
                     height: 6px;
                     -webkit-appearance: none;
+                    appearance: none;
                     background: rgba(255, 255, 255, 0.2);
                     border-radius: 3px;
                     outline: none;
+                    border: none;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    min-width: 100px;
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                .opacity-slider::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    height: 100%;
+                    background: linear-gradient(to right, #4facfe 0%, #00f2fe 100%);
+                    border-radius: 3px;
+                    width: var(--progress, 95%);
+                    transition: width 0.1s ease;
+                }
+
+                .opacity-slider:hover {
+                    background: rgba(255, 255, 255, 0.3);
                 }
 
                 .opacity-slider::-webkit-slider-thumb {
                     -webkit-appearance: none;
-                    width: 16px;
-                    height: 16px;
-                    background: #4facfe;
+                    appearance: none;
+                    width: 18px;
+                    height: 18px;
+                    background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
                     border-radius: 50%;
                     cursor: pointer;
                     transition: all 0.2s ease;
+                    border: 2px solid rgba(255, 255, 255, 0.8);
+                    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
                 }
 
                 .opacity-slider::-webkit-slider-thumb:hover {
-                    transform: scale(1.2);
+                    transform: scale(1.15);
+                    box-shadow: 0 4px 12px rgba(79, 172, 254, 0.4);
+                }
+
+                /* Firefox 滑块样式 */
+                .opacity-slider::-moz-range-thumb {
+                    width: 18px;
+                    height: 18px;
+                    background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+                    border-radius: 50%;
+                    cursor: pointer;
+                    border: 2px solid rgba(255, 255, 255, 0.8);
+                    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+                }
+
+                .opacity-slider::-moz-range-track {
+                    height: 6px;
+                    background: rgba(255, 255, 255, 0.3);
+                    border-radius: 3px;
+                    border: none;
                 }
 
                 .opacity-display {
                     color: #ffffff;
-                    font-size: 0.9rem;
+                    font-size: 0.85rem;
                     font-weight: 600;
-                    min-width: 40px;
+                    min-width: 35px;
                     text-align: center;
                 }
 
@@ -1149,6 +1197,8 @@
                 translationStyleSettings.backgroundOpacity = parseInt(e.target.value);
                 updateTranslationStyle();
                 opacityDisplay.textContent = translationStyleSettings.backgroundOpacity + '%';
+                // 更新进度条
+                e.target.style.setProperty('--progress', translationStyleSettings.backgroundOpacity + '%');
             });
 
             // 文字颜色控制
