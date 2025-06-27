@@ -19,4 +19,4 @@ fairseq*
 node_modules
 env
 .DS_Store
-dist
+dist/
