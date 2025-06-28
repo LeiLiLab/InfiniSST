@@ -28,11 +28,26 @@ console.log('InfiniSST Server:', INFINISST_SERVER);
 function createWindow() {
   console.log('Creating main window...');
   
+  // 获取屏幕尺寸来计算居中位置
+  const { screen } = require('electron');
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+  
+  // 设置窗口尺寸（比之前小一些）
+  const windowWidth = 1200;
+  const windowHeight = 680;
+  
+  // 计算位置 - 水平居中，垂直方向留出更多顶部空间
+  const x = Math.round((screenWidth - windowWidth) / 2);
+  const y = Math.round(screenHeight * 0.15); // 从屏幕顶部15%的位置开始，而不是居中
+  
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 1000,
-    minHeight: 700,
+    width: windowWidth,
+    height: windowHeight,
+    x: x,
+    y: y,
+    minWidth: 900,
+    minHeight: 600,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -55,11 +70,11 @@ function createWindow() {
     console.log('Main window ready to show');
     mainWindow.show();
     
-    // 开发模式下打开开发者工具
-    if (isDev) {
-      console.log('Opening DevTools in development mode');
-      mainWindow.webContents.openDevTools();
-    }
+    // 开发模式下打开开发者工具 (已禁用)
+    // if (isDev) {
+    //   console.log('Opening DevTools in development mode');
+    //   mainWindow.webContents.openDevTools();
+    // }
   });
 
   // 窗口关闭时的处理
@@ -848,16 +863,17 @@ function createTranslationWindow() {
   translationWindow.once('ready-to-show', () => {
     translationWindow.show();
     
-    // 设置窗口位置到屏幕中央
+    // 设置窗口位置到屏幕下方（距底部1/4处）
     const { screen } = require('electron');
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width, height } = primaryDisplay.workAreaSize;
     const windowBounds = translationWindow.getBounds();
     
-    translationWindow.setPosition(
-      Math.floor((width - windowBounds.width) / 2),
-      Math.floor((height - windowBounds.height) / 2)
-    );
+    // 水平居中，垂直方向放在屏幕下方约70%的位置
+    const x = Math.floor((width - windowBounds.width) / 2);
+    const y = Math.floor(height * 0.70 - windowBounds.height / 2);
+    
+    translationWindow.setPosition(x, y);
     
     // 窗口显示后发送初始状态
     setTimeout(() => {
@@ -999,15 +1015,16 @@ ipcMain.handle('set-translation-window-size', (event, width, height) => {
   if (translationWindow) {
     translationWindow.setSize(width, height);
     
-    // 确保窗口保持在屏幕中央
+    // 确保窗口保持在屏幕下方（距底部1/4处）
     const { screen } = require('electron');
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
     
-    translationWindow.setPosition(
-      Math.floor((screenWidth - width) / 2),
-      Math.floor((screenHeight - height) / 2)
-    );
+    // 水平居中，垂直方向放在屏幕下方约70%的位置
+    const x = Math.floor((screenWidth - width) / 2);
+    const y = Math.floor(screenHeight * 0.70 - height / 2);
+    
+    translationWindow.setPosition(x, y);
     
     console.log(`Translation window resized and repositioned`);
   } else {

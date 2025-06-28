@@ -26,6 +26,7 @@
 
         .header {
             text-align: center;
+            margin-top: 40px;
             margin-bottom: 40px;
             -webkit-app-region: drag; /* 使header可拖拽 */
             cursor: move;
@@ -378,6 +379,39 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+        }
+
+        /* Electron模式下的紧凑布局样式 */
+        .electron-mode .video-section {
+            display: none !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .electron-mode .container {
+            padding-bottom: 5px !important;
+        }
+
+        .electron-mode .main-panel {
+            margin-bottom: 5px !important;
+            padding-bottom: 5px !important;
+        }
+
+        .electron-mode .input-section {
+            margin-bottom: 5px !important;
+            padding-bottom: 0 !important;
+        }
+
+        .electron-mode .upload-btn, 
+        .electron-mode .record-btn, 
+        .electron-mode .system-audio-btn {
+            margin-bottom: 0 !important;
+        }
+
+        .electron-mode .button-group {
+            margin-bottom: 0 !important;
+            gap: 10px !important;
         }
 
         /* Floating Translation Panel */
@@ -1524,8 +1558,8 @@
             }
             
             if (videoSection) {
-                videoSection.style.setProperty('display', 'none', 'important');
-                console.log('✅ Hidden videoSection with !important');
+                videoSection.remove();
+                console.log('💥 REMOVED videoSection from DOM completely');
             } else {
                 console.error('❌ videoSection not found!');
             }
@@ -1548,21 +1582,36 @@
                 console.error('❌ audioInputSection not found!');
             }
             
-            // 隐藏video-section以节省空间
-            const videoSectionElement = document.getElementById('videoSection');
-            if (videoSectionElement) {
-                videoSectionElement.style.setProperty('display', 'none', 'important');
-                console.log('✅ Hidden videoSection in Electron mode');
-            } else {
-                console.error('❌ videoSection not found!');
-            }
+            // videoSection 已经在上面被移除，这里不需要重复处理
+            console.log('ℹ️ videoSection already removed from DOM above');
             
             // 调整主面板的下边距，减少空白空间
             const mainPanel = document.querySelector('.main-panel');
             if (mainPanel) {
-                mainPanel.style.setProperty('margin-bottom', '20px', 'important');
-                console.log('✅ Reduced main panel margin in Electron mode');
+                mainPanel.style.setProperty('margin-bottom', '10px', 'important');
+                mainPanel.style.setProperty('padding-bottom', '10px', 'important');
+                console.log('✅ Reduced main panel margin and padding in Electron mode');
             }
+            
+            // 进一步缩短按钮区域与底部的距离
+            if (audioInputSection) {
+                audioInputSection.style.setProperty('margin-bottom', '10px', 'important');
+                audioInputSection.style.setProperty('padding-bottom', '0px', 'important');
+                console.log('✅ Reduced audioInputSection margins in Electron mode');
+            }
+            
+            // 缩短容器之间的间距
+            const container = document.querySelector('.container');
+            if (container) {
+                container.style.setProperty('padding-bottom', '10px', 'important');
+                console.log('✅ Reduced container padding in Electron mode');
+            }
+            
+            // videoSection 已经被完全移除，不需要再调整样式
+            console.log('ℹ️ videoSection completely removed, no style adjustments needed');
+            
+            // 添加Electron模式的CSS类到body元素，用于进一步样式调整
+            document.body.classList.add('electron-mode');
             
             console.log('🎉 FORCE Electron mode UI switch completed');
             
@@ -1571,13 +1620,13 @@
                 const remainingWebUpload = document.getElementById('webUploadItem');
                 const remainingWebYoutube = document.getElementById('webYoutubeItem');
                 const finalSystemAudio = document.getElementById('electronSystemAudioItem');
-                const hiddenVideoSectionElement = document.getElementById('videoSection');
+                const removedVideoSectionElement = document.getElementById('videoSection');
                 
                 const finalCheck = {
                     webUploadRemoved: !remainingWebUpload,
                     webYoutubeRemoved: !remainingWebYoutube,
                     electronSystemAudioVisible: finalSystemAudio ? finalSystemAudio.style.display === 'block' : false,
-                    videoSectionHidden: hiddenVideoSectionElement ? hiddenVideoSectionElement.style.display === 'none' : false
+                    videoSectionCompletelyRemoved: !removedVideoSectionElement
                 };
                 console.log('🔍 Final UI state check (500ms later):', finalCheck);
             }, 500);
