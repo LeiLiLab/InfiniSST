@@ -221,6 +221,83 @@
             animation: pulse 2s infinite;
         }
 
+        .system-audio-btn {
+            background: linear-gradient(45deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            padding: 16px 24px;
+            border: none;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 56px;
+            white-space: nowrap;
+            width: 100%;
+        }
+
+        .system-audio-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(106, 17, 203, 0.4);
+        }
+
+        .system-audio-btn.capturing {
+            background: linear-gradient(45deg, #ff6b6b 0%, #ee5a24 100%);
+            animation: pulse 2s infinite;
+        }
+
+        .blackhole-btn {
+            background: linear-gradient(45deg, #ffa726 0%, #fb8c00 100%);
+            color: white;
+            padding: 16px 24px;
+            border: none;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 56px;
+            white-space: nowrap;
+            width: 100%;
+        }
+
+        .blackhole-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(255, 167, 38, 0.4);
+        }
+
+        .blackhole-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .blackhole-btn.installing {
+            background: linear-gradient(45deg, #4caf50 0%, #2e7d32 100%);
+            animation: pulse 2s infinite;
+        }
+
+        .blackhole-btn.installed {
+            background: linear-gradient(45deg, #4caf50 0%, #388e3c 100%);
+            cursor: default;
+            transform: none;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .blackhole-btn.installed:hover {
+            transform: none;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); }
             70% { box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
@@ -282,7 +359,7 @@
         .video-container {
             position: relative;
             width: 100%;
-            height: 400px;
+            height: 200px;
             background: #000;
             border-radius: 16px;
             overflow: hidden;
@@ -677,8 +754,9 @@
             </div>
 
             <!-- Audio Input Section -->
-            <div class="input-section">
-                <div class="input-item">
+            <div class="input-section" id="audioInputSection">
+                <!-- Web Mode Buttons -->
+                <div class="input-item" id="webUploadItem">
                     <button class="upload-btn" type="button" id="uploadBtn">
                         <svg class="icon" viewBox="0 0 24 24">
                             <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
@@ -688,7 +766,7 @@
                     <input type="file" id="audioFile" class="file-input" accept="audio/*,video/*" />
                 </div>
                 
-                <div class="input-item youtube-section">
+                <div class="input-item youtube-section" id="webYoutubeItem">
                     <input type="url" id="youtubeUrl" class="url-input" placeholder="https://www.youtube.com/watch?v=..." />
                     <button id="playBtn" class="play-btn">
                         <svg class="icon" viewBox="0 0 24 24">
@@ -696,6 +774,18 @@
                         </svg>
                     </button>
                 </div>
+                
+                <!-- Electron Mode System Audio Capture Button -->
+                <div class="input-item" id="electronSystemAudioItem" style="display: none;">
+                    <button class="system-audio-btn" type="button" id="systemAudioBtn">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M3,9V15H7L12,20V4L7,9H3M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.71V20.77C18.01,19.86 21,16.28 21,12C21,7.72 18.01,4.14 14,3.23Z"/>
+                        </svg>
+                        Capture System Audio
+                    </button>
+                </div>
+                
+
                 
                 <div class="input-item">
                     <button id="toggleMic" class="record-btn">
@@ -713,10 +803,10 @@
                 <div id="volumeLevel" class="volume-level"></div>
             </div>
 
-            <!-- Video/Audio Player -->
-            <div class="video-section">
+            <!-- Video/Audio Player (hidden in Electron mode) -->
+            <div class="video-section" id="videoSection">
                 <div class="video-container" id="mediaContainer">
-                    <div class="video-placeholder">
+                    <div class="video-placeholder" id="videoPlaceholder">
                         <p>Upload a video/audio file or enter a YouTube URL to begin</p>
                     </div>
                 </div>
@@ -787,6 +877,8 @@
         let micStream = null;
         let micRecorder = null;
         let isMicRecording = false;
+        let isSystemAudioCapturing = false;
+        let systemAudioStream = null;
         let audioElementConnected = false;
         let currentMediaElement = null;
         let audioProcessingActive = false; // 全局音频处理状态标志
@@ -817,6 +909,7 @@
         const volumeIndicator = document.getElementById('volumeIndicator');
         const mediaContainer = document.getElementById('mediaContainer');
         const uploadBtn = document.getElementById('uploadBtn');
+        const systemAudioBtn = document.getElementById('systemAudioBtn');
         
         // Panel elements
         const translationPanel = document.getElementById('translationPanel');
@@ -1251,10 +1344,99 @@
             isElectron = true;
             console.log('✅ Electron environment confirmed');
             
+            // 防止dragEvent引用错误 - 修复JavaScript错误
+            if (typeof dragEvent === 'undefined') {
+                window.dragEvent = null;
+                console.log('🔧 Defined dragEvent to prevent ReferenceError');
+            }
+            
             // 在Electron环境中隐藏主窗口的翻译面板
             const mainTranslationPanel = document.getElementById('translationPanel');
             if (mainTranslationPanel) {
                 mainTranslationPanel.style.display = 'none';
+            }
+            
+            // 立即强制切换UI显示
+            console.log('🔄 Immediate Electron UI switch...');
+            
+            // 更直接的UI切换方法，不依赖函数
+            try {
+                console.log('🚀 Direct UI switch execution...');
+                
+                // 等待DOM就绪后执行
+                setTimeout(() => {
+                    const webUpload = document.getElementById('webUploadItem');
+                    const webYoutube = document.getElementById('webYoutubeItem');
+                    const systemAudio = document.getElementById('electronSystemAudioItem');
+                    const videoSec = document.getElementById('videoSection');
+                    
+                    console.log('📍 Direct UI switch - elements found:', {
+                        webUpload: !!webUpload,
+                        webYoutube: !!webYoutube,
+                        systemAudio: !!systemAudio,
+                        videoSec: !!videoSec
+                    });
+                    
+                    if (webUpload) {
+                        webUpload.style.display = 'none';
+                        webUpload.style.visibility = 'hidden';
+                        console.log('🔥 HIDDEN webUploadItem DIRECTLY');
+                    }
+                    
+                    if (webYoutube) {
+                        webYoutube.style.display = 'none';
+                        webYoutube.style.visibility = 'hidden';
+                        console.log('🔥 HIDDEN webYoutubeItem DIRECTLY');
+                    }
+                    
+                    if (videoSec) {
+                        videoSec.style.display = 'none';
+                        console.log('🔥 HIDDEN videoSection DIRECTLY');
+                    }
+                    
+                    if (systemAudio) {
+                        systemAudio.style.display = 'block';
+                        systemAudio.style.visibility = 'visible';
+                        console.log('🔥 SHOWN electronSystemAudioItem DIRECTLY');
+                    }
+                    
+                    console.log('🎯 Direct UI switch completed!');
+                }, 100);
+                
+                // 设置监控，确保系统音频按钮始终可见
+                setInterval(() => {
+                    const systemAudio = document.getElementById('electronSystemAudioItem');
+                    
+                    // 如果系统音频按钮被隐藏了，重新显示
+                    if (systemAudio && systemAudio.style.display !== 'block') {
+                        systemAudio.style.setProperty('display', 'block', 'important');
+                        systemAudio.style.setProperty('visibility', 'visible', 'important');
+                        console.log('🔄 Re-enforced electronSystemAudioItem visibility');
+                    }
+                    
+                    // 移除任何可能重新出现的Web模式元素
+                    const webUpload = document.getElementById('webUploadItem');
+                    const webYoutube = document.getElementById('webYoutubeItem');
+                    
+                    if (webUpload) {
+                        webUpload.remove();
+                        console.log('🔄 Removed re-appeared webUploadItem');
+                    }
+                    
+                    if (webYoutube) {
+                        webYoutube.remove();
+                        console.log('🔄 Removed re-appeared webYoutubeItem');
+                    }
+                }, 2000); // 每2秒检查一次
+                
+            } catch (directError) {
+                console.error('❌ Direct UI switch failed:', directError);
+                // 如果直接方法失败，尝试调用函数
+                try {
+                    forceElectronModeUI();
+                } catch (funcError) {
+                    console.error('❌ Function UI switch also failed:', funcError);
+                }
             }
             
             // 从当前URL获取服务器配置
@@ -1305,6 +1487,106 @@
                     audioFile.click();
                 }
             });
+        }
+
+        // 强制切换到Electron模式的UI
+        function forceElectronModeUI() {
+            console.log('🚀 FORCE Electron mode UI switch - immediate execution');
+            
+            // 立即查找并操作元素
+            const webUploadItem = document.getElementById('webUploadItem');
+            const webYoutubeItem = document.getElementById('webYoutubeItem');
+            const videoSection = document.getElementById('videoSection');
+            const electronSystemAudioItem = document.getElementById('electronSystemAudioItem');
+            const audioInputSection = document.getElementById('audioInputSection');
+            
+            console.log('🔍 UI Elements found:', {
+                webUploadItem: !!webUploadItem,
+                webYoutubeItem: !!webYoutubeItem,
+                videoSection: !!videoSection,
+                electronSystemAudioItem: !!electronSystemAudioItem,
+                audioInputSection: !!audioInputSection
+            });
+            
+            // 使用最强制的方法：直接从DOM移除Web模式元素
+            if (webUploadItem) {
+                webUploadItem.remove();
+                console.log('💥 REMOVED webUploadItem from DOM');
+            } else {
+                console.log('ℹ️ webUploadItem already removed or not found');
+            }
+            
+            if (webYoutubeItem) {
+                webYoutubeItem.remove();
+                console.log('💥 REMOVED webYoutubeItem from DOM');
+            } else {
+                console.log('ℹ️ webYoutubeItem already removed or not found');
+            }
+            
+            if (videoSection) {
+                videoSection.style.setProperty('display', 'none', 'important');
+                console.log('✅ Hidden videoSection with !important');
+            } else {
+                console.error('❌ videoSection not found!');
+            }
+            
+            // 强制显示Electron模式的系统音频按钮
+            if (electronSystemAudioItem) {
+                electronSystemAudioItem.style.setProperty('display', 'block', 'important');
+                electronSystemAudioItem.style.setProperty('visibility', 'visible', 'important');
+                electronSystemAudioItem.style.setProperty('opacity', '1', 'important');
+                console.log('✅ Shown electronSystemAudioItem with !important');
+            } else {
+                console.error('❌ electronSystemAudioItem not found!');
+            }
+            
+            // 调整input-section的grid布局为2列（系统音频 + 录音）
+            if (audioInputSection) {
+                audioInputSection.style.setProperty('grid-template-columns', '1fr 1fr', 'important');
+                console.log('✅ Adjusted audioInputSection grid to 2 columns with !important');
+            } else {
+                console.error('❌ audioInputSection not found!');
+            }
+            
+            // 隐藏video-section以节省空间
+            const videoSectionElement = document.getElementById('videoSection');
+            if (videoSectionElement) {
+                videoSectionElement.style.setProperty('display', 'none', 'important');
+                console.log('✅ Hidden videoSection in Electron mode');
+            } else {
+                console.error('❌ videoSection not found!');
+            }
+            
+            // 调整主面板的下边距，减少空白空间
+            const mainPanel = document.querySelector('.main-panel');
+            if (mainPanel) {
+                mainPanel.style.setProperty('margin-bottom', '20px', 'important');
+                console.log('✅ Reduced main panel margin in Electron mode');
+            }
+            
+            console.log('🎉 FORCE Electron mode UI switch completed');
+            
+            // 添加一个延迟再次检查，确保UI正确显示
+            setTimeout(() => {
+                const remainingWebUpload = document.getElementById('webUploadItem');
+                const remainingWebYoutube = document.getElementById('webYoutubeItem');
+                const finalSystemAudio = document.getElementById('electronSystemAudioItem');
+                const hiddenVideoSectionElement = document.getElementById('videoSection');
+                
+                const finalCheck = {
+                    webUploadRemoved: !remainingWebUpload,
+                    webYoutubeRemoved: !remainingWebYoutube,
+                    electronSystemAudioVisible: finalSystemAudio ? finalSystemAudio.style.display === 'block' : false,
+                    videoSectionHidden: hiddenVideoSectionElement ? hiddenVideoSectionElement.style.display === 'none' : false
+                };
+                console.log('🔍 Final UI state check (500ms later):', finalCheck);
+            }, 500);
+        }
+
+        // 切换到Electron模式的UI（兼容性函数）
+        function switchToElectronMode() {
+            console.log('🔄 switchToElectronMode called, delegating to forceElectronModeUI...');
+            forceElectronModeUI();
         }
 
         // Electron翻译窗口辅助函数
@@ -1487,6 +1769,10 @@
             }
             return clientId;
         }
+
+
+        
+
 
         // Update status display
         function updateStatus(text, type = 'ready') {
@@ -2140,7 +2426,17 @@
         
         async function sendPing() {
             if (!sessionId) {
+                console.log('No sessionId available, stopping ping');
                 stopPinging();
+                return;
+            }
+            
+            // 额外验证sessionId格式
+            if (typeof sessionId !== 'string' || sessionId.trim() === '') {
+                console.warn('Invalid sessionId format, stopping ping:', sessionId);
+                stopPinging();
+                sessionId = null;
+                localStorage.removeItem('translationSessionId_' + clientId);
                 return;
             }
             
@@ -2170,11 +2466,21 @@
                 
                 const data = await response.json();
                 if (!data.success) {
-                    console.warn('Failed to send ping:', data.error);
+                    console.warn('Failed to send ping:', data.error, 'for sessionId:', sessionId);
                     if (data.error === 'Invalid session ID') {
+                        console.log('Session invalidated by server, cleaning up');
                         stopPinging();
                         sessionId = null;
                         localStorage.removeItem('translationSessionId_' + clientId);
+                        // 更新UI状态
+                        updateStatus('Session expired. Please load a model again.', 'error');
+                        if (updateLatency) updateLatency.disabled = true;
+                        if (resetTranslation) resetTranslation.disabled = true;
+                    }
+                } else {
+                    // Ping成功，可以在debug模式下记录
+                    if (window.location.search.includes('debug=true')) {
+                        console.log('Ping successful for session:', sessionId);
                     }
                 }
             } catch (error) {
@@ -2372,6 +2678,106 @@
             }
         });
 
+        // System Audio Capture functionality (Electron only)
+        if (systemAudioBtn) {
+            systemAudioBtn.addEventListener('click', async () => {
+                if (isSystemAudioCapturing) {
+                    stopSystemAudioCapture(true);
+                } else {
+                    // 首先检查是否已加载模型
+                    // jiaxuan todo
+                    // if (!sessionId) {
+                    //     updateStatus('Please load a model first', 'error');
+                    //     console.warn('System audio capture attempted without loaded model');
+                    //     return;
+                    // }
+                    
+                    console.log('🎯 System audio capture requested (sessionId:', sessionId, ')');
+                    console.log('Environment check:', {
+                        isElectron: isElectron,
+                        hasElectronAPI: !!window.electronAPI,
+                        hasCheckBlackHole: !!(window.electronAPI && window.electronAPI.checkBlackHoleInstalled)
+                    });
+                    
+                    if (isElectron && window.electronAPI && window.electronAPI.checkBlackHoleInstalled) {
+                        console.log('🔍 Starting virtual device check via electronAPI...');
+                        
+                        // 首先测试 IPC 连接
+                        console.log('🧪 Testing IPC connection before BlackHole check...');
+                        try {
+                            const testResult = await window.electronAPI.testIPC();
+                            console.log('🧪 IPC test successful:', testResult);
+                        } catch (error) {
+                            console.error('🧪 IPC test failed:', error);
+                            updateStatus('IPC connection failed', 'error');
+                            return;
+                        }
+                        
+                        try {
+                            console.log('📞 Calling window.electronAPI.checkBlackHoleInstalled()...');
+                            const hasVirtualDevice = await window.electronAPI.checkBlackHoleInstalled();
+                            console.log('✅ checkBlackHoleInstalled result:', hasVirtualDevice);
+                            
+                            if (!hasVirtualDevice) {
+                                // 提供设置BlackHole的选项，但不强制要求
+                                const shouldSetup = confirm('No virtual audio device detected. Would you like to set up BlackHole for better system audio capture?\n\nClick OK to set up BlackHole, or Cancel to try direct audio capture.');
+                                
+                                if (shouldSetup) {
+                                    updateStatus('Setting up BlackHole for system audio capture...', 'processing');
+                                    systemAudioBtn.textContent = 'Setting up...';
+                                    systemAudioBtn.disabled = true;
+                                    
+                                    const result = await window.electronAPI.installBlackHole();
+                                    
+                                    systemAudioBtn.textContent = 'Capture System Audio';
+                                    systemAudioBtn.disabled = false;
+                                    
+                                    if (result.success) {
+                                        updateStatus('BlackHole setup script started. Please follow the instructions in Terminal, then try again.', 'ready');
+                                    } else {
+                                        updateStatus('Failed to start BlackHole setup: ' + result.message + '. Trying direct capture...', 'processing');
+                                        // 继续尝试直接捕获
+                                        setTimeout(() => startSystemAudioCapture(), 1000);
+                                    }
+                                    return;
+                                } else {
+                                    updateStatus('Attempting direct system audio capture...', 'processing');
+                                }
+                            } else {
+                                console.log('Virtual audio device detected, proceeding with capture');
+                                updateStatus('Ready - Please play any audio/video to begin translation', 'ready');
+                            }
+                        } catch (error) {
+                            console.error('❌ Error checking virtual audio device status:', error);
+                            console.error('Error details:', {
+                                name: error.name,
+                                message: error.message,
+                                stack: error.stack
+                            });
+                            console.log('Device check failed, proceeding with capture attempt');
+                        }
+                    } else {
+                        console.log('❌ Not in Electron environment or electronAPI not available');
+                        console.log('isElectron:', isElectron);
+                        console.log('window.electronAPI:', !!window.electronAPI);
+                        if (window.electronAPI) {
+                            console.log('electronAPI methods:', Object.keys(window.electronAPI));
+                        }
+                        
+                        // 提供手动测试选项
+                        console.log('💡 For manual testing, you can run in console:');
+                        console.log('   window.electronAPI.checkBlackHoleInstalled().then(result => console.log("Result:", result))');
+                        console.log('   window.electronAPI.testSystemProfiler().then(data => console.log("System Profiler:", data))');
+                    }
+                    
+                    // 尝试系统音频捕获（不管检查结果如何）
+                    startSystemAudioCapture();
+                }
+            });
+        }
+
+
+
         async function startMicrophone() {
             try {
                 if (!sessionId) {
@@ -2525,7 +2931,7 @@
                                 });
                                 
                                 updateMicrophoneUI(true);
-                                updateStatus('Translating from microphone...', 'processing');
+                                updateStatus('Microphone ready - Speak to begin translation', 'ready');
                                 resetIdleTimer();
                                 
                                 console.log('✅ Electron audio processor initialized, skipping traditional processing');
@@ -2807,6 +3213,418 @@
             translationInitialized = false;
         }
 
+        // System Audio Capture functionality
+        async function startSystemAudioCapture() {
+            try {
+                if (!sessionId) {
+                    updateStatus('Please load a model first', 'error');
+                    return;
+                }
+                
+                console.log('🔊 Starting system audio capture...');
+                updateStatus('Requesting system audio access...', 'processing');
+                
+                // 通过BlackHole虚拟音频设备获取系统音频
+                console.log('🔄 Looking for BlackHole virtual audio device...');
+                updateStatus('Searching for BlackHole audio device...', 'processing');
+                
+                // 获取所有可用的音频设备
+                const audioDevices = await navigator.mediaDevices.enumerateDevices();
+                const audioInputs = audioDevices.filter(device => device.kind === 'audioinput');
+                
+                console.log('🔍 Total audio devices found:', audioDevices.length);
+                console.log('🎤 Audio input devices found:', audioInputs.length);
+                console.log('📋 Available audio input devices:');
+                audioInputs.forEach((device, index) => {
+                    console.log(`  ${index + 1}. "${device.label || 'Unnamed Device'}" (ID: ${device.deviceId.substring(0, 20)}...)`);
+                    console.log(`      Kind: ${device.kind}, GroupId: ${device.groupId ? device.groupId.substring(0, 20) + '...' : 'No Group'}`);
+                });
+                
+                // 寻找BlackHole或其他虚拟音频设备 - 增强检测逻辑
+                console.log('🔍 Searching for virtual audio devices...');
+                
+                const virtualDeviceCandidates = audioInputs.filter(device => {
+                    const label = device.label.toLowerCase();
+                    const originalLabel = device.label; // 保留原始标签用于调试
+                    
+                    // 更全面的虚拟设备检测
+                    const isBlackHole = label.includes('blackhole') || label.includes('black hole');
+                    const isSoundFlower = label.includes('soundflower') || label.includes('sound flower');
+                    const isVirtual = label.includes('virtual');
+                    const isAggregate = label.includes('aggregate');
+                    const isMultiOutput = label.includes('multi-output') || label.includes('multi output') || label.includes('multioutput') || label.includes('multi_output');
+                    const isLoopback = label.includes('loopback');
+                    const isSystem = label.includes('system') && (label.includes('audio') || label.includes('sound'));
+                    
+                    // 特别检查包含"device"关键词的设备
+                    const isDeviceKeyword = label.includes('device') && (
+                        label.includes('multi') || 
+                        label.includes('aggregate') || 
+                        label.includes('virtual') ||
+                        label.includes('output')
+                    );
+                    
+                    const isVirtualDevice = isBlackHole || isSoundFlower || isVirtual || isAggregate || isMultiOutput || isLoopback || isSystem || isDeviceKeyword;
+                    
+                    console.log(`🎧 Checking device: "${originalLabel}"`, {
+                        labelLower: label,
+                        isBlackHole, isSoundFlower, isVirtual, isAggregate, isMultiOutput, isLoopback, isSystem, isDeviceKeyword,
+                        isVirtualDevice: isVirtualDevice ? '✅ YES' : '❌ NO'
+                    });
+                    
+                    return isVirtualDevice;
+                });
+                
+                console.log('🎯 Virtual device candidates found:', virtualDeviceCandidates.length);
+                virtualDeviceCandidates.forEach((device, index) => {
+                    console.log(`  ${index + 1}. "${device.label}" (ID: ${device.deviceId.substring(0, 20)}...)`);
+                });
+                
+                const virtualDevice = virtualDeviceCandidates[0]; // 选择第一个匹配的虚拟设备
+                
+                if (virtualDevice) {
+                    console.log('🎯 Found virtual audio device:', virtualDevice.label);
+                    updateStatus('Connecting to ' + virtualDevice.label + '...', 'processing');
+                    
+                    systemAudioStream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            deviceId: { exact: virtualDevice.deviceId },
+                            echoCancellation: false,
+                            noiseSuppression: false,
+                            autoGainControl: false,
+                            channelCount: 2,
+                            sampleRate: 48000
+                        }
+                    });
+                    
+                    console.log('✅ System audio stream obtained from virtual device:', systemAudioStream);
+                    console.log('🎯 Stream details:', {
+                        active: systemAudioStream.active,
+                        tracks: systemAudioStream.getTracks().length,
+                        audioTracks: systemAudioStream.getAudioTracks().map(track => ({
+                            label: track.label,
+                            enabled: track.enabled,
+                            readyState: track.readyState
+                        }))
+                    });
+                    updateStatus('Ready - Please play any audio/video to begin translation', 'ready');
+                } else {
+                    // 提供更详细的设备列表和解决方案
+                    console.log('🔍 All available audio input devices:');
+                    audioInputs.forEach((device, index) => {
+                        console.log(`  ${index + 1}. "${device.label}" (ID: ${device.deviceId.substring(0, 20)}...)`);
+                    });
+                    
+                    const errorMessage = `Virtual audio device not found. Available options:\n\n1. Install BlackHole and create a multi-output device\n2. Use existing aggregate or virtual audio devices\n3. Create a multi-output device in Audio MIDI Setup\n\nFound ${audioInputs.length} audio input devices, but none matched virtual device patterns.`;
+                    
+                    console.error('❌ Virtual audio device not found:', errorMessage);
+                    updateStatus('Virtual audio device not found. Please set up a multi-output device or install BlackHole.', 'error');
+                    
+                    throw new Error(errorMessage);
+                }
+                
+                // Show translation panel
+                showPanel();
+                
+                const wsUrl = getWebSocketUrl(sessionId);
+                console.log(`Connecting to WebSocket at: ${wsUrl}`);
+                
+                ws = new WebSocket(wsUrl);
+                
+                ws.onmessage = (event) => {
+                    const message = event.data;
+                    console.log('WebSocket message received:', message);
+
+                    // 处理控制消息
+                    if (typeof message === 'string' && message.startsWith('INITIALIZING:')) {
+                        updateStatus(message.substring('INITIALIZING:'.length).trim(), 'processing');
+                        return;
+                    } else if (typeof message === 'string' && message.startsWith('READY:')) {
+                        updateStatus('Model is ready. Processing system audio...', 'processing');
+                        return;
+                    } else if (typeof message === 'string' && message.startsWith('ERROR:')) {
+                        updateStatus(message, 'error');
+                        return;
+                    }
+                    
+                    // 处理翻译结果
+                    if (isElectron) {
+                        // 在Electron环境中只更新独立翻译窗口
+                        updateElectronTranslation(message);
+                    } else {
+                        // 在浏览器环境中更新主窗口面板
+                        translationOutput.textContent = message;
+                        setTimeout(() => {
+                            scrollTranslationToBottom();
+                        }, 10);
+                    }
+                };
+                
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    const errorMsg = 'WebSocket connection error';
+                    updateStatus(errorMsg, 'error');
+                    stopSystemAudioCapture(false);
+                };
+                
+                ws.onopen = async () => {
+                    console.log('WebSocket connected successfully for system audio');
+                    
+                    try {
+                        // 在Electron环境中使用专用音频处理器
+                        if (isElectron && window.ElectronAudioProcessor) {
+                            console.log('🎵 Using Electron-specific audio processor for system audio...');
+                            
+                            try {
+                                // 确保没有其他音频处理在运行
+                                if (audioContext) {
+                                    try {
+                                        await audioContext.close();
+                                        audioContext = null;
+                                        console.log('🧹 Closed existing AudioContext');
+                                    } catch (e) {
+                                        console.warn('⚠️ Error closing existing AudioContext:', e);
+                                    }
+                                }
+                                
+                                // 禁用全局音频处理标志
+                                audioProcessingActive = false;
+                                
+                                electronAudioProcessor = new window.ElectronAudioProcessor();
+                                await electronAudioProcessor.initializeAudio(systemAudioStream, ws, 'system_audio');
+                                
+                                                        // 设置UI状态
+                        translationPaused = false;
+                        translationInitialized = true;
+                        
+                        updateSystemAudioUI(true);
+                        updateStatus('System audio connected - Play audio/video to see translation', 'ready');
+                        resetIdleTimer();
+                                
+                                console.log('✅ Electron audio processor initialized for system audio');
+                                return;
+                            } catch (electronError) {
+                                console.error('❌ Electron audio processor failed for system audio:', electronError);
+                                updateStatus('Electron audio processor failed, using fallback...', 'processing');
+                                
+                                // 清理失败的Electron处理器
+                                if (electronAudioProcessor) {
+                                    try {
+                                        electronAudioProcessor.stop();
+                                        electronAudioProcessor = null;
+                                    } catch (cleanupError) {
+                                        console.error('Error cleaning up failed Electron processor:', cleanupError);
+                                    }
+                                }
+                                
+                                // 继续使用传统浏览器处理方式作为备用方案
+                                console.log('🔄 Falling back to traditional browser audio processing...');
+                            }
+                        }
+                        
+                        // 传统浏览器处理方式
+                        console.log('Creating AudioContext for system audio...');
+                        audioContext = new AudioContext();
+                        console.log('AudioContext created with sample rate:', audioContext.sampleRate);
+                        
+                        console.log('Creating MediaStreamSource for system audio...');
+                        const systemAudioSource = audioContext.createMediaStreamSource(systemAudioStream);
+                        console.log('MediaStreamSource created for system audio');
+                        
+                        // 使用与麦克风相同的音频处理逻辑 - 内联处理器创建
+                        processor = audioContext.createScriptProcessor(segmentSize, 1, 1);
+                        
+                        // 添加音频检测标志
+                        let hasDetectedSystemAudio = false;
+                        
+                        processor.onaudioprocess = (event) => {
+                            const inputData = event.inputBuffer.getChannelData(0);
+                            
+                            // 检测音频活动
+                            let hasSound = false;
+                            let volumeSum = 0;
+                            for (let i = 0; i < inputData.length; i++) {
+                                const volume = Math.abs(inputData[i]);
+                                volumeSum += volume;
+                                if (volume > 0.01) {
+                                    hasSound = true;
+                                }
+                            }
+                            
+                            // 首次检测到音频时更新状态
+                            if (hasSound && !hasDetectedSystemAudio) {
+                                hasDetectedSystemAudio = true;
+                                updateStatus('Processing audio from system...', 'processing');
+                                console.log('🔊 First audio detected from system audio device');
+                            }
+                            
+                            // Resample to target sample rate
+                            const resampleRatio = targetSampleRate / audioContext.sampleRate;
+                            const resampledLength = Math.floor(inputData.length * resampleRatio);
+                            const resampledChunk = new Float32Array(resampledLength);
+                            for (let i = 0; i < resampledLength; i++) {
+                                const originalIndex = Math.floor(i / resampleRatio);
+                                resampledChunk[i] = inputData[originalIndex];
+                            }
+                            
+                            // Add to buffer
+                            const newBuffer = new Float32Array(resampledBuffer.length + resampledChunk.length);
+                            newBuffer.set(resampledBuffer);
+                            newBuffer.set(resampledChunk, resampledBuffer.length);
+                            resampledBuffer = newBuffer;
+                            
+                            // Send chunks when buffer is large enough
+                            const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
+                            while (resampledBuffer.length >= targetChunkSize) {
+                                const chunk = resampledBuffer.slice(0, targetChunkSize);
+                                if (ws && ws.readyState === WebSocket.OPEN) {
+                                    ws.send(chunk.buffer);
+                                }
+                                resampledBuffer = resampledBuffer.slice(targetChunkSize);
+                            }
+                        };
+                        
+                        systemAudioSource.connect(processor);
+                        processor.connect(audioContext.destination);
+                        
+                        translationPaused = false;
+                        translationInitialized = true;
+                        updateSystemAudioUI(true);
+                        updateStatus('System audio connected - Play audio/video to see translation', 'ready');
+                        resetIdleTimer();
+                        
+                    } catch (audioError) {
+                        console.error('Error setting up system audio processing:', audioError);
+                        updateStatus('Error setting up system audio processing: ' + audioError.message, 'error');
+                        stopSystemAudioCapture(false);
+                    }
+                };
+                
+            } catch (error) {
+                console.error('System audio capture error:', error);
+                let errorMessage = 'Error accessing system audio: ';
+                
+                if (error.name === 'NotAllowedError') {
+                    errorMessage += 'Permission denied. Please allow screen recording/audio access.';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage += 'No audio source found. Please ensure you have a virtual audio device installed (like BlackHole).';
+                } else {
+                    errorMessage += error.message;
+                }
+                
+                updateStatus(errorMessage, 'error');
+                console.error('Full error details:', error);
+            }
+        }
+
+        function updateSystemAudioUI(isCapturing) {
+            if (isCapturing) {
+                systemAudioBtn.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M3,9V15H7L12,20V4L7,9H3M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.71V20.77C18.01,19.86 21,16.28 21,12C21,7.72 18.01,4.14 14,3.23Z"/>
+                    </svg>
+                    Stop System Audio
+                `;
+                systemAudioBtn.classList.add('capturing');
+                isSystemAudioCapturing = true;
+            } else {
+                systemAudioBtn.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M3,9V15H7L12,20V4L7,9H3M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.71V20.77C18.01,19.86 21,16.28 21,12C21,7.72 18.01,4.14 14,3.23Z"/>
+                    </svg>
+                    Capture System Audio
+                `;
+                systemAudioBtn.classList.remove('capturing');
+                isSystemAudioCapturing = false;
+            }
+        }
+
+        function stopSystemAudioCapture(isManualPause = false) {
+            console.log('🛑 Stopping system audio capture...');
+            
+            // 如果使用Electron音频处理器，优先停止它
+            if (electronAudioProcessor) {
+                console.log('🧹 Stopping Electron audio processor...');
+                try {
+                    electronAudioProcessor.stop();
+                    electronAudioProcessor = null;
+                    console.log('✅ Electron audio processor stopped');
+                } catch (error) {
+                    console.error('❌ Error stopping Electron audio processor:', error);
+                }
+            }
+            
+            // 立即停止音频处理
+            if (typeof audioProcessingActive !== 'undefined') {
+                audioProcessingActive = false;
+                console.log('🚫 Audio processing disabled');
+            }
+            
+            if (ws && ws.readyState === WebSocket.OPEN && resampledBuffer.length > 0) {
+                const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
+                const finalChunk = new Float32Array(targetChunkSize);
+                finalChunk.set(resampledBuffer);
+                try {
+                    ws.send(finalChunk.buffer);
+                } catch (error) {
+                    console.error('Error sending final audio chunk:', error);
+                }
+            }
+            
+            if (ws) {
+                try {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.close();
+                    }
+                } catch (e) {
+                    console.error('Error closing WebSocket:', e);
+                }
+                ws = null;
+            }
+            
+            if (systemAudioStream) {
+                systemAudioStream.getTracks().forEach(track => {
+                    track.stop();
+                });
+                systemAudioStream = null;
+            }
+            
+            if (processor) {
+                try {
+                    processor.disconnect();
+                } catch (e) {
+                    console.error('Error disconnecting processor:', e);
+                }
+                processor = null;
+            }
+            
+            if (audioContext) {
+                try {
+                    if (audioContext.state !== 'closed') {
+                        audioContext.close().catch(e => {
+                            console.error('Error closing audio context:', e);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Error in audio context cleanup:', e);
+                }
+                audioContext = null;
+            }
+            
+            resampledBuffer = new Float32Array();
+            
+            // 更新UI状态
+            updateSystemAudioUI(false);
+            
+            if (isManualPause) {
+                updateStatus('System audio capture stopped.', 'ready');
+            } else {
+                updateStatus('', 'ready');
+            }
+            translationPaused = true;
+            translationInitialized = false;
+        }
+
         // Reset translation
         resetTranslation.addEventListener('click', async () => {
             if (!sessionId) return;
@@ -2814,6 +3632,8 @@
             try {
                 if (isMicRecording) {
                     stopMicrophone(false);
+                } else if (isSystemAudioCapturing) {
+                    stopSystemAudioCapture(false);
                 } else {
                     volumeLevel.style.width = '0%';
                     volumeIndicator.classList.add('hidden');
@@ -2919,6 +3739,8 @@
             try {
                 if (isMicRecording) {
                     stopMicrophone(false);
+                } else if (isSystemAudioCapturing) {
+                    stopSystemAudioCapture(false);
                 } else {
                     volumeLevel.style.width = '0%';
                     volumeIndicator.classList.add('hidden');
@@ -3017,8 +3839,13 @@
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', () => {
             try {
-                // Electron环境下强制调整按钮位置
+                // Electron环境下强制调整按钮位置和UI切换
                 if (typeof window !== 'undefined' && window.electronAPI) {
+                    console.log('🔄 DOMContentLoaded: Re-applying Electron mode UI...');
+                    
+                    // 立即执行强制UI切换
+                    forceElectronModeUI();
+                    
                     setTimeout(() => {
                         const buttonsGroup = document.querySelector('.buttons-group');
                         if (buttonsGroup) {
@@ -3027,6 +3854,11 @@
                             buttonsGroup.style.zIndex = '10';
                             console.log('Electron: 按钮位置已调整到-25px');
                         }
+                        
+                        // 再次强制执行UI切换，防止任何时序问题
+                        console.log('🔄 DOMContentLoaded: Final UI enforcement...');
+                        forceElectronModeUI();
+                        
                     }, 100);
                 }
                 
@@ -3046,7 +3878,10 @@
                 
                 const storedSessionId = localStorage.getItem('translationSessionId_' + clientId);
                 if (storedSessionId) {
+                    console.log('Found stored session ID:', storedSessionId);
                     checkSessionStatus(storedSessionId);
+                } else {
+                    console.log('No stored session found, starting fresh');
                 }
                 
                 const pendingDeleteSessions = JSON.parse(localStorage.getItem('pendingDeleteSessions_' + clientId) || '{}');

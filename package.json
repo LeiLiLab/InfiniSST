@@ -28,6 +28,12 @@
       "node_modules/**/*",
       "!**/.*"
     ],
+    "extraResources": [
+      {
+        "from": "electron/scripts",
+        "to": "scripts"
+      }
+    ],
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "electron/assets/icon.png",

@@ -10,6 +10,7 @@ class ElectronAudioProcessor {
         this.chunksSentCount = 0;
         this.errorCount = 0;
         this.lastIdleResetTime = 0;
+        this.hasDetectedAudio = false; // 标记是否已检测到音频
 
         this.config = {
             targetSampleRate: 16000,
@@ -115,6 +116,9 @@ class ElectronAudioProcessor {
             } else if (this.sourceType === 'media') {
                 this.sourceNode = this.audioContext.createMediaElementSource(this.mediaElement);
                 console.log('🎵 Created MediaElementSource for media file');
+            } else if (this.sourceType === 'system_audio') {
+                this.sourceNode = this.audioContext.createMediaStreamSource(this.audioSource);
+                console.log('🔊 Created MediaStreamSource for system audio');
             }
             
             this.sourceNode.connect(this.workletNode);
@@ -179,6 +183,25 @@ class ElectronAudioProcessor {
                         const volumePercent = Math.min(100, Math.round(averageVolume * 1000));
                         volumeLevel.style.width = volumePercent + '%';
                     }
+                    
+                    // 检测到语音时更新状态
+                    if (hasSound && typeof window !== 'undefined' && window.updateStatus) {
+                        if (!this.hasDetectedAudio) {
+                            this.hasDetectedAudio = true;
+                            window.updateStatus('Processing speech from microphone...', 'processing');
+                        }
+                    }
+                } else if (this.sourceType === 'system_audio') {
+                    // 系统音频捕获模式下，检测到音频时更新状态
+                    const averageVolume = volumeSum / input.length;
+                    if (hasSound && typeof window !== 'undefined' && window.updateStatus) {
+                        // 只在第一次检测到音频时更新状态，避免频繁更新
+                        if (!this.hasDetectedAudio) {
+                            this.hasDetectedAudio = true;
+                            window.updateStatus('Processing audio from system...', 'processing');
+                        }
+                    }
+                    console.log('🔊 System audio processing, average volume:', averageVolume.toFixed(4), hasSound ? '(has sound)' : '(no sound)');
                 }
                 
                 // 将新数据添加到本地缓冲区
@@ -287,6 +310,9 @@ class ElectronAudioProcessor {
             } else if (this.sourceType === 'media') {
                 this.sourceNode = this.audioContext.createMediaElementSource(this.mediaElement);
                 console.log('🎵 Created MediaElementSource for media file [ScriptProcessor]');
+            } else if (this.sourceType === 'system_audio') {
+                this.sourceNode = this.audioContext.createMediaStreamSource(this.audioSource);
+                console.log('🔊 Created MediaStreamSource for system audio [ScriptProcessor]');
             }
             
             this.sourceNode.connect(scriptProcessor);
@@ -348,6 +374,25 @@ class ElectronAudioProcessor {
                         const volumePercent = Math.min(100, Math.round(averageVolume * 1000));
                         volumeLevel.style.width = volumePercent + '%';
                     }
+                    
+                    // 检测到语音时更新状态
+                    if (hasSound && typeof window !== 'undefined' && window.updateStatus) {
+                        if (!this.hasDetectedAudio) {
+                            this.hasDetectedAudio = true;
+                            window.updateStatus('Processing speech from microphone...', 'processing');
+                        }
+                    }
+                } else if (this.sourceType === 'system_audio') {
+                    // 系统音频捕获模式下，检测到音频时更新状态
+                    const averageVolume = volumeSum / inputData.length;
+                    if (hasSound && typeof window !== 'undefined' && window.updateStatus) {
+                        // 只在第一次检测到音频时更新状态，避免频繁更新
+                        if (!this.hasDetectedAudio) {
+                            this.hasDetectedAudio = true;
+                            window.updateStatus('Processing audio from system...', 'processing');
+                        }
+                    }
+                    console.log('🔊 System audio processing [ScriptProcessor], average volume:', averageVolume.toFixed(4), hasSound ? '(has sound)' : '(no sound)');
                 }
                 
                 // 重采样逻辑与AudioWorklet相同
@@ -404,6 +449,7 @@ class ElectronAudioProcessor {
     stop() {
         console.log('🛑 Stopping Electron audio processor...');
         this.isProcessing = false;
+        this.hasDetectedAudio = false; // 重置音频检测标志
 
         if (this.resampledBuffer && this.resampledBuffer.length > 0) {
             const currentLatencyMultiplier = (typeof window !== 'undefined' && window.currentLatencyMultiplier) ? window.currentLatencyMultiplier : 2;
@@ -427,6 +473,7 @@ class ElectronAudioProcessor {
         this.mediaElement = null;
         this.audioSource = null;
         this.sourceType = null;
+        this.hasDetectedAudio = false; // 重置音频检测标志
 
         if (this.sourceNode) {
             try { this.sourceNode.disconnect(); } catch (e) {}

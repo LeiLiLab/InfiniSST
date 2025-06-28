@@ -51,6 +51,32 @@ try {
     checkMicrophonePermission: () => ipcRenderer.invoke('check-microphone-permission'),
     requestMicrophonePermission: () => ipcRenderer.invoke('request-microphone-permission'),
     
+    // BlackHole音频驱动管理（替代屏幕录制权限）
+    checkBlackHoleInstalled: async () => {
+      console.log('📡 Preload: checkBlackHoleInstalled called, invoking IPC...');
+      try {
+        console.log('📡 Preload: About to call ipcRenderer.invoke with channel "check-blackhole-installed"');
+        const result = await ipcRenderer.invoke('check-blackhole-installed');
+        console.log('📡 Preload: IPC invoke completed, result:', result);
+        return result;
+      } catch (error) {
+        console.error('📡 Preload: IPC invoke failed:', error);
+        throw error;
+      }
+    },
+    installBlackHole: () => {
+      console.log('📡 Preload: installBlackHole called, invoking IPC...');
+      return ipcRenderer.invoke('install-blackhole');
+    },
+    testSystemProfiler: () => {
+      console.log('📡 Preload: testSystemProfiler called, invoking IPC...');
+      return ipcRenderer.invoke('test-system-profiler');
+    },
+    testIPC: () => {
+      console.log('📡 Preload: testIPC called, invoking IPC...');
+      return ipcRenderer.invoke('test-ipc');
+    },
+    
     // 监听翻译窗口事件（用于翻译窗口）
     onTranslationUpdate: (callback) => {
       ipcRenderer.on('translation-update', callback);
