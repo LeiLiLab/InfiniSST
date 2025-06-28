@@ -24,12 +24,30 @@
             margin: 0 auto;
         }
 
+        /* 窗口拖拽区域 - 扩大到整个顶部区域 */
+        .drag-area {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 120px;
+            -webkit-app-region: drag;
+            z-index: 1000;
+            background: transparent;
+            pointer-events: auto;
+        }
+
+        /* 确保所有交互元素不可拖拽 */
+        button, input, select, textarea, .btn, .upload-btn, .record-btn {
+            -webkit-app-region: no-drag !important;
+        }
+
         .header {
             text-align: center;
             margin-top: 40px;
             margin-bottom: 40px;
-            -webkit-app-region: drag; /* 使header可拖拽 */
-            cursor: move;
+            position: relative;
+            z-index: 1001;
         }
 
         .header h1 {
@@ -41,6 +59,7 @@
             background-clip: text;
             margin-bottom: 10px;
             -webkit-app-region: no-drag; /* 标题文字不可拖拽，避免选择冲突 */
+            pointer-events: none; /* 文字不阻止拖拽 */
         }
 
         .header p {
@@ -48,6 +67,7 @@
             color: #a0a0a0;
             font-weight: 300;
             -webkit-app-region: no-drag; /* 副标题不可拖拽 */
+            pointer-events: none; /* 文字不阻止拖拽 */
         }
 
         .main-panel {
@@ -57,8 +77,11 @@
             border-radius: 24px;
             padding: 40px;
             margin-bottom: 30px;
+            margin-top: 20px; /* 为拖拽区域留出空间 */
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
             -webkit-app-region: no-drag; /* 主面板内容不可拖拽 */
+            position: relative;
+            z-index: 999; /* 确保在拖拽区域下方 */
         }
 
         .controls-section {
@@ -737,6 +760,9 @@
     </style>
 </head>
 <body>
+    <!-- 窗口拖拽区域 -->
+    <div class="drag-area"></div>
+    
     <!-- Electron专用音频处理器 -->
     <script src="/static/electron-audio-fix.js"></script>
     
