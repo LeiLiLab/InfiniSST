@@ -51,16 +51,15 @@ try {
     checkMicrophonePermission: () => ipcRenderer.invoke('check-microphone-permission'),
     requestMicrophonePermission: () => ipcRenderer.invoke('request-microphone-permission'),
     
-    // BlackHole音频驱动管理（替代屏幕录制权限）
-    checkBlackHoleInstalled: async () => {
-      console.log('📡 Preload: checkBlackHoleInstalled called, invoking IPC...');
+    // 系统音频配置管理
+    checkSystemAudioConfig: async () => {
+      console.log('📡 Preload: checkSystemAudioConfig called, invoking IPC...');
       try {
-        console.log('📡 Preload: About to call ipcRenderer.invoke with channel "check-blackhole-installed"');
-        const result = await ipcRenderer.invoke('check-blackhole-installed');
-        console.log('📡 Preload: IPC invoke completed, result:', result);
+        const result = await ipcRenderer.invoke('check-system-audio-config');
+        console.log('📡 Preload: checkSystemAudioConfig completed, result:', result);
         return result;
       } catch (error) {
-        console.error('📡 Preload: IPC invoke failed:', error);
+        console.error('📡 Preload: checkSystemAudioConfig failed:', error);
         throw error;
       }
     },

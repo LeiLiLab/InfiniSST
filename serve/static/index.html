@@ -2733,26 +2733,19 @@
                 if (isSystemAudioCapturing) {
                     stopSystemAudioCapture(true);
                 } else {
-                    // 首先检查是否已加载模型
-                    // jiaxuan todo
-                    // if (!sessionId) {
-                    //     updateStatus('Please load a model first', 'error');
-                    //     console.warn('System audio capture attempted without loaded model');
-                    //     return;
-                    // }
                     
                     console.log('🎯 System audio capture requested (sessionId:', sessionId, ')');
                     console.log('Environment check:', {
                         isElectron: isElectron,
                         hasElectronAPI: !!window.electronAPI,
-                        hasCheckBlackHole: !!(window.electronAPI && window.electronAPI.checkBlackHoleInstalled)
+                        hasSystemAudioConfig: !!(window.electronAPI && window.electronAPI.checkSystemAudioConfig)
                     });
                     
-                    if (isElectron && window.electronAPI && window.electronAPI.checkBlackHoleInstalled) {
-                        console.log('🔍 Starting virtual device check via electronAPI...');
+                    if (isElectron && window.electronAPI && window.electronAPI.checkSystemAudioConfig) {
+                        console.log('🔍 Starting complete system audio configuration check...');
                         
                         // 首先测试 IPC 连接
-                        console.log('🧪 Testing IPC connection before BlackHole check...');
+                        console.log('🧪 Testing IPC connection before audio config check...');
                         try {
                             const testResult = await window.electronAPI.testIPC();
                             console.log('🧪 IPC test successful:', testResult);
@@ -2763,63 +2756,57 @@
                         }
                         
                         try {
-                            console.log('📞 Calling window.electronAPI.checkBlackHoleInstalled()...');
-                            const hasVirtualDevice = await window.electronAPI.checkBlackHoleInstalled();
-                            console.log('✅ checkBlackHoleInstalled result:', hasVirtualDevice);
+                            console.log('📞 Calling window.electronAPI.checkSystemAudioConfig()...');
+                            const audioConfig = await window.electronAPI.checkSystemAudioConfig();
+                            console.log('✅ checkSystemAudioConfig result:', audioConfig);
                             
-                            if (!hasVirtualDevice) {
-                                // 提供设置BlackHole的选项，但不强制要求
-                                const shouldSetup = confirm('No virtual audio device detected. Would you like to set up BlackHole for better system audio capture?\n\nClick OK to set up BlackHole, or Cancel to try direct audio capture.');
+                            if (audioConfig.configured) {
+                                console.log('✅ System audio properly configured for capture');
+                                updateStatus('System audio configured - Please play any audio/video to begin translation', 'ready');
+                            } else if (audioConfig.setupAttempted) {
+                                console.log('🔧 Setup script was attempted');
                                 
-                                if (shouldSetup) {
-                                    updateStatus('Setting up BlackHole for system audio capture...', 'processing');
-                                    systemAudioBtn.textContent = 'Setting up...';
-                                    systemAudioBtn.disabled = true;
-                                    
-                                    const result = await window.electronAPI.installBlackHole();
-                                    
-                                    systemAudioBtn.textContent = 'Capture System Audio';
-                                    systemAudioBtn.disabled = false;
-                                    
-                                    if (result.success) {
-                                        updateStatus('BlackHole setup script started. Please follow the instructions in Terminal, then try again.', 'ready');
-                                    } else {
-                                        updateStatus('Failed to start BlackHole setup: ' + result.message + '. Trying direct capture...', 'processing');
-                                        // 继续尝试直接捕获
-                                        setTimeout(() => startSystemAudioCapture(), 1000);
-                                    }
-                                    return;
+                                if (audioConfig.setupResult && audioConfig.setupResult.success) {
+                                    updateStatus('Setup script started. Please follow the instructions in Terminal, then restart the app to use system audio capture.', 'ready');
+                                    return; // 不继续尝试系统音频捕获，因为需要重启
+                                } else if (audioConfig.setupResult) {
+                                    updateStatus(`Setup script failed: ${audioConfig.setupResult.message}. System audio capture is not available.`, 'error');
+                                    return; // 不继续尝试，因为直接捕获不可能
                                 } else {
-                                    updateStatus('Attempting direct system audio capture...', 'processing');
+                                    updateStatus('Setup script had an unknown result. System audio capture is not available.', 'error');
+                                    return;
                                 }
+                            } else if (audioConfig.setupCancelled) {
+                                console.log('❌ User cancelled setup');
+                                updateStatus(`System audio capture requires configuration. Issue: ${audioConfig.reason}. Setup was cancelled.`, 'error');
+                                return; // 不继续尝试，因为直接捕获不可能
                             } else {
-                                console.log('Virtual audio device detected, proceeding with capture');
-                                updateStatus('Ready - Please play any audio/video to begin translation', 'ready');
+                                // 显示配置问题但没有运行安装脚本的情况（不应该发生）
+                                console.log('❌ Configuration issue but no setup attempted:', audioConfig.reason, audioConfig.details);
+                                updateStatus(`System audio configuration error: ${audioConfig.reason}. ${audioConfig.details || ''}`, 'error');
+                                return; // 不继续尝试，因为直接捕获不可能
                             }
                         } catch (error) {
-                            console.error('❌ Error checking virtual audio device status:', error);
+                            console.error('❌ Error checking system audio configuration:', error);
                             console.error('Error details:', {
                                 name: error.name,
                                 message: error.message,
                                 stack: error.stack
                             });
-                            console.log('Device check failed, proceeding with capture attempt');
+                            updateStatus('Configuration check failed, trying direct capture...', 'processing');
                         }
                     } else {
-                        console.log('❌ Not in Electron environment or electronAPI not available');
+                        console.log('❌ Not in Electron environment or checkSystemAudioConfig not available');
                         console.log('isElectron:', isElectron);
                         console.log('window.electronAPI:', !!window.electronAPI);
                         if (window.electronAPI) {
                             console.log('electronAPI methods:', Object.keys(window.electronAPI));
                         }
-                        
-                        // 提供手动测试选项
-                        console.log('💡 For manual testing, you can run in console:');
-                        console.log('   window.electronAPI.checkBlackHoleInstalled().then(result => console.log("Result:", result))');
-                        console.log('   window.electronAPI.testSystemProfiler().then(data => console.log("System Profiler:", data))');
+                        updateStatus('System audio capture is only available in Electron app', 'error');
+                        return;
                     }
                     
-                    // 尝试系统音频捕获（不管检查结果如何）
+                    // 只有在配置正确的情况下才尝试系统音频捕获
                     startSystemAudioCapture();
                 }
             });

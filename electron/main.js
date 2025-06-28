@@ -83,6 +83,50 @@ function createWindow() {
     mainWindow = null;
   });
 
+  // 监听主窗口移动，让翻译窗口跟随
+  mainWindow.on('move', () => {
+    if (translationWindow && !translationWindow.isDestroyed() && translationWindow.isVisible()) {
+      const mainBounds = mainWindow.getBounds();
+      const translationBounds = translationWindow.getBounds();
+      
+      // 重新计算翻译窗口位置：翻译窗口下边框距主窗口底部20px
+      const x = mainBounds.x + Math.floor((mainBounds.width - translationBounds.width) / 2);
+      const y = mainBounds.y + mainBounds.height - translationBounds.height - 20;
+      
+      // 确保窗口不会超出屏幕范围
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+      
+      const finalX = Math.max(0, Math.min(x, screenWidth - translationBounds.width));
+      const finalY = Math.max(0, Math.min(y, screenHeight - translationBounds.height));
+      
+      translationWindow.setPosition(finalX, finalY);
+    }
+  });
+
+  // 监听主窗口大小改变，重新调整翻译窗口位置
+  mainWindow.on('resize', () => {
+    if (translationWindow && !translationWindow.isDestroyed() && translationWindow.isVisible()) {
+      const mainBounds = mainWindow.getBounds();
+      const translationBounds = translationWindow.getBounds();
+      
+      // 重新计算翻译窗口位置：翻译窗口下边框距主窗口底部20px
+      const x = mainBounds.x + Math.floor((mainBounds.width - translationBounds.width) / 2);
+      const y = mainBounds.y + mainBounds.height - translationBounds.height - 20;
+      
+      // 确保窗口不会超出屏幕范围
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+      
+      const finalX = Math.max(0, Math.min(x, screenWidth - translationBounds.width));
+      const finalY = Math.max(0, Math.min(y, screenHeight - translationBounds.height));
+      
+      translationWindow.setPosition(finalX, finalY);
+    }
+  });
+
   // 处理外部链接
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     console.log('Opening external URL:', url);
@@ -227,112 +271,153 @@ async function requestMicrophonePermission() {
   }
 }
 
-// 检查BlackHole是否已安装
-async function checkBlackHoleInstalled() {
-  console.log('🚀 checkBlackHoleInstalled function started');
+// 检查完整的系统音频配置
+async function checkSystemAudioConfiguration() {
+  console.log('🔍 Checking complete system audio configuration...');
   
   if (process.platform !== 'darwin') {
-    console.log('BlackHole is only available on macOS');
-    return false;
+    console.log('System audio configuration check is only available on macOS');
+    return { configured: false, reason: 'macOS only', hasBlackHole: false };
   }
 
-  console.log('🔍 Platform is macOS, checking for virtual audio devices...');
   try {
     const { execSync } = require('child_process');
     
-    // 检查BlackHole音频设备是否存在
-    console.log('🔍 Running system_profiler command...');
+    // Step 1: 检查 BlackHole 是否安装
+    console.log('📋 Step 1: Checking if BlackHole is installed...');
+    const audioData = await getAudioDevices();
+    const hasBlackHole = audioData.devices.some(device => 
+      device.name.toLowerCase().includes('blackhole')
+    );
+    
+    console.log('BlackHole installed:', hasBlackHole);
+    
+    if (!hasBlackHole) {
+      return { 
+        configured: false, 
+        reason: 'BlackHole not installed', 
+        hasBlackHole: false,
+        details: 'BlackHole virtual audio device is not installed'
+      };
+    }
+    
+    // Step 2: 检查是否存在包含 BlackHole 的 Multi-Output Device
+    console.log('📋 Step 2: Checking for Multi-Output Device with BlackHole...');
+    const multiOutputDevices = audioData.devices.filter(device => 
+      device.name.toLowerCase().includes('multi-output') || 
+      device.name.toLowerCase().includes('multi output') ||
+      device.name.toLowerCase().includes('aggregate')
+    );
+    
+    console.log('Found Multi-Output devices:', multiOutputDevices.map(d => d.name));
+    
+    // Step 3: 检查当前系统音频输出设备
+    console.log('📋 Step 3: Checking current system audio output...');
+    let currentOutputDevice = '';
+    try {
+      // 使用 SwitchAudioSource 工具检查当前输出设备（更可靠）
+      currentOutputDevice = execSync('SwitchAudioSource -c', {
+        encoding: 'utf8'
+      }).trim();
+      console.log('Current output device:', currentOutputDevice);
+    } catch (error) {
+      console.warn('⚠️ Failed to detect current output device using SwitchAudioSource:', error.message);
+      currentOutputDevice = '';
+    }
+    
+    // Step 4: 综合判断配置状态
+    const hasValidMultiOutput = multiOutputDevices.length > 0;
+
+    if (!hasValidMultiOutput) {
+      return {
+        configured: false,
+        reason: 'No Multi-Output Device found',
+        hasBlackHole: true,
+        details: 'BlackHole is installed but no Multi-Output Device has been created. You need to create a Multi-Output Device in Audio MIDI Setup.',
+        instructions: [
+          '1. Open Audio MIDI Setup (Applications > Utilities)',
+          '2. Click the "+" button and select "Create Multi-Output Device"',
+          '3. Check both your speakers and BlackHole in the device list',
+          '4. Set the Multi-Output Device as your system output in System Preferences > Sound'
+        ]
+      };
+    }
+
+    // 检查 Multi-Output Device 是否被设置为当前输出
+    const isMultiOutputActive = multiOutputDevices.some(device =>
+      currentOutputDevice.toLowerCase().includes(device.name.toLowerCase())
+    );
+
+    if (!isMultiOutputActive) {
+      return {
+        configured: false,
+        reason: 'Multi-Output not active',
+        hasBlackHole: true,
+        details: `Multi-Output Device exists but is not the current output device (Current: ${currentOutputDevice})`,
+        instructions: [
+          '1. Open Audio MIDI Setup (Applications > Utilities)',
+          '2. Select the Multi-Output Device that includes BlackHole',
+          '3. Right-click and choose "Use this device for sound output"'
+        ]
+      };
+    }
+
+    console.log('📋 Step 4: Verifying Multi-Output Device is current output...');
+
+    return {
+      configured: true,
+      reason: 'Properly configured',
+      hasBlackHole: true,
+      multiOutputDevices: multiOutputDevices.map(d => d.name),
+      details: 'System audio configuration appears to be correct for capture'
+    };
+    
+  } catch (error) {
+    console.error('Error checking system audio configuration:', error);
+    return {
+      configured: false,
+      reason: 'Check failed',
+      hasBlackHole: false,
+      details: `Configuration check failed: ${error.message}`,
+      error: error.message
+    };
+  }
+}
+
+// 获取音频设备信息的辅助函数
+async function getAudioDevices() {
+  const { execSync } = require('child_process');
+  
+  try {
     const output = execSync('system_profiler SPAudioDataType -json', { 
       encoding: 'utf8',
-      timeout: 10000 // 10秒超时
+      timeout: 10000
     });
-    console.log('✅ system_profiler command completed');
     
     const audioData = JSON.parse(output);
-    console.log('📋 Audio data parsed, found', audioData.SPAudioDataType?.length || 0, 'audio devices');
+    const devices = [];
     
-    // 首先显示所有音频设备的原始数据
-    console.log('🔍 Raw audio data structure:');
-    console.log(JSON.stringify(audioData.SPAudioDataType, null, 2));
-    
-    // 查找BlackHole、multi-output、aggregate设备或其他虚拟音频设备
-    console.log('🔍 Starting virtual device detection...');
-    
-    // 正确遍历音频设备数据结构
+    // 遍历所有音频设备
     for (const deviceGroup of audioData.SPAudioDataType || []) {
-      console.log('🎧 Checking device group:', deviceGroup._name);
-      
-      // 遍历 _items 数组中的实际设备
       for (const device of deviceGroup._items || []) {
         if (device._name) {
-          const deviceName = device._name.toLowerCase();
-          const originalName = device._name;
-          
-          console.log(`🎧 Checking individual device: "${originalName}"`);
-          
-          // 检查各种虚拟音频设备类型
-          const isBlackHole = deviceName.includes('blackhole');
-          const isMultiOutput = deviceName.includes('multi-output') || deviceName.includes('multi output') || deviceName.includes('multioutput');
-          const isAggregate = deviceName.includes('aggregate');
-          const isSoundFlower = deviceName.includes('soundflower');
-          const isVirtual = deviceName.includes('virtual');
-          
-          console.log(`🎧 Device analysis: "${originalName}"`, {
-            deviceNameLower: deviceName,
-            isBlackHole,
-            isMultiOutput,
-            isAggregate,
-            isSoundFlower,
-            isVirtual,
-            isVirtualDevice: isBlackHole || isMultiOutput || isAggregate || isSoundFlower || isVirtual
+          devices.push({
+            name: device._name,
+            type: deviceGroup._name || 'Unknown',
+            raw: device
           });
-          
-          if (isBlackHole || isMultiOutput || isAggregate || isSoundFlower || isVirtual) {
-            console.log('✅ Virtual audio device found:', originalName);
-            console.log('🔚 checkBlackHoleInstalled function ending, returning true');
-            return true;
-          }
-        } else {
-          console.log('⚠️ Device has no _name property:', JSON.stringify(device, null, 2));
         }
       }
     }
     
-    // 额外检查：通过audiodevices命令行工具检查（如果安装了的话）
-    try {
-      const audioDevicesOutput = execSync('audiodevices -i -t input', { encoding: 'utf8' });
-      const inputDevices = audioDevicesOutput.split('\n');
-      
-      for (const deviceLine of inputDevices) {
-        if (deviceLine.trim()) {
-          const deviceName = deviceLine.toLowerCase();
-          if (deviceName.includes('blackhole') || 
-              deviceName.includes('multi-output') || 
-              deviceName.includes('multi output') ||
-              deviceName.includes('aggregate') ||
-              deviceName.includes('soundflower') ||
-              deviceName.includes('virtual')) {
-                         console.log('✅ Virtual audio input device found via audiodevices:', deviceLine.trim());
-             console.log('🔚 checkBlackHoleInstalled function ending (audiodevices), returning true');
-             return true;
-          }
-        }
-      }
-    } catch (audioDevicesError) {
-      console.log('audiodevices command not available, using system_profiler only');
-    }
-    
-         console.log('No virtual audio devices found');
-     console.log('🔚 checkBlackHoleInstalled function ending, returning false');
-     return false;
-   } catch (error) {
-     console.error('Error checking virtual audio device installation:', error);
-     // 如果检查失败，返回true让用户尝试捕获音频
-     console.log('Device check failed, allowing user to try audio capture');
-     console.log('🔚 checkBlackHoleInstalled function ending with error, returning true');
-     return true;
-   }
- }
+    return { devices, raw: audioData };
+  } catch (error) {
+    console.error('Error getting audio devices:', error);
+    return { devices: [], raw: null };
+  }
+}
+
+
 
 // 运行BlackHole设置脚本
 async function installBlackHole() {
@@ -683,7 +768,7 @@ app.whenReady().then(async () => {
   console.log('- test-ipc: ✅');
   console.log('- check-microphone-permission: ✅');
   console.log('- request-microphone-permission: ✅');
-  console.log('- check-blackhole-installed: ✅');
+  console.log('- check-system-audio-config: ✅');
   console.log('- test-system-profiler: ✅');
   console.log('- install-blackhole: ✅');
   
@@ -765,16 +850,62 @@ ipcMain.handle('request-microphone-permission', async () => {
   return await requestMicrophonePermission();
 });
 
-// 检查BlackHole是否已安装
-ipcMain.handle('check-blackhole-installed', async () => {
-  console.log('🔍 IPC: check-blackhole-installed handler called');
+
+
+// 检查完整的系统音频配置（详细检查）
+ipcMain.handle('check-system-audio-config', async () => {
+  console.log('🔍 IPC: check-system-audio-config handler called');
   try {
-    const result = await checkBlackHoleInstalled();
-    console.log('✅ IPC: checkBlackHoleInstalled completed, result:', result);
+    const result = await checkSystemAudioConfiguration();
+    console.log('✅ IPC: checkSystemAudioConfiguration completed, result:', result);
+    
+    // 如果检查失败，自动提供安装/配置选项
+    if (!result.configured) {
+      console.log('💡 System audio not configured properly, offering installation/setup...');
+      
+      // 询问用户是否要运行安装/配置脚本
+      if (mainWindow) {
+        const userResponse = await dialog.showMessageBox(mainWindow, {
+          type: 'question',
+          title: 'System Audio Configuration Required',
+          message: 'System audio capture requires proper configuration.',
+          detail: `Issue: ${result.reason}\n${result.details || ''}\n\nWould you like to run the setup script? This will guide you through installation and configuration.`,
+          buttons: ['Run Setup Script', 'Cancel'],
+          defaultId: 0,
+          cancelId: 1
+        });
+        
+        if (userResponse.response === 0) {
+          console.log('🚀 User chose to run setup script, starting...');
+          try {
+            const installResult = await installBlackHole();
+            console.log('📦 Setup script result:', installResult);
+            
+            // 返回带有安装结果的配置检查结果
+            return {
+              ...result,
+              setupAttempted: true,
+              setupResult: installResult
+            };
+          } catch (setupError) {
+            console.error('❌ Setup script failed:', setupError);
+            return {
+              ...result,
+              setupAttempted: true,
+              setupResult: { success: false, message: setupError.message }
+            };
+          }
+        } else {
+          console.log('❌ User cancelled the setup');
+          return { ...result, setupCancelled: true };
+        }
+      }
+    }
+    
     return result;
   } catch (error) {
-    console.error('❌ IPC: checkBlackHoleInstalled error:', error);
-    throw error;
+    console.error('❌ IPC: checkSystemAudioConfiguration error:', error);
+    return { configured: false, reason: 'IPC error', hasBlackHole: false, error: error.message };
   }
 });
 
@@ -863,17 +994,36 @@ function createTranslationWindow() {
   translationWindow.once('ready-to-show', () => {
     translationWindow.show();
     
-    // 设置窗口位置到屏幕下方（距底部1/4处）
-    const { screen } = require('electron');
-    const primaryDisplay = screen.getPrimaryDisplay();
-    const { width, height } = primaryDisplay.workAreaSize;
-    const windowBounds = translationWindow.getBounds();
-    
-    // 水平居中，垂直方向放在屏幕下方约70%的位置
-    const x = Math.floor((width - windowBounds.width) / 2);
-    const y = Math.floor(height * 0.70 - windowBounds.height / 2);
-    
-    translationWindow.setPosition(x, y);
+    // 设置窗口位置相对于主窗口底部20px
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      const mainBounds = mainWindow.getBounds();
+      const translationBounds = translationWindow.getBounds();
+      
+      // 水平居中对齐主窗口，垂直位置让翻译窗口下边框距主窗口底部20px
+      const x = mainBounds.x + Math.floor((mainBounds.width - translationBounds.width) / 2);
+      const y = mainBounds.y + mainBounds.height - translationBounds.height - 20;
+      
+      // 确保窗口不会超出屏幕范围
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+      
+      const finalX = Math.max(0, Math.min(x, screenWidth - translationBounds.width));
+      const finalY = Math.max(0, Math.min(y, screenHeight - translationBounds.height));
+      
+      translationWindow.setPosition(finalX, finalY);
+    } else {
+      // 备用方案：如果主窗口不可用，使用屏幕中央
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width, height } = primaryDisplay.workAreaSize;
+      const windowBounds = translationWindow.getBounds();
+      
+      const x = Math.floor((width - windowBounds.width) / 2);
+      const y = Math.floor(height * 0.70 - windowBounds.height / 2);
+      
+      translationWindow.setPosition(x, y);
+    }
     
     // 窗口显示后发送初始状态
     setTimeout(() => {
@@ -1015,18 +1165,36 @@ ipcMain.handle('set-translation-window-size', (event, width, height) => {
   if (translationWindow) {
     translationWindow.setSize(width, height);
     
-    // 确保窗口保持在屏幕下方（距底部1/4处）
-    const { screen } = require('electron');
-    const primaryDisplay = screen.getPrimaryDisplay();
-    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+    // 重新定位窗口相对于主窗口底部20px
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      const mainBounds = mainWindow.getBounds();
+      
+      // 水平居中对齐主窗口，垂直位置让翻译窗口下边框距主窗口底部20px
+      const x = mainBounds.x + Math.floor((mainBounds.width - width) / 2);
+      const y = mainBounds.y + mainBounds.height - height - 20;
+      
+      // 确保窗口不会超出屏幕范围
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+      
+      const finalX = Math.max(0, Math.min(x, screenWidth - width));
+      const finalY = Math.max(0, Math.min(y, screenHeight - height));
+      
+      translationWindow.setPosition(finalX, finalY);
+    } else {
+      // 备用方案：如果主窗口不可用，使用屏幕中央
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+      
+      const x = Math.floor((screenWidth - width) / 2);
+      const y = Math.floor(screenHeight * 0.70 - height / 2);
+      
+      translationWindow.setPosition(x, y);
+    }
     
-    // 水平居中，垂直方向放在屏幕下方约70%的位置
-    const x = Math.floor((screenWidth - width) / 2);
-    const y = Math.floor(screenHeight * 0.70 - height / 2);
-    
-    translationWindow.setPosition(x, y);
-    
-    console.log(`Translation window resized and repositioned`);
+    console.log(`Translation window resized and repositioned relative to main window`);
   } else {
     console.warn('Translation window not available for resizing');
   }
