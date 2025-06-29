@@ -51,11 +51,12 @@ class InfiniSSTAPIWithScheduler:
         
         # 创建调度器
         class Args:
-            max_batch_size = max_batch_size
-            batch_timeout = batch_timeout
-            session_timeout = 3600
+            def __init__(self, max_batch_size, batch_timeout):
+                self.max_batch_size = max_batch_size
+                self.batch_timeout = batch_timeout
+                self.session_timeout = 3600
             
-        self.scheduler = LLMScheduler(gpu_language_map, Args())
+        self.scheduler = LLMScheduler(gpu_language_map, Args(max_batch_size, batch_timeout))
         
         # 初始化Flask应用
         self.app = Flask(__name__)

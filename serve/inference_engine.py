@@ -15,12 +15,51 @@ from concurrent.futures import ThreadPoolExecutor, Future
 import threading
 from queue import Queue, Empty
 
-# 导入相关模块
-from agents.infinisst_faster import InfiniSSTFaster
-from agents.infinisst import S2TAgentStates
-from scheduler import InferenceRequest, RequestStage
-
+# 设置logger
 logger = logging.getLogger(__name__)
+
+# 导入相关模块
+try:
+    from agents.infinisst_faster import InfiniSSTFaster
+    INFINISST_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"InfiniSSTFaster不可用: {e}")
+    logger.warning("将使用模拟推理模式")
+    InfiniSSTFaster = None
+    INFINISST_AVAILABLE = False
+try:
+    from agents.infinisst import S2TAgentStates
+    AGENTS_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"agents.infinisst不可用: {e}")
+    # 创建占位符类
+    class S2TAgentStates:
+        def __init__(self):
+            self.source = []
+            self.target = []
+            self.source_finished = False
+            self.source_sample_rate = 16000
+            self.src_len = 0
+            self.speech_cache = None
+            self.past_key_values = None
+            self.target_ids = []
+            self.segment_idx = 0
+            self.translations_list = []
+        
+        def reset(self):
+            self.source = []
+            self.target = []
+            self.source_finished = False
+            self.src_len = 0
+            self.speech_cache = None
+            self.past_key_values = None
+            self.target_ids = []
+            self.segment_idx = 0
+            self.translations_list = []
+    
+    AGENTS_AVAILABLE = False
+    
+from scheduler import InferenceRequest, RequestStage
 
 @dataclass
 class EngineConfig:
@@ -81,6 +120,13 @@ class InferenceEngine:
         """加载模型"""
         try:
             logger.info(f"开始加载模型到GPU {self.gpu_id}...")
+            
+            if not INFINISST_AVAILABLE:
+                logger.warning("InfiniSSTFaster不可用，跳过实际模型加载")
+                self.model = None
+                self.tokenizer = None
+                self.is_loaded = False
+                return False
             
             # 创建InfiniSSTFaster实例
             self.model = InfiniSSTFaster(self.model_args)

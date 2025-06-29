@@ -4,13 +4,48 @@ import contextlib
 from time import perf_counter
 
 from typing import Optional
-from simuleval.agents.states import AgentStates
-from simuleval.utils import entrypoint
-from simuleval.data.segments import SpeechSegment
-from simuleval.agents import SpeechToTextAgent
-from simuleval.agents.actions import WriteAction, ReadAction
-from simuleval.agents.states import AgentStates
 from dataclasses import dataclass
+
+# 条件导入simuleval模块
+try:
+    from simuleval.agents.states import AgentStates
+    from simuleval.utils import entrypoint
+    from simuleval.data.segments import SpeechSegment
+    from simuleval.agents import SpeechToTextAgent
+    from simuleval.agents.actions import WriteAction, ReadAction
+    SIMULEVAL_AVAILABLE = True
+except ImportError:
+    # 如果simuleval不可用，创建占位符类
+    class AgentStates:
+        def __init__(self):
+            self.source = []
+            self.target = []
+            self.source_finished = False
+            self.source_sample_rate = 16000
+        
+        def reset(self):
+            self.source = []
+            self.target = []
+            self.source_finished = False
+    
+    class SpeechToTextAgent:
+        def __init__(self, args):
+            pass
+    
+    class WriteAction:
+        def __init__(self, content="", finished=False):
+            self.content = content
+            self.finished = finished
+    
+    class ReadAction:
+        def __init__(self):
+            pass
+    
+    def entrypoint(cls):
+        """占位符装饰器"""
+        return cls
+    
+    SIMULEVAL_AVAILABLE = False
 
 import numpy as np
 import torch
