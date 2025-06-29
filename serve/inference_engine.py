@@ -34,17 +34,18 @@ except ImportError as e:
     logger.warning(f"agents.infinisst不可用: {e}")
     # 创建占位符类
     class S2TAgentStates:
-        def __init__(self):
+        def __init__(self, src_len=0, speech_cache=None, past_key_values=None, 
+                     target_ids=None, segment_idx=0, translations_list=None):
             self.source = []
             self.target = []
             self.source_finished = False
             self.source_sample_rate = 16000
-            self.src_len = 0
-            self.speech_cache = None
-            self.past_key_values = None
-            self.target_ids = []
-            self.segment_idx = 0
-            self.translations_list = []
+            self.src_len = src_len or 0
+            self.speech_cache = speech_cache
+            self.past_key_values = past_key_values
+            self.target_ids = target_ids or []
+            self.segment_idx = segment_idx or 0
+            self.translations_list = translations_list or []
         
         def reset(self):
             self.source = []
@@ -306,6 +307,9 @@ class InferenceEngine:
                 decode_results = self._process_decode_batch(decode_requests)
                 results.extend(decode_results)
             
+            # 🔥 重要：处理完成后检查并清理结束的session
+            self._cleanup_finished_sessions(requests, results)
+            
             # 更新统计信息
             self.stats['completed_requests'] += len(results)
             self.stats['total_requests'] += len(requests)
@@ -393,26 +397,88 @@ class InferenceEngine:
     
     def _create_agent_states(self, request: InferenceRequest) -> S2TAgentStates:
         """从推理请求创建agent状态"""
-        states = S2TAgentStates()
+        # 首先处理speech_batch，确保维度正确
+        speech_data = request.speech_batch
         
-        # 设置音频数据
-        if isinstance(request.speech_batch, torch.Tensor):
-            states.source = request.speech_batch.cpu().numpy().tolist()
+        print(f"🔍 [INFERENCE] Processing speech_data type: {type(speech_data)}, shape: {speech_data.shape if hasattr(speech_data, 'shape') else 'no shape'}")
+        
+        if isinstance(speech_data, torch.Tensor):
+            # 确保是1D用于agent states
+            if speech_data.dim() == 2:
+                # [batch_size, seq_len] -> [seq_len] (取第一个batch)
+                speech_list = speech_data[0].cpu().numpy().tolist()
+                print(f"🔍 [INFERENCE] Converted 2D tensor to 1D: {len(speech_list)} samples")
+            else:
+                # [seq_len] -> 直接转换
+                speech_list = speech_data.cpu().numpy().tolist()
+                print(f"🔍 [INFERENCE] Converted 1D tensor: {len(speech_list)} samples")
         else:
-            states.source = request.speech_batch
+            # 已经是list或numpy array
+            if isinstance(speech_data, np.ndarray):
+                if speech_data.ndim == 2:
+                    speech_list = speech_data[0].tolist()  # 取第一个batch
+                    print(f"🔍 [INFERENCE] Converted 2D numpy to 1D: {len(speech_list)} samples")
+                else:
+                    speech_list = speech_data.tolist()
+                    print(f"🔍 [INFERENCE] Converted 1D numpy: {len(speech_list)} samples")
+            else:
+                speech_list = speech_data if isinstance(speech_data, list) else [speech_data]
+                print(f"🔍 [INFERENCE] Used as list: {len(speech_list)} samples")
         
+        # 检查音频数据长度
+        speech_length = len(speech_list)
+        print(f"🔍 [INFERENCE] Final speech data length: {speech_length}")
+        
+        # 如果音频数据太短，记录警告但不填充，让模型处理
+        MIN_AUDIO_LENGTH = 160  # 0.01秒 @ 16kHz，更宽松的阈值
+        if speech_length == 0:
+            print(f"⚠️ [INFERENCE] Received empty speech data for request {request.request_id}")
+            # 不抛出异常，让后续处理决定如何处理
+        elif speech_length < MIN_AUDIO_LENGTH:
+            print(f"⚠️ [INFERENCE] Speech data very short ({speech_length} samples) for request {request.request_id}")
+        
+        if speech_list:
+            print(f"🔍 [INFERENCE] Audio stats: min={min(speech_list):.6f}, max={max(speech_list):.6f}")
+        else:
+            print(f"🔍 [INFERENCE] Audio list is empty!")
+        
+        # 处理input_ids，确保是list格式
+        if isinstance(request.input_ids, torch.Tensor):
+            if request.input_ids.dim() == 2:
+                # [batch_size, seq_len] -> [seq_len] (取第一个batch)
+                input_ids_list = request.input_ids[0].cpu().numpy().tolist()
+            else:
+                # [seq_len] -> 直接转换
+                input_ids_list = request.input_ids.cpu().numpy().tolist()
+        else:
+            input_ids_list = request.input_ids if request.input_ids else []
+        
+        # 🔥 关键修复：src_len应该是已处理的音频长度，不是当前片段长度
+        # 对于新请求，src_len应该是0；对于后续请求，应该从session状态获取
+        current_src_len = getattr(request, 'session_src_len', 0)  # 从request获取会话状态
+        
+        # 🔍 使用会话传递的 src_len 值，这样模型的 _prepare_speech 能正确处理增量数据
+        print(f"🔍 [INFERENCE] Using session src_len: {current_src_len} (already processed samples)")
+        print(f"🔍 [INFERENCE] Total audio samples: {speech_length}")
+        print(f"🔍 [INFERENCE] New samples to process: {speech_length - current_src_len}")
+        
+        states = S2TAgentStates(
+            src_len=current_src_len,  # 🔥 修复：使用会话的已处理长度
+            speech_cache=request.speech_cache,
+            past_key_values=request.past_key_values,
+            target_ids=input_ids_list,
+            segment_idx=getattr(request, 'segment_idx', 0),
+            translations_list=getattr(request, 'translations_list', [])
+        )
+        
+        # 设置音频数据 - 确保是1D list
+        states.source = speech_list
         states.source_sample_rate = 16000  # 默认采样率
         states.source_finished = (request.stage == RequestStage.DECODE)
         
-        # 设置文本数据
-        if isinstance(request.input_ids, torch.Tensor):
-            states.target_ids = request.input_ids.cpu().numpy().tolist()
-        else:
-            states.target_ids = request.input_ids if request.input_ids else []
-        
-        # 设置缓存
-        states.speech_cache = request.speech_cache
-        states.past_key_values = request.past_key_values
+        print(f"🔍 [INFERENCE] Created agent states with {len(states.source)} audio samples")
+        print(f"🔍 [INFERENCE] states.source type: {type(states.source)}")
+        print(f"🔍 [INFERENCE] states.src_len: {states.src_len}")
         
         return states
     
@@ -460,6 +526,169 @@ class InferenceEngine:
                 'max_new_tokens': self.config.max_new_tokens
             }
         }
+    
+    def _cleanup_finished_sessions(self, requests: List[InferenceRequest], results: List[Dict[str, Any]]):
+        """清理已结束的session的KV cache页面"""
+        try:
+            for i, request in enumerate(requests):
+                if i < len(results):
+                    result = results[i]
+                    
+                    # 检查session是否结束（翻译完成或出错）
+                    session_finished = (
+                        not result.get('success', False) or  # 出错了
+                        result.get('finished', False) or     # 明确标记完成
+                        getattr(request, 'is_final', False)   # 是最后一个请求
+                    )
+                    
+                    if session_finished:
+                        logger.info(f"🧹 Session结束，开始清理KV cache页面: {request.request_id}")
+                        self._cleanup_session_kv_cache(request)
+                        
+        except Exception as e:
+            logger.error(f"清理session时出错: {e}")
+    
+    def _cleanup_session_kv_cache(self, request: InferenceRequest):
+        """清理单个session的KV cache页面"""
+        try:
+            # 这里需要访问具体的KV cache数据结构
+            # 假设request中包含了KV cache的引用
+            
+            session_id = getattr(request, 'session_id', request.request_id)
+            
+            # 🔥 关键：释放speech cache页面
+            if hasattr(request, 'speech_cache') and request.speech_cache:
+                self._release_speech_cache_pages(request.speech_cache, session_id)
+            
+            # 🔥 关键：释放LLM KV cache页面
+            if hasattr(request, 'past_key_values') and request.past_key_values:
+                self._release_llm_cache_pages(request.past_key_values, session_id)
+            
+            logger.info(f"✅ Session {session_id} KV cache页面清理完成")
+            
+        except Exception as e:
+            logger.error(f"清理session {request.request_id} KV cache时出错: {e}")
+    
+    def _release_speech_cache_pages(self, speech_cache, session_id: str):
+        """释放speech cache占用的页面"""
+        try:
+            # 这里需要根据实际的speech cache结构来实现
+            # 假设speech_cache包含页面索引信息
+            
+            if hasattr(speech_cache, 'paged_kv_indices') and speech_cache.paged_kv_indices:
+                pages_to_release = len(speech_cache.paged_kv_indices)
+                
+                # 调用页面释放函数（需要从flashinfer引擎获取pagetable）
+                if hasattr(self.model, 'speech_pagetable'):
+                    pagetable = self.model.speech_pagetable
+                    self._release_pages_to_pool(pagetable, speech_cache.paged_kv_indices, session_id, 'speech')
+                    
+                    # 清空cache中的页面引用
+                    speech_cache.paged_kv_indices = []
+                    speech_cache.paged_kv_last_page_len = 16  # PAGE_SIZE
+                    
+                    logger.info(f"🔄 释放了 {pages_to_release} 个speech cache页面到页面池")
+                    
+        except Exception as e:
+            logger.error(f"释放speech cache页面时出错: {e}")
+    
+    def _release_llm_cache_pages(self, past_key_values, session_id: str):
+        """释放LLM KV cache占用的页面"""
+        try:
+            # 这里需要根据实际的past_key_values结构来实现
+            
+            if hasattr(past_key_values, 'paged_kv_indices') and past_key_values.paged_kv_indices:
+                pages_to_release = len(past_key_values.paged_kv_indices)
+                
+                # 分别处理prefill和decode cache
+                if hasattr(self.model, 'llm_prefill_pagetable'):
+                    self._release_pages_to_pool(self.model.llm_prefill_pagetable, 
+                                              past_key_values.paged_kv_indices, 
+                                              session_id, 'llm_prefill')
+                
+                if hasattr(self.model, 'llm_decode_pagetable'):
+                    self._release_pages_to_pool(self.model.llm_decode_pagetable, 
+                                              past_key_values.paged_kv_indices, 
+                                              session_id, 'llm_decode')
+                
+                # 清空cache中的页面引用
+                past_key_values.paged_kv_indices = []
+                past_key_values.paged_kv_last_page_len = 16  # PAGE_SIZE
+                
+                logger.info(f"🔄 释放了 {pages_to_release} 个LLM cache页面到页面池")
+                
+        except Exception as e:
+            logger.error(f"释放LLM cache页面时出错: {e}")
+    
+    def _release_pages_to_pool(self, pagetable, page_indices: list, session_id: str, cache_type: str):
+        """将页面释放回页面池"""
+        try:
+            if not page_indices:
+                return
+            
+            import torch
+            
+            # 减少页面引用计数
+            page_indices_tensor = torch.tensor(page_indices, dtype=torch.long)
+            pagetable.page_cnt[page_indices_tensor] -= 1
+            
+            # 找出引用计数为0的页面（可以被释放）
+            free_mask = pagetable.page_cnt[page_indices_tensor] == 0
+            free_pages = page_indices_tensor[free_mask]
+            
+            if len(free_pages) > 0:
+                # 将页面放回可用队列
+                free_pages_list = free_pages.tolist()
+                pagetable.paged_queue.extend(free_pages_list)
+                
+                logger.info(f"🔄 [{cache_type}] Session {session_id} 释放了 {len(free_pages_list)} 个页面回页面池")
+                logger.info(f"🔄 [{cache_type}] 页面池现在有 {len(pagetable.paged_queue)} 个可用页面")
+                
+                # 🔍 详细记录页面使用情况
+                total_pages = len(pagetable.page_cnt)
+                used_pages = torch.sum(pagetable.page_cnt > 0).item()
+                logger.info(f"📊 [{cache_type}] 页面使用统计: {used_pages}/{total_pages} 页被使用")
+            else:
+                logger.warning(f"⚠️ [{cache_type}] Session {session_id} 的 {len(page_indices)} 个页面仍被其他session引用")
+                
+        except Exception as e:
+            logger.error(f"释放页面到池时出错: {e}")
+    
+    def force_cleanup_all_sessions(self):
+        """强制清理所有session的KV cache（紧急情况使用）"""
+        try:
+            logger.warning("🚨 强制清理所有session的KV cache页面")
+            
+            # 重置所有页面池到初始状态
+            if hasattr(self.model, 'speech_pagetable'):
+                self._reset_pagetable(self.model.speech_pagetable, 'speech')
+            
+            if hasattr(self.model, 'llm_prefill_pagetable'):
+                self._reset_pagetable(self.model.llm_prefill_pagetable, 'llm_prefill')
+            
+            if hasattr(self.model, 'llm_decode_pagetable'):
+                self._reset_pagetable(self.model.llm_decode_pagetable, 'llm_decode')
+            
+            logger.info("✅ 强制清理完成，所有页面已重置")
+            
+        except Exception as e:
+            logger.error(f"强制清理时出错: {e}")
+    
+    def _reset_pagetable(self, pagetable, cache_type: str):
+        """重置页面表到初始状态"""
+        try:
+            total_pages = len(pagetable.page_cnt)
+            
+            # 重置页面引用计数
+            pagetable.page_cnt.zero_()
+            
+            # 重建可用页面队列
+            pagetable.paged_queue = list(range(total_pages))
+            
+            logger.info(f"🔄 [{cache_type}] 页面表已重置: {total_pages} 个页面全部可用")
+            
+        except Exception as e:
+            logger.error(f"重置页面表时出错: {e}")
 
 class MultiGPUInferenceEngine:
     """

@@ -549,8 +549,33 @@ async def check_orphaned_sessions():
                     session = active_sessions[session_id]
                     print(f"Cleaning up orphaned session {session_id} (webpage closed/refreshed)")
                     
-                    # Clean up GPU resources
-                    session.cleanup()
+                    # 检查是否是基于调度器的会话
+                    is_scheduler_based = isinstance(session, dict) and session.get('is_scheduler_based', False)
+                    
+                    if is_scheduler_based:
+                        print(f"Deleting scheduler-based session {session_id}")
+                        
+                        # 🔥 关键：调用调度器的会话清理功能
+                        if global_scheduler:
+                            try:
+                                user_id = session.get('user_id', session_id)
+                                language_pair = session.get('language_pair', 'English -> Chinese')
+                                
+                                cleanup_success = global_scheduler.cleanup_session(user_id, language_pair)
+                                if cleanup_success:
+                                    print(f"✅ 调度器会话 {session_id} 清理成功，KV cache页面已释放")
+                                else:
+                                    print(f"⚠️ 调度器会话 {session_id} 清理失败或会话不存在")
+                                    
+                            except Exception as e:
+                                print(f"❌ 调度器会话清理出错: {e}")
+                        else:
+                            print(f"⚠️ 全局调度器不可用，无法清理会话KV cache")
+                    else:
+                        print(f"Deleting traditional session {session_id}")
+                        # 传统会话需要清理GPU资源
+                        if hasattr(session, 'cleanup'):
+                            session.cleanup()
                     
                     # Remove from active sessions
                     del active_sessions[session_id]
@@ -563,7 +588,7 @@ async def check_orphaned_sessions():
                     if session_id in session_last_ping:
                         del session_last_ping[session_id]
                     
-                    # Remove from GPU mapping
+                    # Remove from GPU mapping (仅对传统会话)
                     if session_id in session_gpu_map:
                         gpu_id = session_gpu_map[session_id]
                         del session_gpu_map[session_id]
@@ -609,12 +634,29 @@ async def log_active_sessions():
             for session_id, session in active_sessions.items():
                 last_activity = session_last_activity.get(session_id, current_time)
                 inactivity_time = current_time - last_activity
-                gpu_id = session_gpu_map.get(session_id, "Unknown")
-                process_id = session.process.pid if hasattr(session, 'process') else "Unknown"
                 
-                print(f"  - {session_id}: {session.agent_type} | {session.language_pair} | "
-                      f"Latency: {session.args.latency_multiplier}x | GPU: {gpu_id} | "
-                      f"Process: {process_id} | Inactive for: {inactivity_time:.1f}s")
+                # 区分调度器会话和传统会话
+                is_scheduler_based = isinstance(session, dict) and session.get('is_scheduler_based', False)
+                
+                if is_scheduler_based:
+                    # 调度器会话
+                    agent_type = session.get('agent_type', 'Unknown')
+                    language_pair = session.get('language_pair', 'Unknown')
+                    latency_multiplier = session.get('latency_multiplier', 'Unknown')
+                    gpu_id = "Scheduler"
+                    process_id = "Scheduler"
+                    
+                    print(f"  - {session_id}: {agent_type} | {language_pair} | "
+                          f"Latency: {latency_multiplier}x | GPU: {gpu_id} | "
+                          f"Process: {process_id} | Inactive for: {inactivity_time:.1f}s | Type: Scheduler")
+                else:
+                    # 传统会话
+                    gpu_id = session_gpu_map.get(session_id, "Unknown")
+                    process_id = session.process.pid if hasattr(session, 'process') else "Unknown"
+                    
+                    print(f"  - {session_id}: {session.agent_type} | {session.language_pair} | "
+                          f"Latency: {session.args.latency_multiplier}x | GPU: {gpu_id} | "
+                          f"Process: {process_id} | Inactive for: {inactivity_time:.1f}s | Type: Traditional")
             
             # Print queue information
             if session_queue:
@@ -658,15 +700,26 @@ async def startup_event():
                 model_args_map=model_args_map
             )
             
+            # 🔥 重要：尝试加载模型到推理引擎
+            print("📥 开始加载模型到推理引擎...")
+            model_load_success = global_inference_engine.load_all_models()
+            if model_load_success:
+                print("✅ 推理引擎模型加载成功")
+                # 启动推理引擎
+                global_inference_engine.start_all()
+                print("✅ 推理引擎已启动")
+            else:
+                print("⚠️ 推理引擎模型加载失败，将使用模拟推理")
+            
             # 创建调度器
             class Args:
                 def __init__(self):
-                    self.max_batch_size = 32
+                    self.max_batch_size = 8  # 🔥 紧急修复：从32降到8，减少页面池压力
                     self.batch_timeout = 0.1
                     self.session_timeout = 3600
             
-            args = Args()
-            global_scheduler = LLMScheduler(gpu_language_map, args)
+            args_obj = Args()
+            global_scheduler = LLMScheduler(gpu_language_map, args_obj)
             
             # 连接推理引擎到调度器
             global_scheduler.set_inference_engine(global_inference_engine)
@@ -675,13 +728,20 @@ async def startup_event():
             global_scheduler.start()
             
             print("✅ 集成调度系统初始化完成")
+            print(f"   - 调度器运行状态: {global_scheduler.is_running}")
+            print(f"   - 支持的语言: {global_scheduler.get_supported_languages()}")
+            print(f"   - 推理引擎状态: {len(global_inference_engine.engines)} 个引擎")
             
         except Exception as e:
             print(f"❌ 调度系统初始化失败: {e}")
+            import traceback
+            traceback.print_exc()
             global_scheduler = None
             global_inference_engine = None
     else:
         print("⚠️ 跳过调度系统初始化（Scheduler不可用或无GPU）")
+        print(f"   - SCHEDULER_AVAILABLE: {SCHEDULER_AVAILABLE}")
+        print(f"   - 可用GPU数量: {len(gpus)}")
     
     # 启动原有的后台任务
     asyncio.create_task(check_orphaned_sessions())
@@ -690,7 +750,7 @@ async def startup_event():
 
 @app.post("/init")
 async def initialize_translation(agent_type: str, language_pair: str, latency_multiplier: int = 2, client_id: str = None):
-    global args
+    global args, global_scheduler
     
     # Generate a unique session ID that includes the client ID to ensure different browser tabs have independent sessions
     timestamp = int(time.time() * 1000)  # Use timestamp for uniqueness
@@ -698,6 +758,40 @@ async def initialize_translation(agent_type: str, language_pair: str, latency_mu
     session_id = f"{agent_type}_{language_pair}_{len(active_sessions) + len(session_queue)}{client_suffix}"
     
     print(f"Initializing new session {session_id} with {agent_type} model for {language_pair}, latency: {latency_multiplier}x")
+    
+    # 优先使用调度器系统（如果可用）
+    if global_scheduler and SCHEDULER_AVAILABLE:
+        try:
+            print(f"🚀 使用调度器系统创建会话 {session_id}")
+            
+            # 创建基于调度器的会话
+            scheduler_session = {
+                'session_id': session_id,
+                'agent_type': agent_type,
+                'language_pair': language_pair,
+                'latency_multiplier': latency_multiplier,
+                'user_id': client_id or session_id,
+                'created_at': time.time(),
+                'is_scheduler_based': True,  # 标记这是基于调度器的会话
+                'pending_results': {},  # 存储异步结果
+                'result_callback_map': {}  # 结果回调映射
+            }
+            
+            # 添加到活跃会话
+            active_sessions[session_id] = scheduler_session
+            session_last_activity[session_id] = time.time()
+            session_last_ping[session_id] = time.time()
+            
+            print(f"✅ 调度器会话 {session_id} 创建成功")
+            return {"session_id": session_id, "queued": False, "queue_position": 0, "scheduler_based": True}
+            
+        except Exception as e:
+            print(f"❌ 调度器会话创建失败: {e}")
+            # 如果调度器失败，回退到原始系统
+            pass
+    
+    # 回退到原始的TranslationSession系统
+    print(f"🔄 回退到原始TranslationSession系统 {session_id}")
     
     # Check if there's a free GPU
     free_gpu = find_free_gpu()
@@ -727,7 +821,7 @@ async def initialize_translation(agent_type: str, language_pair: str, latency_mu
             
             print(f"Session {session_id} initialization started on GPU {free_gpu}")
             
-            return {"session_id": session_id, "queued": False, "queue_position": 0, "initializing": True}
+            return {"session_id": session_id, "queued": False, "queue_position": 0, "initializing": True, "scheduler_based": False}
         except Exception as e:
             print(f"Error initializing session {session_id} on GPU {free_gpu}: {e}")
             import traceback
@@ -749,7 +843,7 @@ async def initialize_translation(agent_type: str, language_pair: str, latency_mu
                 
                 print(f"Session {session_id} added to queue at position {queue_position} (no free GPUs available)")
                 
-                return {"session_id": session_id, "queued": True, "queue_position": queue_position}
+                return {"session_id": session_id, "queued": True, "queue_position": queue_position, "scheduler_based": False}
         except Exception as e:
             print(f"Error adding session {session_id} to queue: {e}")
             import traceback
@@ -790,6 +884,174 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     update_session_activity(session_id)
     # Update ping timestamp when WebSocket connection is established
     update_session_ping(session_id)
+    
+    # 检查是否是基于调度器的会话
+    is_scheduler_based = isinstance(session, dict) and session.get('is_scheduler_based', False)
+    
+    if is_scheduler_based:
+        print(f"🚀 WebSocket 连接到调度器会话 {session_id}")
+        await _handle_scheduler_websocket(websocket, session_id, session)
+    else:
+        print(f"🔄 WebSocket 连接到传统会话 {session_id}")
+        await _handle_traditional_websocket(websocket, session_id, session)
+
+async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, session: dict):
+    """处理基于调度器的WebSocket连接"""
+    global global_scheduler
+    
+    if not global_scheduler:
+        await websocket.send_text("ERROR: Scheduler not available")
+        await websocket.close(code=4002, reason="Scheduler not available")
+        return
+    
+    await websocket.send_text("READY: Scheduler system ready")
+    
+    chunk_count = 0
+    # 创建结果队列用于异步处理
+    result_queue = asyncio.Queue()
+    
+    # 获取当前事件循环（用于线程安全的队列操作）
+    loop = asyncio.get_event_loop()
+    
+    # 后台任务：检查和发送结果
+    async def result_sender():
+        while True:
+            try:
+                # 等待结果（带超时）
+                result_text = await asyncio.wait_for(result_queue.get(), timeout=0.1)
+                await websocket.send_text(result_text)
+                print(f"📤 发送调度器结果到 {session_id}: {result_text}")
+            except asyncio.TimeoutError:
+                continue
+            except Exception as e:
+                print(f"Error sending result to {session_id}: {e}")
+                break
+    
+    # 启动结果发送任务
+    sender_task = asyncio.create_task(result_sender())
+    
+    try:
+        while True:
+            try:
+                # Receive data from the WebSocket
+                message = await websocket.receive()
+                
+                # Update activity timestamp
+                update_session_activity(session_id)
+                update_session_ping(session_id)
+                
+                # Check if this is a control message (text) or audio data (bytes)
+                if "text" in message:
+                    control_message = message["text"]
+                    print(f"Received control message for scheduler session {session_id}: {control_message}")
+                    
+                    if control_message == "EOF":
+                        print(f"Received EOF signal for scheduler session {session_id}")
+                        await websocket.send_text("PROCESSING_COMPLETE: File processing finished")
+                        continue
+                        
+                elif "bytes" in message:
+                    # This is audio data
+                    data = message["bytes"]
+                    
+                    # 🔍 调试：检查接收到的原始音频数据
+                    print(f"🎤 [DEBUG] WebSocket received audio data:")
+                    print(f"   - Raw bytes length: {len(data)}")
+                    print(f"   - First 10 bytes: {data[:10] if len(data) >= 10 else data}")
+                    
+                    # Convert bytes to numpy array
+                    audio_data = np.frombuffer(data, dtype=np.float32)
+                    chunk_count += 1
+                    
+                    # 🔍 调试：检查转换后的音频数据
+                    print(f"   - Converted to numpy: shape={audio_data.shape}, dtype={audio_data.dtype}")
+                    print(f"   - Audio samples: min={audio_data.min():.6f}, max={audio_data.max():.6f}, mean={audio_data.mean():.6f}")
+                    print(f"   - Chunk {chunk_count}, size: {len(audio_data)}")
+                    
+                    # 🔍 检查是否全为零
+                    non_zero_count = np.count_nonzero(audio_data)
+                    print(f"   - Non-zero samples: {non_zero_count}/{len(audio_data)} ({100*non_zero_count/len(audio_data):.1f}%)")
+                    
+                    if len(audio_data) == 0:
+                        print(f"⚠️  [WARNING] Received empty audio data in chunk {chunk_count}")
+                        continue
+                    
+                    if non_zero_count == 0:
+                        print(f"⚠️  [WARNING] Received all-zero audio data in chunk {chunk_count}")
+                    
+                    # 提交请求到调度器
+                    try:
+                        user_id = session['user_id']
+                        language_pair = session['language_pair']
+                        
+                        print(f"📤 [DEBUG] Submitting to scheduler:")
+                        print(f"   - User ID: {user_id}")
+                        print(f"   - Language: {language_pair}")
+                        print(f"   - Audio shape: {audio_data.shape}")
+                        
+                        # 创建结果回调函数（使用线程安全的队列）
+                        def result_callback(result):
+                            """处理调度器返回的结果"""
+                            try:
+                                if result.get('success', False):
+                                    generated_text = result.get('generated_text', '')
+                                    if generated_text:
+                                        # 使用线程安全的方式添加结果到队列
+                                        loop.call_soon_threadsafe(result_queue.put_nowait, generated_text)
+                                        print(f"📥 调度器结果入队 {session_id}: {generated_text}")
+                                else:
+                                    error_msg = result.get('error', 'Unknown error')
+                                    loop.call_soon_threadsafe(result_queue.put_nowait, f"ERROR: {error_msg}")
+                                    print(f"📥 调度器错误入队 {session_id}: {error_msg}")
+                            except Exception as e:
+                                print(f"Error in result callback for {session_id}: {e}")
+                                # 尝试发送错误信息
+                                try:
+                                    loop.call_soon_threadsafe(result_queue.put_nowait, f"ERROR: Callback failed - {str(e)}")
+                                except:
+                                    pass
+                        
+                        # 提交请求到调度器
+                        from serve.scheduler import RequestStage
+                        request_id = global_scheduler.submit_request(
+                            user_id=user_id,
+                            language_id=language_pair,
+                            speech_data=audio_data,
+                            stage=RequestStage.PREFILL,
+                            is_final=False,
+                            max_new_tokens=session.get('latency_multiplier', 2) * 10,
+                            result_callback=result_callback
+                        )
+                        
+                        print(f"✅ 提交请求 {request_id} 到调度器 (session: {session_id})")
+                        
+                    except Exception as e:
+                        print(f"❌ 提交调度器请求失败 {session_id}: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        await websocket.send_text(f"ERROR: {str(e)}")
+                        
+            except starlette.websockets.WebSocketDisconnect:
+                print(f"WebSocket disconnected for scheduler session {session_id}")
+                break
+            except Exception as e:
+                print(f"Error in scheduler WebSocket for session {session_id}: {e}")
+                await websocket.send_text(f"ERROR: {str(e)}")
+                break
+                
+    except Exception as e:
+        print(f"Fatal error in scheduler WebSocket for session {session_id}: {e}")
+    finally:
+        # 清理任务
+        sender_task.cancel()
+        try:
+            await sender_task
+        except asyncio.CancelledError:
+            pass
+        print(f"Scheduler WebSocket connection closed for session {session_id}")
+
+async def _handle_traditional_websocket(websocket: WebSocket, session_id: str, session):
+    """处理传统TranslationSession的WebSocket连接"""
     
     # 确保工作进程已准备就绪
     if not session.is_ready:
@@ -939,8 +1201,6 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             except asyncio.CancelledError:
                 pass
 
-
-
 @app.post("/download_youtube")
 async def download_youtube(request: Request, background_tasks: BackgroundTasks):
     try:
@@ -991,7 +1251,6 @@ async def download_youtube(request: Request, background_tasks: BackgroundTasks):
         return FileResponse(output_path, media_type='video/mp4', filename=f'video_{session_id}.mp4')
     except Exception as e:
         return {"error": str(e)}
-
 
 @app.post("/update_latency")
 async def update_latency(session_id: str, latency_multiplier: int):
@@ -1080,8 +1339,33 @@ async def delete_session(request: Request, session_id: Optional[str] = None):
         # Get the session
         session = active_sessions[session_id]
         
-        # Clean up GPU resources
-        session.cleanup()
+        # 检查是否是基于调度器的会话
+        is_scheduler_based = isinstance(session, dict) and session.get('is_scheduler_based', False)
+        
+        if is_scheduler_based:
+            print(f"Deleting scheduler-based session {session_id}")
+            
+            # 🔥 关键：调用调度器的会话清理功能
+            if global_scheduler:
+                try:
+                    user_id = session.get('user_id', session_id)
+                    language_pair = session.get('language_pair', 'English -> Chinese')
+                    
+                    cleanup_success = global_scheduler.cleanup_session(user_id, language_pair)
+                    if cleanup_success:
+                        print(f"✅ 调度器会话 {session_id} 清理成功，KV cache页面已释放")
+                    else:
+                        print(f"⚠️ 调度器会话 {session_id} 清理失败或会话不存在")
+                        
+                except Exception as e:
+                    print(f"❌ 调度器会话清理出错: {e}")
+            else:
+                print(f"⚠️ 全局调度器不可用，无法清理会话KV cache")
+        else:
+            print(f"Deleting traditional session {session_id}")
+            # 传统会话需要清理GPU资源
+            if hasattr(session, 'cleanup'):
+                session.cleanup()
         
         # Remove the session from active sessions
         del active_sessions[session_id]
@@ -1094,7 +1378,7 @@ async def delete_session(request: Request, session_id: Optional[str] = None):
         if session_id in session_last_ping:
             del session_last_ping[session_id]
             
-        # Remove the session from GPU mapping
+        # Remove the session from GPU mapping (仅对传统会话)
         if session_id in session_gpu_map:
             gpu_id = session_gpu_map[session_id]
             del session_gpu_map[session_id]
@@ -1124,30 +1408,76 @@ async def health_check():
             "queued_sessions": len(session_queue),
             "cpu_percent": cpu,
             "memory_percent": memory.percent,
-            "available_gpus": len([gpu for gpu in gpus if gpu not in session_gpu_map.values()])
+            "available_gpus": len([gpu for gpu in gpus if gpu not in session_gpu_map.values()]),
+            "scheduler_available": SCHEDULER_AVAILABLE,
+            "scheduler_enabled": global_scheduler is not None
         }
         
-        # 添加调度器状态
+        # 详细的调度器状态
         if global_scheduler:
+            queue_stats = global_scheduler.get_queue_stats()
+            memory_stats = global_scheduler.get_memory_stats()
+            
             result["scheduler"] = {
                 "running": global_scheduler.is_running,
                 "supported_languages": global_scheduler.get_supported_languages(),
-                "queue_stats": global_scheduler.get_queue_stats()
+                "queue_stats": queue_stats,
+                "total_requests": queue_stats.get('total_requests', 0),
+                "completed_requests": queue_stats.get('completed_requests', 0),
+                "active_scheduler_sessions": queue_stats.get('active_sessions', 0),
+                "memory_stats": {
+                    "total_sessions": memory_stats.get('total_sessions', 0),
+                    "total_pages_used": memory_stats.get('total_pages_used', 0),
+                    "memory_distribution": memory_stats.get('memory_distribution', {}),
+                    "top_memory_users": memory_stats.get('top_memory_users', [])[:5],  # 只显示前5个
+                    "sessions_by_language": {
+                        lang: {
+                            "session_count": stats["session_count"],
+                            "total_pages": stats["total_pages"]
+                        }
+                        for lang, stats in memory_stats.get('sessions_by_language', {}).items()
+                    }
+                }
             }
         else:
             result["scheduler"] = {"status": "not_available"}
             
-        # 添加推理引擎状态
+        # 详细的推理引擎状态
         if global_inference_engine:
             result["inference_engine"] = {
                 "models_loaded": len(global_inference_engine.engines),
-                "gpu_mapping": global_inference_engine.gpu_language_map
+                "gpu_mapping": global_inference_engine.gpu_language_map,
+                "engines_status": {
+                    gpu_id: {
+                        "is_loaded": engine.is_loaded,
+                        "is_running": engine.is_running,
+                        "language_id": engine.language_id
+                    } for gpu_id, engine in global_inference_engine.engines.items()
+                }
             }
         else:
             result["inference_engine"] = {"status": "not_available"}
         
+        # 分离统计传统会话和调度器会话
+        traditional_sessions = 0
+        scheduler_sessions = 0
+        
+        for session_id, session in active_sessions.items():
+            if isinstance(session, dict) and session.get('is_scheduler_based', False):
+                scheduler_sessions += 1
+            else:
+                traditional_sessions += 1
+        
+        result["session_breakdown"] = {
+            "traditional_sessions": traditional_sessions,
+            "scheduler_sessions": scheduler_sessions,
+            "total_sessions": len(active_sessions)
+        }
+        
         return result
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return {"status": "unhealthy", "error": str(e)}
 
 @app.post("/load_models")
