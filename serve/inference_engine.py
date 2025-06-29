@@ -59,7 +59,7 @@ except ImportError as e:
     
     AGENTS_AVAILABLE = False
     
-from scheduler import InferenceRequest, RequestStage
+from .scheduler import InferenceRequest, RequestStage
 
 @dataclass
 class EngineConfig:
@@ -81,7 +81,8 @@ class InferenceEngine:
     def __init__(self, 
                  model_args,
                  config: EngineConfig = None,
-                 gpu_id: int = 0):
+                 gpu_id: int = 0,
+                 language_id: str = "en-zh"):
         """
         初始化推理引擎
         
@@ -89,11 +90,15 @@ class InferenceEngine:
             model_args: 模型参数
             config: 引擎配置
             gpu_id: GPU设备ID
+            language_id: 语言对ID (例如 "en-zh")
         """
-        self.model_args = model_args
-        self.config = config or EngineConfig()
         self.gpu_id = gpu_id
+        self.language_id = language_id
         self.device = f"cuda:{gpu_id}"
+        self.config = config or EngineConfig()
+        
+        # 创建完整的模型参数配置
+        self.model_args = self._create_model_args(model_args, language_id)
         
         # 模型实例
         self.model = None
@@ -114,7 +119,112 @@ class InferenceEngine:
             'average_latency': 0.0
         }
         
-        logger.info(f"推理引擎初始化完成，GPU: {gpu_id}")
+        logger.info(f"推理引擎初始化完成，GPU: {gpu_id}, 语言对: {language_id}")
+    
+    def _create_model_args(self, base_args, language_id: str):
+        """创建完整的模型参数配置"""
+        
+        # 与 api.py 相同的语言对定义
+        LANGUAGE_PAIRS = {
+            "English -> Chinese": ("English", "Chinese", "en", "zh"),
+            "English -> Italian": ("English", "Italian", "en", "it"),
+            "English -> German": ("English", "German", "en", "de"),
+            "English -> Spanish": ("English", "Spanish", "en", "es"),
+        }
+        
+        # 模型路径定义（与 api.py 保持一致）
+        model_path_de = "/mnt/aries/data6/xixu/demo/en-de/pytorch_model.bin"
+        model_path_es = "/mnt/aries/data6/xixu/demo/en-es/pytorch_model.bin"
+        model_path = "/mnt/aries/data6/jiaxuanluo/demo/{}-{}/pytorch_model.bin"
+        lora_path = "/mnt/aries/data6/jiaxuanluo/demo/{}-{}/lora.bin"
+        
+        # 解析语言对（与 api.py 中的逻辑完全一致）
+        if language_id in LANGUAGE_PAIRS:
+            source_lang, target_lang, src_code, tgt_code = LANGUAGE_PAIRS[language_id]
+        else:
+            # 默认配置
+            source_lang, target_lang, src_code, tgt_code = "English", "Chinese", "en", "zh"
+        
+        # 条件性模型和LoRA加载（与 api.py 逻辑一致）
+        if language_id == "English -> German":
+            state_dict_path = model_path_de
+            lora_path_final = None
+        elif language_id == "English -> Spanish":
+            state_dict_path = model_path_es
+            lora_path_final = None
+        else:
+            state_dict_path = model_path.format(src_code, tgt_code)
+            lora_path_final = lora_path.format(src_code, tgt_code)
+        
+        # 默认参数配置（与 api.sh 中的参数完全一致）
+        default_args = {
+            # 基础模型
+            'model_name': '/mnt/aries/data6/jiaxuanluo/Qwen2.5-7B-Instruct',
+            
+            # 语音编码器
+            'w2v2_path': '/mnt/aries/data6/xixu/demo/wav2_vec_vox_960h_pl.pt',
+            'w2v2_type': 'w2v2',
+            'ctc_finetuned': True,
+            
+            # 模型配置
+            'model_type': 'w2v2_qwen25',
+            'length_shrink_cfg': "[(1024,2,2)] * 2",
+            'block_size': 48,
+            'max_cache_size': 576,
+            'rope': 1,
+            'audio_normalize': 0,
+            
+            # Stage1/Stage2 模型路径（动态设置）
+            'state_dict_path': state_dict_path,
+            
+            # LoRA配置（动态设置）
+            'lora_path': lora_path_final,
+            'lora_rank': 32,
+            
+            # 缓存配置
+            'max_llm_cache_size': 1000,
+            'always_cache_system_prompt': True,
+            
+            # 生成参数（与 api.sh 一致）
+            'max_len_a': 10,
+            'max_len_b': 20,
+            'max_new_tokens': 10,
+            'beam': 4,
+            'repetition_penalty': 1.2,
+            'length_penalty': 1.0,
+            
+            # 运行参数
+            'pseudo_batch_size': 1,
+            'min_start_sec': 0,
+            'latency_multiplier': 2,
+            'max_latency_multiplier': 4,
+            
+            # 生成控制参数（与 api.sh 一致）
+            'no_repeat_ngram_size': 5,
+            'no_repeat_ngram_lookback': '100d',
+            'suppress_non_language': True,
+            'do_sample': False,
+            'top_p': 0.9,
+            'top_k': 50,
+            'epsilon_cutoff': 0.0,
+            'temperature': 1.0,
+            'dpo_sampling': False,
+            
+            # 语言配置（动态设置）
+            'source_lang': source_lang,
+            'target_lang': target_lang
+        }
+        
+        # 合并用户提供的参数
+        final_args = {**default_args, **(base_args or {})}
+        
+        # 创建一个类似于argparse.Namespace的对象
+        class ModelArgs:
+            def __init__(self, **kwargs):
+                for key, value in kwargs.items():
+                    setattr(self, key, value)
+        
+        return ModelArgs(**final_args)
     
     def load_model(self) -> bool:
         """加载模型"""
@@ -357,27 +467,26 @@ class MultiGPUInferenceEngine:
     管理多个GPU上的推理引擎实例
     """
     
-    def __init__(self, gpu_language_map: Dict[int, str], model_args_map: Dict[int, Any]):
+    def __init__(self, gpu_language_map: Dict[int, str], model_args_map: Dict[int, Any] = None):
         """
         初始化多GPU推理引擎
         
         Args:
             gpu_language_map: GPU到语言对的映射
-            model_args_map: GPU到模型参数的映射
+            model_args_map: GPU到模型参数的映射（可选）
         """
         self.gpu_language_map = gpu_language_map
-        self.model_args_map = model_args_map
+        self.model_args_map = model_args_map or {}
         
         # 创建引擎实例
         self.engines: Dict[int, InferenceEngine] = {}
         for gpu_id, language_pair in gpu_language_map.items():
-            if gpu_id not in model_args_map:
-                logger.warning(f"GPU {gpu_id} 没有对应的模型参数，跳过")
-                continue
+            model_args = self.model_args_map.get(gpu_id, {})
             
             engine = InferenceEngine(
-                model_args=model_args_map[gpu_id],
-                gpu_id=gpu_id
+                model_args=model_args,
+                gpu_id=gpu_id,
+                language_id=language_pair
             )
             self.engines[gpu_id] = engine
         

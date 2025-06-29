@@ -14,11 +14,11 @@ let mainWindow;
 let translationWindow;
 let backendUrl = null;
 
-// InfiniSST服务器配置（固定使用ngrok tunnel）
+// InfiniSST服务器配置（连接到ngrok tunnel）
 const INFINISST_SERVER = {
   protocol: 'https',
   host: 'infinisst.ngrok.app',
-  port: 443
+  port: null // ngrok doesn't use port numbers in URL
 };
 
 console.log('InfiniSST Server:', INFINISST_SERVER);
@@ -184,7 +184,9 @@ async function connectToBackend() {
   
   try {
     // 直接使用ngrok tunnel，无需配置对话框
-    const url = `${INFINISST_SERVER.protocol}://${INFINISST_SERVER.host}:${INFINISST_SERVER.port}`;
+    const url = INFINISST_SERVER.port 
+      ? `${INFINISST_SERVER.protocol}://${INFINISST_SERVER.host}:${INFINISST_SERVER.port}`
+      : `${INFINISST_SERVER.protocol}://${INFINISST_SERVER.host}`;
     console.log(`Connecting to InfiniSST server at: ${url}`);
     
     // 测试连接

@@ -33,6 +33,16 @@ import gc
 import torch
 import starlette.websockets
 
+# 导入我们的 scheduler 和 inference engine
+try:
+    from serve.scheduler import LLMScheduler, RequestStage, InferenceRequest, UserSession
+    from serve.inference_engine import MultiGPUInferenceEngine, EngineConfig
+    SCHEDULER_AVAILABLE = True
+    print("✅ Scheduler 和 Inference Engine 可用")
+except ImportError as e:
+    print(f"⚠️ Scheduler 不可用: {e}")
+    SCHEDULER_AVAILABLE = False
+
 # 支持的翻译模型列表
 TRANSLATION_AGENTS = {
     "InfiniSST": InfiniSST,
@@ -104,6 +114,10 @@ session_workers: Dict[str, Dict[str, Any]] = {}
 gpus = [int(x.strip()) for x in os.environ.get("CUDA_VISIBLE_DEVICES", "").split(",") if x.strip().isdigit()]
 
 print(f"Number of available GPUs: gpus={gpus}, len(gpus)={len(gpus)}")
+
+# 全局 scheduler 和 inference engine
+global_scheduler: Optional[LLMScheduler] = None
+global_inference_engine: Optional[MultiGPUInferenceEngine] = None
 
 # Short timeout for detecting browser disconnections
 DISCONNECT_CHECK_INTERVAL = 5  # Check every 5 seconds
@@ -626,6 +640,50 @@ def get_logical_index_from_physical_id(physical_id: int) -> int:
 @app.on_event("startup")
 async def startup_event():
     """Start background tasks when the application starts"""
+    global global_scheduler, global_inference_engine
+    
+    # 初始化 scheduler 和 inference engine（如果可用）
+    if SCHEDULER_AVAILABLE and len(gpus) > 0:
+        try:
+            print("🚀 初始化集成调度系统...")
+            
+            # 创建 GPU 语言映射
+            gpu_language_map = {gpu_id: "English -> Chinese" for gpu_id in gpus[:1]}  # 只使用第一个GPU
+            print(f"GPU语言映射: {gpu_language_map}")
+            
+            # 创建推理引擎
+            model_args_map = {gpu_id: {} for gpu_id in gpu_language_map.keys()}
+            global_inference_engine = MultiGPUInferenceEngine(
+                gpu_language_map=gpu_language_map,
+                model_args_map=model_args_map
+            )
+            
+            # 创建调度器
+            class Args:
+                def __init__(self):
+                    self.max_batch_size = 32
+                    self.batch_timeout = 0.1
+                    self.session_timeout = 3600
+            
+            args = Args()
+            global_scheduler = LLMScheduler(gpu_language_map, args)
+            
+            # 连接推理引擎到调度器
+            global_scheduler.set_inference_engine(global_inference_engine)
+            
+            # 启动调度器
+            global_scheduler.start()
+            
+            print("✅ 集成调度系统初始化完成")
+            
+        except Exception as e:
+            print(f"❌ 调度系统初始化失败: {e}")
+            global_scheduler = None
+            global_inference_engine = None
+    else:
+        print("⚠️ 跳过调度系统初始化（Scheduler不可用或无GPU）")
+    
+    # 启动原有的后台任务
     asyncio.create_task(check_orphaned_sessions())
     asyncio.create_task(log_active_sessions())
     asyncio.create_task(process_queue())
@@ -1060,7 +1118,7 @@ async def health_check():
         memory = psutil.virtual_memory()
         cpu = psutil.cpu_percent()
         
-        return {
+        result = {
             "status": "healthy",
             "active_sessions": len(active_sessions),
             "queued_sessions": len(session_queue),
@@ -1068,8 +1126,53 @@ async def health_check():
             "memory_percent": memory.percent,
             "available_gpus": len([gpu for gpu in gpus if gpu not in session_gpu_map.values()])
         }
+        
+        # 添加调度器状态
+        if global_scheduler:
+            result["scheduler"] = {
+                "running": global_scheduler.is_running,
+                "supported_languages": global_scheduler.get_supported_languages(),
+                "queue_stats": global_scheduler.get_queue_stats()
+            }
+        else:
+            result["scheduler"] = {"status": "not_available"}
+            
+        # 添加推理引擎状态
+        if global_inference_engine:
+            result["inference_engine"] = {
+                "models_loaded": len(global_inference_engine.engines),
+                "gpu_mapping": global_inference_engine.gpu_language_map
+            }
+        else:
+            result["inference_engine"] = {"status": "not_available"}
+        
+        return result
     except Exception as e:
         return {"status": "unhealthy", "error": str(e)}
+
+@app.post("/load_models")
+async def load_models():
+    """Load models to inference engine"""
+    try:
+        if not global_inference_engine:
+            return {"success": False, "error": "Inference engine not available"}
+        
+        # 加载所有模型
+        success = global_inference_engine.load_all_models()
+        
+        if success:
+            return {
+                "success": True,
+                "message": "所有模型加载成功",
+                "loaded_gpus": list(global_inference_engine.engines.keys())
+            }
+        else:
+            return {
+                "success": False,
+                "error": "部分或全部模型加载失败"
+            }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 @app.post("/ping")
 async def ping_session(session_id: str):

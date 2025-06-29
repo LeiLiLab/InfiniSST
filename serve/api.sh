@@ -13,11 +13,14 @@ export PYTHONPATH=/home/jiaxuanluo/infinisst-demo-v2
 echo "[INFO] Killing existing ngrok..."
 pkill -f ngrok || true
 
-echo "Killing any process using port 8001..."
-fuser -k 8001/tcp || true
+echo "Killing any process using port 8000..."
+fuser -k 8000/tcp || true
 
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate infinisst
+
+# 设置环境变量
+export CUDA_VISIBLE_DEVICES=0
 
 PYTHONUNBUFFERED=1 python api.py \
     --latency-multiplier 2 \
@@ -46,18 +49,18 @@ PYTHONUNBUFFERED=1 python api.py \
     --suppress-non-language \
     \
     --model-name /mnt/aries/data6/jiaxuanluo/Qwen2.5-7B-Instruct \
-    --lora-rank 32 &
+    --lora-rank 32 \
+    --host 0.0.0.0 \
+    --port 8000 &
 
-# 等待端口8001启动，最多等待10秒
+# 等待端口8000启动，最多等待10秒
 for i in {1..100}; do
-    if lsof -i:8001 &>/dev/null; then
+    if lsof -i:8000 &>/dev/null; then
         break
     fi
-    echo "Waiting for FastAPI to bind on port 8001..."
+    echo "Waiting for FastAPI to bind on port 8000..."
     sleep 1
 done
-# 启动 ngrok
+# 启动 ngrok tunnel
 echo "Starting ngrok tunnel..."
-#/mnt/aries/data6/jiaxuanluo/bin/ngrok http --url=radically-mutual-sailfish.ngrok-free.app 8001
-#https://infinisst.ngrok.app/ 2Ts31SiBXYaOwojWtym3lBJuZdI_2iNfttxoB6Psa5EA38aoH
-/mnt/aries/data6/jiaxuanluo/bin/ngrok http --url=infinisst.ngrok.app 8001
+/mnt/aries/data6/jiaxuanluo/bin/ngrok http --url=infinisst.ngrok.app 8000
