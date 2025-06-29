@@ -50,7 +50,7 @@ class InfiniSSTFaster(InfiniSST):
 
         self.speech_pagetable, self.llm_prefill_pagetable, self.llm_decode_pagetable = \
             init_paged_kv_cache(
-                args.pseudo_batch_size,
+                32,#args.max_batch_size,
                 args.max_cache_size,
                 speech_encoder.cfg.encoder_layers,
                 speech_encoder.cfg.encoder_attention_heads,

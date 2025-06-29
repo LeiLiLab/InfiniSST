@@ -13,9 +13,8 @@ class PageTable:
     def __init__(self, max_batch_size, max_steps, layer, q_heads, kv_heads, kv_dim, device, dtype=torch.bfloat16, wrapper_type='prefill'):
         self.max_steps = max_steps
         # 🔥 紧急修复：增加页面池大小，添加更多缓冲
-        # 原来: 4 * max_batch_size
-        # 现在: 8 * max_batch_size (增加一倍页面池)
-        page_multiplier = 8  # 增加页面池倍数
+        # 4 * max_batch_size
+        page_multiplier = 4  # 增加页面池倍数
         max_num_pages = page_multiplier * max_batch_size * (max_steps + PAGE_SIZE - 1) // PAGE_SIZE
         
         # 🔍 记录页面池大小

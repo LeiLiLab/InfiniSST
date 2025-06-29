@@ -714,7 +714,7 @@ async def startup_event():
             # 创建调度器
             class Args:
                 def __init__(self):
-                    self.max_batch_size = 8  # 🔥 紧急修复：从32降到8，减少页面池压力
+                    self.max_batch_size = 32  #jiaxuanluo
                     self.batch_timeout = 0.1
                     self.session_timeout = 3600
             
@@ -1426,17 +1426,17 @@ async def health_check():
                 "completed_requests": queue_stats.get('completed_requests', 0),
                 "active_scheduler_sessions": queue_stats.get('active_sessions', 0),
                 "memory_stats": {
-                    "total_sessions": memory_stats.get('total_sessions', 0),
-                    "total_pages_used": memory_stats.get('total_pages_used', 0),
-                    "memory_distribution": memory_stats.get('memory_distribution', {}),
-                    "top_memory_users": memory_stats.get('top_memory_users', [])[:5],  # 只显示前5个
+                    "total_sessions": memory_stats.get('total_sessions', 0) if memory_stats else 0,
+                    "total_pages_used": memory_stats.get('total_pages_used', 0) if memory_stats else 0,
+                    "memory_distribution": memory_stats.get('memory_distribution', {}) if memory_stats else {},
+                    "top_memory_users": memory_stats.get('top_memory_users', [])[:5] if memory_stats else [],  # 只显示前5个
                     "sessions_by_language": {
                         lang: {
                             "session_count": stats["session_count"],
                             "total_pages": stats["total_pages"]
                         }
                         for lang, stats in memory_stats.get('sessions_by_language', {}).items()
-                    }
+                    } if memory_stats else {}
                 }
             }
         else:
