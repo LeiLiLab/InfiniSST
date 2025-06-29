@@ -351,8 +351,7 @@ class LLMScheduler:
     
     def _process_batch(self, batch: List[InferenceRequest], gpu_id: int):
         """
-        Process a batch of requests (pseudo implementation since model serving is mocked)
-        This would normally call the model server for actual inference
+        Process a batch of requests using inference engine or fallback to simulation
         """
         if not batch:
             return
@@ -364,45 +363,127 @@ class LLMScheduler:
         for request in batch:
             request.is_processing = True
         
-        # TODO: Call model inference here with batch of requests
-        # Example: results = self.model_server.inference(batch, gpu_id)
-        pass
+        try:
+            # 尝试使用实际的推理引擎
+            if hasattr(self, 'inference_engine') and self.inference_engine:
+                results = self.inference_engine.process_batch(gpu_id, batch)
+                
+                # 处理推理结果
+                for i, request in enumerate(batch):
+                    if i < len(results):
+                        result = results[i]
+                        self._update_session_with_result(request, result)
+                        logger.debug(f"Request {request.request_id} completed with inference engine")
+                    else:
+                        # 处理缺失的结果
+                        self._handle_failed_request(request, "Missing inference result")
+            else:
+                # 使用模拟推理
+                logger.warning(f"No inference engine available, using simulation for GPU {gpu_id}")
+                self._simulate_inference(batch, gpu_id)
+                
+        except Exception as e:
+            logger.error(f"Batch processing failed on GPU {gpu_id}: {e}")
+            # 处理所有请求的错误
+            for request in batch:
+                self._handle_failed_request(request, f"Batch processing failed: {str(e)}")
+    
+    def _update_session_with_result(self, request: InferenceRequest, result: Dict[str, Any]):
+        """使用推理结果更新用户会话"""
+        try:
+            # 更新用户会话
+            session = self.user_sessions[request.language_id][request.user_id]
+            
+            if result.get('success', False):
+                generated_text = result.get('generated_text', '')
+                generated_tokens = result.get('generated_tokens', [])
+                
+                if generated_text:
+                    session.target.append(generated_text)
+                if generated_tokens:
+                    session.target_ids.extend(generated_tokens)
+                
+                session.segment_idx += 1
+                
+                # 更新缓存状态
+                if 'speech_cache' in result:
+                    session.speech_cache = result['speech_cache']
+                if 'past_key_values' in result:
+                    session.past_key_values = result['past_key_values']
+            
+            session.last_activity = time.time()
+            
+            # 标记请求完成
+            request.result = result
+            request.is_completed = True
+            request.is_processing = False
+            
+            # 调用回调函数
+            if request.result_callback:
+                try:
+                    request.result_callback(result)
+                except Exception as e:
+                    logger.error(f"Error in result callback for request {request.request_id}: {e}")
+            
+            self.stats['completed_requests'] += 1
+            
+        except Exception as e:
+            logger.error(f"Error updating session for request {request.request_id}: {e}")
+            self._handle_failed_request(request, f"Session update failed: {str(e)}")
+    
+    def _handle_failed_request(self, request: InferenceRequest, error_msg: str):
+        """处理失败的请求"""
+        error_result = {
+            'request_id': request.request_id,
+            'success': False,
+            'error': error_msg,
+            'generated_text': '',
+            'generated_tokens': [],
+            'stage': request.stage.value
+        }
         
-        # Process results
+        request.result = error_result
+        request.is_completed = True
+        request.is_processing = False
+        
+        if request.result_callback:
+            try:
+                request.result_callback(error_result)
+            except Exception as e:
+                logger.error(f"Error in error callback for request {request.request_id}: {e}")
+        
+        self.stats['failed_requests'] = self.stats.get('failed_requests', 0) + 1
+    
+    def _simulate_inference(self, batch: List[InferenceRequest], gpu_id: int):
+        """模拟推理处理（用于测试和开发）"""
         for request in batch:
             try:
+                # 模拟处理时间
+                processing_time = 0.1 if request.stage == RequestStage.PREFILL else 0.05
+                time.sleep(processing_time)
+                
+                # 生成模拟结果
                 result = {
                     'request_id': request.request_id,
-                    'generated_text': f"Mock translation for {request.user_id}",
-                    'output_ids': [100, 101, 102],  # Mock token IDs
+                    'success': True,
+                    'generated_text': f"模拟翻译结果 {request.request_id}",
+                    'generated_tokens': [100, 101, 102],  # 模拟token IDs
+                    'finished': True,
                     'stage': request.stage.value,
-                    'processing_time': 0.01
+                    'processing_time': processing_time
                 }
                 
-                # Update user session with results
-                session = self.user_sessions[request.language_id][request.user_id]
-                session.target_ids.extend(result['output_ids'])
-                session.target.append(result['generated_text'])
-                session.segment_idx += 1
-                session.last_activity = time.time()
-                
-                # Mark request as completed
-                request.result = result
-                request.is_completed = True
-                request.is_processing = False
-                
-                # Call result callback if provided
-                if request.result_callback:
-                    try:
-                        request.result_callback(result)
-                    except Exception as e:
-                        logger.error(f"Error in result callback for request {request.request_id}: {e}")
-                
-                self.stats['completed_requests'] += 1
+                self._update_session_with_result(request, result)
+                logger.debug(f"Request {request.request_id} completed with simulation")
                 
             except Exception as e:
-                logger.error(f"Error processing request {request.request_id}: {e}")
-                request.is_processing = False
+                logger.error(f"Error in simulation for request {request.request_id}: {e}")
+                self._handle_failed_request(request, f"Simulation failed: {str(e)}")
+    
+    def set_inference_engine(self, inference_engine):
+        """设置推理引擎"""
+        self.inference_engine = inference_engine
+        logger.info("推理引擎已设置到调度器")
     
     def _cleanup_sessions(self):
         """Clean up old/inactive sessions"""
