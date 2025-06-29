@@ -307,7 +307,7 @@ class InferenceEngine:
                 decode_results = self._process_decode_batch(decode_requests)
                 results.extend(decode_results)
             
-            # 🔥 重要：处理完成后检查并清理结束的session
+            # 处理完成后检查并清理结束的session
             self._cleanup_finished_sessions(requests, results)
             
             # 更新统计信息
@@ -340,179 +340,475 @@ class InferenceEngine:
         return results
     
     def _process_prefill_batch(self, requests: List[InferenceRequest]) -> List[Dict[str, Any]]:
-        """处理prefill阶段的请求"""
-        results = []
-        
-        for request in requests:
-            try:
-                # 创建agent状态
-                states = self._create_agent_states(request)
+        """处理prefill阶段的请求 - ORCA风格，一次只做prefill步骤"""
+        try:
+            # 🔥 ORCA架构：为batch中的每个request分别构造beam_search.Request
+            beam_requests = []
+            for req in requests:
+                beam_req = self._create_beam_request(req)
+                beam_requests.append(beam_req)
+            
+            print(f"🔍 [ORCA-PREFILL] 处理batch: {len(beam_requests)} 个requests")
+            
+            # 直接调用beam_search的prefill函数
+            from model.flashinfer.beam_search import prefill
+            
+            processed_requests, speech_pagetable, llm_prefill_pagetable, llm_decode_pagetable = prefill(
+                requests=beam_requests,
+                model=self.model.model,  # 使用内部的模型
+                tokenizer=self.tokenizer,
+                num_beams=self.config.beam_size,
+                length_penalty=1.0,
+                speech_pagetable=self.model.speech_pagetable,
+                llm_prefill_pagetable=self.model.llm_prefill_pagetable,
+                llm_decode_pagetable=self.model.llm_decode_pagetable
+            )
+            
+            # 🔥 关键修复：更新pagetable状态并验证连续性
+            self.model.speech_pagetable = speech_pagetable
+            self.model.llm_prefill_pagetable = llm_prefill_pagetable
+            self.model.llm_decode_pagetable = llm_decode_pagetable
+            
+            # 验证pagetable状态
+            self._verify_pagetable_consistency("Prefill", speech_pagetable, llm_prefill_pagetable, llm_decode_pagetable)
+            
+            # 转换结果并更新每个request的cache引用
+            results = []
+            for i, (orig_req, processed_req) in enumerate(zip(requests, processed_requests)):
+                result = self._convert_beam_result_to_inference_result(orig_req, processed_req, is_prefill=True)
                 
-                # 执行推理
-                action = self.model.policy(states)
+                # 🔥 ORCA关键：立即更新原始request的cache引用，转换为列表格式
+                # 根据infinisst_faster.py，cache应该是列表格式
+                orig_req.speech_cache = [processed_req.speech_cache]  # 转换为列表
                 
-                # 处理结果
-                result = self._process_action(request, action, states)
+                # 🔥 关键修复：prefill完成后，llm_cache应该已经是beam cache列表
+                # 不需要再包装一层列表
+                if isinstance(processed_req.llm_cache, list):
+                    # prefill返回的已经是beam cache列表，直接使用
+                    orig_req.past_key_values = [processed_req.llm_cache]  # 外层列表用于session管理
+                    print(f"🔍 [ORCA-CACHE] Request {orig_req.request_id} prefill完成，保存beam cache列表 (共{len(processed_req.llm_cache)}个beam)")
+                else:
+                    # 如果不是列表，按单个cache处理（不应该发生）
+                    orig_req.past_key_values = [[processed_req.llm_cache]]
+                    print(f"⚠️ [ORCA-CACHE] Request {orig_req.request_id} prefill返回单个cache，包装为beam列表")
+                
+                # 🔥 关键修复：保存beam_state到原始request
+                if hasattr(processed_req, 'beam_state'):
+                    orig_req.beam_state = processed_req.beam_state
+                    print(f"🔍 [ORCA-CACHE] 保存beam_state到request {orig_req.request_id}")
+                
                 results.append(result)
-                
-            except Exception as e:
-                logger.error(f"Prefill处理失败 (request_id: {request.request_id}): {e}")
-                results.append({
-                    'request_id': request.request_id,
+            
+            print(f"🔍 [ORCA-PREFILL] Batch完成: {len(results)} 个结果")
+            return results
+            
+        except Exception as e:
+            logger.error(f"Prefill batch处理失败: {e}")
+            # 返回错误结果
+            return [
+                {
+                    'request_id': req.request_id,
                     'success': False,
                     'error': str(e),
                     'generated_text': '',
-                    'generated_tokens': []
-                })
-        
-        return results
+                    'generated_tokens': [],
+                    'prefill_finished': False
+                }
+                for req in requests
+            ]
     
     def _process_decode_batch(self, requests: List[InferenceRequest]) -> List[Dict[str, Any]]:
-        """处理decode阶段的请求"""
-        results = []
-        
-        for request in requests:
-            try:
-                # 创建agent状态
-                states = self._create_agent_states(request)
+        """处理decode阶段的请求 - ORCA风格，一次只生成一个token"""
+        try:
+            # 🔥 ORCA架构：为batch中的每个request分别构造beam_search.Request
+            beam_requests = []
+            for req in requests:
+                beam_req = self._create_beam_request(req)
+                beam_requests.append(beam_req)
+            
+            print(f"🔍 [ORCA-DECODE] 处理batch: {len(beam_requests)} 个requests")
+            
+            # 直接调用beam_search的decode函数
+            from model.flashinfer.beam_search import decode
+            
+            processed_requests, speech_pagetable, llm_prefill_pagetable, llm_decode_pagetable = decode(
+                requests=beam_requests,
+                model=self.model.model,  # 使用内部的模型
+                tokenizer=self.tokenizer,
+                num_beams=self.config.beam_size,
+                length_penalty=1.0,
+                speech_pagetable=self.model.speech_pagetable,
+                llm_prefill_pagetable=self.model.llm_prefill_pagetable,
+                llm_decode_pagetable=self.model.llm_decode_pagetable
+            )
+            
+            # 🔥 关键修复：更新pagetable状态并验证连续性
+            self.model.speech_pagetable = speech_pagetable
+            self.model.llm_prefill_pagetable = llm_prefill_pagetable
+            self.model.llm_decode_pagetable = llm_decode_pagetable
+            
+            # 验证pagetable状态
+            self._verify_pagetable_consistency("Decode", speech_pagetable, llm_prefill_pagetable, llm_decode_pagetable)
+            
+            # 转换结果并更新每个request的cache引用
+            results = []
+            for i, (orig_req, processed_req) in enumerate(zip(requests, processed_requests)):
+                result = self._convert_beam_result_to_inference_result(orig_req, processed_req, is_prefill=False)
                 
-                # 执行推理
-                action = self.model.policy(states)
+                # 🔥 ORCA关键：立即更新原始request的cache引用
+                # Decode阶段：根据processed_req的状态决定cache格式
+                if hasattr(processed_req, 'decode_finished') and processed_req.decode_finished:
+                    # 如果decode完成，转换为单个cache
+                    orig_req.speech_cache = [processed_req.speech_cache]
+                    orig_req.past_key_values = [processed_req.llm_cache]  
+                    print(f"🔍 [ORCA-CACHE] Request {orig_req.request_id} decode完成，cache转换为单个格式")
+                else:
+                    # 如果decode未完成，保持beam cache列表格式
+                    orig_req.speech_cache = [processed_req.speech_cache]
+                    if isinstance(processed_req.llm_cache, list):
+                        orig_req.past_key_values = processed_req.llm_cache  # 保持beam列表
+                        print(f"🔍 [ORCA-CACHE] Request {orig_req.request_id} decode继续，保持beam cache列表 ({len(processed_req.llm_cache)}个beam)")
+                    else:
+                        orig_req.past_key_values = [processed_req.llm_cache]
+                        print(f"🔍 [ORCA-CACHE] Request {orig_req.request_id} decode继续，cache转换为列表格式")
                 
-                # 处理结果
-                result = self._process_action(request, action, states)
+                # 🔥 关键修复：保存beam_state到原始request
+                if hasattr(processed_req, 'beam_state'):
+                    orig_req.beam_state = processed_req.beam_state
+                    print(f"🔍 [ORCA-CACHE] 保存beam_state到request {orig_req.request_id}")
+                
                 results.append(result)
-                
-            except Exception as e:
-                logger.error(f"Decode处理失败 (request_id: {request.request_id}): {e}")
-                results.append({
-                    'request_id': request.request_id,
+            
+            print(f"🔍 [ORCA-DECODE] Batch完成: {len(results)} 个结果")
+            return results
+            
+        except Exception as e:
+            logger.error(f"Decode batch处理失败: {e}")
+            # 返回错误结果
+            return [
+                {
+                    'request_id': req.request_id,
                     'success': False,
                     'error': str(e),
                     'generated_text': '',
-                    'generated_tokens': []
-                })
-        
-        return results
+                    'generated_tokens': [],
+                    'decode_finished': False
+                }
+                for req in requests
+            ]
     
-    def _create_agent_states(self, request: InferenceRequest) -> S2TAgentStates:
-        """从推理请求创建agent状态"""
-        # 首先处理speech_batch，确保维度正确
-        speech_data = request.speech_batch
+    def _create_beam_request(self, request: InferenceRequest):
+        """将InferenceRequest转换为beam_search的Request格式"""
+        from model.flashinfer.beam_search import Request
+        from model.flashinfer.engine import SpeechCache, LLMCache
+        from agents.infinisst import S2TAgentStates
         
-        print(f"🔍 [INFERENCE] Processing speech_data type: {type(speech_data)}, shape: {speech_data.shape if hasattr(speech_data, 'shape') else 'no shape'}")
-        
-        if isinstance(speech_data, torch.Tensor):
-            # 确保是1D用于agent states
-            if speech_data.dim() == 2:
-                # [batch_size, seq_len] -> [seq_len] (取第一个batch)
-                speech_list = speech_data[0].cpu().numpy().tolist()
-                print(f"🔍 [INFERENCE] Converted 2D tensor to 1D: {len(speech_list)} samples")
-            else:
-                # [seq_len] -> 直接转换
-                speech_list = speech_data.cpu().numpy().tolist()
-                print(f"🔍 [INFERENCE] Converted 1D tensor: {len(speech_list)} samples")
-        else:
-            # 已经是list或numpy array
-            if isinstance(speech_data, np.ndarray):
-                if speech_data.ndim == 2:
-                    speech_list = speech_data[0].tolist()  # 取第一个batch
-                    print(f"🔍 [INFERENCE] Converted 2D numpy to 1D: {len(speech_list)} samples")
-                else:
-                    speech_list = speech_data.tolist()
-                    print(f"🔍 [INFERENCE] Converted 1D numpy: {len(speech_list)} samples")
-            else:
-                speech_list = speech_data if isinstance(speech_data, list) else [speech_data]
-                print(f"🔍 [INFERENCE] Used as list: {len(speech_list)} samples")
-        
-        # 检查音频数据长度
-        speech_length = len(speech_list)
-        print(f"🔍 [INFERENCE] Final speech data length: {speech_length}")
-        
-        # 如果音频数据太短，记录警告但不填充，让模型处理
-        MIN_AUDIO_LENGTH = 160  # 0.01秒 @ 16kHz，更宽松的阈值
-        if speech_length == 0:
-            print(f"⚠️ [INFERENCE] Received empty speech data for request {request.request_id}")
-            # 不抛出异常，让后续处理决定如何处理
-        elif speech_length < MIN_AUDIO_LENGTH:
-            print(f"⚠️ [INFERENCE] Speech data very short ({speech_length} samples) for request {request.request_id}")
-        
-        if speech_list:
-            print(f"🔍 [INFERENCE] Audio stats: min={min(speech_list):.6f}, max={max(speech_list):.6f}")
-        else:
-            print(f"🔍 [INFERENCE] Audio list is empty!")
-        
-        # 处理input_ids，确保是list格式
-        if isinstance(request.input_ids, torch.Tensor):
-            if request.input_ids.dim() == 2:
-                # [batch_size, seq_len] -> [seq_len] (取第一个batch)
-                input_ids_list = request.input_ids[0].cpu().numpy().tolist()
-            else:
-                # [seq_len] -> 直接转换
-                input_ids_list = request.input_ids.cpu().numpy().tolist()
-        else:
-            input_ids_list = request.input_ids if request.input_ids else []
-        
-        # 🔥 关键修复：src_len应该是已处理的音频长度，不是当前片段长度
-        # 对于新请求，src_len应该是0；对于后续请求，应该从session状态获取
-        current_src_len = getattr(request, 'session_src_len', 0)  # 从request获取会话状态
-        
-        # 🔍 使用会话传递的 src_len 值，这样模型的 _prepare_speech 能正确处理增量数据
-        print(f"🔍 [INFERENCE] Using session src_len: {current_src_len} (already processed samples)")
-        print(f"🔍 [INFERENCE] Total audio samples: {speech_length}")
-        print(f"🔍 [INFERENCE] New samples to process: {speech_length - current_src_len}")
-        
+        # 🔥 关键修复：创建S2TAgentStates对象，让model的_prepare_speech和_prepare_inputs方法处理
         states = S2TAgentStates(
-            src_len=current_src_len,  # 🔥 修复：使用会话的已处理长度
+            src_len=request.session_src_len,  # 使用session的已处理长度
             speech_cache=request.speech_cache,
             past_key_values=request.past_key_values,
-            target_ids=input_ids_list,
+            target_ids=getattr(request, 'target_ids', []),
             segment_idx=getattr(request, 'segment_idx', 0),
             translations_list=getattr(request, 'translations_list', [])
         )
         
-        # 设置音频数据 - 确保是1D list
-        states.source = speech_list
-        states.source_sample_rate = 16000  # 默认采样率
-        states.source_finished = (request.stage == RequestStage.DECODE)
+        # 设置source数据（完整的音频历史）
+        if request.speech_batch.dim() == 2:
+            speech_data = request.speech_batch[0]  # 取第一个batch
+        else:
+            speech_data = request.speech_batch
         
-        print(f"🔍 [INFERENCE] Created agent states with {len(states.source)} audio samples")
-        print(f"🔍 [INFERENCE] states.source type: {type(states.source)}")
-        print(f"🔍 [INFERENCE] states.src_len: {states.src_len}")
+        # 转换为list格式（S2TAgentStates期望的格式）
+        states.source = speech_data.tolist()
+        states.source_finished = getattr(request, 'is_final', False)
+        states.source_sample_rate = 16000
         
-        return states
+        print(f"🔧 [PREPARE-DATA] 创建states对象:")
+        print(f"   - src_len: {states.src_len}")
+        print(f"   - source length: {len(states.source)}")
+        print(f"   - speech_cache: {states.speech_cache is not None}")
+        print(f"   - past_key_values: {states.past_key_values is not None}")
+        
+        # 🔥 直接调用model的prepare方法，就像infinisst_faster.policy()那样
+        speech_batch = self.model._prepare_speech(states)
+        input_ids = self.model._prepare_inputs(states)
+        
+        print(f"🔧 [PREPARE-DATA] 调用model._prepare_speech和_prepare_inputs完成:")
+        print(f"   - speech_batch shape: {speech_batch.shape}")
+        print(f"   - input_ids shape: {input_ids.shape}")
+        
+        # 🔥 关键修复：参考infinisst_faster.py，模拟pseudo_batch_size处理
+        # 但在ORCA架构中，我们每次只处理一个request，所以使用pseudo_batch_size=1
+        pseudo_batch_size = 1  # ORCA架构：逐个处理请求
+        
+        # 确保数据维度正确
+        if speech_batch.dim() == 2:
+            speech_batch = speech_batch[0]  # [1, seq_len] -> [seq_len]
+        if input_ids.dim() == 2:
+            input_ids = input_ids[0]  # [1, seq_len] -> [seq_len]
+        
+        # 🔥 关键修复：正确处理cache结构
+        # 根据infinisst_faster.py，states.speech_cache和states.past_key_values是列表
+        # 在ORCA架构中，每个request对应一个cache条目
+        cache_index = 0  # 每个request使用第一个cache（在ORCA中每个request都是独立的）
+        
+        if states.speech_cache is None:
+            speech_cache_for_request = None
+        else:
+            # 如果是列表，取指定索引；如果不是列表，直接使用
+            if isinstance(states.speech_cache, list):
+                speech_cache_for_request = states.speech_cache[cache_index] if len(states.speech_cache) > cache_index else None
+            else:
+                speech_cache_for_request = states.speech_cache
+        
+        if states.past_key_values is None:
+            past_key_values_for_request = None
+        else:
+            # 🔥 关键修复：Decode阶段需要特殊处理
+            if request.stage == RequestStage.DECODE:
+                # Decode阶段：past_key_values应该是beam cache列表
+                if isinstance(states.past_key_values, list) and len(states.past_key_values) > cache_index:
+                    # 🔥 修复：检查第一个元素是否是LLMCache对象来判断是否为beam cache列表
+                    first_element = states.past_key_values[0]
+                    if hasattr(first_element, 'paged_kv_indices'):
+                        # 第一个元素是LLMCache对象，说明这就是beam cache列表
+                        past_key_values_for_request = states.past_key_values
+                        print(f"🔍 [DECODE-CACHE] 识别为beam cache列表，长度: {len(states.past_key_values)}")
+                    else:
+                        # 第一个元素不是LLMCache，需要进一步解析
+                        past_key_values_cache = states.past_key_values[cache_index]
+                        if isinstance(past_key_values_cache, list):
+                            # 检查嵌套列表的第一个元素
+                            if len(past_key_values_cache) > 0 and hasattr(past_key_values_cache[0], 'paged_kv_indices'):
+                                # 这是beam cache列表，直接使用
+                                past_key_values_for_request = past_key_values_cache
+                                print(f"🔍 [DECODE-CACHE] 使用嵌套beam cache列表，长度: {len(past_key_values_cache)}")
+                            else:
+                                # 这是外层包装列表，需要进一步解析
+                                if len(past_key_values_cache) > 0 and isinstance(past_key_values_cache[0], list):
+                                    # 双层包装：[[beam_cache_1, beam_cache_2, ...]]
+                                    past_key_values_for_request = past_key_values_cache[0]
+                                    print(f"🔍 [DECODE-CACHE] 解析双层包装，beam cache列表长度: {len(past_key_values_for_request)}")
+                                else:
+                                    # 单个cache被包装：[single_cache]
+                                    past_key_values_for_request = past_key_values_cache
+                                    print(f"⚠️ [DECODE-CACHE] 检测到单cache包装，长度: {len(past_key_values_cache)}")
+                        else:
+                            # 单个cache，需要包装成列表（这种情况不应该发生在正确的prefill之后）
+                            past_key_values_for_request = [past_key_values_cache]
+                            print(f"⚠️ [DECODE-CACHE] 单个cache包装为列表")
+                else:
+                    past_key_values_for_request = None
+                    print(f"⚠️ [DECODE-CACHE] 无法获取cache")
+            else:
+                # Prefill阶段：单个cache
+                if isinstance(states.past_key_values, list):
+                    past_key_values_for_request = states.past_key_values[cache_index] if len(states.past_key_values) > cache_index else None
+                else:
+                    past_key_values_for_request = states.past_key_values
+        
+        print(f"🔍 [BEAM-CACHE] Cache状态:")
+        print(f"   - speech_cache类型: {type(states.speech_cache)}, 长度: {len(states.speech_cache) if isinstance(states.speech_cache, list) else 'N/A'}")
+        print(f"   - past_key_values类型: {type(states.past_key_values)}, 长度: {len(states.past_key_values) if isinstance(states.past_key_values, list) else 'N/A'}")
+        print(f"   - 使用cache索引: {cache_index}")
+        print(f"   - speech_cache_for_request: {speech_cache_for_request is not None}")
+        print(f"   - past_key_values_for_request类型: {type(past_key_values_for_request)}")
+        if isinstance(past_key_values_for_request, list):
+            print(f"   - past_key_values_for_request长度: {len(past_key_values_for_request)}")
+        else:
+            print(f"   - past_key_values_for_request: {past_key_values_for_request is not None}")
+        
+        # 🔥 关键修复：按照infinisst_faster.py的Request构造方式
+        beam_req = Request(
+            input_ids.view(-1),  # 按照原始代码：input_ids.view(-1)
+            speech_batch.view(-1),  # 按照原始代码：speech_batch.view(-1)
+            self.model.latency_multiplier * self.model.blocksize,  # blocksize参数
+            request.max_new_tokens,  # max_new_tokens
+            
+            # speech相关参数
+            self.model_args.max_cache_size,  # speech_max_steps
+            speech_cache_for_request,  # speech_cache
+            
+            # LLM相关参数  
+            self.model_args.max_llm_cache_size,  # llm_max_steps
+            getattr(self.model, 'system_prompt_size', 0),  # llm_max_steps_start
+            past_key_values_for_request  # llm_cache
+        )
+        
+        # 设置状态 - 根据request.stage判断是否已经prefill
+        beam_req.prefill_finished = (request.stage == RequestStage.DECODE)
+        beam_req.decode_finished = False
+        
+        # 🔥 关键修复：正确设置beam_state
+        if request.stage == RequestStage.DECODE and hasattr(request, 'beam_state') and request.beam_state is not None:
+            # Decode阶段：恢复保存的beam_state
+            beam_req.beam_state = request.beam_state
+            print(f"🔍 [BEAM-STATE] 恢复decode阶段的beam_state for {request.request_id}")
+        else:
+            # Prefill阶段：设置为None，将由beam_search.prefill()创建
+            beam_req.beam_state = None
+            print(f"🔍 [BEAM-STATE] Prefill阶段，beam_state将被创建 for {request.request_id}")
+        
+        print(f"🔍 [BEAM-REQUEST] Created beam request for {request.request_id}")
+        print(f"   - Speech shape: {speech_batch.shape}")
+        print(f"   - Input IDs shape: {input_ids.shape}")
+        print(f"   - Prefill finished: {beam_req.prefill_finished}")
+        print(f"   - Max new tokens: {beam_req.max_new_tokens}")
+        print(f"   - Blocksize: {self.model.latency_multiplier * self.model.blocksize}")
+        
+        return beam_req
     
-    def _process_action(self, request: InferenceRequest, action, states: S2TAgentStates) -> Dict[str, Any]:
-        """处理模型输出的action"""
-        from simuleval.agents.actions import WriteAction, ReadAction
+    def _convert_beam_result_to_inference_result(self, orig_request: InferenceRequest, 
+                                               processed_request, is_prefill: bool) -> Dict[str, Any]:
+        """将beam_search的结果转换为InferenceResult格式"""
         
         result = {
-            'request_id': request.request_id,
+            'request_id': orig_request.request_id,
             'success': True,
             'generated_text': '',
             'generated_tokens': [],
             'finished': False,
-            'speech_cache': states.speech_cache,
-            'past_key_values': states.past_key_values
+            'speech_cache': processed_request.speech_cache,
+            'past_key_values': processed_request.llm_cache
         }
         
-        if isinstance(action, WriteAction):
-            result['generated_text'] = action.content
-            result['finished'] = action.finished
+        if is_prefill:
+            # Prefill阶段完成
+            result['prefill_finished'] = processed_request.prefill_finished
+            result['decode_finished'] = False
             
-            # 如果有新的token，添加到统计中
-            if action.content:
-                # 简单的token计数（实际应该用tokenizer）
-                token_count = len(action.content.split())
-                self.stats['total_tokens_generated'] += token_count
-                result['generated_tokens'] = list(range(token_count))  # 占位符
-        
-        elif isinstance(action, ReadAction):
-            result['generated_text'] = ''
-            result['finished'] = False
+            # Prefill通常不生成文本，只是准备beam状态
+            if hasattr(processed_request, 'beam_state') and processed_request.beam_state:
+                beam_state = processed_request.beam_state
+                if hasattr(beam_state, 'generated_ids') and beam_state.generated_ids is not None:
+                    # 获取初始的beam candidates
+                    first_tokens = beam_state.generated_ids[:, 0].tolist()  # 第一个token
+                    result['generated_tokens'] = first_tokens
+                    
+                    # 尝试解码第一个token
+                    if len(first_tokens) > 0:
+                        try:
+                            decoded_text = self.tokenizer.decode([first_tokens[0]], skip_special_tokens=True)
+                            result['generated_text'] = decoded_text
+                            print(f"🔍 [PREFILL-RESULT] Generated first token: {first_tokens[0]} -> '{decoded_text}'")
+                        except Exception as e:
+                            print(f"⚠️ [PREFILL-RESULT] Failed to decode token {first_tokens[0]}: {e}")
+            
+            print(f"🔍 [PREFILL-RESULT] Request {orig_request.request_id} prefill完成")
+            
+        else:
+            # Decode阶段 - 生成了新的token
+            result['prefill_finished'] = True
+            result['decode_finished'] = processed_request.decode_finished
+            
+            # 🔥 修复：检查beam_state是否为None
+            if hasattr(processed_request, 'beam_state') and processed_request.beam_state is not None:
+                beam_state = processed_request.beam_state
+                if hasattr(beam_state, 'generated_ids') and beam_state.generated_ids is not None:
+                    # 获取当前最佳beam的所有token
+                    if len(beam_state.generated_ids) > 0:
+                        best_sequence = beam_state.generated_ids[0].tolist()  # 取第一个beam
+                        result['generated_tokens'] = best_sequence
+                        
+                        # 解码完整序列
+                        try:
+                            decoded_text = self.tokenizer.decode(best_sequence, skip_special_tokens=True)
+                            
+                            # 🔥 关键修复：后处理生成的文本，过滤掉prompt格式token
+                            filtered_text = self._filter_prompt_tokens(decoded_text)
+                            result['generated_text'] = filtered_text
+                            
+                            print(f"🔍 [DECODE-RESULT] Generated sequence: {best_sequence} -> '{decoded_text}'")
+                            print(f"🔍 [DECODE-RESULT] Filtered translation: '{filtered_text}'")
+                        except Exception as e:
+                            print(f"⚠️ [DECODE-RESULT] Failed to decode sequence {best_sequence}: {e}")
+                            result['generated_text'] = ""
+                    
+                    # 检查是否完成
+                    result['finished'] = processed_request.decode_finished
+                else:
+                    print(f"⚠️ [DECODE-RESULT] beam_state.generated_ids is None or missing")
+                    result['finished'] = True  # 如果beam_state有问题，标记为完成避免无限循环
+            else:
+                print(f"⚠️ [DECODE-RESULT] beam_state is None or missing")
+                result['finished'] = True  # 如果beam_state为None，标记为完成
+            
+            # 检查是否有最终结果
+            if hasattr(processed_request, 'results') and processed_request.results:
+                # 如果已经有最终结果
+                final_result = processed_request.results
+                if isinstance(final_result, dict) and 'sequence' in final_result:
+                    sequence = final_result['sequence']
+                    result['generated_tokens'] = sequence
+                    
+                    try:
+                        decoded_text = self.tokenizer.decode(sequence, skip_special_tokens=True)
+                        result['generated_text'] = decoded_text
+                        result['finished'] = True
+                        print(f"🔍 [DECODE-FINAL] Final result: {sequence} -> '{decoded_text}'")
+                    except Exception as e:
+                        print(f"⚠️ [DECODE-FINAL] Failed to decode final sequence {sequence}: {e}")
+                        
+            print(f"🔍 [DECODE-RESULT] Request {orig_request.request_id} decode step完成, finished={result['finished']}")
         
         return result
-    
+
+    def _filter_prompt_tokens(self, text: str) -> str:
+        """
+        过滤掉prompt格式token，只保留真正的翻译内容
+        
+        主要过滤的格式token包括：
+        - <speech>, <|user|>, <|assistant|>, <|startofprev|>, <|endofprev|> 等
+        - 换行符和多余的空格
+        """
+        if not text:
+            return ""
+        
+        # 需要过滤的格式token模式
+        format_tokens = [
+            '<speech>',
+            '<|user|>',
+            '<|assistant|>', 
+            '<|startofprev|>',
+            '<|endofprev|>',
+            '<|start_header_id|>',
+            '<|end_header_id|>',
+            '<|eot_id|>',
+            '<sp_patch>',
+            '<|',
+            '|>',
+            'Translate the following speech',
+            'from English to Chinese',
+            'from English to Italian',
+            'from English to German', 
+            'from English to Spanish'
+        ]
+        
+        # 移除格式token
+        filtered_text = text
+        for token in format_tokens:
+            filtered_text = filtered_text.replace(token, '')
+        
+        # 清理多余的空白字符
+        filtered_text = filtered_text.strip()
+        
+        # 移除连续的换行符和空格
+        import re
+        filtered_text = re.sub(r'\s+', ' ', filtered_text)
+        filtered_text = filtered_text.strip()
+        
+        # 🔥 特殊处理：如果结果只包含格式字符（如'<'），返回空字符串
+        if filtered_text in ['<', '><', '|', '>', ''] or filtered_text.isspace():
+            filtered_text = ""
+        
+        # 🔥 检查是否还在生成prompt格式
+        if any(pattern in filtered_text.lower() for pattern in ['translate', 'speech', 'english', 'chinese']):
+            # 如果还包含这些关键词，说明还在生成prompt，返回空字符串
+            filtered_text = ""
+        
+        return filtered_text
+
     def get_stats(self) -> Dict[str, Any]:
         """获取引擎统计信息"""
         return {
@@ -754,4 +1050,39 @@ class MultiGPUInferenceEngine:
     
     def get_all_stats(self) -> Dict[int, Dict[str, Any]]:
         """获取所有引擎的统计信息"""
-        return {gpu_id: engine.get_stats() for gpu_id, engine in self.engines.items()} 
+        return {gpu_id: engine.get_stats() for gpu_id, engine in self.engines.items()}
+
+# 在推理引擎类中添加验证方法
+def _verify_pagetable_consistency(engine, stage_name: str, speech_pagetable, llm_prefill_pagetable, llm_decode_pagetable):
+    """验证pagetable状态的连续性"""
+    try:
+        print(f"🔍 [PAGETABLE-VERIFY] {stage_name} 阶段后 pagetable 状态:")
+        
+        # 检查speech pagetable
+        if hasattr(speech_pagetable, 'paged_queue'):
+            available_speech_pages = len(speech_pagetable.paged_queue)
+            total_speech_pages = len(speech_pagetable.page_cnt)
+            used_speech_pages = torch.sum(speech_pagetable.page_cnt > 0).item()
+            print(f"   - Speech: {used_speech_pages}/{total_speech_pages} 页被使用, {available_speech_pages} 页可用")
+        
+        # 检查LLM prefill pagetable
+        if hasattr(llm_prefill_pagetable, 'paged_queue'):
+            available_prefill_pages = len(llm_prefill_pagetable.paged_queue)
+            total_prefill_pages = len(llm_prefill_pagetable.page_cnt)
+            used_prefill_pages = torch.sum(llm_prefill_pagetable.page_cnt > 0).item()
+            print(f"   - LLM Prefill: {used_prefill_pages}/{total_prefill_pages} 页被使用, {available_prefill_pages} 页可用")
+        
+        # 检查LLM decode pagetable
+        if hasattr(llm_decode_pagetable, 'paged_queue'):
+            available_decode_pages = len(llm_decode_pagetable.paged_queue)
+            total_decode_pages = len(llm_decode_pagetable.page_cnt)
+            used_decode_pages = torch.sum(llm_decode_pagetable.page_cnt > 0).item()
+            print(f"   - LLM Decode: {used_decode_pages}/{total_decode_pages} 页被使用, {available_decode_pages} 页可用")
+        
+        print(f"✅ [PAGETABLE-VERIFY] {stage_name} pagetable状态验证完成")
+        
+    except Exception as e:
+        print(f"⚠️ [PAGETABLE-VERIFY] {stage_name} pagetable验证失败: {e}")
+
+# 将验证方法添加到InferenceEngine类中
+InferenceEngine._verify_pagetable_consistency = lambda self, stage_name, speech_pt, llm_prefill_pt, llm_decode_pt: _verify_pagetable_consistency(self, stage_name, speech_pt, llm_prefill_pt, llm_decode_pt) 

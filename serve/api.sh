@@ -4,7 +4,7 @@
 #SBATCH --error=logs/infinisst_api_%j.err
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:1
 #SBATCH --partition=taurus
 #SBATCH --mem=64GB
 

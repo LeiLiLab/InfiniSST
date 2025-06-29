@@ -994,11 +994,26 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                             """处理调度器返回的结果"""
                             try:
                                 if result.get('success', False):
+                                    # 🔥 修复：优先使用完整翻译历史，然后fallback到generated_text
+                                    full_translation = result.get('full_translation', '')
                                     generated_text = result.get('generated_text', '')
-                                    if generated_text:
+                                    
+                                    # 决定发送什么内容到前端
+                                    text_to_send = full_translation if full_translation else generated_text
+                                    
+                                    if text_to_send:
                                         # 使用线程安全的方式添加结果到队列
-                                        loop.call_soon_threadsafe(result_queue.put_nowait, generated_text)
-                                        print(f"📥 调度器结果入队 {session_id}: {generated_text}")
+                                        loop.call_soon_threadsafe(result_queue.put_nowait, text_to_send)
+                                        
+                                        # 🔥 增强调试信息
+                                        if full_translation:
+                                            print(f"📥 调度器完整翻译入队 {session_id}: {text_to_send}")
+                                            print(f"   - 段落数: {result.get('segment_count', 'unknown')}")
+                                            new_segment = result.get('new_segment', '')
+                                            if new_segment:
+                                                print(f"   - 新增内容: '{new_segment}'")
+                                        else:
+                                            print(f"📥 调度器单次结果入队 {session_id}: {text_to_send}")
                                 else:
                                     error_msg = result.get('error', 'Unknown error')
                                     loop.call_soon_threadsafe(result_queue.put_nowait, f"ERROR: {error_msg}")
@@ -1288,35 +1303,57 @@ async def update_latency(session_id: str, latency_multiplier: int):
 
 @app.post("/reset_translation")
 async def reset_translation(session_id: str):
-    """Reset the translation state for a session."""
+    """重置翻译会话，清空历史翻译内容"""
     try:
-        if session_id not in active_sessions:
-            return {"success": False, "error": "Invalid session ID"}
+        # 从session_id中提取user_id和language_pair
+        if session_id.startswith("InfiniSST_"):
+            # 调度器会话：InfiniSST_English -> Chinese_1_client_xxx
+            parts = session_id.split("_")
+            if len(parts) >= 4:
+                language_pair = f"{parts[1]} -> {parts[3]}"
+                client_id = "_".join(parts[4:])  # client_xxx
+                user_id = client_id
+                
+                # 重置调度器会话
+                if global_scheduler:
+                    success = global_scheduler.reset_session(user_id, language_pair)
+                    if success:
+                        logger.info(f"✅ 调度器会话重置成功: {session_id}")
+                        return {
+                            "status": "success", 
+                            "message": f"调度器会话 {session_id} 重置成功",
+                            "session_type": "scheduler"
+                        }
+                    else:
+                        return {
+                            "status": "error", 
+                            "message": f"调度器会话 {session_id} 不存在或重置失败",
+                            "session_type": "scheduler"
+                        }
+                else:
+                    return {"status": "error", "message": "调度器不可用"}
         
-        # Get the session
-        session = active_sessions[session_id]
+        # 传统会话处理
+        if session_id in active_sessions:
+            session = active_sessions[session_id]
+            
+            if session:
+                # 重置传统会话
+                session.reset()
+                logger.info(f"✅ 传统会话重置成功: {session_id}")
+                return {
+                    "status": "success", 
+                    "message": f"传统会话 {session_id} 重置成功",
+                    "session_type": "traditional"
+                }
+            else:
+                return {"status": "error", "message": f"会话 {session_id} 未找到有效的session对象"}
         
-        # 确保工作进程已准备就绪
-        if not session.is_ready:
-            # 尝试等待工作进程准备就绪，最多等待10秒
-            if not await session.wait_for_ready(timeout=10):
-                return {"success": False, "error": "Worker process not ready, try again later"}
+        return {"status": "error", "message": f"会话 {session_id} 不存在"}
         
-        # Reset the translation state
-        if not session.reset():
-            return {"success": False, "error": "Failed to reset translation state"}
-        
-        # Update the last activity timestamp
-        update_session_activity(session_id)
-        # Update ping timestamp
-        update_session_ping(session_id)
-        
-        print(f"Reset translation state for session {session_id}")
-        
-        return {"success": True, "message": "Translation state reset successfully"}
     except Exception as e:
-        print(f"Error resetting translation: {e}")
-        return {"success": False, "error": str(e)}
+        logger.error(f"重置会话 {session_id} 时出错: {e}")
+        return {"status": "error", "message": f"重置会话失败: {str(e)}"}
 
 @app.post("/delete_session")
 async def delete_session(request: Request, session_id: Optional[str] = None):
@@ -1396,89 +1433,64 @@ async def delete_session(request: Request, session_id: Optional[str] = None):
 
 @app.get("/health")
 async def health_check():
-    """Simple health check endpoint"""
     try:
-        import psutil
-        memory = psutil.virtual_memory()
-        cpu = psutil.cpu_percent()
-        
-        result = {
+        return {
             "status": "healthy",
+            "time": int(time.time()),
+            "scheduler_available": global_scheduler is not None,
             "active_sessions": len(active_sessions),
-            "queued_sessions": len(session_queue),
-            "cpu_percent": cpu,
-            "memory_percent": memory.percent,
-            "available_gpus": len([gpu for gpu in gpus if gpu not in session_gpu_map.values()]),
-            "scheduler_available": SCHEDULER_AVAILABLE,
-            "scheduler_enabled": global_scheduler is not None
+            "scheduler_sessions": global_scheduler.stats['active_sessions'] if global_scheduler else 0
         }
-        
-        # 详细的调度器状态
-        if global_scheduler:
-            queue_stats = global_scheduler.get_queue_stats()
-            memory_stats = global_scheduler.get_memory_stats()
-            
-            result["scheduler"] = {
-                "running": global_scheduler.is_running,
-                "supported_languages": global_scheduler.get_supported_languages(),
-                "queue_stats": queue_stats,
-                "total_requests": queue_stats.get('total_requests', 0),
-                "completed_requests": queue_stats.get('completed_requests', 0),
-                "active_scheduler_sessions": queue_stats.get('active_sessions', 0),
-                "memory_stats": {
-                    "total_sessions": memory_stats.get('total_sessions', 0) if memory_stats else 0,
-                    "total_pages_used": memory_stats.get('total_pages_used', 0) if memory_stats else 0,
-                    "memory_distribution": memory_stats.get('memory_distribution', {}) if memory_stats else {},
-                    "top_memory_users": memory_stats.get('top_memory_users', [])[:5] if memory_stats else [],  # 只显示前5个
-                    "sessions_by_language": {
-                        lang: {
-                            "session_count": stats["session_count"],
-                            "total_pages": stats["total_pages"]
-                        }
-                        for lang, stats in memory_stats.get('sessions_by_language', {}).items()
-                    } if memory_stats else {}
-                }
-            }
-        else:
-            result["scheduler"] = {"status": "not_available"}
-            
-        # 详细的推理引擎状态
-        if global_inference_engine:
-            result["inference_engine"] = {
-                "models_loaded": len(global_inference_engine.engines),
-                "gpu_mapping": global_inference_engine.gpu_language_map,
-                "engines_status": {
-                    gpu_id: {
-                        "is_loaded": engine.is_loaded,
-                        "is_running": engine.is_running,
-                        "language_id": engine.language_id
-                    } for gpu_id, engine in global_inference_engine.engines.items()
-                }
-            }
-        else:
-            result["inference_engine"] = {"status": "not_available"}
-        
-        # 分离统计传统会话和调度器会话
-        traditional_sessions = 0
-        scheduler_sessions = 0
-        
-        for session_id, session in active_sessions.items():
-            if isinstance(session, dict) and session.get('is_scheduler_based', False):
-                scheduler_sessions += 1
-            else:
-                traditional_sessions += 1
-        
-        result["session_breakdown"] = {
-            "traditional_sessions": traditional_sessions,
-            "scheduler_sessions": scheduler_sessions,
-            "total_sessions": len(active_sessions)
-        }
-        
-        return result
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return {"status": "unhealthy", "error": str(e)}
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
+@app.get("/diagnose")
+async def diagnose_system():
+    """🔍 诊断系统状态，特别是卡住的session"""
+    try:
+        diagnosis = {
+            "timestamp": time.time(),
+            "traditional_sessions": {},
+            "scheduler_diagnosis": None
+        }
+        
+        # 诊断传统session
+        current_time = time.time()
+        for session_id, session_info in active_sessions.items():
+            session = session_info.get('session')
+            if session:
+                last_activity = session_info.get('last_activity', 0)
+                inactive_time = current_time - last_activity
+                
+                diagnosis["traditional_sessions"][session_id] = {
+                    "session_type": "traditional",
+                    "language_pair": session_info.get('language_pair', 'unknown'),
+                    "is_ready": getattr(session, 'is_ready', False),
+                    "worker_alive": session.process.is_alive() if hasattr(session, 'process') else False,
+                    "inactive_seconds": inactive_time,
+                    "status": "normal" if inactive_time < 30 else "potentially_stuck"
+                }
+        
+        # 诊断scheduler系统
+        if global_scheduler:
+            scheduler_diagnosis = global_scheduler.diagnose_stuck_sessions()
+            diagnosis["scheduler_diagnosis"] = scheduler_diagnosis
+            
+            # 添加队列统计
+            queue_stats = global_scheduler.get_queue_stats()
+            diagnosis["queue_stats"] = queue_stats
+        
+        return diagnosis
+        
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": time.time()
+        }
 
 @app.post("/load_models")
 async def load_models():
