@@ -213,6 +213,38 @@ class LLMScheduler:
             'queue_sizes': {gpu_id: {'prefill': 0, 'decode': 0} for gpu_id in gpu_language_map.keys()}
         }
         
+        # 🔥 新增：队列监控统计
+        self.queue_stats = {
+            gpu_id: {
+                'prefill': {
+                    'total_processed': 0,
+                    'total_wait_time': 0.0,
+                    'total_process_time': 0.0,
+                    'max_wait_time': 0.0,
+                    'max_process_time': 0.0,
+                    'avg_wait_time': 0.0,
+                    'avg_process_time': 0.0,
+                    'current_queue_size': 0,
+                    'max_queue_size': 0,
+                    'last_process_time': 0.0,
+                    'throughput_per_sec': 0.0
+                },
+                'decode': {
+                    'total_processed': 0,
+                    'total_wait_time': 0.0,
+                    'total_process_time': 0.0,
+                    'max_wait_time': 0.0,
+                    'max_process_time': 0.0,
+                    'avg_wait_time': 0.0,
+                    'avg_process_time': 0.0,
+                    'current_queue_size': 0,
+                    'max_queue_size': 0,
+                    'last_process_time': 0.0,
+                    'throughput_per_sec': 0.0
+                }
+            } for gpu_id in gpu_language_map.keys()
+        }
+        
         logger.info(f"LLMScheduler initialized with GPU mapping: {gpu_language_map}")
         logger.info(f"Max batch size: {self.max_batch_size}")
     
@@ -392,12 +424,28 @@ class LLMScheduler:
         
         # Add to appropriate queue
         with self.queue_lock:
+            # 🔥 记录入队时间
+            queue_enter_time = time.time()
+            request.queue_enter_time = queue_enter_time
+            
             if stage == RequestStage.PREFILL:
                 self.prefill_queues[gpu_id].append(request)
                 self.stats['queue_sizes'][gpu_id]['prefill'] += 1
+                # 🔥 更新队列统计
+                current_size = len(self.prefill_queues[gpu_id])
+                self.queue_stats[gpu_id]['prefill']['current_queue_size'] = current_size
+                if current_size > self.queue_stats[gpu_id]['prefill']['max_queue_size']:
+                    self.queue_stats[gpu_id]['prefill']['max_queue_size'] = current_size
+                    print(f"📊 [QUEUE-STATS] GPU {gpu_id} Prefill队列新峰值: {current_size}")
             else:
                 self.decode_queues[gpu_id].append(request)
                 self.stats['queue_sizes'][gpu_id]['decode'] += 1
+                # 🔥 更新队列统计
+                current_size = len(self.decode_queues[gpu_id])
+                self.queue_stats[gpu_id]['decode']['current_queue_size'] = current_size
+                if current_size > self.queue_stats[gpu_id]['decode']['max_queue_size']:
+                    self.queue_stats[gpu_id]['decode']['max_queue_size'] = current_size
+                    print(f"📊 [QUEUE-STATS] GPU {gpu_id} Decode队列新峰值: {current_size}")
             
             self.stats['total_requests'] += 1
         
@@ -416,6 +464,10 @@ class LLMScheduler:
         last_diagnosis_time = time.time()
         diagnosis_interval = 60  # 每60秒诊断一次
         
+        # 🔥 添加：队列状态报告计时器
+        last_queue_report_time = time.time()
+        queue_report_interval = 30  # 每30秒报告队列状态
+        
         while self.is_running:
             try:
                 # Get batch of requests following the priority rule
@@ -423,11 +475,16 @@ class LLMScheduler:
                 
                 if not batch:
                     time.sleep(0.001)  
-                    # 🔥 添加：在空闲时检查是否需要诊断
+                    # 🔥 添加：在空闲时检查是否需要诊断和报告
                     current_time = time.time()
                     if current_time - last_diagnosis_time > diagnosis_interval:
                         self._auto_diagnose_stuck_sessions(gpu_id)
                         last_diagnosis_time = current_time
+                    
+                    # 🔥 添加：周期性队列状态报告
+                    if current_time - last_queue_report_time > queue_report_interval:
+                        self._report_queue_performance(gpu_id)
+                        last_queue_report_time = current_time
                     continue
                 
                 # Process the batch
@@ -466,9 +523,20 @@ class LLMScheduler:
             
             # Priority 1: Create PREFILL batch
             if prefill_queue:
+                batch_exit_time = time.time()
                 while len(batch) < self.max_batch_size and prefill_queue:
                     try:
                         request = prefill_queue.popleft()
+                        # 🔥 记录出队时间和等待时间
+                        request.queue_exit_time = batch_exit_time
+                        if hasattr(request, 'queue_enter_time'):
+                            wait_time = batch_exit_time - request.queue_enter_time
+                            request.queue_wait_time = wait_time
+                            # 更新统计
+                            stats = self.queue_stats[gpu_id]['prefill']
+                            stats['total_wait_time'] += wait_time
+                            if wait_time > stats['max_wait_time']:
+                                stats['max_wait_time'] = wait_time
                         batch.append(request)
                         self.stats['queue_sizes'][gpu_id]['prefill'] -= 1
                     except IndexError:
@@ -478,13 +546,26 @@ class LLMScheduler:
                 # decouple PD
                 if batch:
                     assert all(req.stage == RequestStage.PREFILL for req in batch)
+                    # 🔥 更新队列大小统计
+                    self.queue_stats[gpu_id]['prefill']['current_queue_size'] = len(prefill_queue)
                     logger.debug(f"Created PREFILL batch of size {len(batch)} for GPU {gpu_id}")
             
             # Priority 2: Create  DECODE batch ( if no PREFILL requests)
             elif decode_queue:
+                batch_exit_time = time.time()
                 while len(batch) < self.max_batch_size and decode_queue:
                     try:
                         request = decode_queue.popleft()
+                        # 🔥 记录出队时间和等待时间
+                        request.queue_exit_time = batch_exit_time
+                        if hasattr(request, 'queue_enter_time'):
+                            wait_time = batch_exit_time - request.queue_enter_time
+                            request.queue_wait_time = wait_time
+                            # 更新统计
+                            stats = self.queue_stats[gpu_id]['decode']
+                            stats['total_wait_time'] += wait_time
+                            if wait_time > stats['max_wait_time']:
+                                stats['max_wait_time'] = wait_time
                         batch.append(request)
                         self.stats['queue_sizes'][gpu_id]['decode'] -= 1
                     except IndexError:
@@ -494,6 +575,8 @@ class LLMScheduler:
                 
                 if batch:
                     assert all(req.stage == RequestStage.DECODE for req in batch)
+                    # 🔥 更新队列大小统计
+                    self.queue_stats[gpu_id]['decode']['current_queue_size'] = len(decode_queue)
                     logger.debug(f"Created DECODE batch of size {len(batch)} for GPU {gpu_id}")
         
         return batch
@@ -506,11 +589,23 @@ class LLMScheduler:
             return
         
         language_id = self.gpu_language_map[gpu_id]
-        logger.debug(f"Processing batch of {len(batch)} requests on GPU {gpu_id} for language {language_id}")
+        batch_stage = batch[0].stage.value if batch else "unknown"
         
-        # Mark requests as processing
-        for request in batch:
+        # 🔥 开始处理时间记录
+        process_start_time = time.time()
+        print(f"📊 [BATCH-TIMING] GPU {gpu_id} 开始处理 {batch_stage} batch: {len(batch)} 个请求")
+        
+        # 记录每个请求的处理开始时间和等待时间统计
+        for i, request in enumerate(batch):
             request.is_processing = True
+            request.process_start_time = process_start_time
+            
+            # 🔥 打印等待时间信息
+            if hasattr(request, 'queue_wait_time'):
+                wait_time_ms = request.queue_wait_time * 1000
+                print(f"   - Request {i+1}: 队列等待 {wait_time_ms:.1f}ms")
+        
+        logger.debug(f"Processing batch of {len(batch)} requests on GPU {gpu_id} for language {language_id}")
         
         try:
             # 🔥 只使用真实推理引擎，不再使用模拟推理
@@ -569,6 +664,39 @@ class LLMScheduler:
             # 处理所有请求的错误
             for request in batch:
                 self._handle_failed_request(request, f"Batch processing failed: {str(e)}")
+        
+        # 🔥 处理完成后的时间统计
+        process_end_time = time.time()
+        total_process_time = process_end_time - process_start_time
+        
+        # 更新队列统计
+        stage_stats = self.queue_stats[gpu_id][batch_stage]
+        stage_stats['total_processed'] += len(batch)
+        stage_stats['total_process_time'] += total_process_time
+        stage_stats['last_process_time'] = total_process_time
+        
+        if total_process_time > stage_stats['max_process_time']:
+            stage_stats['max_process_time'] = total_process_time
+        
+        # 计算平均值
+        if stage_stats['total_processed'] > 0:
+            stage_stats['avg_process_time'] = stage_stats['total_process_time'] / stage_stats['total_processed']
+            stage_stats['avg_wait_time'] = stage_stats['total_wait_time'] / stage_stats['total_processed']
+            
+            # 计算吞吐量 (requests per second)
+            if total_process_time > 0:
+                stage_stats['throughput_per_sec'] = len(batch) / total_process_time
+        
+        # 🔥 打印详细的性能统计
+        print(f"📊 [BATCH-TIMING] GPU {gpu_id} {batch_stage} batch完成:")
+        print(f"   - 批处理耗时: {total_process_time*1000:.1f}ms")
+        print(f"   - 平均每请求: {(total_process_time/len(batch))*1000:.1f}ms")
+        print(f"   - 吞吐量: {len(batch)/total_process_time:.1f} req/s")
+        print(f"   - 累计处理: {stage_stats['total_processed']} 个{batch_stage}请求")
+        print(f"   - 平均处理时间: {stage_stats['avg_process_time']*1000:.1f}ms")
+        print(f"   - 平均等待时间: {stage_stats['avg_wait_time']*1000:.1f}ms")
+        print(f"   - 最大处理时间: {stage_stats['max_process_time']*1000:.1f}ms")
+        print(f"   - 最大等待时间: {stage_stats['max_wait_time']*1000:.1f}ms")
     
     def _requeue_requests_for_memory_wait(self, batch: List[InferenceRequest], gpu_id: int):
         """将内存不足的请求重新放回队列等待"""
@@ -853,7 +981,7 @@ class LLMScheduler:
         return False
     
     def get_queue_stats(self) -> Dict[str, Any]:
-        """Get current queue and system statistics"""
+        """Get current queue and system statistics with detailed performance monitoring"""
         with self.queue_lock:
             current_stats = self.stats.copy()
             current_stats['gpu_language_map'] = self.gpu_language_map.copy()
@@ -871,6 +999,24 @@ class LLMScheduler:
                     'decode_queue_size': decode_count,
                     'total_queue_size': prefill_count + decode_count
                 }
+            
+            # 🔥 新增：详细的队列性能统计
+            current_stats['queue_performance'] = {}
+            for gpu_id in self.gpu_language_map.keys():
+                gpu_stats = {}
+                for stage in ['prefill', 'decode']:
+                    stage_stats = self.queue_stats[gpu_id][stage].copy()
+                    
+                    # 转换时间单位为毫秒以便阅读
+                    stage_stats['avg_wait_time_ms'] = stage_stats['avg_wait_time'] * 1000
+                    stage_stats['avg_process_time_ms'] = stage_stats['avg_process_time'] * 1000
+                    stage_stats['max_wait_time_ms'] = stage_stats['max_wait_time'] * 1000
+                    stage_stats['max_process_time_ms'] = stage_stats['max_process_time'] * 1000
+                    stage_stats['last_process_time_ms'] = stage_stats['last_process_time'] * 1000
+                    
+                    gpu_stats[stage] = stage_stats
+                
+                current_stats['queue_performance'][gpu_id] = gpu_stats
             
             # 🔥 添加：活跃session的最后活动时间检查
             current_time = time.time()
@@ -1302,4 +1448,61 @@ class LLMScheduler:
                     logger.warning(f"   建议检查前端WebSocket连接状态")
                 
             except Exception as e:
-                logger.error(f"🔧 [AUTO-FIX] 修复session {session_info['session_id'][:8]} 时出错: {e}") 
+                logger.error(f"🔧 [AUTO-FIX] 修复session {session_info['session_id'][:8]} 时出错: {e}")
+    
+    def _report_queue_performance(self, gpu_id: int):
+        """周期性报告队列性能统计"""
+        try:
+            with self.queue_lock:
+                prefill_count = len(self.prefill_queues[gpu_id])
+                decode_count = len(self.decode_queues[gpu_id])
+                
+                # 只在有活动时报告
+                if prefill_count == 0 and decode_count == 0:
+                    prefill_stats = self.queue_stats[gpu_id]['prefill']
+                    decode_stats = self.queue_stats[gpu_id]['decode']
+                    
+                    # 如果没有处理过任何请求，不报告
+                    if prefill_stats['total_processed'] == 0 and decode_stats['total_processed'] == 0:
+                        return
+                
+                language = self.gpu_language_map[gpu_id]
+                print(f"📊 [QUEUE-REPORT] GPU {gpu_id} ({language}) 队列状态:")
+                print(f"   📥 当前队列: Prefill={prefill_count}, Decode={decode_count}")
+                
+                # Prefill性能统计
+                prefill_stats = self.queue_stats[gpu_id]['prefill']
+                if prefill_stats['total_processed'] > 0:
+                    print(f"   🔥 Prefill性能:")
+                    print(f"      - 累计处理: {prefill_stats['total_processed']} 个请求")
+                    print(f"      - 平均等待: {prefill_stats['avg_wait_time']*1000:.1f}ms")
+                    print(f"      - 平均处理: {prefill_stats['avg_process_time']*1000:.1f}ms")
+                    print(f"      - 最大等待: {prefill_stats['max_wait_time']*1000:.1f}ms")
+                    print(f"      - 最大处理: {prefill_stats['max_process_time']*1000:.1f}ms")
+                    print(f"      - 当前队列大小: {prefill_stats['current_queue_size']}")
+                    print(f"      - 峰值队列大小: {prefill_stats['max_queue_size']}")
+                    if prefill_stats.get('throughput_per_sec', 0) > 0:
+                        print(f"      - 吞吐量: {prefill_stats['throughput_per_sec']:.1f} req/s")
+                
+                # Decode性能统计
+                decode_stats = self.queue_stats[gpu_id]['decode']
+                if decode_stats['total_processed'] > 0:
+                    print(f"   🔄 Decode性能:")
+                    print(f"      - 累计处理: {decode_stats['total_processed']} 个请求")
+                    print(f"      - 平均等待: {decode_stats['avg_wait_time']*1000:.1f}ms")
+                    print(f"      - 平均处理: {decode_stats['avg_process_time']*1000:.1f}ms")
+                    print(f"      - 最大等待: {decode_stats['max_wait_time']*1000:.1f}ms")
+                    print(f"      - 最大处理: {decode_stats['max_process_time']*1000:.1f}ms")
+                    print(f"      - 当前队列大小: {decode_stats['current_queue_size']}")
+                    print(f"      - 峰值队列大小: {decode_stats['max_queue_size']}")
+                    if decode_stats.get('throughput_per_sec', 0) > 0:
+                        print(f"      - 吞吐量: {decode_stats['throughput_per_sec']:.1f} req/s")
+                
+                # 队列积压警告
+                if prefill_count > 5:
+                    print(f"⚠️  [QUEUE-WARNING] Prefill队列积压: {prefill_count} 个请求")
+                if decode_count > 10:
+                    print(f"⚠️  [QUEUE-WARNING] Decode队列积压: {decode_count} 个请求")
+                    
+        except Exception as e:
+            logger.error(f"Error reporting queue performance for GPU {gpu_id}: {e}") 
