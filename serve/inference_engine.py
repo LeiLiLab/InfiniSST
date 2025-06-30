@@ -538,10 +538,6 @@ class InferenceEngine:
         print(f"   - speech_batch shape: {speech_batch.shape}")
         print(f"   - input_ids shape: {input_ids.shape}")
         
-        # 🔥 关键修复：参考infinisst_faster.py，模拟pseudo_batch_size处理
-        # 但在ORCA架构中，我们每次只处理一个request，所以使用pseudo_batch_size=1
-        pseudo_batch_size = 1  # ORCA架构：逐个处理请求
-        
         # 确保数据维度正确
         if speech_batch.dim() == 2:
             speech_batch = speech_batch[0]  # [1, seq_len] -> [seq_len]

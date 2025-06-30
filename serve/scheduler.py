@@ -460,10 +460,6 @@ class LLMScheduler:
         language_id = self.gpu_language_map[gpu_id]
         logger.info(f"Starting processing loop for GPU {gpu_id} (language: {language_id})")
         
-        # 🔥 添加：卡住检测计时器
-        last_diagnosis_time = time.time()
-        diagnosis_interval = 60  # 每60秒诊断一次
-        
         # 🔥 添加：队列状态报告计时器
         last_queue_report_time = time.time()
         queue_report_interval = 30  # 每30秒报告队列状态
@@ -477,9 +473,6 @@ class LLMScheduler:
                     time.sleep(0.001)  
                     # 🔥 添加：在空闲时检查是否需要诊断和报告
                     current_time = time.time()
-                    if current_time - last_diagnosis_time > diagnosis_interval:
-                        self._auto_diagnose_stuck_sessions(gpu_id)
-                        last_diagnosis_time = current_time
                     
                     # 🔥 添加：周期性队列状态报告
                     if current_time - last_queue_report_time > queue_report_interval:
@@ -496,9 +489,6 @@ class LLMScheduler:
                 
                 # 🔥 添加：定期诊断检查
                 current_time = time.time()
-                if current_time - last_diagnosis_time > diagnosis_interval:
-                    self._auto_diagnose_stuck_sessions(gpu_id)
-                    last_diagnosis_time = current_time
                 
             except Exception as e:
                 logger.error(f"Error in processing loop for GPU {gpu_id}: {e}")
@@ -1361,94 +1351,6 @@ class LLMScheduler:
             key=lambda x: x['memory_usage']['total_pages'], 
             reverse=True
         )[:10]  # 前10个 
-    
-    def _auto_diagnose_stuck_sessions(self, gpu_id: int):
-        """🔍 自动诊断当前GPU的卡住session"""
-        try:
-            language_id = self.gpu_language_map[gpu_id]
-            diagnosis = self.diagnose_stuck_sessions()
-            
-            # 过滤只看当前GPU的session
-            gpu_stuck_sessions = [
-                session for session in diagnosis['stuck_sessions'] 
-                if session['gpu_id'] == gpu_id
-            ]
-            
-            if gpu_stuck_sessions:
-                logger.warning(f"🚨 [AUTO-DIAGNOSIS] GPU {gpu_id} ({language_id}) 发现 {len(gpu_stuck_sessions)} 个可能卡住的session:")
-                
-                for session in gpu_stuck_sessions:
-                    logger.warning(f"   - Session {session['session_id'][:8]}...")
-                    logger.warning(f"     用户: {session['user_id']}")
-                    logger.warning(f"     不活跃: {session['inactive_seconds']:.1f}s")
-                    logger.warning(f"     未处理音频: {session['unprocessed_samples']} 样本")
-                    logger.warning(f"     队列状态: P{session['prefill_queue_size']} + D{session['decode_queue_size']}")
-                    
-                    for cause in session['possible_causes']:
-                        logger.warning(f"     可能原因: {cause}")
-                
-                # 🔥 添加：自动修复尝试
-                self._attempt_auto_fix_stuck_sessions(gpu_stuck_sessions, gpu_id)
-            else:
-                logger.debug(f"✅ [AUTO-DIAGNOSIS] GPU {gpu_id} ({language_id}) 所有session正常运行")
-                
-        except Exception as e:
-            logger.error(f"自动诊断时出错: {e}")
-    
-    def _attempt_auto_fix_stuck_sessions(self, stuck_sessions: List[Dict], gpu_id: int):
-        """🔧 尝试自动修复卡住的session"""
-        for session_info in stuck_sessions:
-            try:
-                session_id = session_info['session_id']
-                user_id = session_info['user_id']
-                language_id = session_info['language_id']
-                
-                logger.info(f"🔧 [AUTO-FIX] 尝试修复卡住的session {session_id[:8]}...")
-                
-                # 修复策略1：如果有未处理的音频数据，尝试重新提交请求
-                if session_info['unprocessed_samples'] > 0:
-                    logger.info(f"🔧 [AUTO-FIX] 检测到未处理音频，尝试重新生成请求...")
-                    
-                    # 获取session对象
-                    with self.session_lock:
-                        if language_id in self.user_sessions and user_id in self.user_sessions[language_id]:
-                            session = self.user_sessions[language_id][user_id]
-                            
-                            # 创建一个新的prefill请求来处理未处理的音频
-                            try:
-                                import torch
-                                
-                                # 计算需要处理的音频片段
-                                unprocessed_audio = session.source[session.src_len:]
-                                if len(unprocessed_audio) > 160:  # 至少0.01秒的音频
-                                    audio_tensor = torch.tensor(unprocessed_audio, dtype=torch.float32)
-                                    
-                                    # 创建一个临时的处理请求
-                                    def temp_callback(result):
-                                        logger.info(f"🔧 [AUTO-FIX] 自动修复请求完成: {result.get('success', False)}")
-                                    
-                                    request_id = self.submit_request(
-                                        user_id=user_id,
-                                        language_id=language_id,
-                                        speech_data=audio_tensor,
-                                        stage=RequestStage.PREFILL,
-                                        is_final=False,
-                                        max_new_tokens=10,
-                                        result_callback=temp_callback
-                                    )
-                                    
-                                    logger.info(f"🔧 [AUTO-FIX] 重新提交请求 {request_id} 处理 {len(unprocessed_audio)} 个未处理样本")
-                                    
-                            except Exception as e:
-                                logger.error(f"🔧 [AUTO-FIX] 重新提交请求失败: {e}")
-                
-                # 修复策略2：如果队列为空但session有数据，可能是前端停止发送数据
-                elif session_info['total_queue_size'] == 0 and session_info['source_length_samples'] > 0:
-                    logger.warning(f"🔧 [AUTO-FIX] Session {session_id[:8]} 可能前端停止发送数据")
-                    logger.warning(f"   建议检查前端WebSocket连接状态")
-                
-            except Exception as e:
-                logger.error(f"🔧 [AUTO-FIX] 修复session {session_info['session_id'][:8]} 时出错: {e}")
     
     def _report_queue_performance(self, gpu_id: int):
         """周期性报告队列性能统计"""
