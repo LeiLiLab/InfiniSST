@@ -449,7 +449,7 @@ class LLMScheduler:
             
             self.stats['total_requests'] += 1
         
-        logger.debug(f"Submitted {stage.value} request {request_id} for user {user_id}, language {language_id}, GPU {gpu_id}")
+        logger.info(f"Submitted {stage.value} request {request_id} for user {user_id}, language {language_id}, GPU {gpu_id}")
         return request_id
     
     def _processing_loop(self, gpu_id: int):
@@ -538,7 +538,7 @@ class LLMScheduler:
                     assert all(req.stage == RequestStage.PREFILL for req in batch)
                     # 🔥 更新队列大小统计
                     self.queue_stats[gpu_id]['prefill']['current_queue_size'] = len(prefill_queue)
-                    logger.debug(f"Created PREFILL batch of size {len(batch)} for GPU {gpu_id}")
+                    logger.info(f"Created PREFILL batch of size {len(batch)} for GPU {gpu_id}")
             
             # Priority 2: Create  DECODE batch ( if no PREFILL requests)
             elif decode_queue:
@@ -567,7 +567,7 @@ class LLMScheduler:
                     assert all(req.stage == RequestStage.DECODE for req in batch)
                     # 🔥 更新队列大小统计
                     self.queue_stats[gpu_id]['decode']['current_queue_size'] = len(decode_queue)
-                    logger.debug(f"Created DECODE batch of size {len(batch)} for GPU {gpu_id}")
+                    logger.info(f"Created DECODE batch of size {len(batch)} for GPU {gpu_id}")
         
         return batch
     
@@ -595,7 +595,7 @@ class LLMScheduler:
                 wait_time_ms = request.queue_wait_time * 1000
                 print(f"   - Request {i+1}: 队列等待 {wait_time_ms:.1f}ms")
         
-        logger.debug(f"Processing batch of {len(batch)} requests on GPU {gpu_id} for language {language_id}")
+        logger.info(f"Processing batch of {len(batch)} requests on GPU {gpu_id} for language {language_id}")
         
         try:
             # 🔥 只使用真实推理引擎，不再使用模拟推理
@@ -607,10 +607,12 @@ class LLMScheduler:
                         audio_len = req.speech_batch.shape[-1] if hasattr(req.speech_batch, 'shape') else len(req.speech_batch)
                         print(f"   - Request {i+1}: {audio_len} samples, stage={req.stage.value}")
                     
+                    batch_inference_start = time.time()
                     results = self.inference_engine.process_batch(gpu_id, batch)
+                    batch_inference_time = time.time() - batch_inference_start
                     
                     # 🔍 处理后记录结果
-                    print(f"📊 [SCHEDULER] GPU {gpu_id} 完成处理，返回 {len(results)} 个结果")
+                    print(f"📊 [SCHEDULER] GPU {gpu_id} 完成处理 [{batch_stage}]: {len(batch)} 个请求 → {len(results)} 个结果, 推理耗时: {batch_inference_time*1000:.1f}ms")
                     
                     # 处理推理结果
                     for i, request in enumerate(batch):
@@ -620,7 +622,7 @@ class LLMScheduler:
                             error = result.get('error', 'None')
                             print(f"   - Request {i+1} 结果: success={success}, error={error}")
                             self._update_session_with_result(request, result)
-                            logger.debug(f"Request {request.request_id} completed with inference engine")
+                            logger.info(f"Request {request.request_id} completed with inference engine")
                         else:
                             # 处理缺失的结果
                             print(f"   - Request {i+1} 缺失结果")
@@ -1252,7 +1254,7 @@ class LLMScheduler:
             
             # 🔥 修复：完全移除模拟的页面统计修改
             # 不再修改 session.memory_usage，避免状态不一致
-            logger.debug(f"🔍 [PARTIAL-CLEANUP] Session {session.session_id} 当前内存使用保持不变: {session.memory_usage.get('total_pages', 0)} 页")
+            logger.info(f"🔍 [PARTIAL-CLEANUP] Session {session.session_id} 当前内存使用保持不变: {session.memory_usage.get('total_pages', 0)} 页")
                 
         except Exception as e:
             logger.error(f"部分页面清理时出错: {e}")

@@ -319,8 +319,10 @@ class InferenceEngine:
                 self.stats['average_latency'] * (self.stats['completed_requests'] - len(results)) + 
                 latency * len(results)
             ) / self.stats['completed_requests']
-            
-            logger.debug(f"批处理完成: {len(requests)}个请求, 耗时: {latency:.3f}s")
+            stage = requests[0].stage.value if requests else "unknown"
+            prefill_count = len([r for r in requests if r.stage == RequestStage.PREFILL])
+            decode_count = len([r for r in requests if r.stage == RequestStage.DECODE])
+            logger.info(f"[IMPORTANT] 批处理完成 [{stage}]: {len(requests)} 个请求 (Prefill:{prefill_count}, Decode:{decode_count}), 耗时: {latency*1000:.1f}ms")
             
         except Exception as e:
             logger.error(f"批处理失败: {e}")
@@ -649,7 +651,6 @@ class InferenceEngine:
         print(f"🔍 [BEAM-REQUEST] Created beam request for {request.request_id}")
         print(f"   - Speech shape: {speech_batch.shape}")
         print(f"   - Input IDs shape: {input_ids.shape}")
-        print(f"   - Prefill finished: {beam_req.prefill_finished}")
         print(f"   - Max new tokens: {beam_req.max_new_tokens}")
         print(f"   - Blocksize: {self.model.latency_multiplier * self.model.blocksize}")
         
