@@ -12,7 +12,7 @@
 mkdir -p logs
 
 # 设置PYTHONPATH
-export PYTHONPATH=/home/jiaxuanluo/infinisst-demo-v2
+export PYTHONPATH=/home/jiaxuanluo/new-infinisst
 
 # 显示SLURM分配的GPU信息
 echo "[INFO] SLURM Job ID: $SLURM_JOB_ID"
