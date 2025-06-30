@@ -808,6 +808,7 @@
                 <div class="control-group buttons-group">
                     <div class="button-row">
                         <button id="loadModel" class="btn">Load Model</button>
+                        <button id="testButton" class="btn">测试固定音频</button>
                         <button id="updateLatency" class="btn" disabled>Update Latency</button>
                     </div>
                 </div>
@@ -3999,6 +4000,48 @@
                 statusText.textContent = text;
             }
         }
+
+        // 添加测试按钮处理函数
+        document.getElementById('testButton').addEventListener('click', async () => {
+            try {
+                // 禁用按钮，显示加载状态
+                const testButton = document.getElementById('testButton');
+                testButton.disabled = true;
+                testButton.textContent = '测试中...';
+                
+                // 调用测试接口
+                const response = await fetch('/test_fixed_audio', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        language_pair: document.getElementById('languageSelect').value
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`测试请求失败: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                console.log('测试初始化成功:', result);
+                
+                // 连接到新的WebSocket
+                if (result.session_id) {
+                    await connectWebSocket(result.session_id);
+                }
+                
+            } catch (error) {
+                console.error('测试失败:', error);
+                alert(`测试失败: ${error.message}`);
+            } finally {
+                // 恢复按钮状态
+                const testButton = document.getElementById('testButton');
+                testButton.disabled = false;
+                testButton.textContent = '测试固定音频';
+            }
+        });
     </script>
 </body>
 </html> 

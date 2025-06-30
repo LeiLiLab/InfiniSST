@@ -364,7 +364,7 @@ class InferenceEngine:
                 llm_decode_pagetable=self.model.llm_decode_pagetable
             )
             
-            # 🔥 关键修复：更新pagetable状态并验证连续性
+            # 更新pagetable状态并验证连续性
             self.model.speech_pagetable = speech_pagetable
             self.model.llm_prefill_pagetable = llm_prefill_pagetable
             self.model.llm_decode_pagetable = llm_decode_pagetable
@@ -377,11 +377,11 @@ class InferenceEngine:
             for i, (orig_req, processed_req) in enumerate(zip(requests, processed_requests)):
                 result = self._convert_beam_result_to_inference_result(orig_req, processed_req, is_prefill=True)
                 
-                # 🔥 ORCA关键：立即更新原始request的cache引用，转换为列表格式
+                # 立即更新原始request的cache引用，转换为列表格式
                 # 根据infinisst_faster.py，cache应该是列表格式
                 orig_req.speech_cache = [processed_req.speech_cache]  # 转换为列表
                 
-                # 🔥 关键修复：prefill完成后，llm_cache应该已经是beam cache列表
+                # prefill完成后，llm_cache应该已经是beam cache列表
                 # 不需要再包装一层列表
                 if isinstance(processed_req.llm_cache, list):
                     # prefill返回的已经是beam cache列表，直接使用
@@ -423,10 +423,28 @@ class InferenceEngine:
             # 🔥 ORCA架构：为batch中的每个request分别构造beam_search.Request
             beam_requests = []
             for req in requests:
+                # 🔥 增量处理验证：在创建beam request之前检查
+                print(f"🔧 [DECODE-BATCH] 处理请求 {req.request_id}:")
+                print(f"   - Session src_len: {req.session_src_len}")
+                print(f"   - Total audio samples: {req.speech_batch.numel()}")
+                print(f"   - New samples: {req.speech_batch.numel() - req.session_src_len}")
+                print(f"   - Has cache: speech={req.speech_cache is not None}, llm={req.past_key_values is not None}")
+                
                 beam_req = self._create_beam_request(req)
                 beam_requests.append(beam_req)
             
             print(f"🔍 [ORCA-DECODE] 处理batch: {len(beam_requests)} 个requests")
+            
+            # 🔥 增量处理关键修复：确保beam_search知道这是增量处理
+            for i, beam_req in enumerate(beam_requests):
+                orig_req = requests[i]
+                print(f"🔧 [BEAM-DECODE] Request {orig_req.request_id} beam参数:")
+                print(f"   - speech length: {len(beam_req.speech)}")
+                print(f"   - input_ids length: {len(beam_req.input_ids)}")
+                print(f"   - speech_cache: {beam_req.speech_cache is not None}")
+                print(f"   - llm_cache type: {type(beam_req.llm_cache)}")
+                print(f"   - prefill_finished: {beam_req.prefill_finished}")
+                print(f"   - max_new_tokens: {beam_req.max_new_tokens}")
             
             # 直接调用beam_search的decode函数
             from model.flashinfer.beam_search import decode
@@ -442,7 +460,7 @@ class InferenceEngine:
                 llm_decode_pagetable=self.model.llm_decode_pagetable
             )
             
-            # 🔥 关键修复：更新pagetable状态并验证连续性
+            # 更新pagetable状态并验证连续性
             self.model.speech_pagetable = speech_pagetable
             self.model.llm_prefill_pagetable = llm_prefill_pagetable
             self.model.llm_decode_pagetable = llm_decode_pagetable
@@ -455,7 +473,7 @@ class InferenceEngine:
             for i, (orig_req, processed_req) in enumerate(zip(requests, processed_requests)):
                 result = self._convert_beam_result_to_inference_result(orig_req, processed_req, is_prefill=False)
                 
-                # 🔥 ORCA关键：立即更新原始request的cache引用
+                # 立即更新原始request的cache引用
                 # Decode阶段：根据processed_req的状态决定cache格式
                 if hasattr(processed_req, 'decode_finished') and processed_req.decode_finished:
                     # 如果decode完成，转换为单个cache
@@ -503,7 +521,7 @@ class InferenceEngine:
         from model.flashinfer.engine import SpeechCache, LLMCache
         from agents.infinisst import S2TAgentStates
         
-        # 🔥 关键修复：创建S2TAgentStates对象，让model的_prepare_speech和_prepare_inputs方法处理
+        # 🔥 关键修复：创建S2TAgentStates对象，确保正确的增量处理
         states = S2TAgentStates(
             src_len=request.session_src_len,  # 使用session的已处理长度
             speech_cache=request.speech_cache,
@@ -523,6 +541,22 @@ class InferenceEngine:
         states.source = speech_data.tolist()
         states.source_finished = getattr(request, 'is_final', False)
         states.source_sample_rate = 16000
+        
+        # 🔥 关键修复：确保增量处理的正确性
+        print(f"🔧 [INCREMENTAL-FIX] 增量处理状态检查:")
+        print(f"   - Total audio samples: {len(states.source)}")
+        print(f"   - Already processed (src_len): {states.src_len}")
+        print(f"   - New samples to process: {len(states.source) - states.src_len}")
+        print(f"   - Request stage: {request.stage.value}")
+        print(f"   - Has cache: speech={states.speech_cache is not None}, llm={states.past_key_values is not None}")
+        
+        # 🔥 增量处理验证：如果没有新音频且是DECODE，这可能是问题根源
+        new_samples = len(states.source) - states.src_len
+        if request.stage == RequestStage.DECODE and new_samples <= 0:
+            print(f"⚠️ [INCREMENTAL-WARNING] DECODE请求但没有新音频样本，可能导致重复翻译")
+            print(f"   - 建议检查调度器的音频增量逻辑")
+        elif request.stage == RequestStage.DECODE and new_samples > 0:
+            print(f"✅ [INCREMENTAL-OK] DECODE请求有 {new_samples} 个新音频样本等待处理")
         
         print(f"🔧 [PREPARE-DATA] 创建states对象:")
         print(f"   - src_len: {states.src_len}")
@@ -619,10 +653,27 @@ class InferenceEngine:
         else:
             print(f"   - past_key_values_for_request: {past_key_values_for_request is not None}")
         
-        # 🔥 关键修复：按照infinisst_faster.py的Request构造方式
+        # 🔥 关键修复：为增量处理准备正确的音频数据
+        if request.stage == RequestStage.DECODE and states.src_len > 0:
+            # DECODE阶段：只传递新的音频片段而非完整历史
+            new_audio_start = states.src_len
+            new_audio_samples = speech_batch[new_audio_start:]
+            print(f"🔧 [INCREMENTAL-AUDIO] DECODE阶段 - 只处理新音频:")
+            print(f"   - 完整音频长度: {len(speech_batch)}")
+            print(f"   - 已处理长度: {new_audio_start}")
+            print(f"   - 新音频长度: {len(new_audio_samples)}")
+            
+            # 使用新音频片段
+            speech_for_beam = new_audio_samples.view(-1)
+        else:
+            # PREFILL阶段：使用完整音频
+            speech_for_beam = speech_batch.view(-1)
+            print(f"🔧 [INCREMENTAL-AUDIO] PREFILL阶段 - 使用完整音频: {len(speech_batch)}")
+        
+        # 🔥 关键修复：按照infinisst_faster.py的Request构造方式，但传递正确的音频数据
         beam_req = Request(
             input_ids.view(-1),  # 按照原始代码：input_ids.view(-1)
-            speech_batch.view(-1),  # 按照原始代码：speech_batch.view(-1)
+            speech_for_beam,     # 🔥 修复：DECODE时只传递新音频片段
             self.model.latency_multiplier * self.model.blocksize,  # blocksize参数
             request.max_new_tokens,  # max_new_tokens
             
@@ -635,6 +686,10 @@ class InferenceEngine:
             getattr(self.model, 'system_prompt_size', 0),  # llm_max_steps_start
             past_key_values_for_request  # llm_cache
         )
+        
+        # 🔥 增量处理标识：为beam_req添加必要的增量信息
+        beam_req.src_len = states.src_len  # 传递已处理的音频长度
+        beam_req.is_incremental = (request.stage == RequestStage.DECODE)  # 标记是否为增量处理
         
         # 设置状态 - 根据request.stage判断是否已经prefill
         beam_req.prefill_finished = (request.stage == RequestStage.DECODE)
@@ -651,9 +706,11 @@ class InferenceEngine:
             print(f"🔍 [BEAM-STATE] Prefill阶段，beam_state将被创建 for {request.request_id}")
         
         print(f"🔍 [BEAM-REQUEST] Created beam request for {request.request_id}")
-        print(f"   - Speech shape: {speech_batch.shape}")
+        print(f"   - Speech shape: {speech_for_beam.shape}")
         print(f"   - Input IDs shape: {input_ids.shape}")
         print(f"   - Prefill finished: {beam_req.prefill_finished}")
+        print(f"   - Is incremental: {beam_req.is_incremental}")
+        print(f"   - Src len: {beam_req.src_len}")
         print(f"   - Max new tokens: {beam_req.max_new_tokens}")
         print(f"   - Blocksize: {self.model.latency_multiplier * self.model.blocksize}")
         
@@ -670,87 +727,39 @@ class InferenceEngine:
             'generated_tokens': [],
             'finished': False,
             'speech_cache': processed_request.speech_cache,
-            'past_key_values': processed_request.llm_cache
+            'past_key_values': processed_request.llm_cache,
+            'continue_processing': True  # 默认继续处理
         }
         
+        # 检查是否还有新音频需要处理
+        has_new_audio = (
+            hasattr(orig_request, 'speech_batch') and 
+            hasattr(orig_request, 'session_src_len') and
+            orig_request.speech_batch.numel() > orig_request.session_src_len
+        )
+
         if is_prefill:
-            # Prefill阶段完成
             result['prefill_finished'] = processed_request.prefill_finished
             result['decode_finished'] = False
-            
-            # Prefill通常不生成文本，只是准备beam状态
-            if hasattr(processed_request, 'beam_state') and processed_request.beam_state:
-                beam_state = processed_request.beam_state
-                if hasattr(beam_state, 'generated_ids') and beam_state.generated_ids is not None:
-                    # 获取初始的beam candidates
-                    first_tokens = beam_state.generated_ids[:, 0].tolist()  # 第一个token
-                    result['generated_tokens'] = first_tokens
-                    
-                    # 尝试解码第一个token
-                    if len(first_tokens) > 0:
-                        try:
-                            decoded_text = self.tokenizer.decode([first_tokens[0]], skip_special_tokens=True)
-                            result['generated_text'] = decoded_text
-                            print(f"🔍 [PREFILL-RESULT] Generated first token: {first_tokens[0]} -> '{decoded_text}'")
-                        except Exception as e:
-                            print(f"⚠️ [PREFILL-RESULT] Failed to decode token {first_tokens[0]}: {e}")
-            
-            print(f"🔍 [PREFILL-RESULT] Request {orig_request.request_id} prefill完成")
-            
+            result['continue_processing'] = True  # Prefill后总是继续到DECODE
         else:
-            # Decode阶段 - 生成了新的token
-            result['prefill_finished'] = True
+            result['prefill_finished'] = False
             result['decode_finished'] = processed_request.decode_finished
-            
-            # 🔥 修复：检查beam_state是否为None
-            if hasattr(processed_request, 'beam_state') and processed_request.beam_state is not None:
-                beam_state = processed_request.beam_state
-                if hasattr(beam_state, 'generated_ids') and beam_state.generated_ids is not None:
-                    # 获取当前最佳beam的所有token
-                    if len(beam_state.generated_ids) > 0:
-                        best_sequence = beam_state.generated_ids[0].tolist()  # 取第一个beam
-                        result['generated_tokens'] = best_sequence
-                        
-                        # 解码完整序列
-                        try:
-                            decoded_text = self.tokenizer.decode(best_sequence, skip_special_tokens=True)
-                            
-                            # 🔥 关键修复：后处理生成的文本，过滤掉prompt格式token
-                            filtered_text = self._filter_prompt_tokens(decoded_text)
-                            result['generated_text'] = filtered_text
-                            
-                            print(f"🔍 [DECODE-RESULT] Generated sequence: {best_sequence} -> '{decoded_text}'")
-                            print(f"🔍 [DECODE-RESULT] Filtered translation: '{filtered_text}'")
-                        except Exception as e:
-                            print(f"⚠️ [DECODE-RESULT] Failed to decode sequence {best_sequence}: {e}")
-                            result['generated_text'] = ""
-                    
-                    # 检查是否完成
-                    result['finished'] = processed_request.decode_finished
-                else:
-                    print(f"⚠️ [DECODE-RESULT] beam_state.generated_ids is None or missing")
-                    result['finished'] = True  # 如果beam_state有问题，标记为完成避免无限循环
-            else:
-                print(f"⚠️ [DECODE-RESULT] beam_state is None or missing")
-                result['finished'] = True  # 如果beam_state为None，标记为完成
-            
-            # 检查是否有最终结果
-            if hasattr(processed_request, 'results') and processed_request.results:
-                # 如果已经有最终结果
-                final_result = processed_request.results
-                if isinstance(final_result, dict) and 'sequence' in final_result:
-                    sequence = final_result['sequence']
-                    result['generated_tokens'] = sequence
-                    
-                    try:
-                        decoded_text = self.tokenizer.decode(sequence, skip_special_tokens=True)
-                        result['generated_text'] = decoded_text
-                        result['finished'] = True
-                        print(f"🔍 [DECODE-FINAL] Final result: {sequence} -> '{decoded_text}'")
-                    except Exception as e:
-                        print(f"⚠️ [DECODE-FINAL] Failed to decode final sequence {sequence}: {e}")
-                        
-            print(f"🔍 [DECODE-RESULT] Request {orig_request.request_id} decode step完成, finished={result['finished']}")
+            result['continue_processing'] = has_new_audio  # 只要有新音频就继续处理
+
+        if has_new_audio:
+            print(f"🔄 [INCREMENTAL] 检测到新音频，继续处理:")
+            print(f"   - 总音频长度: {orig_request.speech_batch.numel()}")
+            print(f"   - 已处理长度: {orig_request.session_src_len}")
+            print(f"   - 新音频长度: {orig_request.speech_batch.numel() - orig_request.session_src_len}")
+            result['decode_finished'] = False  # 强制继续处理
+        else:
+            print(f"✋ [INCREMENTAL] 没有新音频，可以结束处理")
+            # 注意：这里不强制设置decode_finished，保留模型的原始判断
+        
+        # 🔥 关键修复：后处理生成的文本，过滤掉prompt格式token
+        if result['generated_text']:
+            result['generated_text'] = self._filter_prompt_tokens(result['generated_text'])
         
         return result
 

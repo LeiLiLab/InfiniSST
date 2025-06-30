@@ -246,7 +246,7 @@ class LLMScheduler:
         logger.info("Scheduler stopped")
     
     def get_or_create_session(self, user_id: str, language_id: str) -> UserSession:
-        """Get existing session or create new one"""
+        """Get existing session or create new one - 🔥 增强session重用逻辑"""
         with self.session_lock:
             if language_id not in self.user_sessions:
                 self.user_sessions[language_id] = {}
@@ -260,10 +260,34 @@ class LLMScheduler:
                 )
                 self.user_sessions[language_id][user_id] = session
                 self.stats['active_sessions'] += 1
-                logger.info(f"Created new session {session_id} for user {user_id}, language {language_id}")
+                logger.info(f"🆕 [SESSION-CREATE] Created new session {session_id}")
+                logger.info(f"   - User: {user_id}")
+                logger.info(f"   - Language: {language_id}")
+                logger.info(f"   - Total active sessions: {self.stats['active_sessions']}")
             else:
                 session = self.user_sessions[language_id][user_id]
                 session.last_activity = time.time()
+                session_age = time.time() - session.created_at
+                
+                # 🔥 增强诊断：记录session重用情况
+                has_speech_cache = session.speech_cache is not None
+                has_past_key_values = session.past_key_values is not None
+                has_beam_state = session.beam_state is not None
+                
+                logger.info(f"🔄 [SESSION-REUSE] Reusing existing session {session.session_id}")
+                logger.info(f"   - User: {user_id}")
+                logger.info(f"   - 会话年龄: {session_age:.1f}s")
+                logger.info(f"   - Audio samples: {len(session.source)}")
+                logger.info(f"   - Translation segments: {len(session.target)}")
+                logger.info(f"   - Speech cache: {has_speech_cache}")
+                logger.info(f"   - Past key values: {has_past_key_values}")
+                logger.info(f"   - Beam state: {has_beam_state}")
+                
+                # 🔍 检测异常的session重用模式
+                if session_age < 1 and (has_speech_cache or has_past_key_values):
+                    logger.warning(f"⚠️ [SESSION-REUSE] 可疑的快速重用：会话刚创建{session_age:.1f}s就已有cache")
+                elif session_age > 300:  # 5分钟
+                    logger.warning(f"⚠️ [SESSION-REUSE] 长时间session重用：{session_age:.1f}s，可能需要清理")
             
             return self.user_sessions[language_id][user_id]
     
@@ -299,6 +323,83 @@ class LLMScheduler:
         # Get or create user session
         session = self.get_or_create_session(user_id, language_id)
         
+        print(f"🔍 [SCHEDULER-SUBMIT] 请求详情:")
+        print(f"   - Request ID: {str(uuid.uuid4())[:8]}")
+        print(f"   - User ID: {user_id}")
+        print(f"   - Language: {language_id}")
+        print(f"   - Stage: {stage.value}")
+        print(f"   - Audio samples: {speech_data.numel() if hasattr(speech_data, 'numel') else len(speech_data)}")
+        print(f"   - Max new tokens: {max_new_tokens}")
+        print(f"   - Is final: {is_final}")
+        
+        # 🔥 关键修复：检查session状态，避免重复prefill
+        if stage == RequestStage.PREFILL:
+            # 🔍 详细诊断session状态
+            has_speech_cache = session.speech_cache is not None
+            has_past_key_values = session.past_key_values is not None
+            has_beam_state = session.beam_state is not None
+            audio_samples = len(session.source)
+            translation_segments = len(session.target)
+            session_age = time.time() - session.created_at
+            
+            print(f"🔍 [PREFILL-CHECK] Session {session.session_id} 状态检查:")
+            print(f"   - User ID: {user_id}")
+            print(f"   - 会话年龄: {session_age:.1f}s")
+            print(f"   - 已有音频: {audio_samples} 样本 ({audio_samples/16000:.1f}s)")
+            print(f"   - 已有翻译: {translation_segments} 段")
+            print(f"   - Speech cache: {has_speech_cache}")
+            print(f"   - Past key values: {has_past_key_values}")
+            print(f"   - Beam state: {has_beam_state}")
+            print(f"   - 新音频长度: {speech_data.numel() if hasattr(speech_data, 'numel') else len(speech_data)} 样本")
+            
+            # 检查session是否已经有cache，表明已经prefill过
+            if has_speech_cache or has_past_key_values or has_beam_state:
+                print(f"🚨 [DUPLICATE-PREFILL] Session {session.session_id} 已经prefill过!")
+                print(f"   - 这可能是前端重复发送、WebSocket重连、或并发竞争导致的")
+                print(f"   - 建议检查前端逻辑和WebSocket连接状态")
+                
+                # 🔍 分析可能的原因
+                if session_age < 5:
+                    print(f"   - 可能原因: 并发请求 (会话刚创建{session_age:.1f}s)")
+                elif audio_samples > 0 and translation_segments == 0:
+                    print(f"   - 可能原因: 前端重复发送初始音频")
+                else:
+                    print(f"   - 可能原因: WebSocket重连或状态管理错误")
+                
+                # 🔥 额外诊断：检查最近的请求历史
+                print(f"🔍 [DUPLICATE-PREFILL] 额外诊断信息:")
+                print(f"   - Session创建时间: {time.strftime('%H:%M:%S', time.localtime(session.created_at))}")
+                print(f"   - 最后活动时间: {time.strftime('%H:%M:%S', time.localtime(session.last_activity))}")
+                print(f"   - 距离上次活动: {time.time() - session.last_activity:.1f}s")
+                
+                raise ValueError(f"Session {session.session_id} already prefilled - duplicate prefill request rejected")
+        
+        elif stage == RequestStage.DECODE:
+            # 🔍 DECODE请求的状态检查
+            has_speech_cache = session.speech_cache is not None
+            has_past_key_values = session.past_key_values is not None
+            has_beam_state = session.beam_state is not None
+            audio_samples = len(session.source)
+            translation_segments = len(session.target)
+            session_age = time.time() - session.created_at
+            
+            print(f"🔄 [DECODE-CHECK] Session {session.session_id} 状态检查:")
+            print(f"   - User ID: {user_id}")
+            print(f"   - 会话年龄: {session_age:.1f}s")
+            print(f"   - 已有音频: {audio_samples} 样本 ({audio_samples/16000:.1f}s)")
+            print(f"   - 已有翻译: {translation_segments} 段")
+            print(f"   - Speech cache: {has_speech_cache}")
+            print(f"   - Past key values: {has_past_key_values}")
+            print(f"   - Beam state: {has_beam_state}")
+            print(f"   - 新音频长度: {speech_data.numel() if hasattr(speech_data, 'numel') else len(speech_data)} 样本")
+            
+            # DECODE请求应该有cache
+            if not (has_speech_cache or has_past_key_values):
+                print(f"⚠️ [DECODE-WARNING] DECODE请求但session缺少cache，可能需要先PREFILL")
+                print(f"   - 这可能是session状态不一致或前端逻辑错误")
+            
+            print(f"✅ [DECODE-READY] DECODE请求准备就绪")
+        
         # Update session with new speech data - 验证但不做滑动窗口
         if isinstance(speech_data, (list, np.ndarray)):
             speech_data = torch.tensor(speech_data, dtype=torch.float32)
@@ -325,7 +426,7 @@ class LLMScheduler:
         session.last_activity = time.time()
         
         print(f"🔍 [SCHEDULER] Session source now has {len(session.source)} total samples ({len(session.source)/16000:.1f}s)")
-        print(f"🔍 [SCHEDULER] Session src_len (already processed): {session.src_len} samples")
+        print(f"🔍 [SCHEDULER] Session src_len (already processed): {session.src_len}")
         print(f"🔍 [SCHEDULER] New samples to process: {len(session.source) - session.src_len}")
         
         # 🔍 估算页面使用量（仅用于诊断）
@@ -457,6 +558,7 @@ class LLMScheduler:
         1. If PREFILL queue has requests: Create pure PREFILL batch (up to 32 requests)
         2. If PREFILL queue is empty: Create pure DECODE batch (up to 32 requests)
         3. NEVER mix PREFILL and DECODE in the same batch
+        4. PREFILL priority over DECODE (但要防止DECODE饥饿)
         """
         batch = []
         
@@ -464,23 +566,37 @@ class LLMScheduler:
             prefill_queue = self.prefill_queues[gpu_id]
             decode_queue = self.decode_queues[gpu_id]
             
-            # Priority 1: Create PREFILL batch
-            if prefill_queue:
+            # 🔍 诊断信息
+            prefill_count = len(prefill_queue)
+            decode_count = len(decode_queue)
+            print(f"🔍 [SCHEDULER-BATCH] GPU {gpu_id} 队列状态: PREFILL={prefill_count}, DECODE={decode_count}")
+            
+            # 🔥 防止DECODE饥饿：如果DECODE队列积压过多，优先处理DECODE
+            DECODE_STARVATION_THRESHOLD = 20  # DECODE队列超过20个时优先处理
+            force_decode = decode_count > DECODE_STARVATION_THRESHOLD
+            
+            if force_decode:
+                print(f"⚠️ [SCHEDULER-BATCH] DECODE队列积压过多({decode_count})，优先处理DECODE防止饥饿")
+            
+            # Priority 1: Create PREFILL batch (unless forcing DECODE)
+            if prefill_queue and not force_decode:
                 while len(batch) < self.max_batch_size and prefill_queue:
                     try:
                         request = prefill_queue.popleft()
                         batch.append(request)
                         self.stats['queue_sizes'][gpu_id]['prefill'] -= 1
                     except IndexError:
-                        # 队列为空，退出循环
                         print(f"⚠️ [SCHEDULER] Prefill queue empty during pop for GPU {gpu_id}")
                         break
-                # decouple PD
+                
                 if batch:
                     assert all(req.stage == RequestStage.PREFILL for req in batch)
-                    logger.debug(f"Created PREFILL batch of size {len(batch)} for GPU {gpu_id}")
+                    print(f"📦 [SCHEDULER-BATCH] Created PREFILL batch of size {len(batch)} for GPU {gpu_id}")
+                    # 🔍 诊断：显示每个request的session信息
+                    for i, req in enumerate(batch):
+                        print(f"   - Request {i+1}: {req.user_id} (session: {req.session_id})")
             
-            # Priority 2: Create  DECODE batch ( if no PREFILL requests)
+            # Priority 2: Create DECODE batch (if no PREFILL requests OR forced)
             elif decode_queue:
                 while len(batch) < self.max_batch_size and decode_queue:
                     try:
@@ -488,13 +604,16 @@ class LLMScheduler:
                         batch.append(request)
                         self.stats['queue_sizes'][gpu_id]['decode'] -= 1
                     except IndexError:
-                        # 队列为空，退出循环
                         print(f"⚠️ [SCHEDULER] Decode queue empty during pop for GPU {gpu_id}")
                         break
                 
                 if batch:
                     assert all(req.stage == RequestStage.DECODE for req in batch)
-                    logger.debug(f"Created DECODE batch of size {len(batch)} for GPU {gpu_id}")
+                    print(f"📦 [SCHEDULER-BATCH] Created DECODE batch of size {len(batch)} for GPU {gpu_id}")
+                    # 🔍 诊断：显示每个request的session信息和decode步数
+                    for i, req in enumerate(batch):
+                        steps = getattr(req, '_decode_steps', 0)
+                        print(f"   - Request {i+1}: {req.user_id} (session: {req.session_id}, step: {steps})")
         
         return batch
     
@@ -513,7 +632,7 @@ class LLMScheduler:
             request.is_processing = True
         
         try:
-            # 🔥 只使用真实推理引擎，不再使用模拟推理
+            # 只使用真实推理引擎，不再使用模拟推理
             if hasattr(self, 'inference_engine') and self.inference_engine:
                 try:
                     # 🔍 处理前记录页面池状态
@@ -571,9 +690,17 @@ class LLMScheduler:
                 self._handle_failed_request(request, f"Batch processing failed: {str(e)}")
     
     def _requeue_requests_for_memory_wait(self, batch: List[InferenceRequest], gpu_id: int):
-        """将内存不足的请求重新放回队列等待"""
+        """将内存不足的请求重新放回队列等待 - 🔥 修复PREFILL重复问题"""
         with self.queue_lock:
             for request in batch:
+                # 🔥 关键修复：PREFILL请求不允许重试，避免重复prefill
+                if request.stage == RequestStage.PREFILL:
+                    logger.error(f"🚨 PREFILL request {request.request_id} 内存不足，拒绝重试避免重复prefill")
+                    # PREFILL失败直接标记失败，不重试
+                    self._handle_failed_request(request, "GPU memory exhausted during prefill - no retry to avoid duplicate prefill")
+                    continue
+                
+                # 只有DECODE请求允许重试
                 # 重置请求状态
                 request.is_processing = False
                 request.is_completed = False
@@ -584,196 +711,115 @@ class LLMScheduler:
                 request.retry_count += 1
                 
                 # 限制重试次数，避免无限重试
-                max_retries = 3
+                max_retries = 2  # 减少DECODE重试次数
                 if request.retry_count <= max_retries:
-                    # 重新放回对应的队列
-                    if request.stage == RequestStage.PREFILL:
-                        self.prefill_queues[gpu_id].appendleft(request)  # 放到队列前面，优先处理
-                        self.stats['queue_sizes'][gpu_id]['prefill'] += 1
-                        logger.info(f"Request {request.request_id} requeued for memory wait (retry {request.retry_count}/{max_retries})")
-                    else:
-                        self.decode_queues[gpu_id].appendleft(request)
-                        self.stats['queue_sizes'][gpu_id]['decode'] += 1
-                        logger.info(f"Request {request.request_id} requeued for memory wait (retry {request.retry_count}/{max_retries})")
+                    # 只重新放回DECODE队列
+                    self.decode_queues[gpu_id].appendleft(request)
+                    self.stats['queue_sizes'][gpu_id]['decode'] += 1
+                    logger.info(f"DECODE request {request.request_id} requeued for memory wait (retry {request.retry_count}/{max_retries})")
                 else:
                     # 超过重试次数，标记失败
                     logger.error(f"Request {request.request_id} exceeded max retries ({max_retries}) due to memory issues")
                     self._handle_failed_request(request, f"GPU memory exhausted after {max_retries} retries")
     
     def _update_session_with_result(self, request: InferenceRequest, result: Dict[str, Any]):
-        """使用推理结果更新用户会话 - ORCA风格分步处理"""
+        """使用推理结果更新用户会话 - ORCA风格分步处理 (增强诊断&防止decode爆炸)"""
         try:
             # 更新用户会话
             session = self.user_sessions[request.language_id][request.user_id]
-            
+
+            # 🔍 诊断日志
+            print(f"🧩 [DEBUG] update_session_with_result: req={request.request_id}, stage={request.stage}, _decode_steps={getattr(request, '_decode_steps', 0)}")
+
+            # 🔥 关键修复：根据continue_processing标志决定是否继续处理
+            # 即使模型说完成了，如果还有新音频也要继续处理
+            finished = (result.get('finished', False) or result.get('decode_finished', False)) and not result.get('continue_processing', False)
+
+            # 更新session状态
             if result.get('success', False):
-                # 🔥 ORCA风格：根据处理阶段更新状态
-                prefill_finished = result.get('prefill_finished', False)
-                decode_finished = result.get('decode_finished', False)
+                # 更新cache引用
+                if result.get('speech_cache') is not None:
+                    session.speech_cache = result['speech_cache']
+                if result.get('past_key_values') is not None:
+                    session.past_key_values = result['past_key_values']
                 
-                if prefill_finished and not hasattr(request, '_prefill_done'):
-                    # Prefill阶段刚完成
-                    print(f"🔍 [ORCA-SCHEDULER] Request {request.request_id} prefill完成")
-                    request._prefill_done = True
-                    
-                    # 将request状态切换到DECODE
-                    request.stage = RequestStage.DECODE
-                    
-                    # Prefill阶段通常不生成最终文本，只是准备beam状态
-                    generated_text = result.get('generated_text', '')
-                    if generated_text:
-                        print(f"🔍 [ORCA-SCHEDULER] Prefill生成初始文本: '{generated_text}'")
-                    
-                    # 🔥 关键修复：更新session和request的缓存状态
-                    if 'speech_cache' in result:
-                        session.speech_cache = result['speech_cache']
-                        request.speech_cache = result['speech_cache']  # 🔥 同步更新request
-                        print(f"🔍 [ORCA-CACHE] 更新speech_cache引用")
-                    
-                    if 'past_key_values' in result:
-                        session.past_key_values = result['past_key_values']
-                        request.past_key_values = result['past_key_values']  # 🔥 同步更新request
-                        print(f"🔍 [ORCA-CACHE] 更新past_key_values引用")
-                        
-                    # 🔥 关键修复：保存beam_state
-                    if hasattr(request, 'beam_state') and request.beam_state is not None:
-                        session.beam_state = request.beam_state
-                        print(f"🔍 [ORCA-CACHE] 保存beam_state到session")
-                        
-                    # 🔥 关键：将request重新放回DECODE队列继续处理
-                    with self.queue_lock:
-                        gpu_id = self.language_gpu_map[request.language_id]
-                        self.decode_queues[gpu_id].append(request)
-                        self.stats['queue_sizes'][gpu_id]['decode'] += 1
-                        print(f"🔄 [ORCA-SCHEDULER] Request {request.request_id} 已放回DECODE队列 (cache已更新)")
+                # 更新beam_state（如果有）
+                if hasattr(request, 'beam_state'):
+                    session.beam_state = request.beam_state
                 
-                elif request.stage == RequestStage.DECODE:
-                    # Decode阶段 - 生成了新的token
-                    generated_text = result.get('generated_text', '')
-                    generated_tokens = result.get('generated_tokens', [])
-                    finished = result.get('finished', False)
-                    
-                    print(f"🔍 [ORCA-SCHEDULER] Decode step: '{generated_text}', finished={finished}")
-                    
-                    # 🔥 修复：累积式更新翻译历史
-                    if generated_text:
-                        # 获取当前完整翻译历史
-                        is_chinese_translation = "Chinese" in request.language_id or "zh" in request.language_id.lower()
-                        
-                        if is_chinese_translation:
-                            current_full_text = ''.join(session.target)
-                        else:
-                            current_full_text = ' '.join(session.target)
-                        
-                        # 🔥 关键修复：基于src_len判断是否为新音频片段
-                        if generated_text.strip() != current_full_text.strip():
-                            # 检查是否处理了新的音频数据
-                            if not hasattr(session, 'last_processed_src_len'):
-                                session.last_processed_src_len = 0
-                            
-                            current_src_len = request.session_src_len
-                            is_new_audio_segment = current_src_len > session.last_processed_src_len
-                            
-                            if not session.target:
-                                # 第一个翻译片段
-                                session.target = [generated_text]
-                                session.last_processed_src_len = current_src_len
-                                print(f"🔍 [ORCA-SCHEDULER] 开始新翻译: '{generated_text}' (src_len: {current_src_len})")
-                            elif is_new_audio_segment:
-                                # 新的音频片段，添加新的翻译段落
-                                session.target.append(generated_text)
-                                session.last_processed_src_len = current_src_len
-                                print(f"🔍 [ORCA-SCHEDULER] 新音频片段翻译: '{generated_text}' (src_len: {session.last_processed_src_len} -> {current_src_len})")
-                                print(f"🔍 [ORCA-SCHEDULER] 翻译历史共 {len(session.target)} 个段落")
-                            else:
-                                # 同一音频片段的翻译扩展，替换最后一个翻译
-                                session.target[-1] = generated_text
-                                print(f"🔍 [ORCA-SCHEDULER] 扩展当前翻译: '{generated_text}' (同一音频片段, src_len: {current_src_len})")
-                                print(f"🔍 [ORCA-SCHEDULER] 翻译历史共 {len(session.target)} 个段落")
-                            
-                            # 计算发送给前端的完整翻译
-                            if is_chinese_translation:
-                                new_full_text = ''.join(session.target)
-                            else:
-                                new_full_text = ' '.join(session.target)
-                            
-                            # 计算新增的内容（相对于上次发送的）
-                            if current_full_text:
-                                new_segment = new_full_text.replace(current_full_text, "").strip()
-                            else:
-                                new_segment = new_full_text.strip()
-                            
-                            result['new_segment'] = new_segment
-                            result['segment_count'] = len(session.target)
-                            result['full_translation'] = new_full_text
-                        else:
-                            print(f"🔍 [ORCA-SCHEDULER] 翻译未变化，跳过更新")
-                            result['new_segment'] = ""
-                            result['segment_count'] = len(session.target)
-                            # 返回当前完整翻译历史
-                            if is_chinese_translation:
-                                result['full_translation'] = ''.join(session.target)
-                            else:
-                                result['full_translation'] = ' '.join(session.target)
-                    
-                    # 更新token序列
-                    if generated_tokens:
-                        session.target_ids = generated_tokens.copy()  # 完全替换
-                        print(f"🔍 [ORCA-SCHEDULER] 更新token序列: {len(session.target_ids)} tokens")
-                    
-                    # 🔥 关键修复：更新session和request的缓存状态
-                    if 'speech_cache' in result:
-                        session.speech_cache = result['speech_cache']
-                        request.speech_cache = result['speech_cache']  # 🔥 同步更新request
-                        print(f"🔍 [ORCA-CACHE] Decode阶段更新speech_cache引用")
-                    
-                    if 'past_key_values' in result:
-                        session.past_key_values = result['past_key_values']
-                        request.past_key_values = result['past_key_values']  # 🔥 同步更新request
-                        print(f"🔍 [ORCA-CACHE] Decode阶段更新past_key_values引用")
-                    
-                    # 🔥 关键修复：保存beam_state
-                    if hasattr(request, 'beam_state') and request.beam_state is not None:
-                        session.beam_state = request.beam_state
-                        print(f"🔍 [ORCA-CACHE] 保存beam_state到session")
-                        
-                    # 🔥 关键：如果还没完成，继续放回DECODE队列
-                    if not finished and not decode_finished:
-                        with self.queue_lock:
-                            gpu_id = self.language_gpu_map[request.language_id]
-                            self.decode_queues[gpu_id].append(request)
-                            self.stats['queue_sizes'][gpu_id]['decode'] += 1
-                            print(f"🔄 [ORCA-SCHEDULER] Request {request.request_id} 继续DECODE，已重新入队 (cache已更新)")
-                    else:
-                        print(f"✅ [ORCA-SCHEDULER] Request {request.request_id} 翻译完成")
-                        # 更新 src_len 到当前 session.source 的长度
-                        session.src_len = len(session.source)
-                        print(f"🔍 [ORCA-SCHEDULER] Final src_len updated to {session.src_len}")
-            
-            session.last_activity = time.time()
-            
-            # 🔥 关键：只在真正完成时才标记request完成和调用回调
-            finished = result.get('finished', False) or result.get('decode_finished', False)
-            
-            if finished:
-                # 标记请求完成
-                request.result = result
-                request.is_completed = True
-                request.is_processing = False
+                # 更新已处理的音频长度
+                if request.stage == RequestStage.DECODE and result.get('continue_processing', False):
+                    # 只在DECODE阶段且需要继续处理时更新src_len
+                    session.src_len = request.speech_batch.numel()
+                    print(f"🔄 [SESSION-UPDATE] 更新session音频长度: {session.src_len}")
                 
-                # 调用回调函数
+                # 生成了新的文本
+                if result.get('generated_text'):
+                    generated_text = result['generated_text']
+                    if generated_text.strip():  # 只添加非空文本
+                        session.target.append(generated_text)
+                        print(f"✍️ [SESSION-UPDATE] 添加新翻译: '{generated_text}'")
+                
+                # 更新session状态
+                session.last_activity = time.time()
+                
+                # 调用结果回调（如果有）
                 if request.result_callback:
                     try:
-                        request.result_callback(result)
+                        # 传递完整的翻译历史
+                        full_translation = ''.join(session.target) if session.target else ''
+                        callback_result = {
+                            'success': True,
+                            'text': full_translation,
+                            'finished': finished,
+                            'continue_processing': result.get('continue_processing', False)
+                        }
+                        request.result_callback(callback_result)
                     except Exception as e:
-                        logger.error(f"Error in result callback for request {request.request_id}: {e}")
-                
-                self.stats['completed_requests'] += 1
-                print(f"📤 [ORCA-SCHEDULER] 发送最终结果到客户端: '{result.get('generated_text', '')}'")
+                        logger.error(f"结果回调执行失败: {e}")
             else:
-                # 中间步骤，不调用回调，继续处理
-                print(f"🔄 [ORCA-SCHEDULER] 中间步骤完成，继续处理...")
-            
+                # 处理失败
+                if request.result_callback:
+                    try:
+                        callback_result = {
+                            'success': False,
+                            'error': result.get('error', 'Unknown error'),
+                            'finished': True,
+                            'continue_processing': False
+                        }
+                        request.result_callback(callback_result)
+                    except Exception as e:
+                        logger.error(f"错误回调执行失败: {e}")
+
+            # 更新请求状态
+            request.is_completed = finished
+            request.is_processing = False
+            request.result = result
+
+            print(f"🔄 [REQUEST-UPDATE] Request {request.request_id} 更新完成:")
+            print(f"   - Success: {result.get('success', False)}")
+            print(f"   - Continue: {result.get('continue_processing', False)}")
+            print(f"   - Finished: {finished}")
+            print(f"   - Stage: {request.stage.value}")
+            print(f"   - Session src_len: {session.src_len}")
+
+            # 🔥 关键修复：如果需要继续处理，将请求重新放入队列
+            if not finished and result.get('continue_processing', False):
+                with self.queue_lock:
+                    gpu_id = self.language_gpu_map[request.language_id]
+                    if request.stage == RequestStage.PREFILL:
+                        # Prefill完成后切换到DECODE阶段
+                        request.stage = RequestStage.DECODE
+                        self.decode_queues[gpu_id].append(request)
+                        self.stats['queue_sizes'][gpu_id]['decode'] += 1
+                        print(f"🔄 [QUEUE] Request {request.request_id} 从PREFILL切换到DECODE队列")
+                    else:
+                        # DECODE阶段继续处理
+                        self.decode_queues[gpu_id].append(request)
+                        self.stats['queue_sizes'][gpu_id]['decode'] += 1
+                        print(f"🔄 [QUEUE] Request {request.request_id} 重新进入DECODE队列继续处理")
+
+            return finished
         except Exception as e:
             logger.error(f"Error updating session for request {request.request_id}: {e}")
             self._handle_failed_request(request, f"Session update failed: {str(e)}")
@@ -793,7 +839,11 @@ class LLMScheduler:
         request.is_completed = True
         request.is_processing = False
         
-        if request.result_callback:
+        # 🔥 智能过滤：不发送"already prefilled"错误给用户
+        if "already prefilled" in error_msg:
+            logger.info(f"🔄 过滤重复prefill错误，不调用result_callback: {error_msg}")
+            # 这种错误已经被内部处理，不需要通知用户
+        elif request.result_callback:
             try:
                 request.result_callback(error_result)
             except Exception as e:
@@ -965,7 +1015,7 @@ class LLMScheduler:
     
     def get_supported_languages(self) -> List[str]:
         """Get list of supported language pairs"""
-        return list(self.language_gpu_map.keys())
+        return list(self.language_gpu_map.keys()) 
     
     def _emergency_cleanup_sessions(self):
         """紧急清理不活跃的会话以释放GPU内存"""

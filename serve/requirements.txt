@@ -2,14 +2,17 @@ flask
 flask-cors
 fastapi
 uvicorn
-soundfile
+python-multipart
 numpy
 torch
-yt-dlp
-transformers
-peft
-tqdm
+soundfile
 scikit-learn
 # 可选依赖项 - 完整功能需要
 # simuleval
 # flashinfer
+websockets
+aiofiles
+python-dotenv
+requests
+yt-dlp
+pydantic

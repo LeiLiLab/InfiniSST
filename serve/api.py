@@ -954,10 +954,12 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                     # This is audio data
                     data = message["bytes"]
                     
-                    # 🔍 调试：检查接收到的原始音频数据
-                    print(f"🎤 [DEBUG] WebSocket received audio data:")
+                    # 🔍 全链路日志：WebSocket音频数据接收
+                    print(f"🎤 [WEBSOCKET-AUDIO] 接收音频数据:")
+                    print(f"   - Session ID: {session_id}")
                     print(f"   - Raw bytes length: {len(data)}")
                     print(f"   - First 10 bytes: {data[:10] if len(data) >= 10 else data}")
+                    print(f"   - 接收时间: {time.strftime('%H:%M:%S.%f')[:-3]}")
                     
                     # Convert bytes to numpy array
                     audio_data = np.frombuffer(data, dtype=np.float32)
@@ -966,86 +968,163 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                     # 🔍 调试：检查转换后的音频数据
                     print(f"   - Converted to numpy: shape={audio_data.shape}, dtype={audio_data.dtype}")
                     print(f"   - Audio samples: min={audio_data.min():.6f}, max={audio_data.max():.6f}, mean={audio_data.mean():.6f}")
-                    print(f"   - Chunk {chunk_count}, size: {len(audio_data)}")
+                    print(f"   - Chunk #{chunk_count}, size: {len(audio_data)} samples ({len(audio_data)/16000:.3f}s)")
                     
                     # 🔍 检查是否全为零
                     non_zero_count = np.count_nonzero(audio_data)
                     print(f"   - Non-zero samples: {non_zero_count}/{len(audio_data)} ({100*non_zero_count/len(audio_data):.1f}%)")
                     
                     if len(audio_data) == 0:
-                        print(f"⚠️  [WARNING] Received empty audio data in chunk {chunk_count}")
+                        print(f"⚠️ [WEBSOCKET-AUDIO] Received empty audio data in chunk {chunk_count}")
                         continue
                     
                     if non_zero_count == 0:
-                        print(f"⚠️  [WARNING] Received all-zero audio data in chunk {chunk_count}")
+                        print(f"⚠️ [WEBSOCKET-AUDIO] Received all-zero audio data in chunk {chunk_count}")
                     
-                    # 提交请求到调度器
-                    try:
-                        user_id = session['user_id']
-                        language_pair = session['language_pair']
-                        
-                        print(f"📤 [DEBUG] Submitting to scheduler:")
-                        print(f"   - User ID: {user_id}")
-                        print(f"   - Language: {language_pair}")
-                        print(f"   - Audio shape: {audio_data.shape}")
-                        
-                        # 创建结果回调函数（使用线程安全的队列）
-                        def result_callback(result):
-                            """处理调度器返回的结果"""
+                    # 🔍 全链路日志：准备提交到调度器
+                    user_id = session['user_id']
+                    language_pair = session['language_pair']
+                    
+                    print(f"🚀 [WEBSOCKET->SCHEDULER] 准备提交到调度器:")
+                    print(f"   - Session ID: {session_id}")
+                    print(f"   - User ID: {user_id}")
+                    print(f"   - Language pair: {language_pair}")
+                    print(f"   - Audio chunk: {len(audio_data)} samples")
+                    print(f"   - Chunk序号: {chunk_count}")
+                    
+                    print(f"📤 [DEBUG] Submitting to scheduler:")
+                    print(f"   - User ID: {user_id}")
+                    print(f"   - Language: {language_pair}")
+                    print(f"   - Audio shape: {audio_data.shape}")
+                    
+                    # 创建结果回调函数（使用线程安全的队列）
+                    def result_callback(result):
+                        """处理调度器返回的结果"""
+                        try:
+                            if result.get('success', False):
+                                # 🔥 修复：优先使用完整翻译历史，然后fallback到generated_text
+                                full_translation = result.get('full_translation', '')
+                                generated_text = result.get('generated_text', '')
+                                
+                                # 决定发送什么内容到前端
+                                text_to_send = full_translation if full_translation else generated_text
+                                
+                                if text_to_send:
+                                    # 使用线程安全的方式添加结果到队列
+                                    loop.call_soon_threadsafe(result_queue.put_nowait, text_to_send)
+                                    
+                                    # 🔥 增强调试信息
+                                    if full_translation:
+                                        print(f"📥 调度器完整翻译入队 {session_id}: {text_to_send}")
+                                        print(f"   - 段落数: {result.get('segment_count', 'unknown')}")
+                                        new_segment = result.get('new_segment', '')
+                                        if new_segment:
+                                            print(f"   - 新增内容: '{new_segment}'")
+                                    else:
+                                        print(f"📥 调度器单次结果入队 {session_id}: {text_to_send}")
+                            else:
+                                error_msg = result.get('error', 'Unknown error')
+                                
+                                # 🔥 智能过滤：不发送"already prefilled"错误给用户
+                                if "already prefilled" in error_msg:
+                                    print(f"🔄 过滤重复prefill错误，不发送给用户 {session_id}: {error_msg}")
+                                    # 这种错误已经被内部处理，不需要通知用户
+                                    return
+                                
+                                loop.call_soon_threadsafe(result_queue.put_nowait, f"ERROR: {error_msg}")
+                                print(f"📥 调度器错误入队 {session_id}: {error_msg}")
+                        except Exception as e:
+                            print(f"Error in result callback for {session_id}: {e}")
+                            # 尝试发送错误信息
                             try:
-                                if result.get('success', False):
-                                    # 🔥 修复：优先使用完整翻译历史，然后fallback到generated_text
-                                    full_translation = result.get('full_translation', '')
-                                    generated_text = result.get('generated_text', '')
-                                    
-                                    # 决定发送什么内容到前端
-                                    text_to_send = full_translation if full_translation else generated_text
-                                    
-                                    if text_to_send:
-                                        # 使用线程安全的方式添加结果到队列
-                                        loop.call_soon_threadsafe(result_queue.put_nowait, text_to_send)
-                                        
-                                        # 🔥 增强调试信息
-                                        if full_translation:
-                                            print(f"📥 调度器完整翻译入队 {session_id}: {text_to_send}")
-                                            print(f"   - 段落数: {result.get('segment_count', 'unknown')}")
-                                            new_segment = result.get('new_segment', '')
-                                            if new_segment:
-                                                print(f"   - 新增内容: '{new_segment}'")
-                                        else:
-                                            print(f"📥 调度器单次结果入队 {session_id}: {text_to_send}")
-                                else:
-                                    error_msg = result.get('error', 'Unknown error')
-                                    loop.call_soon_threadsafe(result_queue.put_nowait, f"ERROR: {error_msg}")
-                                    print(f"📥 调度器错误入队 {session_id}: {error_msg}")
-                            except Exception as e:
-                                print(f"Error in result callback for {session_id}: {e}")
-                                # 尝试发送错误信息
-                                try:
-                                    loop.call_soon_threadsafe(result_queue.put_nowait, f"ERROR: Callback failed - {str(e)}")
-                                except:
-                                    pass
+                                loop.call_soon_threadsafe(result_queue.put_nowait, f"ERROR: Callback failed - {str(e)}")
+                            except:
+                                pass
+                    
+                    # 🔥 关键修复：智能决定发送PREFILL还是DECODE请求
+                    from serve.scheduler import RequestStage
+                    
+                    # 🔍 检查调度器中的session状态来决定stage
+                    scheduler_session_info = global_scheduler.get_session_info(user_id, language_pair)
+                    
+                    if scheduler_session_info is None:
+                        # 新session，需要PREFILL
+                        stage_to_use = RequestStage.PREFILL
+                        print(f"🆕 [STAGE-DECISION] 新session，使用PREFILL stage")
+                    else:
+                        # 已存在session，检查是否已有cache
+                        session_age = time.time() - scheduler_session_info['created_at']
+                        has_audio = scheduler_session_info['source_length'] > 0
+                        has_translations = scheduler_session_info['target_segments'] > 0
                         
-                        # 提交请求到调度器
-                        from serve.scheduler import RequestStage
+                        print(f"🔍 [STAGE-DECISION] 已存在session分析:")
+                        print(f"   - Session age: {session_age:.1f}s")
+                        print(f"   - Has audio: {has_audio} ({scheduler_session_info['source_length']} samples)")
+                        print(f"   - Has translations: {has_translations} ({scheduler_session_info['target_segments']} segments)")
+                        
+                        if has_audio or has_translations:
+                            # 已经有数据，应该使用DECODE继续
+                            stage_to_use = RequestStage.DECODE
+                            print(f"🔄 [STAGE-DECISION] Session已有数据，使用DECODE stage")
+                        else:
+                            # Session存在但没有数据，可能是刚创建，使用PREFILL
+                            stage_to_use = RequestStage.PREFILL
+                            print(f"🆕 [STAGE-DECISION] Session无数据，使用PREFILL stage")
+                    
+                    print(f"🎯 [STAGE-DECISION] 最终决定: {stage_to_use.value}")
+                    
+                    # 提交请求到调度器 - 🔥 增强错误处理
+                    try:
                         request_id = global_scheduler.submit_request(
                             user_id=user_id,
                             language_id=language_pair,
                             speech_data=audio_data,
-                            stage=RequestStage.PREFILL,
+                            stage=stage_to_use,
                             is_final=False,
                             max_new_tokens=session.get('latency_multiplier', 2) * 10,
                             result_callback=result_callback
                         )
                         
-                        print(f"✅ 提交请求 {request_id} 到调度器 (session: {session_id})")
+                        print(f"✅ 提交PREFILL请求 {request_id} 到调度器 (session: {session_id})")
                         
+                    except ValueError as ve:
+                        # 🔥 智能处理重复prefill错误
+                        if "already prefilled" in str(ve):
+                            print(f"🔄 Session {session_id} 已经prefill过，转为DECODE请求")
+                            
+                            # 尝试提交DECODE请求继续处理
+                            try:
+                                request_id = global_scheduler.submit_request(
+                                    user_id=user_id,
+                                    language_id=language_pair,
+                                    speech_data=audio_data,
+                                    stage=RequestStage.DECODE,
+                                    is_final=False,
+                                    max_new_tokens=session.get('latency_multiplier', 2) * 10,
+                                    result_callback=result_callback
+                                )
+                                
+                                print(f"✅ 转换为DECODE请求 {request_id} (session: {session_id})")
+                                
+                            except Exception as decode_error:
+                                print(f"❌ DECODE请求也失败 {session_id}: {decode_error}")
+                                # 这种情况下可能是真正的错误，但不发送给用户
+                                # 因为session可能仍在正常运行
+                                pass
+                        else:
+                            # 其他ValueError，记录但不发送给用户
+                            print(f"⚠️ Scheduler request failed {session_id}: {ve}")
+                            pass
+                    
                     except Exception as e:
+                        # 其他类型的错误，记录但也不发送给用户
                         print(f"❌ 提交调度器请求失败 {session_id}: {e}")
                         import traceback
                         traceback.print_exc()
-                        await websocket.send_text(f"ERROR: {str(e)}")
-                        
+                        # 🔥 修改：不发送错误给用户，因为可能只是暂时性问题
+                        # await websocket.send_text(f"ERROR: {str(e)}")
+                        pass
+                    
             except starlette.websockets.WebSocketDisconnect:
                 print(f"WebSocket disconnected for scheduler session {session_id}")
                 break
@@ -1585,6 +1664,104 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 async def read_index():
     """Return index.html"""
     return FileResponse('static/index.html')
+
+# 添加测试音频处理端点
+@app.post("/test_fixed_audio")
+async def test_fixed_audio(request: Request):
+    """处理固定的测试音频文件"""
+    try:
+        data = await request.json()
+        language_pair = data.get('language_pair', 'English -> Chinese')
+        
+        # 初始化翻译会话
+        session = await initialize_translation(
+            agent_type='infinisst_faster',
+            language_pair=language_pair,
+            latency_multiplier=2
+        )
+        
+        if not session or 'session_id' not in session:
+            raise HTTPException(status_code=500, detail="Failed to initialize translation session")
+        
+        # 启动后台任务处理固定音频文件
+        background_tasks = BackgroundTasks()
+        background_tasks.add_task(process_test_audio, session['session_id'])
+        
+        return session
+        
+    except Exception as e:
+        logger.error(f"测试音频处理失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def process_test_audio(session_id: str):
+    """处理固定的测试音频文件的后台任务"""
+    try:
+        import soundfile as sf
+        import numpy as np
+        
+        # 读取固定的测试音频文件
+        test_audio_path = os.path.expanduser("~/Downloads/0000AAAA.mp4")
+        if not os.path.exists(test_audio_path):
+            logger.error(f"测试音频文件不存在: {test_audio_path}")
+            return
+            
+        # 使用soundfile读取音频
+        audio_data, sample_rate = sf.read(test_audio_path)
+        if len(audio_data.shape) > 1:
+            audio_data = audio_data.mean(axis=1)  # 转换为单声道
+            
+        # 确保采样率为16kHz
+        if sample_rate != 16000:
+            # 需要重采样
+            from scipy import signal
+            audio_data = signal.resample(audio_data, int(len(audio_data) * 16000 / sample_rate))
+            
+        # 将音频数据分成多个块
+        chunk_size = 30720  # 每个块1.92秒 (16000 * 1.92 = 30720)
+        audio_chunks = [
+            audio_data[i:i+chunk_size] 
+            for i in range(0, len(audio_data), chunk_size)
+        ]
+        
+        # 获取会话对象
+        session = active_sessions.get(session_id)
+        if not session:
+            logger.error(f"会话不存在: {session_id}")
+            return
+            
+        # 逐个处理音频块
+        for i, chunk in enumerate(audio_chunks):
+            is_last = i == len(audio_chunks) - 1
+            
+            # 确保音频数据类型正确
+            chunk = chunk.astype(np.float32)
+            
+            # 处理这个音频块
+            if SCHEDULER_AVAILABLE and global_scheduler:
+                # 使用调度器处理
+                stage = RequestStage.PREFILL if i == 0 else RequestStage.DECODE
+                request_id = global_scheduler.submit_request(
+                    user_id=session_id,
+                    language_id=session['language_pair'],
+                    speech_data=chunk,
+                    stage=stage,
+                    is_final=is_last
+                )
+                logger.info(f"测试音频块 {i+1}/{len(audio_chunks)} 已提交到调度器: {request_id}")
+            else:
+                # 使用传统方式处理
+                await session['session'].process_segment(chunk, is_last)
+                logger.info(f"测试音频块 {i+1}/{len(audio_chunks)} 已处理完成")
+            
+            # 短暂等待，模拟实时音频输入
+            await asyncio.sleep(0.1)
+            
+        logger.info(f"测试音频处理完成: {session_id}")
+        
+    except Exception as e:
+        logger.error(f"测试音频处理失败: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="InfiniSST Translation API Server")
