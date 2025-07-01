@@ -689,8 +689,19 @@ async def startup_event():
         try:
             print("🚀 初始化集成调度系统...")
             
-            # 创建 GPU 语言映射
-            gpu_language_map = {gpu_id: "English -> Chinese" for gpu_id in gpus[:1]}  # 只使用第一个GPU
+            # 创建 GPU 语言映射 - 使用逻辑GPU ID
+            # 将物理GPU ID转换为逻辑GPU ID
+            logical_gpu_ids = []
+            for physical_gpu_id in gpus[:1]:  # 只使用第一个GPU
+                try:
+                    logical_id = get_logical_index_from_physical_id(physical_gpu_id)
+                    logical_gpu_ids.append(logical_id)
+                except ValueError as e:
+                    print(f"⚠️ GPU ID转换失败: {e}")
+                    logical_gpu_ids.append(0)  # 默认使用逻辑GPU 0
+            
+            gpu_language_map = {logical_id: "English -> Chinese" for logical_id in logical_gpu_ids}
+            print(f"GPU语言映射 (物理->逻辑): {gpus[:1]} -> {logical_gpu_ids}")
             print(f"GPU语言映射: {gpu_language_map}")
             
             # 创建推理引擎
@@ -708,8 +719,6 @@ async def startup_event():
                 # 启动推理引擎
                 global_inference_engine.start_all()
                 print("✅ 推理引擎已启动")
-            else:
-                print("⚠️ 推理引擎模型加载失败，将使用模拟推理")
             
             # 创建调度器
             class Args:
@@ -994,26 +1003,8 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                             """处理调度器返回的结果"""
                             try:
                                 if result.get('success', False):
-                                    # 🔥 修复：优先使用完整翻译历史，然后fallback到generated_text
-                                    full_translation = result.get('full_translation', '')
-                                    generated_text = result.get('generated_text', '')
-                                    
-                                    # 决定发送什么内容到前端
-                                    text_to_send = full_translation if full_translation else generated_text
-                                    
-                                    if text_to_send:
-                                        # 使用线程安全的方式添加结果到队列
-                                        loop.call_soon_threadsafe(result_queue.put_nowait, text_to_send)
-                                        
-                                        # 🔥 增强调试信息
-                                        if full_translation:
-                                            print(f"📥 调度器完整翻译入队 {session_id}: {text_to_send}")
-                                            print(f"   - 段落数: {result.get('segment_count', 'unknown')}")
-                                            new_segment = result.get('new_segment', '')
-                                            if new_segment:
-                                                print(f"   - 新增内容: '{new_segment}'")
-                                        else:
-                                            print(f"📥 调度器单次结果入队 {session_id}: {text_to_send}")
+                                    text_to_send = result.get('full_translation', '')
+                                    loop.call_soon_threadsafe(result_queue.put_nowait, text_to_send)
                                 else:
                                     error_msg = result.get('error', 'Unknown error')
                                     loop.call_soon_threadsafe(result_queue.put_nowait, f"ERROR: {error_msg}")
@@ -1026,8 +1017,20 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                                 except:
                                     pass
                         
-                        # 提交请求到调度器
                         from serve.scheduler import RequestStage
+
+                        # 初始化计数器
+                        if "request_count" not in session:
+                            session["request_count"] = 0
+                        if "request_count_by_stage" not in session:
+                            session["request_count_by_stage"] = {}
+
+                        # 更新计数
+                        session["request_count"] += 1
+                        stage_str = RequestStage.PREFILL.name  # 或者 decode 阶段写成 RequestStage.DECODE.name
+                        session["request_count_by_stage"][stage_str] = session["request_count_by_stage"].get(stage_str, 0) + 1
+
+                        # 提交请求
                         request_id = global_scheduler.submit_request(
                             user_id=user_id,
                             language_id=language_pair,
@@ -1037,8 +1040,9 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                             max_new_tokens=session.get('latency_multiplier', 2) * 10,
                             result_callback=result_callback
                         )
-                        
-                        print(f"✅ 提交请求 {request_id} 到调度器 (session: {session_id})")
+
+                        # 打印结构化日志
+                        print(f"[{time.strftime('%H:%M:%S')}] [Session: {session_id}] [Stage: {stage_str}] ✅ 提交请求 {request_id}，累计 {session['request_count']} 次（本阶段: {session['request_count_by_stage'][stage_str]}）")
                         
                     except Exception as e:
                         print(f"❌ 提交调度器请求失败 {session_id}: {e}")

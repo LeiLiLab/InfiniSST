@@ -319,8 +319,10 @@ class InferenceEngine:
                 self.stats['average_latency'] * (self.stats['completed_requests'] - len(results)) + 
                 latency * len(results)
             ) / self.stats['completed_requests']
-            
-            logger.debug(f"批处理完成: {len(requests)}个请求, 耗时: {latency:.3f}s")
+            stage = requests[0].stage.value if requests else "unknown"
+            prefill_count = len([r for r in requests if r.stage == RequestStage.PREFILL])
+            decode_count = len([r for r in requests if r.stage == RequestStage.DECODE])
+            logger.info(f"[IMPORTANT] 批处理完成 [{stage}]: {len(requests)} 个请求 (Prefill:{prefill_count}, Decode:{decode_count}), 耗时: {latency*1000:.1f}ms")
             
         except Exception as e:
             logger.error(f"批处理失败: {e}")
@@ -505,7 +507,6 @@ class InferenceEngine:
         
         # 🔥 关键修复：创建S2TAgentStates对象，让model的_prepare_speech和_prepare_inputs方法处理
         states = S2TAgentStates(
-            src_len=request.session_src_len,  # 使用session的已处理长度
             speech_cache=request.speech_cache,
             past_key_values=request.past_key_values,
             target_ids=getattr(request, 'target_ids', []),
@@ -513,23 +514,10 @@ class InferenceEngine:
             translations_list=getattr(request, 'translations_list', [])
         )
         
-        # 设置source数据（完整的音频历史）
-        if request.speech_batch.dim() == 2:
-            speech_data = request.speech_batch[0]  # 取第一个batch
-        else:
-            speech_data = request.speech_batch
-        
         # 转换为list格式（S2TAgentStates期望的格式）
-        states.source = speech_data.tolist()
+        states.source = request.speech_batch
         states.source_finished = getattr(request, 'is_final', False)
         states.source_sample_rate = 16000
-        
-        print(f"🔧 [PREPARE-DATA] 创建states对象:")
-        print(f"   - src_len: {states.src_len}")
-        print(f"   - source length: {len(states.source)}")
-        print(f"   - speech_cache: {states.speech_cache is not None}")
-        print(f"   - past_key_values: {states.past_key_values is not None}")
-        
         # 🔥 直接调用model的prepare方法，就像infinisst_faster.policy()那样
         speech_batch = self.model._prepare_speech(states)
         input_ids = self.model._prepare_inputs(states)
@@ -537,10 +525,6 @@ class InferenceEngine:
         print(f"🔧 [PREPARE-DATA] 调用model._prepare_speech和_prepare_inputs完成:")
         print(f"   - speech_batch shape: {speech_batch.shape}")
         print(f"   - input_ids shape: {input_ids.shape}")
-        
-        # 🔥 关键修复：参考infinisst_faster.py，模拟pseudo_batch_size处理
-        # 但在ORCA架构中，我们每次只处理一个request，所以使用pseudo_batch_size=1
-        pseudo_batch_size = 1  # ORCA架构：逐个处理请求
         
         # 确保数据维度正确
         if speech_batch.dim() == 2:
@@ -653,7 +637,6 @@ class InferenceEngine:
         print(f"🔍 [BEAM-REQUEST] Created beam request for {request.request_id}")
         print(f"   - Speech shape: {speech_batch.shape}")
         print(f"   - Input IDs shape: {input_ids.shape}")
-        print(f"   - Prefill finished: {beam_req.prefill_finished}")
         print(f"   - Max new tokens: {beam_req.max_new_tokens}")
         print(f"   - Blocksize: {self.model.latency_multiplier * self.model.blocksize}")
         

@@ -97,7 +97,6 @@ def synchronized_timer(description: str):
 
 @dataclass
 class S2TAgentStates(AgentStates):
-    src_len: int
     speech_cache: None
     past_key_values: None
     target_ids: list
@@ -107,7 +106,6 @@ class S2TAgentStates(AgentStates):
 
     def reset(self):
         super().reset()
-        self.src_len = 0
         self.speech_cache = None
         self.past_key_values = None
         self.target_ids = []
@@ -183,7 +181,6 @@ class InfiniSST(SpeechToTextAgent):
 
     def build_states(self):
         return S2TAgentStates(
-            src_len=0,
             speech_cache=None,
             past_key_values=None,
             target_ids=[],
@@ -398,48 +395,16 @@ class InfiniSST(SpeechToTextAgent):
 
     def _prepare_speech(self, states):
         sp_seg_frame = int(self.args.block_size * 0.02 * 16000) * self.latency_multiplier
-        
-        # Only tensorize the new part
-        if len(states.source) > states.MAX_SRC_LEN:
-            states.src_len -= len(states.source) - states.MAX_SRC_LEN
-            states.source = states.source[-states.MAX_SRC_LEN:]
 
         source = states.source
         if self.audio_normalize:
             source = normalize(torch.tensor(states.source).unsqueeze(0))[0].tolist()
-           
-        source = torch.tensor(source[states.src_len:])
         
+        source = torch.tensor(source, dtype=torch.float)
         # Pad if needed
         if source.size(0) % sp_seg_frame != 0:
             n_pad = sp_seg_frame - source.size(0) % sp_seg_frame
             source = torch.cat([source, torch.zeros(n_pad).to(source)], dim=0)
-            
-        # Add offset only for first chunk
-        if states.src_len == 0:
-            offset = torch.zeros(79 + 320).to(source)
-            source = torch.cat([offset, source], dim=0)
-        
-        if self.args.model_type == "seamless_llama31":
-            if states.src_len > 0:
-                if states.src_len >= sp_seg_frame + 320 + 79:
-                    source_left_pad = states.source[states.src_len - sp_seg_frame - 320 - 79 : states.src_len]
-                elif states.src_len == sp_seg_frame:
-                    offset = [0.] * (79 + 320)
-                    source_left_pad = offset + states.source[: states.src_len]
-                else:
-                    raise ValueError(f"Invalid source length: {len(states.source)}")
-                source_left_pad = torch.tensor(source_left_pad)
-                source = torch.cat([source_left_pad, source], dim=0)
-            
-            source = self.processor(
-                audios=source.numpy(), 
-                sampling_rate=16000,
-                do_normalize_per_mel_bins=False, 
-                return_tensors="pt",
-            )['input_features'][0, -self.args.block_size * self.latency_multiplier:]
-        
-        states.src_len = len(states.source)
 
         speech_batch = source.unsqueeze(0).to(device=self.model.device, dtype=self.model.dtype)
         return speech_batch

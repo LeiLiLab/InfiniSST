@@ -3,6 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from logging import log
 import math
 from dataclasses import dataclass, field
 from typing import List, Tuple
@@ -435,17 +436,38 @@ class Wav2Vec2Model(BaseFairseqModel):
         requests,
         pagetable,
     ):    
+        # print("\n=== Speech Batch Processing Start ===")
+        # print(f"Number of requests to process: {len(requests)}")
+        
         sources = []
         for request in requests:
+            # print(f"\n[Request {len(sources)}]")
+            # print(f"⚡ Input speech shape: {request['speech'].shape}")
+            # print(f"⚡ Input speech stats: min={request['speech'].min():.3f}, max={request['speech'].max():.3f}, mean={request['speech'].mean():.3f}")
+            
             if request['cache'] is None:
                 request['cache'] = SpeechCache()
+                print("✨ Created new SpeechCache")
             cache = request['cache']
+            
             if cache.src is not None:
+                print(f"📎 Existing cache.src shape: {cache.src.shape}")
                 cache.src = torch.cat([cache.src, request['speech']], dim=0)
+                print(f"📎 After concatenation shape: {cache.src.shape}")
             else:
-                cache.src = request['speech']
+                offset = torch.zeros(79 + 320).to(request['speech'])
+                cache.src = torch.cat([offset, request['speech']], dim=0)
+                print("📎 No existing cache.src, using input speech directly")
+            
             sources.append(cache.src)
+            print(f"➡️ Final source shape: {cache.src.shape}")
+        
+        #print("\n=== Stacking Sources ===")
+        # for i, src in enumerate(sources):
+        #     print(f"Source {i} shape: {src.shape}")
+        
         source = torch.stack(sources, dim=0)
+        print(f"Final stacked shape: {source.shape}\n")
 
         with torch.no_grad():
             features = self.feature_extractor(source)
@@ -454,14 +476,23 @@ class Wav2Vec2Model(BaseFairseqModel):
         for i, request in enumerate(requests):
             cache = request['cache']
             blocksize = request['blocksize']
-            if cache.src_len > 0:
-                feature = features[i, :, blocksize : 2 * blocksize]
-                max_src_token_len = 79 + 320 + 320 * blocksize
-                cache.src = cache.src[-max_src_token_len:]
-            else:
-                feature = features[i, :, : blocksize]
-            cache.src_len = blocksize
+
+            feature = features[i, :, : blocksize]
+            max_src_token_len = 79 + 320
+            cache.src = cache.src[-max_src_token_len:]
             feature_batch.append(feature)
+
+
+            try:
+                # print  ("🔍 [DEBUG - 拼接前] sources:")
+                # for idx, src in enumerate(sources):
+                #     print(f"  - source[{idx}].shape: {src.shape}")
+                
+                print(f"🔍 [DEBUG - 当前 request speech shape]: {request['speech'].shape}")
+                # print(f"🔍 [DEBUG - 当前 cache.src shape]: {cache.src.shape}")
+                # print(f"🔍 [DEBUG - 当前 cache.src_len]: {cache.src_len}")
+            except Exception as e:
+                print(f"[日志打印出错] {e}")
 
         features = torch.cat(feature_batch, dim=-1).transpose(0, 1)        
         features = self.layer_norm(features)
