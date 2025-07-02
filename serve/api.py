@@ -1,4 +1,9 @@
 import multiprocessing as mp
+import logging
+
+# Configure logger
+logger = logging.getLogger(__name__)
+
 # Set the start method for multiprocessing to 'spawn' for better compatibility across platforms
 # This is especially important on macOS where 'fork' can cause issues with multithreading
 # Do this at the very beginning before any other imports that might use multiprocessing
@@ -799,65 +804,6 @@ async def initialize_translation(agent_type: str, language_pair: str, latency_mu
             # 如果调度器失败，回退到原始系统
             pass
     
-    # 回退到原始的TranslationSession系统
-    print(f"🔄 回退到原始TranslationSession系统 {session_id}")
-    
-    # Check if there's a free GPU
-    free_gpu = find_free_gpu()
-    
-    if free_gpu is not None:
-        # Initialize the session immediately on the free GPU
-        session_args = copy.deepcopy(args)
-        session_args.latency_multiplier = latency_multiplier
-        session_args.max_new_tokens = 10 * latency_multiplier
-        
-        try:
-            # Create the session with the specified GPU
-            print(f"Creating session {session_id} on GPU {free_gpu}")
-            session = TranslationSession(agent_type, language_pair, session_args, gpu_id=free_gpu)
-            
-            # Add the session to active sessions immediately, but mark it as initializing
-            active_sessions[session_id] = session
-            session_last_activity[session_id] = time.time()
-            session_last_ping[session_id] = time.time()
-            
-            # Map the session to the GPU
-            session_gpu_map[session_id] = free_gpu
-            
-            # 异步等待工作进程准备就绪，但不阻塞API响应
-            # 创建一个后台任务来等待工作进程准备就绪
-            asyncio.create_task(session.wait_for_ready())
-            
-            print(f"Session {session_id} initialization started on GPU {free_gpu}")
-            
-            return {"session_id": session_id, "queued": False, "queue_position": 0, "initializing": True, "scheduler_based": False}
-        except Exception as e:
-            print(f"Error initializing session {session_id} on GPU {free_gpu}: {e}")
-            import traceback
-            traceback.print_exc()
-            return {"error": f"Failed to initialize session: {str(e)}", "queued": False, "queue_position": 0}
-    else:
-        # No free GPU, add to queue
-        try:
-            async with queue_lock:
-                queue_item = {
-                    "session_id": session_id,
-                    "agent_type": agent_type,
-                    "language_pair": language_pair,
-                    "latency_multiplier": latency_multiplier,
-                    "timestamp": time.time()
-                }
-                session_queue.append(queue_item)
-                queue_position = len(session_queue)
-                
-                print(f"Session {session_id} added to queue at position {queue_position} (no free GPUs available)")
-                
-                return {"session_id": session_id, "queued": True, "queue_position": queue_position, "scheduler_based": False}
-        except Exception as e:
-            print(f"Error adding session {session_id} to queue: {e}")
-            import traceback
-            traceback.print_exc()
-            return {"error": f"Failed to queue session: {str(e)}", "queued": False, "queue_position": 0}
 
 @app.get("/queue_status/{session_id}")
 async def get_queue_status(session_id: str):
@@ -1038,7 +984,8 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                             stage=RequestStage.PREFILL,
                             is_final=False,
                             max_new_tokens=session.get('latency_multiplier', 2) * 10,
-                            result_callback=result_callback
+                            result_callback=result_callback,
+                            api_session_id=session_id
                         )
 
                         # 打印结构化日志
@@ -1309,55 +1256,137 @@ async def update_latency(session_id: str, latency_multiplier: int):
 async def reset_translation(session_id: str):
     """重置翻译会话，清空历史翻译内容"""
     try:
-        # 从session_id中提取user_id和language_pair
-        if session_id.startswith("InfiniSST_"):
-            # 调度器会话：InfiniSST_English -> Chinese_1_client_xxx
-            parts = session_id.split("_")
-            if len(parts) >= 4:
-                language_pair = f"{parts[1]} -> {parts[3]}"
-                client_id = "_".join(parts[4:])  # client_xxx
-                user_id = client_id
-                
-                # 重置调度器会话
-                if global_scheduler:
-                    success = global_scheduler.reset_session(user_id, language_pair)
-                    if success:
-                        logger.info(f"✅ 调度器会话重置成功: {session_id}")
-                        return {
-                            "status": "success", 
-                            "message": f"调度器会话 {session_id} 重置成功",
-                            "session_type": "scheduler"
-                        }
-                    else:
-                        return {
-                            "status": "error", 
-                            "message": f"调度器会话 {session_id} 不存在或重置失败",
-                            "session_type": "scheduler"
-                        }
-                else:
-                    return {"status": "error", "message": "调度器不可用"}
+        logger.info(f"🔍 重置翻译请求 - Session ID: {session_id}")
         
-        # 传统会话处理
+        # 检查会话是否存在
         if session_id in active_sessions:
             session = active_sessions[session_id]
             
-            if session:
-                # 重置传统会话
-                session.reset()
-                logger.info(f"✅ 传统会话重置成功: {session_id}")
-                return {
-                    "status": "success", 
-                    "message": f"传统会话 {session_id} 重置成功",
-                    "session_type": "traditional"
-                }
+            # 检查是否是基于调度器的会话
+            is_scheduler_based = isinstance(session, dict) and session.get('is_scheduler_based', False)
+            
+            if is_scheduler_based:
+                # 调度器会话处理 - 支持两种格式
+                client_id = None
+                language_pair = None
+                
+                try:
+                    if session_id.startswith("client_"):
+                        # 新格式：client_hl00mmox6ss69onw7dpeu8_English -> Chinese_1751481504
+                        last_underscore_idx = session_id.rfind('_')
+                        if last_underscore_idx == -1:
+                            raise ValueError("Invalid new format session ID")
+                        
+                        before_timestamp = session_id[:last_underscore_idx]
+                        arrow_idx = before_timestamp.find(' -> ')
+                        if arrow_idx == -1:
+                            raise ValueError("Language pair separator not found in new format")
+                        
+                        lang_start_idx = before_timestamp.rfind('_', 0, arrow_idx)
+                        if lang_start_idx == -1:
+                            raise ValueError("Client ID separator not found in new format")
+                        
+                        client_id = before_timestamp[:lang_start_idx]
+                        language_pair = before_timestamp[lang_start_idx + 1:]
+                        
+                    elif session_id.startswith("InfiniSST_"):
+                        # 旧格式：InfiniSST_English -> Chinese_1_client_xxx
+                        # 移除 "InfiniSST_" 前缀
+                        remaining_part = session_id[10:]  # "English -> Chinese_1_client_xxx"
+                        
+                        # 找到最后一个 "_client_" 来分离语言对和客户端ID
+                        client_marker = "_client_"
+                        client_index = remaining_part.rfind(client_marker)
+                        if client_index != -1:
+                            # 语言对部分: "English -> Chinese_1"
+                            language_part = remaining_part[:client_index]  # "English -> Chinese_1"
+                            # 客户端ID部分: "xxx"
+                            client_id = "client_" + remaining_part[client_index + len(client_marker):]  # "client_xxx"
+                            
+                            # 从语言对部分移除版本号（最后的 "_数字"）
+                            if '_' in language_part:
+                                language_pair = language_part.rsplit('_', 1)[0]  # "English -> Chinese"
+                            else:
+                                language_pair = language_part
+                        else:
+                            raise ValueError("Client marker not found in old format session ID")
+                    else:
+                        raise ValueError("Unknown session ID format")
+                    
+                    logger.info(f"🔍 解析调度器会话:")
+                    logger.info(f"   - Session ID: {session_id}")
+                    logger.info(f"   - Client ID: {client_id}")
+                    logger.info(f"   - Language pair: {language_pair}")
+                    
+                    # 重置调度器会话
+                    if global_scheduler and client_id and language_pair:
+                        success = global_scheduler.reset_session(client_id, language_pair)
+                        if success:
+                            logger.info(f"✅ 调度器会话重置成功: {session_id}")
+                            return {
+                                "success": True,
+                                "status": "success", 
+                                "message": "Scheduler session reset successfully",
+                                "session_type": "scheduler"
+                            }
+                        else:
+                            logger.warning(f"⚠️ 调度器会话重置失败: {session_id}")
+                            return {
+                                "success": False,
+                                "status": "error", 
+                                "message": f"Scheduler session {session_id} does not exist or reset failed",
+                                "session_type": "scheduler"
+                            }
+                    else:
+                        return {
+                            "success": False,
+                            "status": "error", 
+                            "message": "Scheduler unavailable or parameter parsing failed"
+                        }
+                        
+                except Exception as parse_error:
+                    logger.error(f"❌ 解析调度器session_id失败: {parse_error}")
+                    return {
+                        "success": False,
+                        "status": "error", 
+                        "message": f"Failed to parse session_id: {str(parse_error)}"
+                    }
+            
             else:
-                return {"status": "error", "message": f"会话 {session_id} 未找到有效的session对象"}
+                # 传统会话处理
+                if hasattr(session, 'reset'):
+                    session.reset()
+                    logger.info(f"✅ 传统会话重置成功: {session_id}")
+                    return {
+                        "success": True,
+                        "status": "success", 
+                        "message": "Traditional session reset successfully",
+                        "session_type": "traditional"
+                    }
+                else:
+                    logger.error(f"❌ 传统会话对象无效: {session_id}")
+                    return {
+                        "success": False,
+                        "status": "error", 
+                        "message": f"Session {session_id} has no valid session object"
+                    }
         
-        return {"status": "error", "message": f"会话 {session_id} 不存在"}
+        logger.warning(f"⚠️ 会话不存在: {session_id}")
+        return {
+            "success": False,
+            "status": "error", 
+            "message": f"Session {session_id} does not exist"
+        }
         
     except Exception as e:
-        logger.error(f"重置会话 {session_id} 时出错: {e}")
-        return {"status": "error", "message": f"重置会话失败: {str(e)}"}
+        logger.error(f"❌ 重置会话 {session_id} 时出错: {e}")
+        import traceback
+        logger.error(f"详细错误信息: {traceback.format_exc()}")
+        return {
+            "success": False,
+            "status": "error", 
+            "message": f"Session reset failed: {str(e)}"
+        }
 
 @app.post("/delete_session")
 async def delete_session(request: Request, session_id: Optional[str] = None):
@@ -1509,13 +1538,13 @@ async def load_models():
         if success:
             return {
                 "success": True,
-                "message": "所有模型加载成功",
+                "message": "All models loaded successfully",
                 "loaded_gpus": list(global_inference_engine.engines.keys())
             }
         else:
             return {
                 "success": False,
-                "error": "部分或全部模型加载失败"
+                "error": "Some or all models failed to load"
             }
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -1615,7 +1644,6 @@ if __name__ == "__main__":
         reload=args.reload if hasattr(args, 'reload') else False,
         workers=1,  # 单个worker避免进程间通信问题
         limit_concurrency=100,  # 限制并发连接数
-        limit_max_requests=1000,  # 最大请求数后重启worker
         timeout_keep_alive=30,  # Keep-alive超时
         access_log=True,  # 启用访问日志
     )

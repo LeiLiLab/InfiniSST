@@ -440,20 +440,21 @@
         /* Floating Translation Panel */
         .translation-panel {
             position: fixed;
-            bottom: 30px;
+            bottom: 120px;
             left: 50%;
             transform: translateX(-50%);
             width: calc(100% - 60px);
             max-width: 1160px;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.9);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 16px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-            z-index: 1000;
+            z-index: 10000;
             transition: all 0.3s ease;
-            cursor: move;
             user-select: none;
+            min-width: 300px;
+            min-height: 200px;
         }
 
         .translation-panel.minimized {
@@ -464,6 +465,7 @@
         .translation-panel.dragging {
             transition: none;
             box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
+            z-index: 10001;
         }
 
         .translation-header {
@@ -571,6 +573,8 @@
             padding: 20px;
             max-height: 300px;
             overflow-y: auto;
+            position: relative;
+            z-index: 1;
         }
 
         .translation-output {
@@ -669,10 +673,15 @@
             .translation-panel {
                 left: 15px;
                 right: 15px;
-                bottom: 15px;
+                bottom: 80px;
                 width: auto;
                 max-width: none;
                 transform: none;
+            }
+
+            /* 隐藏移动端的拖拽手柄 */
+            .resize-handle {
+                display: none;
             }
         }
 
@@ -698,15 +707,42 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Resize handle */
+        /* Resize handles */
         .resize-handle {
             position: absolute;
-            top: 0;
+            background: rgba(255, 255, 255, 0.1);
+            transition: background 0.2s ease;
+        }
+
+        .resize-handle:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .resize-handle-left {
+            top: 20px;
+            left: 0;
+            width: 6px;
+            height: calc(100% - 40px);
+            cursor: w-resize;
+            border-radius: 0 3px 3px 0;
+        }
+
+        .resize-handle-right {
+            top: 20px;
             right: 0;
-            width: 20px;
-            height: 20px;
-            cursor: nw-resize;
-            background: linear-gradient(-45deg, transparent 0%, transparent 40%, rgba(255,255,255,0.1) 40%, rgba(255,255,255,0.1) 60%, transparent 60%);
+            width: 6px;
+            height: calc(100% - 40px);
+            cursor: e-resize;
+            border-radius: 3px 0 0 3px;
+        }
+
+        .resize-handle-bottom {
+            bottom: 0;
+            left: 20px;
+            width: calc(100% - 40px);
+            height: 6px;
+            cursor: s-resize;
+            border-radius: 3px 3px 0 0;
         }
 
         /* Toast通知系统已移除 */
@@ -903,7 +939,9 @@
                 Translation will appear here...
             </div>
         </div>
-        <div class="resize-handle" id="resizeHandle"></div>
+        <div class="resize-handle resize-handle-left" id="resizeHandleLeft"></div>
+        <div class="resize-handle resize-handle-right" id="resizeHandleRight"></div>
+        <div class="resize-handle resize-handle-bottom" id="resizeHandleBottom"></div>
     </div>
 
     <script>
@@ -946,6 +984,7 @@
         // Panel dragging variables
         let isDragging = false;
         let isResizing = false;
+        let resizeDirection = null;
         let dragOffset = { x: 0, y: 0 };
         let isMinimized = false;
 
@@ -977,7 +1016,9 @@
         const translationContent = document.getElementById('translationContent');
         const minimizeBtn = document.getElementById('minimizeBtn');
         const closeBtn = document.getElementById('closeBtn');
-        const resizeHandle = document.getElementById('resizeHandle');
+        const resizeHandleLeft = document.getElementById('resizeHandleLeft');
+        const resizeHandleRight = document.getElementById('resizeHandleRight');
+        const resizeHandleBottom = document.getElementById('resizeHandleBottom');
 
         // Electron 集成检测和初始化
         let isElectron = false;
@@ -1728,9 +1769,18 @@
             if (panelHeader) {
                 panelHeader.addEventListener('mousedown', startDragging);
             }
-            if (resizeHandle) {
-                resizeHandle.addEventListener('mousedown', startResizing);
+            
+            // 添加拖拽手柄事件监听器
+            if (resizeHandleLeft) {
+                resizeHandleLeft.addEventListener('mousedown', (e) => startResizing(e, 'left'));
             }
+            if (resizeHandleRight) {
+                resizeHandleRight.addEventListener('mousedown', (e) => startResizing(e, 'right'));
+            }
+            if (resizeHandleBottom) {
+                resizeHandleBottom.addEventListener('mousedown', (e) => startResizing(e, 'bottom'));
+            }
+            
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', stopDragging);
 
@@ -1759,8 +1809,9 @@
             e.preventDefault();
         }
 
-        function startResizing(e) {
+        function startResizing(e, direction) {
             isResizing = true;
+            resizeDirection = direction;
             e.preventDefault();
             e.stopPropagation();
         }
@@ -1783,11 +1834,25 @@
                 translationPanel.style.transform = 'none';
             } else if (isResizing && translationPanel) {
                 const rect = translationPanel.getBoundingClientRect();
-                const newWidth = Math.max(300, e.clientX - rect.left);
-                const newHeight = Math.max(200, e.clientY - rect.top);
+                const currentWidth = rect.width;
+                const currentHeight = rect.height;
                 
-                translationPanel.style.width = newWidth + 'px';
-                translationPanel.style.height = newHeight + 'px';
+                if (resizeDirection === 'left') {
+                    // 调整左边界（改变宽度和位置）
+                    const newWidth = Math.max(300, rect.right - e.clientX);
+                    const newLeft = rect.right - newWidth;
+                    
+                    translationPanel.style.width = newWidth + 'px';
+                    translationPanel.style.left = newLeft + 'px';
+                } else if (resizeDirection === 'right') {
+                    // 调整右边界（只改变宽度）
+                    const newWidth = Math.max(300, e.clientX - rect.left);
+                    translationPanel.style.width = newWidth + 'px';
+                } else if (resizeDirection === 'bottom') {
+                    // 调整底边界（只改变高度）
+                    const newHeight = Math.max(200, e.clientY - rect.top);
+                    translationPanel.style.height = newHeight + 'px';
+                }
             }
         }
 
@@ -1800,6 +1865,7 @@
             }
             if (isResizing) {
                 isResizing = false;
+                resizeDirection = null;
             }
         }
 
@@ -2334,6 +2400,125 @@
             audioElementConnected = false;
         }
 
+        // Handle invalid/expired session
+        async function handleInvalidSession(autoReload = false) {
+            console.log('Handling invalid session, cleaning up...');
+            
+            // 停止所有活动的音频处理
+            if (isMicRecording) {
+                stopMicrophone(false);
+            }
+            if (isSystemAudioCapturing) {
+                stopSystemAudioCapture(false);
+            }
+            
+            // 清理音频资源
+            cleanupAudioResources();
+            
+            // 清理会话状态
+            if (sessionId) {
+                localStorage.removeItem('translationSessionId_' + clientId);
+                sessionId = null;
+            }
+            
+            // 停止定时器
+            stopPinging();
+            stopQueueCheck();
+            
+            // 重置UI状态
+            updateLatency.disabled = true;
+            resetTranslation.disabled = true;
+            
+            // 清空翻译输出
+            if (!isElectron && translationOutput) {
+                translationOutput.textContent = 'Translation will appear here...';
+            }
+            
+            translationInitialized = false;
+            isQueued = false;
+            
+            console.log('Invalid session cleanup completed');
+            
+            // 自动重新加载模型
+            if (autoReload) {
+                console.log('Auto-reloading model...');
+                setTimeout(async () => {
+                    try {
+                                            updateStatus('Auto-reloading model...', 'processing');
+                    updateElectronStatus('Auto-reloading model...', 'processing');
+                    await autoLoadModel();
+                    } catch (error) {
+                        console.error('Auto-reload failed:', error);
+                        updateStatus('Auto-reload failed. Please manually load the model or open console and run: manualReloadModel()', 'error');
+                    }
+                }, 1000); // 延迟1秒再重新加载
+            }
+        }
+
+        // Auto-load model function
+        async function autoLoadModel() {
+            console.log('Starting auto model load...');
+            
+            try {
+                currentLatencyMultiplier = parseInt(latencyMultiplier.value);
+                const response = await fetch('/init?' + new URLSearchParams({
+                    agent_type: agentType.value,
+                    language_pair: languagePair.value,
+                    latency_multiplier: currentLatencyMultiplier,
+                    client_id: clientId
+                }), {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                sessionId = data.session_id;
+                localStorage.setItem('translationSessionId_' + clientId, sessionId);
+                startPinging();
+                
+                console.log('Auto model load successful:', {
+                    model: agentType.value,
+                    languagePair: languagePair.value,
+                    latency: latencyMultiplier.value + 'x',
+                    sessionId: sessionId
+                });
+                
+                if (data.queued) {
+                    isQueued = true;
+                    updateStatus(`Auto-reload in queue... Position: ${data.queue_position}`, 'processing');
+                    updateElectronStatus(`Auto-reload in queue... Position: ${data.queue_position}`, 'processing');
+                    startQueueCheck(sessionId);
+                    updateLatency.disabled = true;
+                    resetTranslation.disabled = true;
+                } else if (data.initializing) {
+                    updateStatus('Auto-reloading model, please wait...', 'processing');
+                    updateElectronStatus('Auto-reloading model...', 'processing');
+                    updateLatency.disabled = true;
+                    resetTranslation.disabled = true;
+                    isQueued = true;
+                    startQueueCheck(sessionId);
+                } else {
+                    isQueued = false;
+                    translationInitialized = false;
+                    updateLatency.disabled = false;
+                    resetTranslation.disabled = false;
+                    updateStatus('Model auto-reloaded successfully. Ready to translate.', 'ready');
+                    updateElectronStatus('Model auto-reloaded. Ready to translate.', 'ready');
+                    console.log('Model auto-reloaded successfully');
+                    startPinging();
+                    resetIdleTimer();
+                }
+            } catch (error) {
+                console.error('Auto-reload error:', error);
+                updateStatus('Auto-reload failed: ' + error.message + '. Please manually load the model.', 'error');
+                updateElectronStatus('Auto-reload failed', 'error');
+                throw error;
+            }
+        }
+
         // Session management functions (keeping existing logic)
         function resetIdleTimer() {
             if (idleTimer) {
@@ -2542,15 +2727,11 @@
                 const data = await response.json();
                 if (!data.success) {
                     console.warn('Failed to send ping:', data.error, 'for sessionId:', sessionId);
-                    if (data.error === 'Invalid session ID') {
-                        console.log('Session invalidated by server, cleaning up');
-                        stopPinging();
-                        sessionId = null;
-                        localStorage.removeItem('translationSessionId_' + clientId);
-                        // 更新UI状态
-                        updateStatus('Session expired. Please load a model again.', 'error');
-                        if (updateLatency) updateLatency.disabled = true;
-                        if (resetTranslation) resetTranslation.disabled = true;
+                    if (data.error === 'Invalid session ID' || data.error === 'Session not found' || 
+                        (data.error && (data.error.includes('不存在') || data.error.includes('调度器')))) {
+                        console.log('Session invalidated by server, auto-reloading model');
+                        await handleInvalidSession(true); // 启用自动重新加载
+                        updateStatus('Session expired. Auto-reloading model...', 'processing');
                     }
                 } else {
                     // Ping成功，可以在debug模式下记录
@@ -2621,13 +2802,10 @@
                     updateStatus(`Waiting in queue... Position: ${data.queue_position}`, 'processing');
                     updateElectronStatus(`Queue: ${data.queue_position}`, 'processing');
                 } else {
-                    updateStatus('Error: Session not found in queue or active sessions', 'error');
-                    updateElectronStatus('Session error', 'error');
-                    isQueued = false;
-                    if (queueCheckInterval) {
-                        clearInterval(queueCheckInterval);
-                        queueCheckInterval = null;
-                    }
+                    console.log('Session not found in queue, auto-reloading model...');
+                    await handleInvalidSession(true); // 启用自动重新加载
+                    updateStatus('Session expired. Auto-reloading model...', 'processing');
+                    updateElectronStatus('Auto-reloading model...', 'processing');
                 }
             } catch (error) {
                 // 区分不同类型的错误
@@ -3689,7 +3867,18 @@
 
         // Reset translation
         resetTranslation.addEventListener('click', async () => {
-            if (!sessionId) return;
+            if (!sessionId) {
+                console.log('No active session, auto-loading model instead of reset...');
+                updateStatus('No active session. Auto-loading model...', 'processing');
+                updateElectronStatus('Auto-loading model...', 'processing');
+                try {
+                    await autoLoadModel();
+                } catch (error) {
+                    updateStatus('Failed to load model: ' + error.message, 'error');
+                    updateElectronStatus('Failed to load model', 'error');
+                }
+                return;
+            }
             
             try {
                 if (isMicRecording) {
@@ -3747,6 +3936,10 @@
                 }), {
                     method: 'POST'
                 });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
                 
                 const data = await response.json();
                 if (data.success) {
@@ -3758,18 +3951,50 @@
                     updateLatency.disabled = false;
                     console.log('Translation reset successfully');
                 } else {
-                    updateStatus('Failed to reset translation: ' + data.error, 'error');
-                    console.error('Failed to reset translation:', data.error);
+                    const errorMsg = data.error || data.message || 'Unknown server error';
+                    console.error('Failed to reset translation:', errorMsg);
+                    
+                    // 调试：显示检测条件
+                    console.log('Checking error patterns:', {
+                        hasNotExist: errorMsg.includes('不存在'),
+                        hasResetFailed: errorMsg.includes('重置失败'),
+                        hasScheduler: errorMsg.includes('调度器会话'),
+                        hasSchedulerGeneral: errorMsg.includes('调度器'),
+                        errorMessage: errorMsg
+                    });
+                    
+                    // 检查是否是会话不存在的错误
+                    if (errorMsg.includes('不存在') || errorMsg.includes('重置失败') || 
+                        errorMsg.includes('调度器会话') || errorMsg.includes('调度器') ||
+                        errorMsg.includes('not found') || errorMsg.includes('does not exist') || 
+                        errorMsg.includes('Invalid session') || errorMsg.includes('Session not found')) {
+                        console.log('🔄 Session error detected, auto-reloading model...');
+                        await handleInvalidSession(true); // 启用自动重新加载
+                        updateStatus('Session expired. Auto-reloading model...', 'processing');
+                    } else {
+                        updateStatus('Failed to reset translation: ' + errorMsg, 'error');
+                    }
                 }
             } catch (error) {
-                updateStatus('Error resetting translation: ' + error, 'error');
+                let errorMessage = 'Error resetting translation: ';
+                if (error.message) {
+                    errorMessage += error.message;
+                } else if (typeof error === 'string') {
+                    errorMessage += error;
+                } else {
+                    errorMessage += 'Unknown error occurred';
+                }
+                updateStatus(errorMessage, 'error');
                 console.error('Error resetting translation:', error);
             }
         });
 
         // Update latency
         updateLatency.addEventListener('click', async () => {
-            if (!sessionId) return;
+            if (!sessionId) {
+                updateStatus('No active session. Please load a model first.', 'error');
+                return;
+            }
             
             try {
                 currentLatencyMultiplier = parseInt(latencyMultiplier.value);
@@ -3780,13 +4005,29 @@
                     method: 'POST'
                 });
                 
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
                 if (data.success) {
                     updateStatus('Latency updated successfully', 'ready');
                     console.log('Latency updated to:', latencyMultiplier.value + 'x');
                 } else {
-                    updateStatus('Failed to update latency: ' + data.error, 'error');
-                    console.error('Failed to update latency:', data.error);
+                    const errorMsg = data.error || data.message || 'Unknown server error';
+                    console.error('Failed to update latency:', errorMsg);
+                    
+                    // 检查是否是会话不存在的错误
+                    if (errorMsg.includes('不存在') || errorMsg.includes('重置失败') || 
+                        errorMsg.includes('调度器会话') || errorMsg.includes('调度器') ||
+                        errorMsg.includes('not found') || errorMsg.includes('does not exist') || 
+                        errorMsg.includes('Invalid session') || errorMsg.includes('Session not found')) {
+                        console.log('Session no longer exists during latency update, auto-reloading model...');
+                        await handleInvalidSession(true); // 启用自动重新加载
+                        updateStatus('Session expired. Auto-reloading model...', 'processing');
+                    } else {
+                        updateStatus('Failed to update latency: ' + errorMsg, 'error');
+                    }
                 }
             } catch (error) {
                 updateStatus('Error updating latency: ' + error, 'error');
@@ -3794,9 +4035,34 @@
             }
         });
 
+        // 手动重新加载模型功能（用于恢复失效会话）
+        window.manualReloadModel = async function() {
+            console.log('🔧 Manual model reload triggered by user');
+            updateStatus('Manually reloading model...', 'processing');
+            updateElectronStatus('Manually reloading model...', 'processing');
+            try {
+                await autoLoadModel();
+            } catch (error) {
+                console.error('Manual reload failed:', error);
+                updateStatus('Manual reload failed: ' + error.message, 'error');
+                updateElectronStatus('Manual reload failed', 'error');
+            }
+        };
+
         // 供Electron调用的重置翻译函数
         window.resetTranslationFromElectron = async function() {
-            if (!sessionId) return;
+            if (!sessionId) {
+                console.log('No active session (Electron), auto-loading model instead of reset...');
+                updateStatus('No active session. Auto-loading model...', 'processing');
+                updateElectronStatus('Auto-loading model...', 'processing');
+                try {
+                    await autoLoadModel();
+                } catch (error) {
+                    updateStatus('Failed to load model: ' + error.message, 'error');
+                    updateElectronStatus('Failed to load model', 'error');
+                }
+                return;
+            }
             
             try {
                 if (isMicRecording) {
@@ -3855,17 +4121,50 @@
                     method: 'POST'
                 });
                 
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
                 if (data.success) {
                     updateStatus(data.message || 'Translation reset successfully. Please select an audio source.', 'ready');
                     updateLatency.disabled = false;
                     console.log('Translation reset successfully from Electron');
                 } else {
-                    updateStatus('Failed to reset translation: ' + data.error, 'error');
-                    console.error('Failed to reset translation:', data.error);
+                    const errorMsg = data.error || data.message || 'Unknown server error';
+                    console.error('Failed to reset translation (Electron):', errorMsg);
+                    
+                    // 调试：显示检测条件
+                    console.log('Checking error patterns (Electron):', {
+                        hasNotExist: errorMsg.includes('不存在'),
+                        hasResetFailed: errorMsg.includes('重置失败'),
+                        hasScheduler: errorMsg.includes('调度器会话'),
+                        hasSchedulerGeneral: errorMsg.includes('调度器'),
+                        errorMessage: errorMsg
+                    });
+                    
+                    // 检查是否是会话不存在的错误
+                    if (errorMsg.includes('不存在') || errorMsg.includes('重置失败') || 
+                        errorMsg.includes('调度器会话') || errorMsg.includes('调度器') ||
+                        errorMsg.includes('not found') || errorMsg.includes('does not exist') || 
+                        errorMsg.includes('Invalid session') || errorMsg.includes('Session not found')) {
+                        console.log('🔄 Session error detected (Electron), auto-reloading model...');
+                        await handleInvalidSession(true); // 启用自动重新加载
+                        updateStatus('Session expired. Auto-reloading model...', 'processing');
+                    } else {
+                        updateStatus('Failed to reset translation: ' + errorMsg, 'error');
+                    }
                 }
             } catch (error) {
-                updateStatus('Error resetting translation: ' + error, 'error');
+                let errorMessage = 'Error resetting translation: ';
+                if (error.message) {
+                    errorMessage += error.message;
+                } else if (typeof error === 'string') {
+                    errorMessage += error;
+                } else {
+                    errorMessage += 'Unknown error occurred';
+                }
+                updateStatus(errorMessage, 'error');
                 console.error('Error resetting translation:', error);
             }
         };
@@ -3926,6 +4225,12 @@
                 
                 ensureClientId();
                 
+                // 添加调试功能提示
+                console.log('🚀 InfiniSST Translation Demo loaded');
+                console.log('📋 Available debug functions:');
+                console.log('  - manualReloadModel() : Manually reload the model when session expires');
+                console.log('  - handleInvalidSession(true) : Clean up and auto-reload model');
+                
                 // 只在非Electron环境下初始化面板拖拽
                 if (!isElectron) {
                     initializePanelDragging();
@@ -3934,6 +4239,36 @@
                 const userEvents = ['mousedown', 'keypress', 'scroll', 'touchstart'];
                 userEvents.forEach(eventType => {
                     document.addEventListener(eventType, resetIdleTimer);
+                });
+                
+                // 页面可见性检测 - 当用户回到页面时检查会话状态
+                document.addEventListener('visibilitychange', async () => {
+                    if (!document.hidden && sessionId) {
+                        console.log('🔍 Page became visible, checking session status...');
+                        // 发送一个ping来检查会话是否仍然有效
+                        try {
+                            const response = await fetch('/ping?' + new URLSearchParams({
+                                session_id: sessionId
+                            }), {
+                                method: 'POST',
+                                timeout: 5000
+                            });
+                            
+                            if (response.ok) {
+                                const data = await response.json();
+                                if (!data.success && data.error) {
+                                    console.log('⚠️  Session check failed on page focus:', data.error);
+                                    if (data.error === 'Invalid session ID' || data.error === 'Session not found' || 
+                                        (data.error && (data.error.includes('不存在') || data.error.includes('调度器')))) {
+                                        console.log('🔄 Auto-reloading model on page focus...');
+                                        await handleInvalidSession(true);
+                                    }
+                                }
+                            }
+                        } catch (error) {
+                            console.log('Session check failed on page focus:', error);
+                        }
+                    }
                 });
                 
                 resetIdleTimer();

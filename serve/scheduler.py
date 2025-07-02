@@ -274,14 +274,17 @@ class LLMScheduler:
         self.processing_threads.clear()
         logger.info("Scheduler stopped")
     
-    def get_or_create_session(self, user_id: str, language_id: str) -> UserSession:
+    def get_or_create_session(self, user_id: str, language_id: str, session_id: str = None) -> UserSession:
         """Get existing session or create new one"""
         with self.session_lock:
             if language_id not in self.user_sessions:
                 self.user_sessions[language_id] = {}
             
             if user_id not in self.user_sessions[language_id]:
-                session_id = f"{user_id}_{language_id}_{int(time.time())}"
+                # 使用提供的session_id，如果没有提供则生成新的
+                if session_id is None:
+                    session_id = f"{user_id}_{language_id}_{int(time.time())}"
+                
                 session = UserSession(
                     user_id=user_id,
                     language_id=language_id,
@@ -303,7 +306,8 @@ class LLMScheduler:
                       stage: RequestStage = RequestStage.PREFILL,
                       is_final: bool = False,
                       max_new_tokens: int = 20,
-                      result_callback: Optional[callable] = None) -> str:
+                      result_callback: Optional[callable] = None,
+                      api_session_id: str = None) -> str:
         """
         Submit a request to the appropriate queue based on language and stage
         
@@ -315,6 +319,7 @@ class LLMScheduler:
             is_final: Whether this is the final segment
             max_new_tokens: Maximum tokens to generate
             result_callback: Callback function for results
+            api_session_id: Session ID from API layer (optional, for consistency)
             
         Returns:
             request_id: Unique identifier for this request
@@ -326,9 +331,8 @@ class LLMScheduler:
         gpu_id = self.language_gpu_map[language_id]
         
         # Get or create user session
-        session = self.get_or_create_session(user_id, language_id)
+        session = self.get_or_create_session(user_id, language_id, api_session_id)
         
-        # Update session with new speech data - 验证但不做滑动窗口
         if isinstance(speech_data, (list, np.ndarray)):
             speech_data = torch.tensor(speech_data, dtype=torch.float32)
         elif not isinstance(speech_data, torch.Tensor):
@@ -347,22 +351,15 @@ class LLMScheduler:
         elif audio_length < MIN_AUDIO_LENGTH:
             print(f"⚠️ [SCHEDULER] Audio data too short ({audio_length} samples), but processing anyway")
         
-        # Update session state - 简化版，移除滑动窗口
-        new_audio_data = speech_data.tolist() if speech_data.dim() == 1 else speech_data.flatten().tolist()
-        session.source = new_audio_data
+        session.source = speech_data.tolist() if speech_data.dim() == 1 else speech_data.flatten().tolist()
         session.source_finished = is_final
         session.last_activity = time.time()
 
         
         # Prepare input data 
         request_id = str(uuid.uuid4())
-        
-        # 🔥 简化：scheduler只提供placeholder，让inference engine调用model的_prepare_inputs处理
-        # 这样保持了与原始infinisst_faster.policy()完全一致的行为
         input_ids = torch.tensor([[1]], dtype=torch.long)  # 简单的placeholder
-        
-        print(f"🔧 [SCHEDULER] 使用placeholder input_ids，inference engine将调用model._prepare_inputs")
-        
+
         request = InferenceRequest(
             request_id=request_id,
             user_id=user_id,
