@@ -219,6 +219,9 @@ class InferenceEngine:
         # 合并用户提供的参数
         final_args = {**default_args, **(base_args or {})}
         
+        # 🔥 确保gpu_id传递给模型参数，用于设备绑定
+        final_args['gpu_id'] = self.gpu_id
+        
         # 创建一个类似于argparse.Namespace的对象
         class ModelArgs:
             def __init__(self, **kwargs):

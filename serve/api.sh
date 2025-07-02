@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu:2
 #SBATCH --partition=taurus
-#SBATCH --mem=64GB
+#SBATCH --mem=128GB
 
 # 确保logs目录存在
 mkdir -p logs

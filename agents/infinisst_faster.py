@@ -40,6 +40,14 @@ class InfiniSSTFaster(InfiniSST):
     def __init__(self, args):
         self.dtype = torch.bfloat16
 
+        # 🔥 提前设置设备信息，确保KV cache使用正确设备
+        if hasattr(args, 'gpu_id'):
+            self.device = torch.device(f"cuda:{args.gpu_id}")
+        else:
+            self.device = torch.device("cuda:0")
+        
+        print(f"🔧 [INIT-DEVICE] InfiniSSTFaster 初始化设备: {self.device}")
+
         super().__init__(args)
 
         self.length_penalty = args.length_penalty
@@ -48,6 +56,10 @@ class InfiniSSTFaster(InfiniSST):
         speech_encoder = self.model.model.speech_encoder.speech_encoder
         llm = self.model.model
 
+        # 🔥 使用正确的设备初始化KV cache
+        device_str = str(self.device)
+        print(f"🔧 [CACHE-DEVICE] KV cache 使用设备: {device_str}")
+        
         self.speech_pagetable, self.llm_prefill_pagetable, self.llm_decode_pagetable = \
             init_paged_kv_cache(
                 32,#args.max_batch_size,
@@ -61,8 +73,8 @@ class InfiniSSTFaster(InfiniSST):
                 llm.config.num_key_value_heads,
                 llm.config.hidden_size // llm.config.num_attention_heads,
                 dtype=self.dtype,
-                device_prefill='cuda:0',
-                device_decode='cuda:0'
+                device_prefill=device_str,
+                device_decode=device_str
             )
     
     def load_w2v2_qwen25(self, args):
@@ -73,12 +85,25 @@ class InfiniSSTFaster(InfiniSST):
         )
         self.tokenizer.pad_token = "<|finetune_right_pad_id|>"
 
+        # 🔥 修复：显式绑定到单个GPU，确保设备一致性
+        # 从args获取设备信息，默认使用cuda:0
+        if hasattr(args, 'gpu_id'):
+            self.device = torch.device(f"cuda:{args.gpu_id}")
+        else:
+            self.device = torch.device("cuda:0")
+        
+        print(f"🔧 [DEVICE] InfiniSSTFaster 将模型加载到设备: {self.device}")
+
         self.model = SpeechQwenFastForCausalLM.from_pretrained(
             args.model_name,
             torch_dtype=self.dtype,
             attn_implementation="eager",
-            device_map='cuda',
-        ).eval()
+            # 🔥 移除device_map，使用显式.to(device)
+        ).to(self.device).eval()
+        
+        # 🔍 验证模型确实在正确设备上
+        sample_param = next(self.model.parameters())
+        print(f"🔧 [DEVICE-CHECK] 模型参数设备: {sample_param.device}")
 
         speech_encoder_args = [
             args.w2v2_path,
@@ -97,8 +122,11 @@ class InfiniSSTFaster(InfiniSST):
         else:
             raise ValueError(f"Unsupported type: {args.w2v2_type}")
         speech_encoder.eval()
-        speech_encoder.to(dtype=self.model.dtype, device=self.model.device)
+        speech_encoder.to(dtype=self.model.dtype, device=self.device)
         self.length_shrink_func = speech_encoder._get_feat_extract_output_lengths
+        
+        # 🔍 验证语音编码器设备
+        print(f"🔧 [DEVICE-CHECK] 语音编码器设备: {next(speech_encoder.parameters()).device}")
         
         self.model.model.speech_encoder = speech_encoder
         self.model.preprocess(tokenizer=self.tokenizer, resize=False)

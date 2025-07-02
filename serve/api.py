@@ -697,17 +697,31 @@ async def startup_event():
             # 创建 GPU 语言映射 - 使用逻辑GPU ID
             # 将物理GPU ID转换为逻辑GPU ID
             logical_gpu_ids = []
-            for physical_gpu_id in gpus[:1]:  # 只使用第一个GPU
+            #TODO: should be changed when more languages are supported
+            available_gpus = gpus[:2]  # 使用前两个GPU（如果只有一个GPU则只用一个）
+            for physical_gpu_id in available_gpus:
                 try:
                     logical_id = get_logical_index_from_physical_id(physical_gpu_id)
                     logical_gpu_ids.append(logical_id)
                 except ValueError as e:
                     print(f"⚠️ GPU ID转换失败: {e}")
-                    logical_gpu_ids.append(0)  # 默认使用逻辑GPU 0
+                    logical_gpu_ids.append(len(logical_gpu_ids))  # 使用顺序逻辑ID
             
-            gpu_language_map = {logical_id: "English -> Chinese" for logical_id in logical_gpu_ids}
-            print(f"GPU语言映射 (物理->逻辑): {gpus[:1]} -> {logical_gpu_ids}")
+            # 定义支持的语言对映射
+            supported_languages = ["English -> Chinese", "English -> Italian"]
+            
+            # 根据可用GPU数量创建映射
+            gpu_language_map = {}
+            for i, logical_id in enumerate(logical_gpu_ids):
+                if i < len(supported_languages):
+                    gpu_language_map[logical_id] = supported_languages[i]
+                else:
+                    # 如果GPU数量超过支持的语言对，重复使用语言对
+                    gpu_language_map[logical_id] = supported_languages[i % len(supported_languages)]
+            
+            print(f"GPU语言映射 (物理->逻辑): {available_gpus} -> {logical_gpu_ids}")
             print(f"GPU语言映射: {gpu_language_map}")
+            print(f"支持的语言对: {list(gpu_language_map.values())}")
             
             # 创建推理引擎
             model_args_map = {gpu_id: {} for gpu_id in gpu_language_map.keys()}
@@ -943,6 +957,48 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                         print(f"   - User ID: {user_id}")
                         print(f"   - Language: {language_pair}")
                         print(f"   - Audio shape: {audio_data.shape}")
+                        
+                        # 🔍 检查推理引擎状态
+                        if global_inference_engine:
+                            # 检查语言对是否被支持
+                            if language_pair in global_scheduler.get_supported_languages():
+                                # 获取对应的GPU ID
+                                gpu_id = global_scheduler.language_gpu_map.get(language_pair)
+                                if gpu_id is not None:
+                                    engine = global_inference_engine.get_engine(gpu_id)
+                                    if engine:
+                                        engine_stats = engine.get_stats()
+                                        print(f"🔍 [ENGINE-CHECK] GPU {gpu_id} 引擎状态:")
+                                        print(f"   - is_loaded: {engine_stats['is_loaded']}")
+                                        print(f"   - is_running: {engine_stats['is_running']}")
+                                        if not engine_stats['is_loaded']:
+                                            error_msg = f"推理引擎未加载模型 (GPU {gpu_id})"
+                                            await websocket.send_text(f"ERROR: {error_msg}")
+                                            continue
+                                        if not engine_stats['is_running']:
+                                            error_msg = f"推理引擎未运行 (GPU {gpu_id})"
+                                            await websocket.send_text(f"ERROR: {error_msg}")
+                                            continue
+                                    else:
+                                        error_msg = f"GPU {gpu_id} 上没有推理引擎"
+                                        await websocket.send_text(f"ERROR: {error_msg}")
+                                        logger.error(f"❌ {error_msg}")
+                                        continue
+                                else:
+                                    error_msg = f"语言对 {language_pair} 没有分配GPU"
+                                    await websocket.send_text(f"ERROR: {error_msg}")
+                                    logger.error(f"❌ {error_msg}")
+                                    continue
+                            else:
+                                error_msg = f"不支持的语言对: {language_pair}"
+                                await websocket.send_text(f"ERROR: {error_msg}")
+                                logger.error(f"❌ {error_msg}")
+                                continue
+                        else:
+                            error_msg = "推理引擎不可用"
+                            await websocket.send_text(f"ERROR: {error_msg}")
+                            logger.error(f"❌ {error_msg}")
+                            continue
                         
                         # 创建结果回调函数（使用线程安全的队列）
                         def result_callback(result):
