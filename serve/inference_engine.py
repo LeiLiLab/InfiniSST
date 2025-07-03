@@ -295,7 +295,7 @@ class InferenceEngine:
             推理结果列表
         """
         if not self.is_running or not self.is_loaded:
-            raise RuntimeError("推理引擎未运行或模型未加载")
+            raise RuntimeError("inference engine not running or model not loaded not running or model not loaded")
         
         start_time = time.time()
         results = []
