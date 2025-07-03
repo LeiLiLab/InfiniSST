@@ -156,42 +156,43 @@ class MultiheadAttention(nn.Module):
                 weights for each head. Implies *need_weights*. Default:
                 return the average attention weights over all heads.
         """
-        # L * D
-        q = self.q_proj(query)
-        k = self.k_proj(key)
-        v = self.v_proj(value)
+        with torch.cuda.device(query.device):
+            # L * D
+            q = self.q_proj(query)
+            k = self.k_proj(key)
+            v = self.v_proj(value)
 
-        q = q.view(-1, self.num_heads, self.head_dim)
-        k = k.view(-1, self.num_heads, self.head_dim)
-        v = v.view(-1, self.num_heads, self.head_dim)
-        
-        batch_indices, positions = flashinfer.get_batch_indices_positions(
-            qo_indptr,
-            flashinfer.get_seq_lens(
+            q = q.view(-1, self.num_heads, self.head_dim)
+            k = k.view(-1, self.num_heads, self.head_dim)
+            v = v.view(-1, self.num_heads, self.head_dim)
+            
+            batch_indices, positions = flashinfer.get_batch_indices_positions(
+                qo_indptr,
+                flashinfer.get_seq_lens(
+                    paged_kv_indptr,
+                    paged_kv_last_page_len,
+                    PAGE_SIZE,
+                ),
+                qo_indptr[-1]
+            )
+
+            flashinfer.append_paged_kv_cache(
+                k,
+                v,
+                batch_indices,
+                positions,
+                pagetable.paged_kv_cache[layer_idx],
+                paged_kv_indices,
                 paged_kv_indptr,
                 paged_kv_last_page_len,
-                PAGE_SIZE,
-            ),
-            qo_indptr[-1]
-        )
+            )
 
-        flashinfer.append_paged_kv_cache(
-            k,
-            v,
-            batch_indices,
-            positions,
-            pagetable.paged_kv_cache[layer_idx],
-            paged_kv_indices,
-            paged_kv_indptr,
-            paged_kv_last_page_len,
-        )
+            attn_output = pagetable.wrapper.run(
+                q,
+                pagetable.paged_kv_cache[layer_idx],
+            )
+            attn_output = attn_output.view(-1, self.num_heads * self.head_dim)
 
-        attn_output = pagetable.wrapper.run(
-            q,
-            pagetable.paged_kv_cache[layer_idx],
-        )
-        attn_output = attn_output.view(-1, self.num_heads * self.head_dim)
+            attn_output = self.out_proj(attn_output)
 
-        attn_output = self.out_proj(attn_output)
-
-        return attn_output, None, pagetable
+            return attn_output, None, pagetable

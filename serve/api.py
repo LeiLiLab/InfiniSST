@@ -1,5 +1,43 @@
+#!/usr/bin/env python3
+"""
+InfiniSST API Server with Multi-GPU Support and Debugging
+"""
+
+# 🔥 添加debugpy支持用于调试
+import debugpy
+import os
+
+# 启用debugpy调试支持
+DEBUG_MODE = os.getenv('DEBUG_MODE', 'false').lower() == 'true'
+DEBUG_PORT = int(os.getenv('DEBUG_PORT', '5678'))
+
+if DEBUG_MODE:
+    print(f"🐛 [DEBUG] 启动debugpy调试服务器，端口: {DEBUG_PORT}")
+    debugpy.listen(("0.0.0.0", DEBUG_PORT))
+    print(f"🐛 [DEBUG] 等待调试器连接到 localhost:{DEBUG_PORT}")
+    debugpy.wait_for_client()  # 等待调试器连接
+    print(f"🐛 [DEBUG] 调试器已连接！")
+
 import multiprocessing as mp
 import logging
+import asyncio
+import time
+import uuid
+from typing import Dict, List, Optional
+import json
+import argparse
+import signal
+import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
+import traceback
+
+import torch
+import numpy as np
+import websockets
+from websockets.server import WebSocketServerProtocol
+
+# 导入调度器和推理引擎 - 将在后面统一导入
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -21,7 +59,6 @@ import yt_dlp
 from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
 import soundfile as sf
-import numpy as np
 import json
 import asyncio
 import argparse
@@ -30,6 +67,11 @@ import time
 from multiprocessing import Process, Queue, Manager
 from queue import Empty
 from typing import Dict, Optional, Any, Tuple
+# 将agents目录添加到Python路径
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 from agents.infinisst import InfiniSST
 from agents.streamatt import StreamAtt
 import io
@@ -40,8 +82,8 @@ import starlette.websockets
 
 # 导入我们的 scheduler 和 inference engine
 try:
-    from serve.scheduler import LLMScheduler, RequestStage, InferenceRequest, UserSession
-    from serve.inference_engine import MultiGPUInferenceEngine, EngineConfig
+    from scheduler import LLMScheduler, RequestStage, InferenceRequest, UserSession
+    from inference_engine import MultiGPUInferenceEngine, EngineConfig
     SCHEDULER_AVAILABLE = True
     print("✅ Scheduler 和 Inference Engine 可用")
 except ImportError as e:

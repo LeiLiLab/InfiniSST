@@ -383,8 +383,8 @@ class LLMScheduler:
             # 🔥 记录入队时间
             queue_enter_time = time.time()
             request.queue_enter_time = queue_enter_time
-            
-            if stage == RequestStage.PREFILL:
+            print(stage.name)
+            if stage.name == RequestStage.PREFILL.name:
                 self.prefill_queues[gpu_id].append(request)
                 self.stats['queue_sizes'][gpu_id]['prefill'] += 1
                 # 🔥 更新队列统计
@@ -491,7 +491,7 @@ class LLMScheduler:
                         break
                 # decouple PD
                 if batch:
-                    assert all(req.stage == RequestStage.PREFILL for req in batch)
+                    assert all(req.stage.name == RequestStage.PREFILL.name for req in batch)
                     # 🔥 更新队列大小统计
                     self.queue_stats[gpu_id]['prefill']['current_queue_size'] = len(prefill_queue)
                     logger.info(f"Created PREFILL batch of size {len(batch)} for GPU {gpu_id}")
@@ -663,7 +663,7 @@ class LLMScheduler:
                 max_retries = 3
                 if request.retry_count <= max_retries:
                     # 重新放回对应的队列
-                    if request.stage == RequestStage.PREFILL:
+                    if request.stage.name == RequestStage.PREFILL.name:
                         self.prefill_queues[gpu_id].appendleft(request)  # 放到队列前面，优先处理
                         self.stats['queue_sizes'][gpu_id]['prefill'] += 1
                         logger.info(f"Request {request.request_id} requeued for memory wait (retry {request.retry_count}/{max_retries})")

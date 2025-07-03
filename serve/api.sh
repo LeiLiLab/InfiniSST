@@ -9,6 +9,10 @@
 #SBATCH --mem=128GB
 
 # 确保logs目录存在
+
+export DEBUG_MODE=true
+export DEBUG_PORT=5678
+
 mkdir -p logs
 
 # 设置PYTHONPATH

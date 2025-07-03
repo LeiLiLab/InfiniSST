@@ -19,6 +19,11 @@ from queue import Queue, Empty
 logger = logging.getLogger(__name__)
 
 # 导入相关模块
+import sys
+import os
+# 将agents目录添加到Python路径
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 try:
     from agents.infinisst_faster import InfiniSSTFaster
     INFINISST_AVAILABLE = True
@@ -60,7 +65,7 @@ except ImportError as e:
     
     AGENTS_AVAILABLE = False
     
-from .scheduler import InferenceRequest, RequestStage
+from scheduler import InferenceRequest, RequestStage
 
 @dataclass
 class EngineConfig:
@@ -297,8 +302,8 @@ class InferenceEngine:
         
         try:
             # 按阶段分组处理
-            prefill_requests = [r for r in requests if r.stage == RequestStage.PREFILL]
-            decode_requests = [r for r in requests if r.stage == RequestStage.DECODE]
+            prefill_requests = [r for r in requests if r.stage.name == RequestStage.PREFILL.name]
+            decode_requests = [r for r in requests if r.stage.name == RequestStage.DECODE.name]
             
             # 处理prefill请求
             if prefill_requests:
@@ -346,81 +351,81 @@ class InferenceEngine:
     
     def _process_prefill_batch(self, requests: List[InferenceRequest]) -> List[Dict[str, Any]]:
         """处理prefill阶段的请求 - ORCA风格，一次只做prefill步骤"""
-        try:
-            # 🔥 ORCA架构：为batch中的每个request分别构造beam_search.Request
-            beam_requests = []
-            for req in requests:
-                beam_req = self._create_beam_request(req)
-                beam_requests.append(beam_req)
+        #todo :try
+        # 🔥 ORCA架构：为batch中的每个request分别构造beam_search.Request
+        beam_requests = []
+        for req in requests:
+            beam_req = self._create_beam_request(req)
+            beam_requests.append(beam_req)
+        
+        print(f"🔍 [ORCA-PREFILL] 处理batch: {len(beam_requests)} 个requests")
+        
+        # 直接调用beam_search的prefill函数
+        from model.flashinfer.beam_search import prefill
+        
+        processed_requests, speech_pagetable, llm_prefill_pagetable, llm_decode_pagetable = prefill(
+            requests=beam_requests,
+            model=self.model.model,  # 使用内部的模型
+            tokenizer=self.tokenizer,
+            num_beams=self.config.beam_size,
+            length_penalty=1.0,
+            speech_pagetable=self.model.speech_pagetable,
+            llm_prefill_pagetable=self.model.llm_prefill_pagetable,
+            llm_decode_pagetable=self.model.llm_decode_pagetable
+        )
+        
+        # 🔥 关键修复：更新pagetable状态并验证连续性
+        self.model.speech_pagetable = speech_pagetable
+        self.model.llm_prefill_pagetable = llm_prefill_pagetable
+        self.model.llm_decode_pagetable = llm_decode_pagetable
+        
+        # 验证pagetable状态
+        self._verify_pagetable_consistency("Prefill", speech_pagetable, llm_prefill_pagetable, llm_decode_pagetable)
+        
+        # 转换结果并更新每个request的cache引用
+        results = []
+        for i, (orig_req, processed_req) in enumerate(zip(requests, processed_requests)):
+            result = self._convert_beam_result_to_inference_result(orig_req, processed_req, is_prefill=True)
             
-            print(f"🔍 [ORCA-PREFILL] 处理batch: {len(beam_requests)} 个requests")
+            # 🔥 ORCA关键：立即更新原始request的cache引用，转换为列表格式
+            # 根据infinisst_faster.py，cache应该是列表格式
+            orig_req.speech_cache = [processed_req.speech_cache]  # 转换为列表
             
-            # 直接调用beam_search的prefill函数
-            from model.flashinfer.beam_search import prefill
+            # 🔥 关键修复：prefill完成后，llm_cache应该已经是beam cache列表
+            # 不需要再包装一层列表
+            if isinstance(processed_req.llm_cache, list):
+                # prefill返回的已经是beam cache列表，直接使用
+                orig_req.past_key_values = [processed_req.llm_cache]  # 外层列表用于session管理
+                print(f"🔍 [ORCA-CACHE] Request {orig_req.request_id} prefill完成，保存beam cache列表 (共{len(processed_req.llm_cache)}个beam)")
+            else:
+                # 如果不是列表，按单个cache处理（不应该发生）
+                orig_req.past_key_values = [[processed_req.llm_cache]]
+                print(f"⚠️ [ORCA-CACHE] Request {orig_req.request_id} prefill返回单个cache，包装为beam列表")
             
-            processed_requests, speech_pagetable, llm_prefill_pagetable, llm_decode_pagetable = prefill(
-                requests=beam_requests,
-                model=self.model.model,  # 使用内部的模型
-                tokenizer=self.tokenizer,
-                num_beams=self.config.beam_size,
-                length_penalty=1.0,
-                speech_pagetable=self.model.speech_pagetable,
-                llm_prefill_pagetable=self.model.llm_prefill_pagetable,
-                llm_decode_pagetable=self.model.llm_decode_pagetable
-            )
+            # 🔥 关键修复：保存beam_state到原始request
+            if hasattr(processed_req, 'beam_state'):
+                orig_req.beam_state = processed_req.beam_state
+                print(f"🔍 [ORCA-CACHE] 保存beam_state到request {orig_req.request_id}")
             
-            # 🔥 关键修复：更新pagetable状态并验证连续性
-            self.model.speech_pagetable = speech_pagetable
-            self.model.llm_prefill_pagetable = llm_prefill_pagetable
-            self.model.llm_decode_pagetable = llm_decode_pagetable
+            results.append(result)
+        
+        print(f"🔍 [ORCA-PREFILL] Batch完成: {len(results)} 个结果")
+        return results
             
-            # 验证pagetable状态
-            self._verify_pagetable_consistency("Prefill", speech_pagetable, llm_prefill_pagetable, llm_decode_pagetable)
-            
-            # 转换结果并更新每个request的cache引用
-            results = []
-            for i, (orig_req, processed_req) in enumerate(zip(requests, processed_requests)):
-                result = self._convert_beam_result_to_inference_result(orig_req, processed_req, is_prefill=True)
-                
-                # 🔥 ORCA关键：立即更新原始request的cache引用，转换为列表格式
-                # 根据infinisst_faster.py，cache应该是列表格式
-                orig_req.speech_cache = [processed_req.speech_cache]  # 转换为列表
-                
-                # 🔥 关键修复：prefill完成后，llm_cache应该已经是beam cache列表
-                # 不需要再包装一层列表
-                if isinstance(processed_req.llm_cache, list):
-                    # prefill返回的已经是beam cache列表，直接使用
-                    orig_req.past_key_values = [processed_req.llm_cache]  # 外层列表用于session管理
-                    print(f"🔍 [ORCA-CACHE] Request {orig_req.request_id} prefill完成，保存beam cache列表 (共{len(processed_req.llm_cache)}个beam)")
-                else:
-                    # 如果不是列表，按单个cache处理（不应该发生）
-                    orig_req.past_key_values = [[processed_req.llm_cache]]
-                    print(f"⚠️ [ORCA-CACHE] Request {orig_req.request_id} prefill返回单个cache，包装为beam列表")
-                
-                # 🔥 关键修复：保存beam_state到原始request
-                if hasattr(processed_req, 'beam_state'):
-                    orig_req.beam_state = processed_req.beam_state
-                    print(f"🔍 [ORCA-CACHE] 保存beam_state到request {orig_req.request_id}")
-                
-                results.append(result)
-            
-            print(f"🔍 [ORCA-PREFILL] Batch完成: {len(results)} 个结果")
-            return results
-            
-        except Exception as e:
-            logger.error(f"Prefill batch处理失败: {e}")
-            # 返回错误结果
-            return [
-                {
-                    'request_id': req.request_id,
-                    'success': False,
-                    'error': str(e),
-                    'generated_text': '',
-                    'generated_tokens': [],
-                    'prefill_finished': False
-                }
-                for req in requests
-            ]
+        # except Exception as e:
+        #     logger.error(f"Prefill batch处理失败: {e}")
+        #     # 返回错误结果
+        #     return [
+        #         {
+        #             'request_id': req.request_id,
+        #             'success': False,
+        #             'error': str(e),
+        #             'generated_text': '',
+        #             'generated_tokens': [],
+        #             'prefill_finished': False
+        #         }
+        #         for req in requests
+        #     ]
     
     def _process_decode_batch(self, requests: List[InferenceRequest]) -> List[Dict[str, Any]]:
         """处理decode阶段的请求 - ORCA风格，一次只生成一个token"""
@@ -1031,8 +1036,9 @@ class MultiGPUInferenceEngine:
         engine = self.get_engine(gpu_id)
         if not engine:
             raise ValueError(f"GPU {gpu_id} 上没有可用的推理引擎")
-        
-        return engine.process_batch(requests)
+        with torch.cuda.device("cuda:"+str(gpu_id)):
+            res = engine.process_batch(requests)
+        return res
     
     def get_all_stats(self) -> Dict[int, Dict[str, Any]]:
         """获取所有引擎的统计信息"""
