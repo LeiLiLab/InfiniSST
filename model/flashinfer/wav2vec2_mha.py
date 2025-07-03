@@ -195,4 +195,4 @@ class MultiheadAttention(nn.Module):
 
             attn_output = self.out_proj(attn_output)
 
-            return attn_output, None, pagetable
+        return attn_output, None, pagetable # type: ignore[return-value]

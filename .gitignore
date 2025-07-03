@@ -21,3 +21,4 @@ env
 .DS_Store
 dist/
 *.err
+*.mp4

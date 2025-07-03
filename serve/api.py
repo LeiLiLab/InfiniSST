@@ -1647,6 +1647,75 @@ async def load_models():
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+@app.post("/load_model")
+async def load_model(request: Request):
+    """Load model for a specific language pair and client - used for test mode"""
+    try:
+        # Get request data
+        data = await request.json()
+        language_pair = data.get("language_pair", "English -> Chinese")
+        client_id = data.get("client_id")
+        model_type = data.get("model_type", "infinisst")
+        
+        print(f"🧪 [LOAD-MODEL] Loading model for {language_pair}, client: {client_id}")
+        
+        # Check if scheduler is available
+        if not global_scheduler:
+            return {"success": False, "error": "Scheduler not available"}
+        
+        # Load inference engine models if needed
+        if global_inference_engine:
+            print(f"🧪 [LOAD-MODEL] Loading inference engine models...")
+            success = global_inference_engine.load_all_models()
+            if not success:
+                return {"success": False, "error": "Failed to load inference engine models"}
+            
+            # Start all engines
+            global_inference_engine.start_all()
+        
+        # Create a test session using the scheduler
+        print(f"🧪 [LOAD-MODEL] Creating test session...")
+        
+        # Generate session ID
+        session_id = f"test_{client_id}_{int(time.time())}"
+        
+        # Create session in scheduler
+        session = global_scheduler.get_or_create_session(
+            user_id=client_id or "test_user",
+            language_id=language_pair,
+            session_id=session_id
+        )
+        
+        print(f"🧪 [LOAD-MODEL] Session created: {session_id}")
+        
+        # Store session info
+        session_info = {
+            "session_id": session_id,
+            "language_pair": language_pair,
+            "client_id": client_id,
+            "scheduler_session": session,
+            "created_at": time.time(),
+            "last_activity": time.time()
+        }
+        
+        active_sessions[session_id] = session_info
+        update_session_activity(session_id)
+        update_session_ping(session_id)
+        
+        return {
+            "success": True,
+            "session_id": session_id,
+            "message": f"Model loaded successfully for {language_pair}",
+            "queued": False,
+            "language_pair": language_pair
+        }
+        
+    except Exception as e:
+        print(f"🧪 [LOAD-MODEL] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
+
 @app.post("/ping")
 async def ping_session(session_id: str):
     """Update the last ping timestamp for a session to indicate the webpage is still open."""
@@ -1710,6 +1779,42 @@ async def ping_session(session_id: str):
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Test video serving route for automated testing
+@app.get("/test_video/{filename}")
+async def serve_test_video(filename: str):
+    """Serve test video files for automated testing"""
+    import os
+    from pathlib import Path
+    
+    # Security check - only allow specific filenames
+    allowed_filenames = ["0000AAAA.mp4", "test.mp4", "sample.mp4"]
+    if filename not in allowed_filenames:
+        raise HTTPException(status_code=404, detail="Test video not found")
+    
+    # Look for the test video in multiple locations
+    test_video_paths = [
+        f"serve/static/test_video/{filename}",
+        f"~/Downloads/{filename}",
+        f"/tmp/{filename}",
+        f"test_video/{filename}"
+    ]
+    
+    video_path = None
+    for path in test_video_paths:
+        expanded_path = os.path.expanduser(path)
+        if os.path.exists(expanded_path):
+            video_path = expanded_path
+            break
+    
+    if not video_path:
+        # 如果找不到视频文件，返回详细的错误信息
+        error_msg = f"Test video '{filename}' not found. Searched in: {', '.join(test_video_paths)}"
+        print(f"🧪 [TEST-VIDEO] {error_msg}")
+        raise HTTPException(status_code=404, detail=error_msg)
+    
+    print(f"🧪 [TEST-VIDEO] Serving test video: {video_path}")
+    return FileResponse(video_path, media_type="video/mp4", filename=filename)
 
 # Explicit root path handling
 @app.get("/")

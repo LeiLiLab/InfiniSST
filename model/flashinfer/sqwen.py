@@ -47,7 +47,7 @@ class SpeechQwenFastModel(Qwen2Model):
         Computes the output length of the convolutional layers
         """
 
-        return self.speech_encoder._get_feat_extract_output_lengths(input_lengths)                
+        return self.speech_encoder._get_feat_extract_output_lengths(input_lengths)    # type: ignore[attr-defined]            
               
     def forward(
         self,

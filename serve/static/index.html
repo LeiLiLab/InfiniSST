@@ -4225,11 +4225,28 @@
                 
                 ensureClientId();
                 
+                // 🔥 检查是否启用测试模式
+                const urlParams = new URLSearchParams(window.location.search);
+                const isTestMode = urlParams.get('test') === 'true';
+                
+                if (isTestMode && !isElectron) {
+                    console.log('🧪 Test mode enabled - starting automated test...');
+                    setTimeout(() => {
+                        startTestMode();
+                    }, 1000); // 延迟1秒确保页面完全加载
+                }
+                
                 // 添加调试功能提示
                 console.log('🚀 InfiniSST Translation Demo loaded');
                 console.log('📋 Available debug functions:');
                 console.log('  - manualReloadModel() : Manually reload the model when session expires');
                 console.log('  - handleInvalidSession(true) : Clean up and auto-reload model');
+                console.log('  - triggerTestMode() : Manually start test mode');
+                console.log('  - enableAutoPlay() : Manually enable auto-play permission');
+                console.log('  - checkAutoPlayStatus() : Check current auto-play status');
+                if (isTestMode) {
+                    console.log('  - 🧪 TEST MODE ACTIVE: Auto-loading model and video');
+                }
                 
                 // 只在非Electron环境下初始化面板拖拽
                 if (!isElectron) {
@@ -4293,6 +4310,561 @@
                 }
             }
         });
+
+        // 🧪 测试模式函数
+        async function startTestMode() {
+            try {
+                console.log('🧪 [TEST MODE] Starting automated test sequence...');
+                updateStatus('TEST MODE: Auto-loading model...', 'processing');
+                
+                // 步骤1：自动加载模型
+                console.log('🧪 [TEST MODE] Step 1: Loading model...');
+                await autoLoadModel();
+                
+                // 等待模型加载完成
+                let maxRetries = 30; // 最多等待30秒
+                let retryCount = 0;
+                
+                while ((!sessionId || isQueued) && retryCount < maxRetries) {
+                    console.log(`🧪 [TEST MODE] Waiting for model to load... (${retryCount + 1}/${maxRetries})`);
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    retryCount++;
+                }
+                
+                if (!sessionId || isQueued) {
+                    throw new Error('Model failed to load within timeout period');
+                }
+                
+                console.log('🧪 [TEST MODE] Model loaded successfully, session ID:', sessionId);
+                
+                // 步骤2：加载测试视频文件
+                console.log('🧪 [TEST MODE] Step 2: Loading test video...');
+                updateStatus('TEST MODE: Loading test video...', 'processing');
+                
+                await loadTestVideo();
+                
+                console.log('🧪 [TEST MODE] Automated test sequence completed successfully!');
+                updateStatus('TEST MODE: Ready to play video for translation', 'ready');
+                
+            } catch (error) {
+                console.error('🧪 [TEST MODE] Test sequence failed:', error);
+                updateStatus('TEST MODE FAILED: ' + error.message, 'error');
+            }
+        }
+
+        // 🧪 加载测试视频文件
+        async function loadTestVideo() {
+            try {
+                const testVideoPath = '/test_video/0000AAAA.mp4'; // 使用相对于服务器的路径
+                
+                console.log(`🧪 [TEST MODE] Fetching test video from: ${testVideoPath}`);
+                
+                // 尝试从服务器获取测试视频文件
+                const response = await fetch(testVideoPath);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch test video: ${response.status} ${response.statusText}`);
+                }
+                
+                const blob = await response.blob();
+                const videoFile = new File([blob], '0000AAAA.mp4', { type: 'video/mp4' });
+                
+                console.log('🧪 [TEST MODE] Test video loaded:', {
+                    name: videoFile.name,
+                    size: videoFile.size,
+                    type: videoFile.type
+                });
+                
+                // 创建媒体元素并设置事件监听器
+                const mediaElement = createMediaElement(videoFile);
+                
+                // 等待媒体元素加载完成
+                await new Promise((resolve, reject) => {
+                    const timeoutId = setTimeout(() => {
+                        reject(new Error('Video loading timeout'));
+                    }, 10000); // 10秒超时
+                    
+                    mediaElement.addEventListener('loadeddata', () => {
+                        clearTimeout(timeoutId);
+                        console.log('🧪 [TEST MODE] Video loaded and ready to play');
+                        resolve();
+                    }, { once: true });
+                    
+                    mediaElement.addEventListener('error', (e) => {
+                        clearTimeout(timeoutId);
+                        reject(new Error('Video loading error: ' + e.message));
+                    }, { once: true });
+                });
+                
+                console.log('🧪 [TEST MODE] Video setup complete, ready for manual play');
+                updateStatus('TEST MODE: Video loaded - Click play to start translation', 'ready');
+                
+                // 🚀 智能自动播放策略
+                setTimeout(async () => {
+                    await attemptAutoPlay(mediaElement);
+                }, 1000); // 减少延迟到1秒
+                
+            } catch (error) {
+                console.error('🧪 [TEST MODE] Failed to load test video:', error);
+                
+                // 回退方案：显示文件选择提示
+                updateStatus('TEST MODE: Test video not found - Please upload ~/Downloads/0000AAAA.mp4 manually', 'error');
+                
+                // 高亮文件上传按钮
+                if (uploadBtn) {
+                    uploadBtn.style.animation = 'pulse 2s infinite';
+                    uploadBtn.style.background = 'linear-gradient(45deg, #ff6b6b 0%, #ee5a24 100%)';
+                    
+                    // 添加提示文本
+                    const originalText = uploadBtn.textContent;
+                    uploadBtn.innerHTML = `
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                        </svg>
+                        🧪 Upload 0000AAAA.mp4
+                    `;
+                    
+                    // 监听文件上传，检查是否是目标文件
+                    const originalChangeListener = audioFile.onchange;
+                    audioFile.onchange = (event) => {
+                        const file = event.target.files[0];
+                        if (file && file.name === '0000AAAA.mp4') {
+                            console.log('🧪 [TEST MODE] Target test file uploaded:', file.name);
+                            uploadBtn.style.animation = '';
+                            uploadBtn.style.background = '';
+                            uploadBtn.innerHTML = `
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                                </svg>
+                                Upload Video/Audio
+                            `;
+                            updateStatus('TEST MODE: Test video uploaded successfully!', 'ready');
+                        }
+                        
+                        // 调用原始的change事件处理器
+                        if (originalChangeListener) {
+                            originalChangeListener(event);
+                        }
+                    };
+                }
+                
+                throw error;
+            }
+        }
+
+        // 🧪 自动加载模型函数
+        async function autoLoadModel() {
+            try {
+                console.log('🧪 [AUTO-LOAD] Starting automatic model loading...');
+                
+                // 检查是否已有session
+                if (sessionId && !isQueued) {
+                    console.log('🧪 [AUTO-LOAD] Model already loaded, session ID:', sessionId);
+                    return;
+                }
+                
+                // 模拟点击Load Model按钮的逻辑
+                const loadButton = document.getElementById('loadModel');
+                if (loadButton && loadButton.click) {
+                    console.log('🧪 [AUTO-LOAD] Triggering load model button click...');
+                    loadButton.click();
+                } else {
+                    // 如果按钮不可用，直接调用load model逻辑
+                    console.log('🧪 [AUTO-LOAD] Button not available, calling load model logic directly...');
+                    await loadModelLogic();
+                }
+                
+                console.log('🧪 [AUTO-LOAD] Model load initiated successfully');
+                
+            } catch (error) {
+                console.error('🧪 [AUTO-LOAD] Failed to auto-load model:', error);
+                throw error;
+            }
+        }
+
+        // 🧪 直接调用模型加载逻辑
+        async function loadModelLogic() {
+            try {
+                updateStatus('Loading model on server...', 'processing');
+                
+                const response = await fetch('/load_model', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        language_pair: selectedLanguage,
+                        client_id: clientId,
+                        model_type: 'infinisst'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('🧪 [AUTO-LOAD] Load model response:', data);
+                
+                if (data.success) {
+                    sessionId = data.session_id;
+                    isQueued = data.queued || false;
+                    
+                    if (sessionId) {
+                        localStorage.setItem('translationSessionId_' + clientId, sessionId);
+                        console.log('🧪 [AUTO-LOAD] Session ID stored:', sessionId);
+                    }
+                    
+                    updateStatus(data.message || 'Model loaded successfully', 'ready');
+                    
+                    if (data.queued) {
+                        console.log('🧪 [AUTO-LOAD] Model is queued, waiting...');
+                        startQueuePolling();
+                    }
+                } else {
+                    throw new Error(data.message || 'Failed to load model');
+                }
+                
+            } catch (error) {
+                console.error('🧪 [AUTO-LOAD] Model loading failed:', error);
+                updateStatus('Failed to load model: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        // 🚀 智能自动播放函数
+        async function attemptAutoPlay(mediaElement) {
+            console.log('🧪 [AUTO-PLAY] Starting intelligent auto-play sequence...');
+            
+            // 策略1: 检查用户是否已经与页面有过交互
+            const hasUserInteracted = await checkUserInteraction();
+            
+            if (hasUserInteracted) {
+                console.log('🧪 [AUTO-PLAY] User has interacted, attempting direct play...');
+                try {
+                    await mediaElement.play();
+                    console.log('🧪 [AUTO-PLAY] ✅ Direct auto-play successful!');
+                    updateStatus('TEST MODE: Auto-playing and translating...', 'processing');
+                    return;
+                } catch (error) {
+                    console.log('🧪 [AUTO-PLAY] Direct play failed:', error.message);
+                }
+            }
+            
+            // 策略2: 静音播放（更容易被允许）
+            console.log('🧪 [AUTO-PLAY] Trying muted auto-play...');
+            const originalVolume = mediaElement.volume;
+            const originalMuted = mediaElement.muted;
+            
+            try {
+                mediaElement.muted = true;
+                await mediaElement.play();
+                console.log('🧪 [AUTO-PLAY] ✅ Muted auto-play successful!');
+                
+                // 2秒后恢复音量
+                setTimeout(() => {
+                    mediaElement.muted = originalMuted;
+                    mediaElement.volume = originalVolume;
+                    console.log('🧪 [AUTO-PLAY] Audio restored');
+                }, 2000);
+                
+                updateStatus('TEST MODE: Auto-playing (muted initially) and translating...', 'processing');
+                return;
+                
+            } catch (error) {
+                console.log('🧪 [AUTO-PLAY] Muted play failed:', error.message);
+            }
+            
+            // 策略3: 创建用户交互提示
+            console.log('🧪 [AUTO-PLAY] Creating user interaction prompt...');
+            createInteractionPrompt(mediaElement);
+        }
+
+        // 检查用户是否已经与页面交互过
+        async function checkUserInteraction() {
+            // 检查是否已有用户交互标记
+            if (window.userHasInteracted) {
+                return true;
+            }
+            
+            // 尝试播放一个空的音频来检测用户交互
+            try {
+                const testAudio = new Audio();
+                testAudio.volume = 0;
+                testAudio.muted = true;
+                await testAudio.play();
+                window.userHasInteracted = true;
+                return true;
+            } catch (error) {
+                return false;
+            }
+        }
+
+        // 创建用户交互提示
+        function createInteractionPrompt(mediaElement) {
+            const videoContainer = mediaElement.parentElement;
+            if (!videoContainer) return;
+            
+            // 创建覆盖层
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+                cursor: pointer;
+                border-radius: 8px;
+            `;
+            
+            // 创建播放按钮
+            const playButton = document.createElement('div');
+            playButton.style.cssText = `
+                background: rgba(79, 172, 254, 0.95);
+                color: white;
+                padding: 20px 30px;
+                border-radius: 12px;
+                font-size: 16px;
+                font-weight: 600;
+                text-align: center;
+                box-shadow: 0 4px 20px rgba(79, 172, 254, 0.4);
+                animation: pulse 2s infinite;
+                transition: all 0.3s ease;
+                cursor: pointer;
+                user-select: none;
+            `;
+            
+            playButton.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="font-size: 24px;">▶️</div>
+                    <div>
+                        <div>🧪 TEST MODE</div>
+                        <div style="font-size: 14px; opacity: 0.9;">点击开始翻译</div>
+                    </div>
+                </div>
+            `;
+            
+            // 悬停效果
+            playButton.addEventListener('mouseenter', () => {
+                playButton.style.transform = 'scale(1.05)';
+                playButton.style.background = 'rgba(79, 172, 254, 1)';
+            });
+            
+            playButton.addEventListener('mouseleave', () => {
+                playButton.style.transform = 'scale(1)';
+                playButton.style.background = 'rgba(79, 172, 254, 0.95)';
+            });
+            
+            overlay.appendChild(playButton);
+            videoContainer.appendChild(overlay);
+            
+            // 点击事件
+            overlay.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                try {
+                    console.log('🧪 [AUTO-PLAY] User clicked play button, starting playback...');
+                    window.userHasInteracted = true; // 标记用户已交互
+                    
+                    await mediaElement.play();
+                    overlay.remove();
+                    
+                    console.log('🧪 [AUTO-PLAY] ✅ User-initiated play successful!');
+                    updateStatus('TEST MODE: Playing and translating...', 'processing');
+                    
+                } catch (error) {
+                    console.error('🧪 [AUTO-PLAY] User-initiated play failed:', error);
+                    updateStatus('TEST MODE: Play failed - ' + error.message, 'error');
+                }
+            });
+            
+            // 更新状态
+            updateStatus('TEST MODE: Auto-play blocked - Click play button to start', 'ready');
+            console.log('🧪 [AUTO-PLAY] User interaction prompt created');
+        }
+
+        // 🧪 手动触发测试模式的函数（用于调试）
+        window.triggerTestMode = function() {
+            console.log('🧪 Manually triggering test mode...');
+            startTestMode();
+        };
+
+        // 🧪 手动启用自动播放的调试函数
+        window.enableAutoPlay = function() {
+            console.log('🧪 [DEBUG] Manually enabling auto-play...');
+            window.userHasInteracted = true;
+            
+            // 创建一个用户手势模拟
+            const event = new MouseEvent('click', {
+                view: window,
+                bubbles: true,
+                cancelable: true
+            });
+            document.body.dispatchEvent(event);
+            
+            console.log('🧪 [DEBUG] Auto-play enabled. Refresh and try test mode again.');
+        };
+
+        // 🧪 检查自动播放状态的调试函数
+        window.checkAutoPlayStatus = async function() {
+            console.log('🧪 [DEBUG] Checking auto-play status...');
+            
+            // 检查用户交互状态
+            console.log('User has interacted:', !!window.userHasInteracted);
+            
+            // 尝试播放测试音频
+            try {
+                const testAudio = new Audio();
+                testAudio.volume = 0;
+                await testAudio.play();
+                console.log('✅ Auto-play allowed');
+                return true;
+            } catch (error) {
+                console.log('❌ Auto-play blocked:', error.message);
+                return false;
+            }
+        };
+
+        // 🧪 添加用户交互监听器
+        function addUserInteractionListeners() {
+            const interactionEvents = ['click', 'keydown', 'touchstart', 'pointerdown'];
+            
+            function markUserInteraction() {
+                window.userHasInteracted = true;
+                console.log('🧪 [AUTO-PLAY] User interaction detected');
+                
+                // 移除监听器（只需要标记一次）
+                interactionEvents.forEach(event => {
+                    document.removeEventListener(event, markUserInteraction);
+                });
+            }
+            
+            // 添加监听器
+            interactionEvents.forEach(event => {
+                document.addEventListener(event, markUserInteraction, { once: true });
+            });
+        }
+
+        // 在页面加载时添加用户交互监听器
+        addUserInteractionListeners();
+
+        // 🎯 Chrome浏览器特殊优化
+        function enableChromeAutoplay() {
+            // 检测Chrome浏览器
+            const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+            
+            if (isChrome) {
+                console.log('🧪 [AUTO-PLAY] Chrome detected, applying Chrome-specific optimizations...');
+                
+                // 在页面加载时预创建音频上下文
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    window.testAudioContext = audioContext;
+                    console.log('🧪 [AUTO-PLAY] Audio context created for Chrome');
+                } catch (error) {
+                    console.log('🧪 [AUTO-PLAY] Failed to create audio context:', error);
+                }
+                
+                // 为Chrome添加特殊的用户交互检测
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden) {
+                        window.userHasInteracted = true;
+                        console.log('🧪 [AUTO-PLAY] Page became visible, marking as user interaction');
+                    }
+                });
+                
+                // 在Chrome中，如果用户切换标签页再回来，通常可以自动播放
+                window.addEventListener('focus', () => {
+                    window.userHasInteracted = true;
+                    console.log('🧪 [AUTO-PLAY] Window focused, marking as user interaction');
+                });
+            }
+        }
+
+        // 🔧 浏览器自动播放设置检测和提示
+        async function checkAutoplayPolicy() {
+            try {
+                // 检测浏览器的自动播放策略
+                if ('getAutoplayPolicy' in navigator) {
+                    const policy = navigator.getAutoplayPolicy('mediaelement');
+                    console.log('🧪 [AUTO-PLAY] Browser autoplay policy:', policy);
+                    
+                    if (policy === 'disallowed') {
+                        showAutoplayHint();
+                    }
+                }
+            } catch (error) {
+                console.log('🧪 [AUTO-PLAY] Could not check autoplay policy:', error);
+            }
+        }
+
+        // 显示自动播放设置提示
+        function showAutoplayHint() {
+            const hint = document.createElement('div');
+            hint.style.cssText = `
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                background: #ff9500;
+                color: white;
+                padding: 12px 16px;
+                border-radius: 8px;
+                font-size: 13px;
+                font-weight: 500;
+                z-index: 10000;
+                max-width: 300px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                cursor: pointer;
+            `;
+            
+            hint.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div>🔊</div>
+                    <div>
+                        <div>自动播放被限制</div>
+                        <div style="font-size: 11px; opacity: 0.9;">点击此处了解如何启用</div>
+                    </div>
+                    <div style="margin-left: auto; cursor: pointer;">×</div>
+                </div>
+            `;
+            
+            hint.addEventListener('click', () => {
+                alert(`启用自动播放的方法：
+
+Chrome浏览器：
+1. 点击地址栏左侧的🔒或🛡️图标
+2. 将"声音"设置为"允许"
+3. 刷新页面
+
+Firefox浏览器：
+1. 点击地址栏左侧的🔒图标
+2. 点击"权限"
+3. 将"自动播放"设置为"允许音频和视频"
+4. 刷新页面
+
+或者直接点击视频播放按钮开始测试。`);
+                hint.remove();
+            });
+            
+            document.body.appendChild(hint);
+            
+            // 10秒后自动消失
+            setTimeout(() => {
+                if (hint.parentElement) {
+                    hint.remove();
+                }
+            }, 10000);
+        }
+
+        // 初始化Chrome优化和策略检测
+        enableChromeAutoplay();
+        checkAutoplayPolicy();
 
         async function checkSessionStatus(checkSessionId) {
             try {

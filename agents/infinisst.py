@@ -8,11 +8,11 @@ from dataclasses import dataclass
 
 # 条件导入simuleval模块
 try:
-    from simuleval.agents.states import AgentStates
-    from simuleval.utils import entrypoint
+    from simuleval.agents.states import AgentStates # type: ignore[attr-defined]
+    from simuleval.utils import entrypoint # type: ignore[attr-defined]
     from simuleval.data.segments import SpeechSegment
-    from simuleval.agents import SpeechToTextAgent
-    from simuleval.agents.actions import WriteAction, ReadAction
+    from simuleval.agents import SpeechToTextAgent # type: ignore[attr-defined]
+    from simuleval.agents.actions import WriteAction, ReadAction # type: ignore[attr-defined]
     SIMULEVAL_AVAILABLE = True
 except ImportError:
     # 如果simuleval不可用，创建占位符类
@@ -225,8 +225,8 @@ class InfiniSST(SpeechToTextAgent):
         config.position_embeddings_type = 'rope'
         config.speech_encoder_chunk_size = args.block_size
         config.speech_encoder_left_chunk_num = args.max_cache_size // args.block_size
-        speech_encoder = SeamlessM4Tv2SpeechEncoder(config).eval()
-        speech_encoder.to(dtype=model.dtype, device=model.device)
+        speech_encoder = SeamlessM4Tv2SpeechEncoder(config).eval() # type: ignore[attr-defined]
+        speech_encoder.to(dtype=model.dtype, device=model.device)   # type: ignore[attr-defined]
         model.model.speech_encoder = speech_encoder
 
         model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.max_latency_multiplier, resize=False)
