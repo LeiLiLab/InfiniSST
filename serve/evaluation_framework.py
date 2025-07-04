@@ -758,14 +758,8 @@ class EvaluationFramework:
                     f"instance_{user.user_id}.log"
                 )
                 
-                # 首先尝试从服务器导出精确的延迟数据
-                server_exported = await self._export_server_delays(user, log_path)
-                
-                if not server_exported and user.delays:
-                    # 备用方案：使用本地收集的延迟数据
-                    await self._export_local_delays(user, log_path)
-                    
-                logger.debug(f"📝 Simuleval log exported for {user.user_id}")
+                # 从服务器导出精确的延迟数据
+                await self._export_server_delays(user, log_path)
     
     async def _export_server_delays(self, user: UserSimulation, log_path: str) -> bool:
         """从服务器导出精确的延迟数据"""
@@ -797,60 +791,6 @@ class EvaluationFramework:
             logger.debug(f"⚠️ User {user.user_id}: Failed to export server delays: {e}")
             
         return False
-    
-    async def _export_local_delays(self, user: UserSimulation, log_path: str):
-        """使用本地收集的延迟数据导出（备用方案）"""
-        log_entries = []
-        
-        # 🔥 改进：尝试从服务器获取真实的翻译文本
-        real_segments = []
-        try:
-            if user.session_id:
-                async with aiohttp.ClientSession() as temp_session:
-                    # 直接使用session_id作为URL参数，让FastAPI自动处理
-                    async with temp_session.get(
-                        f"{self.config.server_url}/session_delays/{user.session_id}",
-                        params={"include_details": True}
-                    ) as response:
-                        if response.status == 200:
-                            data = await response.json()
-                            if data.get("success", False):
-                                delay_stats = data.get("delays", {})
-                                if "segment_logs" in delay_stats:
-                                    real_segments = delay_stats["segment_logs"]
-                                    logger.info(f"🎯 User {user.user_id}: Retrieved {len(real_segments)} real segments from server")
-        except Exception as e:
-            logger.debug(f"⚠️ User {user.user_id}: Failed to get real segments: {e}")
-        
-        # 改进的本地延迟导出 - 优先使用真实数据
-        if real_segments:
-            # 使用从服务器获取的真实数据
-            for segment in real_segments:
-                entry = {
-                    "segment_id": segment["segment_id"],
-                    "src": segment["src"],  # 真实的源文本（虽然可能是占位符）
-                    "tgt": segment["tgt"],  # 真实的翻译文本
-                    "tokens": segment["tokens"],  # 真实的token
-                    "delays": segment["delays"],  # 真实的延迟
-                    "input_start_time": segment.get("input_start_time", 0),
-                    "output_time": segment.get("output_time", 0),
-                    "average_delay": segment.get("average_delay", 0),
-                    "user_id": user.user_id,
-                    "language_pair": user.language_pair,
-                    "video_file": user.video_file,
-                    "estimated": False  # 标记这是真实数据
-                }
-                log_entries.append(entry)
-        else:
-            raise ValueError("No real segments found")
-        
-        # 写入文件
-        async with aiofiles.open(log_path, 'w') as f:
-            for entry in log_entries:
-                await f.write(json.dumps(entry, ensure_ascii=False) + '\n')
-        
-        data_type = "real" if real_segments else "estimated"
-        logger.info(f"📝 User {user.user_id}: Local delays exported to {log_path} ({len(log_entries)} entries, {data_type} data)")
     
     async def _generate_summary_report(self, timestamp: int):
         """生成汇总报告"""

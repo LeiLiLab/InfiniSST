@@ -1830,7 +1830,7 @@ async def export_session_delays(session_id: str, filepath: Optional[str] = None)
     
     try:
         # 🔍 FastAPI已经自动解码路径参数，无需手动解码
-        print(f"🔍 [EXPORT-DELAYS] Received session_id: '{session_id}' (len={len(session_id)})")
+        print(f"🔍 EXPORT-DELAYS Received session_id: '{session_id}' (len={len(session_id)})")
         
         # Find the session and export delays
         session_found = False

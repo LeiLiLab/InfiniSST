@@ -82,91 +82,6 @@ class PageTable:
                 kv_data_type=dtype,
             )
     
-    def _emergency_page_reclaim(self, needed_pages: int) -> int:
-        """紧急页面回收：从不活跃的session中回收页面"""
-        import time
-        current_time = time.time()
-        freed_pages = 0
-        
-        print(f"🚨 [EMERGENCY] 开始紧急页面回收，需要 {needed_pages} 页")
-        
-        # 获取所有session的最后访问时间，按不活跃程度排序
-        inactive_sessions = []
-        for session_id, last_access in self.last_access_time.items():
-            inactive_time = current_time - last_access
-            if session_id in self.session_pages:
-                page_count = len(self.session_pages[session_id])
-                inactive_sessions.append((session_id, inactive_time, page_count))
-        
-        # 按不活跃时间排序（最不活跃的优先回收）
-        inactive_sessions.sort(key=lambda x: x[1], reverse=True)
-        
-        print(f"🔍 [EMERGENCY] 找到 {len(inactive_sessions)} 个session可供回收")
-        
-        # 优先回收5分钟以上不活跃的session
-        for session_id, inactive_time, page_count in inactive_sessions:
-            if freed_pages >= needed_pages:
-                break
-                
-            # 只回收超过5分钟不活跃的session
-            if inactive_time > 300:  # 5分钟
-                print(f"🔄 [EMERGENCY] 回收session {session_id} ({page_count} 页，不活跃 {inactive_time:.1f}s)")
-                
-                # 释放该session的所有页面
-                if session_id in self.session_pages:
-                    pages_to_free = self.session_pages[session_id].copy()
-                    
-                    # 减少页面引用计数
-                    for page_id in pages_to_free:
-                        if self.page_cnt[page_id] > 0:
-                            self.page_cnt[page_id] -= 1
-                            
-                            # 如果引用计数为0，放回页面池
-                            if self.page_cnt[page_id] == 0:
-                                self.paged_queue.append(page_id)
-                                freed_pages += 1
-                                
-                                # 清理映射
-                                if page_id in self.page_session_map:
-                                    del self.page_session_map[page_id]
-                    
-                    # 清理session记录
-                    del self.session_pages[session_id]
-                    if session_id in self.last_access_time:
-                        del self.last_access_time[session_id]
-                    
-                    print(f"✅ [EMERGENCY] Session {session_id} 释放了 {len(pages_to_free)} 页")
-        
-        # 如果还是不够，考虑回收较新的session（但给出警告）
-        if freed_pages < needed_pages:
-            remaining_needed = needed_pages - freed_pages
-            print(f"⚠️ [EMERGENCY] 仍需 {remaining_needed} 页，考虑回收较新session")
-            
-            for session_id, inactive_time, page_count in inactive_sessions:
-                if freed_pages >= needed_pages:
-                    break
-                    
-                # 回收1分钟以上不活跃的session
-                if inactive_time > 60 and session_id in self.session_pages:  # 1分钟
-                    print(f"🔄 [EMERGENCY] 强制回收session {session_id} ({page_count} 页，不活跃 {inactive_time:.1f}s)")
-                    
-                    pages_to_free = self.session_pages[session_id].copy()
-                    for page_id in pages_to_free:
-                        if self.page_cnt[page_id] > 0:
-                            self.page_cnt[page_id] -= 1
-                            if self.page_cnt[page_id] == 0:
-                                self.paged_queue.append(page_id)
-                                freed_pages += 1
-                                if page_id in self.page_session_map:
-                                    del self.page_session_map[page_id]
-                    
-                    del self.session_pages[session_id]
-                    if session_id in self.last_access_time:
-                        del self.last_access_time[session_id]
-        
-        print(f"🏁 [EMERGENCY] 紧急回收完成，释放了 {freed_pages} 页")
-        return freed_pages
-    
     def track_session_page_usage(self, session_id: str, allocated_pages: list):
         """追踪session的页面使用"""
         import time
@@ -298,38 +213,16 @@ def allocate_paged_kv_cache(
             print(f"❌ [MEMORY] 页面池不足：需要 {num_new_pages} 页，但只有 {available_pages} 页可用")
             print(f"🔍 [MEMORY] 页面使用统计:")
             print(f"   - 使用率: {usage_rate:.1%}")
+            if available_pages == 0:
+                print(f"❌ [MEMORY] 页面池完全耗尽，无法分配内存")
             
-            # 🔥 策略1：已有session优先保护
-            if is_existing_session and usage_rate > 0.9:  # 90%以上使用率
-                print(f"🛡️ [MEMORY] 已有session优先保护策略启用")
-                
-                # 尝试紧急回收页面
-                emergency_freed = pagetable._emergency_page_reclaim(num_new_pages)
-                if emergency_freed >= num_new_pages:
-                    print(f"✅ [MEMORY] 紧急回收成功，释放了 {emergency_freed} 页")
-                    available_pages = len(pagetable.paged_queue)
-                else:
-                    print(f"⚠️ [MEMORY] 紧急回收不足，已有session请求将被延迟处理")
-                    raise RuntimeError(f"GPU内存页面池耗尽：已有session需要 {num_new_pages} 页但只能回收 {emergency_freed} 页")
+            # 显示引用计数分布
+            unique_counts, count_frequencies = torch.unique(pagetable.page_cnt, return_counts=True)
+            print(f"📊 [MEMORY] 页面引用计数分布:")
+            for count, freq in zip(unique_counts.cpu().numpy(), count_frequencies.cpu().numpy()):
+                print(f"   - 引用计数 {count}: {freq} 页")
             
-            # 🔥 策略2：新session降级处理
-            elif not is_existing_session:
-                print(f"🔄 [MEMORY] 新session降级策略：延迟创建")
-                raise RuntimeError(f"GPU内存页面池耗尽：新session创建被阻止以保护已有session（需要 {num_new_pages} 页但只有 {available_pages} 页）")
-            
-            # 🔥 策略3：系统过载保护
-            else:
-                print(f"🚨 [MEMORY] 系统内存严重不足")
-                if available_pages == 0:
-                    print(f"❌ [MEMORY] 页面池完全耗尽，无法分配内存")
-                
-                # 显示引用计数分布
-                unique_counts, count_frequencies = torch.unique(pagetable.page_cnt, return_counts=True)
-                print(f"📊 [MEMORY] 页面引用计数分布:")
-                for count, freq in zip(unique_counts.cpu().numpy(), count_frequencies.cpu().numpy()):
-                    print(f"   - 引用计数 {count}: {freq} 页")
-                
-                raise RuntimeError(f"GPU内存页面池耗尽：需要 {num_new_pages} 页但无可用页面")
+            raise RuntimeError(f"GPU内存页面池耗尽：需要 {num_new_pages} 页但无可用页面")
         
         # 分配页面
         allocated_indices = []

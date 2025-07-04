@@ -44,7 +44,7 @@ async def run_moderate_test():
         num_users=16,
         language_split=0.5,
         arrival_rate=2.0,    # 2 users per second
-        test_duration=120,   # 2 minutes
+        test_duration=1200,   # 2 minutes
         server_url="http://localhost:8000",
         output_dir="evaluation_results/moderate_test",
         use_dynamic_schedule=False,

@@ -834,7 +834,6 @@ class LLMScheduler:
                     self.queue_stats[gpu_id]['decode']['current_queue_size'] = len(decode_queue)
                     logger.info(f"🔒 [FINE-LOCK] Created DECODE batch of size {len(batch)} for GPU {gpu_id}")
         
-        print(f"🔒 [FINE-LOCK] GPU {gpu_id} no requests available, returning empty batch")
         return batch
     
     def _process_batch(self, batch: List[InferenceRequest], gpu_id: int):
