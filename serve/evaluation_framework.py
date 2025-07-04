@@ -334,13 +334,23 @@ class SimulatedUser:
                                         text = msg.data
                                         output_timestamp = time.time()
                                         
-                                        # 计算字符级延迟
+                                        # 🔥 计算延迟（根据语言类型使用字符或单词级）
                                         if text and not text.startswith("ERROR:") and not text.startswith("READY:"):
-                                            # 🎯 更精确的延迟计算：每个字符使用相同的延迟
                                             chunk_delay = output_timestamp - input_timestamp
-                                            for char in text:
-                                                self.simulation.delays.append(chunk_delay)
-                                                self.simulation.total_characters += 1
+                                            
+                                            # 🔥 根据语言类型进行不同的计数
+                                            if "Chinese" in self.simulation.language_pair:
+                                                # 中文：字符级计数
+                                                for char in text:
+                                                    self.simulation.delays.append(chunk_delay)
+                                                    self.simulation.total_characters += 1
+                                            else:
+                                                # 意大利语等：单词级计数
+                                                import re
+                                                words = re.findall(r'\b\w+\b', text)
+                                                for word in words:
+                                                    self.simulation.delays.append(chunk_delay)
+                                                    self.simulation.total_characters += 1  # 统一使用total_characters字段
                                             
                                             logger.debug(f"📤 User {self.simulation.user_id}: Received '{text}' (delay: {chunk_delay:.3f}s)")
                                     elif msg.type == aiohttp.WSMsgType.ERROR:
@@ -391,12 +401,22 @@ class SimulatedUser:
                                         logger.info(f"✅ User {self.simulation.user_id}: Audio processing completed")
                                         break
                                     elif text and not text.startswith("ERROR:") and not text.startswith("READY:"):
-                                        # 处理最终的翻译结果
+                                        # 🔥 处理最终的翻译结果（根据语言类型）
                                         output_timestamp = time.time()
                                         final_delay = output_timestamp - input_timestamp
-                                        for char in text:
-                                            self.simulation.delays.append(final_delay)
-                                            self.simulation.total_characters += 1
+                                        
+                                        if "Chinese" in self.simulation.language_pair:
+                                            # 中文：字符级计数
+                                            for char in text:
+                                                self.simulation.delays.append(final_delay)
+                                                self.simulation.total_characters += 1
+                                        else:
+                                            # 意大利语等：单词级计数
+                                            import re
+                                            words = re.findall(r'\b\w+\b', text)
+                                            for word in words:
+                                                self.simulation.delays.append(final_delay)
+                                                self.simulation.total_characters += 1  # 统一使用total_characters字段
                                         
                                         logger.debug(f"📤 User {self.simulation.user_id}: Final result '{text}' (delay: {final_delay:.3f}s)")
                                 elif msg.type == aiohttp.WSMsgType.CLOSE:
@@ -448,8 +468,11 @@ class SimulatedUser:
         if self.simulation.delays:
             self.simulation.stream_laal = statistics.mean(self.simulation.delays)
             self.simulation.total_segments = len(self.simulation.delays)
+            
+            # 🔥 根据语言类型显示正确的单位
+            unit_text = "chars" if "Chinese" in self.simulation.language_pair else "words"
             logger.info(f"📊 User {self.simulation.user_id}: streamLAAL = {self.simulation.stream_laal:.3f}s "
-                       f"({self.simulation.total_characters} chars, {self.simulation.total_segments} segments)")
+                       f"({self.simulation.total_characters} {unit_text}, {self.simulation.total_segments} segments)")
         else:
             self.simulation.stream_laal = 0.0
             logger.warning(f"⚠️ User {self.simulation.user_id}: No delays recorded")
@@ -467,18 +490,29 @@ class SimulatedUser:
                     if data.get("success", False):
                         delay_stats = data.get("delays", {})
                         
-                        # 更新统计数据
+                        # 🔥 更新统计数据（支持字符级和单词级）
                         if "stream_laal" in delay_stats:
                             self.simulation.stream_laal = delay_stats["stream_laal"]
-                            self.simulation.total_characters = delay_stats.get("total_characters", 0)
                             self.simulation.total_segments = delay_stats.get("segments", 0)
                             
-                            # 如果有详细的字符延迟数据，使用它
-                            if "character_delays" in delay_stats:
-                                self.simulation.delays = [cd["delay"] for cd in delay_stats["character_delays"]]
+                            # 🔥 根据语言类型获取相应的计数
+                            language_type = delay_stats.get("language_type", "characters")
+                            if language_type == "characters":
+                                self.simulation.total_characters = delay_stats.get("total_characters", 0)
+                                # 如果有详细的字符延迟数据，使用它
+                                if "character_delays" in delay_stats:
+                                    self.simulation.delays = [cd["delay"] for cd in delay_stats["character_delays"]]
+                                unit_text = "chars"
+                            else:
+                                # 对于单词级语言，我们仍然使用total_characters字段来保持兼容性
+                                self.simulation.total_characters = delay_stats.get("total_words", 0)
+                                # 如果有详细的单词延迟数据，使用它
+                                if "word_delays" in delay_stats:
+                                    self.simulation.delays = [wd["delay"] for wd in delay_stats["word_delays"]]
+                                unit_text = "words"
                             
                             logger.info(f"🎯 User {self.simulation.user_id}: Server delays - streamLAAL = {self.simulation.stream_laal:.3f}s "
-                                       f"({self.simulation.total_characters} chars, {self.simulation.total_segments} segments)")
+                                       f"({self.simulation.total_characters} {unit_text}, {self.simulation.total_segments} segments)")
                         else:
                             logger.warning(f"⚠️ User {self.simulation.user_id}: No server delay data available")
                     else:
@@ -740,6 +774,10 @@ class EvaluationFramework:
         
         timestamp = int(time.time())
         
+        # 🔥 确保输出目录存在
+        import os
+        os.makedirs(self.config.output_dir, exist_ok=True)
+        
         # 导出详细结果
         detailed_results_path = os.path.join(
             self.config.output_dir, 
@@ -804,6 +842,9 @@ class EvaluationFramework:
     
     async def _export_simuleval_logs(self):
         """导出simuleval兼容的instance.log文件"""
+        # 🔥 确保输出目录存在
+        os.makedirs(self.config.output_dir, exist_ok=True)
+        
         for user in self.results.users:
             if user.status == "completed":
                 log_path = os.path.join(
@@ -847,6 +888,9 @@ class EvaluationFramework:
     
     async def _generate_summary_report(self, timestamp: int):
         """生成汇总报告"""
+        # 🔥 确保输出目录存在
+        os.makedirs(self.config.output_dir, exist_ok=True)
+        
         report_path = os.path.join(
             self.config.output_dir,
             f"evaluation_summary_{timestamp}.txt"

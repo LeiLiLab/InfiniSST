@@ -42,7 +42,7 @@ async def run_quick_test():
     return results
 
 async def run_moderate_test():
-    """运行中等规模测试：16个用户，2分钟"""
+    """运行中等规模测试：16个用户，20分钟"""
     config = TestConfig(
         num_users=16,
         language_split=0.5,
@@ -69,7 +69,7 @@ async def run_moderate_test():
     return results
 
 async def run_large_scale_test():
-    """运行大规模测试：32个用户，5分钟"""
+    """运行大规模测试：32个用户，50分钟"""
     config = TestConfig(
         num_users=32,
         language_split=0.5,

@@ -31,6 +31,16 @@ class CharacterDelay:
     delay: float
 
 @dataclass
+class WordDelay:
+    """记录单个单词的延迟信息"""
+    word: str
+    segment_id: int
+    word_index: int
+    input_time: float
+    output_time: float
+    delay: float
+
+@dataclass
 class SegmentLog:
     """Simuleval兼容的segment日志"""
     segment_id: int
@@ -43,65 +53,135 @@ class SegmentLog:
     average_delay: float
 
 class DelayTracker:
-    """字符级延迟追踪器，用于计算streamLAAL"""
+    """多语言延迟追踪器，支持字符级和单词级对齐，用于计算streamLAAL"""
     
-    def __init__(self, session_id: str):
+    def __init__(self, session_id: str, language_id: str):
         self.session_id = session_id
-        self.character_delays: List[CharacterDelay] = []
+        self.language_id = language_id
+        
+        # 🔥 根据语言确定对齐类型：中文用字符级，意大利语等用单词级
+        self.is_character_based = self._is_character_based_language(language_id)
+        
+        # 通用延迟记录（统一接口）
+        self.unit_delays: List[Union[CharacterDelay, WordDelay]] = []
         self.segment_logs: List[SegmentLog] = []
         self.current_segment_id = 0
         self.current_input_buffer = ""
         self.current_input_start_time = 0.0
-        self.char_input_times: List[float] = []  # 记录每个输入字符的时间
+        
+        # 根据语言类型选择不同的输入时间记录策略
+        if self.is_character_based:
+            self.char_input_times: List[float] = []  # 记录每个输入字符的时间
+        else:
+            self.word_input_times: List[float] = []  # 记录每个输入单词的时间
+            self.input_words: List[str] = []  # 记录输入的单词序列
+    
+    def _is_character_based_language(self, language_id: str) -> bool:
+        """判断语言是否为字符级对齐（中文）还是单词级对齐（意大利语等）"""
+        # 中文相关的语言对使用字符级对齐
+        chinese_patterns = ['chinese', 'zh', 'Chinese', 'Chinese']
+        return any(pattern in language_id for pattern in chinese_patterns)
         
     def record_input_segment(self, text: str, timestamp: float):
-        """记录输入segment和每个字符的输入时间"""
+        """记录输入segment和每个单元的输入时间（字符或单词）"""
         self.current_input_buffer += text
-        # 为新输入的每个字符记录时间戳
-        for char in text:
-            self.char_input_times.append(timestamp)
+        
+        if self.is_character_based:
+            # 🔥 中文：字符级处理
+            for char in text:
+                self.char_input_times.append(timestamp)
+        else:
+            # 🔥 意大利语等：单词级处理
+            import re
+            # 提取单词（忽略标点符号）
+            words = re.findall(r'\b\w+\b', text)
+            for word in words:
+                self.word_input_times.append(timestamp)
+                self.input_words.append(word)
         
         if not self.current_input_start_time:
             self.current_input_start_time = timestamp
     
     def record_output_segment(self, output_text: str, timestamp: float, is_final: bool = False):
-        """记录输出segment并计算字符级延迟"""
-        if not output_text or not self.char_input_times:
+        """记录输出segment并计算延迟（字符级或单词级）"""
+        if not output_text:
             return
             
-        # 分析输出文本的每个字符
-        output_chars = list(output_text)
         delays = []
         tokens = []
         
-        # 对于每个输出字符，计算与对应输入字符的延迟
-        input_char_index = 0
-        for i, output_char in enumerate(output_chars):
-            # 找到对应的输入字符时间（简化匹配策略）
-            if input_char_index < len(self.char_input_times):
-                input_time = self.char_input_times[input_char_index]
-                delay = timestamp - input_time
+        if self.is_character_based:
+            # 🔥 中文：字符级处理
+            if not self.char_input_times:
+                return
                 
-                char_delay = CharacterDelay(
-                    char=output_char,
-                    segment_id=self.current_segment_id,
-                    char_index=i,
-                    input_time=input_time,
-                    output_time=timestamp,
-                    delay=delay
-                )
+            output_chars = list(output_text)
+            input_char_index = 0
+            
+            for i, output_char in enumerate(output_chars):
+                if input_char_index < len(self.char_input_times):
+                    input_time = self.char_input_times[input_char_index]
+                    delay = timestamp - input_time
+                    
+                    char_delay = CharacterDelay(
+                        char=output_char,
+                        segment_id=self.current_segment_id,
+                        char_index=i,
+                        input_time=input_time,
+                        output_time=timestamp,
+                        delay=delay
+                    )
+                    
+                    self.unit_delays.append(char_delay)
+                    delays.append(delay)
+                    tokens.append(output_char)
+                    
+                    input_char_index += 1
+            
+            logger.info(f"🎯 [DELAY-TRACKER-CHAR] Segment {self.current_segment_id}: {len(delays)} chars, avg delay: {statistics.mean(delays):.3f}s")
+        
+        else:
+            # 🔥 意大利语等：单词级处理
+            if not self.word_input_times or not self.input_words:
+                return
                 
-                self.character_delays.append(char_delay)
-                delays.append(delay)
-                tokens.append(output_char)
-                
-                input_char_index += 1
+            import re
+            output_words = re.findall(r'\b\w+\b', output_text)
+            input_word_index = 0
+            
+            for i, output_word in enumerate(output_words):
+                if input_word_index < len(self.word_input_times):
+                    input_time = self.word_input_times[input_word_index]
+                    delay = timestamp - input_time
+                    
+                    word_delay = WordDelay(
+                        word=output_word,
+                        segment_id=self.current_segment_id,
+                        word_index=i,
+                        input_time=input_time,
+                        output_time=timestamp,
+                        delay=delay
+                    )
+                    
+                    self.unit_delays.append(word_delay)
+                    delays.append(delay)
+                    tokens.append(output_word)
+                    
+                    input_word_index += 1
+            
+            logger.info(f"🎯 [DELAY-TRACKER-WORD] Segment {self.current_segment_id}: {len(delays)} words, avg delay: {statistics.mean(delays):.3f}s")
         
         # 创建segment日志
         if delays:
+            # 根据语言类型确定源文本长度
+            if self.is_character_based:
+                src_length = len(output_text)  # 字符数
+            else:
+                src_length = len(tokens)  # 单词数
+                
             segment_log = SegmentLog(
                 segment_id=self.current_segment_id,
-                src=self.current_input_buffer[:len(output_chars)],  # 对应的输入文本
+                src=self.current_input_buffer[:src_length] if self.is_character_based else ' '.join(self.input_words[:len(tokens)]),
                 tgt=output_text,
                 tokens=tokens,
                 delays=delays,
@@ -111,24 +191,28 @@ class DelayTracker:
             )
             
             self.segment_logs.append(segment_log)
-            
-            logger.info(f"🎯 [DELAY-TRACKER] Segment {self.current_segment_id}: {len(delays)} chars, avg delay: {segment_log.average_delay:.3f}s")
         
         if is_final:
             self.current_segment_id += 1
             self.current_input_buffer = ""
             self.current_input_start_time = 0.0
-            self.char_input_times = []
+            
+            if self.is_character_based:
+                self.char_input_times = []
+            else:
+                self.word_input_times = []
+                self.input_words = []
     
     def calculate_stream_laal(self) -> float:
-        """计算streamLAAL（所有字符延迟的平均值）"""
-        if not self.character_delays:
+        """计算streamLAAL（所有延迟单元的平均值）"""
+        if not self.unit_delays:
             return 0.0
             
-        all_delays = [cd.delay for cd in self.character_delays]
+        all_delays = [unit.delay for unit in self.unit_delays]
         stream_laal = statistics.mean(all_delays)
         
-        logger.info(f"📊 [STREAM-LAAL] Session {self.session_id}: {stream_laal:.3f}s (from {len(all_delays)} characters)")
+        unit_type = "characters" if self.is_character_based else "words"
+        logger.info(f"📊 [STREAM-LAAL] Session {self.session_id}: {stream_laal:.3f}s (from {len(all_delays)} {unit_type})")
         return stream_laal
     
     def export_simuleval_log(self, filepath: str):
@@ -155,12 +239,19 @@ class DelayTracker:
         logger.info(f"📝 [EXPORT] Simuleval log exported to {filepath} ({len(simuleval_data)} segments)")
         return filepath
     
-    def get_statistics(self, include_character_details: bool = False) -> Dict[str, Any]:
+    def get_statistics(self, include_unit_details: bool = False) -> Dict[str, Any]:
         """获取延迟统计信息"""
-        if not self.character_delays:
-            return {"stream_laal": 0.0, "total_characters": 0, "segments": 0}
+        if not self.unit_delays:
+            unit_type = "characters" if self.is_character_based else "words"
+            return {
+                "stream_laal": 0.0, 
+                f"total_{unit_type}": 0, 
+                "segments": 0,
+                "language_type": unit_type
+            }
             
-        delays = [cd.delay for cd in self.character_delays]
+        delays = [unit.delay for unit in self.unit_delays]
+        unit_type = "characters" if self.is_character_based else "words"
         
         result = {
             "stream_laal": statistics.mean(delays),
@@ -168,24 +259,43 @@ class DelayTracker:
             "max_delay": max(delays),
             "median_delay": statistics.median(delays),
             "std_delay": statistics.stdev(delays) if len(delays) > 1 else 0.0,
-            "total_characters": len(delays),
+            f"total_{unit_type}": len(delays),
             "segments": len(self.segment_logs),
-            "session_id": self.session_id
+            "session_id": self.session_id,
+            "language_type": unit_type,
+            "language_id": self.language_id
         }
         
-        # 如果需要详细信息，包含字符级延迟数据
-        if include_character_details:
-            result["character_delays"] = [
-                {
-                    "char": cd.char,
-                    "segment_id": cd.segment_id,
-                    "char_index": cd.char_index,
-                    "input_time": cd.input_time,
-                    "output_time": cd.output_time,
-                    "delay": cd.delay
-                }
-                for cd in self.character_delays
-            ]
+        # 🔥 向后兼容：为字符级语言保留total_characters字段
+        if self.is_character_based:
+            result["total_characters"] = len(delays)
+        
+        # 如果需要详细信息，包含单元级延迟数据
+        if include_unit_details:
+            if self.is_character_based:
+                result["character_delays"] = [
+                    {
+                        "char": unit.char,
+                        "segment_id": unit.segment_id,
+                        "char_index": unit.char_index,
+                        "input_time": unit.input_time,
+                        "output_time": unit.output_time,
+                        "delay": unit.delay
+                    }
+                    for unit in self.unit_delays
+                ]
+            else:
+                result["word_delays"] = [
+                    {
+                        "word": unit.word,
+                        "segment_id": unit.segment_id,
+                        "word_index": unit.word_index,
+                        "input_time": unit.input_time,
+                        "output_time": unit.output_time,
+                        "delay": unit.delay
+                    }
+                    for unit in self.unit_delays
+                ]
             
             result["segment_logs"] = [
                 {
@@ -314,13 +424,13 @@ class UserSession:
     def __post_init__(self):
         # 初始化延迟追踪器
         if self.evaluation_mode:
-            self.delay_tracker = DelayTracker(self.session_id)
+            self.delay_tracker = DelayTracker(self.session_id, self.language_id)
     
     def enable_evaluation_mode(self):
         """启用评估模式，开始记录延迟"""
         self.evaluation_mode = True
         if not self.delay_tracker:
-            self.delay_tracker = DelayTracker(self.session_id)
+            self.delay_tracker = DelayTracker(self.session_id, self.language_id)
         logger.info(f"🎯 [EVAL] Session {self.session_id} evaluation mode enabled")
     
     def record_input(self, text: str, timestamp: Optional[float] = None):
@@ -349,11 +459,17 @@ class UserSession:
             return self.delay_tracker.export_simuleval_log(filepath)
         return ""
     
-    def get_delay_statistics(self, include_character_details: bool = False) -> Dict[str, Any]:
+    def get_delay_statistics(self, include_unit_details: bool = False) -> Dict[str, Any]:
         """获取延迟统计"""
         if self.delay_tracker:
-            return self.delay_tracker.get_statistics(include_character_details)
-        return {"stream_laal": 0.0, "total_characters": 0, "segments": 0}
+            return self.delay_tracker.get_statistics(include_unit_details)
+        unit_type = "characters" if "Chinese" in self.language_id else "words"
+        return {
+            "stream_laal": 0.0, 
+            f"total_{unit_type}": 0, 
+            "segments": 0, 
+            "language_type": unit_type
+        }
 
 @dataclass
 class InferenceRequest:
