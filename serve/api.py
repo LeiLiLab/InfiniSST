@@ -786,7 +786,7 @@ async def startup_event():
                 def __init__(self):
                     self.max_batch_size = 32  #jiaxuanluo
                     self.batch_timeout = 0.1
-                    self.session_timeout = 300
+                    self.session_timeout = 3600
             
             args_obj = Args()
             global_scheduler = LLMScheduler(gpu_language_map, args_obj)
@@ -822,12 +822,18 @@ async def startup_event():
 async def initialize_translation(agent_type: str, language_pair: str, latency_multiplier: int = 2, client_id: str = None):
     global args, global_scheduler
     
-    # Generate a unique session ID that includes the client ID to ensure different browser tabs have independent sessions
-    timestamp = int(time.time() * 1000)  # Use timestamp for uniqueness
-    client_suffix = f"_{client_id}" if client_id else f"_{timestamp}"
-    session_id = f"{agent_type}_{language_pair}_{len(active_sessions) + len(session_queue)}{client_suffix}"
+    # 🔥 改进：使用更清晰的session ID生成机制
+    timestamp = int(time.time() * 1000)  # 毫秒级时间戳
+    
+    if client_id:
+        # 如果有client_id，使用client_id + 语言对 + 时间戳
+        session_id = f"{client_id}_{language_pair}_{timestamp}"
+    else:
+        # 如果没有client_id，使用agent类型 + 语言对 + 时间戳
+        session_id = f"{agent_type}_{language_pair}_{timestamp}"
     
     print(f"Initializing new session {session_id} with {agent_type} model for {language_pair}, latency: {latency_multiplier}x")
+    print(f"📊 [SESSION-STATS] 当前活跃session数: {len(active_sessions)}, 队列中session数: {len(session_queue)}")
     
     # 优先使用调度器系统（如果可用）
     if global_scheduler and SCHEDULER_AVAILABLE:
@@ -870,11 +876,19 @@ async def get_queue_status(session_id: str):
     # Check if the session is already active
     if session_id in active_sessions:
         session = active_sessions[session_id]
-        # 检查会话是否已准备就绪
-        if session.is_ready:
-            return {"session_id": session_id, "status": "active", "queued": False, "queue_position": 0}
+        
+        # 检查是否是基于调度器的会话
+        is_scheduler_based = isinstance(session, dict) and session.get('is_scheduler_based', False)
+        
+        if is_scheduler_based:
+            # 调度器会话总是被认为是活跃状态
+            return {"session_id": session_id, "status": "active", "queued": False, "queue_position": 0, "session_type": "scheduler"}
         else:
-            return {"session_id": session_id, "status": "initializing", "queued": False, "queue_position": 0}
+            # 传统会话：检查会话是否已准备就绪
+            if session.is_ready:
+                return {"session_id": session_id, "status": "active", "queued": False, "queue_position": 0, "session_type": "traditional"}
+            else:
+                return {"session_id": session_id, "status": "initializing", "queued": False, "queue_position": 0, "session_type": "traditional"}
     
     # Check if the session is in the queue
     queue_position = get_queue_position(session_id)
@@ -1339,26 +1353,49 @@ async def update_latency(session_id: str, latency_multiplier: int):
         # Get the session
         session = active_sessions[session_id]
         
-        # 确保工作进程已准备就绪
-        if not session.is_ready:
-            # 尝试等待工作进程准备就绪，最多等待10秒
-            if not await session.wait_for_ready(timeout=10):
-                return {"success": False, "error": "Worker process not ready, try again later"}
+        # 检查是否是基于调度器的会话
+        is_scheduler_based = isinstance(session, dict) and session.get('is_scheduler_based', False)
         
-        # Update the latency multiplier in the session args
-        session.args.latency_multiplier = latency_multiplier
-        
-        # Send a command to the worker process to update the latency multiplier
-        session.control_queue.put(f"update_latency:{latency_multiplier}")
-        
-        # Update the last activity timestamp
-        update_session_activity(session_id)
-        # Update ping timestamp
-        update_session_ping(session_id)
-        
-        print(f"Updated latency multiplier for session {session_id} to {latency_multiplier}x")
-        
-        return {"success": True}
+        if is_scheduler_based:
+            # 调度器会话处理
+            print(f"🔧 调度器会话延迟更新: {session_id} -> {latency_multiplier}x")
+            
+            # 调度器会话的延迟更新（如果需要的话）
+            # 目前调度器会话的延迟由调度器内部管理
+            # 这里可以添加调度器相关的延迟更新逻辑
+            
+            # 更新会话活动时间
+            update_session_activity(session_id)
+            update_session_ping(session_id)
+            
+            return {
+                "success": True, 
+                "message": f"Scheduler session latency noted: {latency_multiplier}x",
+                "session_type": "scheduler"
+            }
+        else:
+            # 传统会话处理
+            # 确保工作进程已准备就绪
+            if not session.is_ready:
+                # 尝试等待工作进程准备就绪，最多等待10秒
+                if not await session.wait_for_ready(timeout=10):
+                    return {"success": False, "error": "Worker process not ready, try again later"}
+            
+            # Update the latency multiplier in the session args
+            session.args.latency_multiplier = latency_multiplier
+            
+            # Send a command to the worker process to update the latency multiplier
+            session.control_queue.put(f"update_latency:{latency_multiplier}")
+            
+            # Update the last activity timestamp
+            update_session_activity(session_id)
+            # Update ping timestamp
+            update_session_ping(session_id)
+            
+            print(f"Updated latency multiplier for traditional session {session_id} to {latency_multiplier}x")
+            
+            return {"success": True, "session_type": "traditional"}
+            
     except Exception as e:
         print(f"Error updating latency: {e}")
         return {"success": False, "error": str(e)}
@@ -2101,8 +2138,92 @@ async def serve_test_video(filename: str):
 # Explicit root path handling
 @app.get("/")
 async def read_index():
-    """Return index.html"""
-    return FileResponse('static/index.html')
+    """Serve the main HTML page"""
+    with open("static/index.html", "r", encoding="utf-8") as f:
+        content = f.read()
+    return HTMLResponse(content=content)
+
+@app.get("/debug/session_stats")
+async def get_session_stats():
+    """🔍 调试用：获取详细的session统计信息"""
+    global active_sessions, session_queue, global_scheduler
+    
+    stats = {
+        "timestamp": time.time(),
+        "api_layer": {
+            "active_sessions_count": len(active_sessions),
+            "session_queue_count": len(session_queue),
+            "active_session_ids": list(active_sessions.keys()),
+            "session_types": {}
+        },
+        "scheduler_layer": {
+            "scheduler_available": global_scheduler is not None and SCHEDULER_AVAILABLE,
+            "total_sessions": 0,
+            "sessions_by_language": {},
+            "session_details": []
+        }
+    }
+    
+    # 分析API层的session类型
+    for session_id, session in active_sessions.items():
+        is_scheduler = isinstance(session, dict) and session.get('is_scheduler_based', False)
+        session_type = "scheduler" if is_scheduler else "traditional"
+        
+        if session_type not in stats["api_layer"]["session_types"]:
+            stats["api_layer"]["session_types"][session_type] = 0
+        stats["api_layer"]["session_types"][session_type] += 1
+    
+    # 分析调度器层的sessions
+    if global_scheduler and SCHEDULER_AVAILABLE:
+        try:
+            with global_scheduler.session_lock:
+                for language_id, user_sessions in global_scheduler.user_sessions.items():
+                    stats["scheduler_layer"]["total_sessions"] += len(user_sessions)
+                    stats["scheduler_layer"]["sessions_by_language"][language_id] = len(user_sessions)
+                    
+                    for user_id, session in user_sessions.items():
+                        session_detail = {
+                            "session_id": session.session_id,
+                            "user_id": user_id,
+                            "language_id": language_id,
+                            "created_at": session.created_at,
+                            "last_activity": session.last_activity,
+                            "inactive_seconds": time.time() - session.last_activity,
+                            "prefill_can_enter": session.prefill_can_enter,
+                            "evaluation_mode": session.evaluation_mode
+                        }
+                        stats["scheduler_layer"]["session_details"].append(session_detail)
+        except Exception as e:
+            stats["scheduler_layer"]["error"] = str(e)
+    
+    return stats
+
+@app.get("/debug/session_history")
+async def get_session_creation_history():
+    """🔍 调试用：显示session创建历史（如果有的话）"""
+    # 这个功能需要在后续版本中实现session创建历史记录
+    # 现在返回当前统计
+    current_time = time.time()
+    
+    history = {
+        "message": "Session creation history not yet implemented",
+        "current_stats": {
+            "active_sessions": len(active_sessions),
+            "session_queue": len(session_queue),
+            "timestamp": current_time
+        },
+        "explanation": {
+            "why_numbers_jump": [
+                "Session IDs使用时间戳生成，确保全局唯一性",
+                "不同测试运行之间的session ID不会重复",
+                "编号跳跃是正常的，表示之前有session被创建过",
+                "这避免了session ID冲突的问题"
+            ],
+            "new_id_format": "现在使用: {client_id/agent_type}_{language_pair}_{timestamp}"
+        }
+    }
+    
+    return history
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="InfiniSST Translation API Server")

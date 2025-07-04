@@ -463,36 +463,22 @@ class Wav2Vec2Model(BaseFairseqModel):
             print(f"➡️ Final source shape: {cache.src.shape}")
         
         #print("\n=== Stacking Sources ===")
-        # for i, src in enumerate(sources):
-        #     print(f"Source {i} shape: {src.shape}")
-        
-        source = torch.stack(sources, dim=0)
-        print(f"Final stacked shape: {source.shape}\n")
-
-        with torch.no_grad():
-            features = self.feature_extractor(source)
-
+        features = []
+        for i, src in enumerate(sources):
+            src = src.unsqueeze(0)
+            with torch.no_grad():
+                feature = self.feature_extractor(src)
+            print(f"Source {i} shape: {src.shape}")
+            features.append(feature)
         feature_batch = []
         for i, request in enumerate(requests):
             cache = request['cache']
             blocksize = request['blocksize']
 
-            feature = features[i, :, : blocksize]
+            feature = features[i][0, :, : blocksize]
             max_src_token_len = 79 + 320
             cache.src = cache.src[-max_src_token_len:]
             feature_batch.append(feature)
-
-
-            try:
-                # print  ("🔍 [DEBUG - 拼接前] sources:")
-                # for idx, src in enumerate(sources):
-                #     print(f"  - source[{idx}].shape: {src.shape}")
-                
-                print(f"🔍 [DEBUG - 当前 request speech shape]: {request['speech'].shape}")
-                # print(f"🔍 [DEBUG - 当前 cache.src shape]: {cache.src.shape}")
-                # print(f"🔍 [DEBUG - 当前 cache.src_len]: {cache.src_len}")
-            except Exception as e:
-                print(f"[日志打印出错] {e}")
 
         features = torch.cat(feature_batch, dim=-1).transpose(0, 1)        
         features = self.layer_norm(features)

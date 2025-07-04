@@ -115,7 +115,9 @@ class SpeechQwenModel(Qwen2Model):
                     index += a_p - u_p - 5
                 filled_inputs_embeds.append(filled_inputs_embed)
 
-            inputs_embeds = torch.stack(filled_inputs_embeds)
+            inputs_embeds = filled_inputs_embeds
+            #inputs_embeds = torch.stack(filled_inputs_embeds)
+
         else:
             inputs_embeds = self.embed_tokens(input_ids[:, -1:])
 

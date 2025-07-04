@@ -49,6 +49,9 @@ class TestConfig:
     # 评估专用配置
     session_timeout_extension: bool = True  # 是否延长session超时时间
     ping_interval: int = 60  # ping间隔（秒）
+    # 🔥 新增：Latency测试配置
+    latency_range: List[int] = field(default_factory=lambda: [1, 2, 3, 4])  # 支持的latency multiplier范围
+    latency_distribution: Optional[List[float]] = None  # 自定义latency分布，如果为None则使用均匀分布
     
 @dataclass 
 class UserSimulation:
@@ -57,6 +60,7 @@ class UserSimulation:
     language_pair: str
     video_file: str
     arrival_time: float
+    latency_multiplier: int = 2  # 🔥 新增：延迟倍数
     session_id: Optional[str] = None
     start_time: Optional[float] = None
     end_time: Optional[float] = None
@@ -88,6 +92,9 @@ class EvaluationResults:
     # 按语言的统计
     chinese_results: Dict[str, float] = field(default_factory=dict)
     italian_results: Dict[str, float] = field(default_factory=dict)
+    
+    # 🔥 新增：按latency的统计
+    latency_results: Dict[int, Dict[str, float]] = field(default_factory=dict)
     
     # 系统性能指标
     server_stats: Dict[str, Any] = field(default_factory=dict)
@@ -135,12 +142,12 @@ class SimulatedUser:
     
     async def _load_model(self):
         """加载翻译模型"""
-        logger.info(f"🤖 User {self.simulation.user_id}: Loading model for {self.simulation.language_pair}")
+        logger.info(f"🤖 User {self.simulation.user_id}: Loading model for {self.simulation.language_pair} (latency: {self.simulation.latency_multiplier})")
         
         payload = {
             "agent_type": "InfiniSST",
             "language_pair": self.simulation.language_pair,
-            "latency_multiplier": 2,
+            "latency_multiplier": self.simulation.latency_multiplier,  # 🔥 使用分配的latency_multiplier
             "client_id": self.simulation.user_id,
             "evaluation_mode": "true"  # 🔥 使用字符串而不是布尔值
         }
@@ -522,6 +529,11 @@ class EvaluationFramework:
         logger.info(f"   - Language split: {self.config.language_split*100:.0f}% Chinese, {(1-self.config.language_split)*100:.0f}% Italian")
         logger.info(f"   - Arrival rate: {self.config.arrival_rate} users/second")
         logger.info(f"   - Dynamic scheduling: {self.config.use_dynamic_schedule}")
+        logger.info(f"   - Latency range: {self.config.latency_range}")  # 🔥 新增：显示latency范围
+        if self.config.latency_distribution:
+            logger.info(f"   - Latency distribution: {self.config.latency_distribution}")
+        else:
+            logger.info(f"   - Latency distribution: uniform")
         
         # 创建输出目录
         os.makedirs(self.config.output_dir, exist_ok=True)
@@ -579,16 +591,36 @@ class EvaluationFramework:
             # 随机选择测试视频
             video_file = random.choice(self.config.test_videos)
             
+            # 🔥 新增：随机分配latency_multiplier
+            latency_multiplier = self._assign_latency_multiplier()
+            
             user = UserSimulation(
                 user_id=f"eval_user_{i:03d}_{uuid.uuid4().hex[:8]}",
                 language_pair=language_pair,
                 video_file=video_file,
-                arrival_time=arrival_time
+                arrival_time=arrival_time,
+                latency_multiplier=latency_multiplier  # 🔥 分配latency
             )
             
             users.append(user)
         
         return users
+    
+    def _assign_latency_multiplier(self) -> int:
+        """根据配置分配latency_multiplier"""
+        if self.config.latency_distribution:
+            # 使用自定义分布
+            if len(self.config.latency_distribution) != len(self.config.latency_range):
+                raise ValueError("latency_distribution length must match latency_range length")
+            
+            return random.choices(
+                self.config.latency_range, 
+                weights=self.config.latency_distribution, 
+                k=1
+            )[0]
+        else:
+            # 使用均匀分布
+            return random.choice(self.config.latency_range)
     
     async def _configure_server(self):
         """配置服务器的动态调度参数"""
@@ -635,7 +667,7 @@ class EvaluationFramework:
         # 等待到达时间
         await asyncio.sleep(user.arrival_time)
         
-        logger.info(f"👤 User {user.user_id} arriving at t={user.arrival_time:.1f}s ({user.language_pair})")
+        logger.info(f"👤 User {user.user_id} arriving at t={user.arrival_time:.1f}s ({user.language_pair}, latency={user.latency_multiplier}x)")
         
         # 启动用户模拟
         simulated_user = SimulatedUser(user, self.config)
@@ -679,9 +711,28 @@ class EvaluationFramework:
                         "avg_stream_laal": statistics.mean(italian_laals),
                         "std_stream_laal": statistics.stdev(italian_laals) if len(italian_laals) > 1 else 0.0
                     }
+                
+                # 🔥 新增：按latency分组统计
+                for latency in self.config.latency_range:
+                    latency_users = [u for u in completed_users if u.latency_multiplier == latency and u.stream_laal is not None]
+                    if latency_users:
+                        latency_laals = [u.stream_laal for u in latency_users]
+                        self.results.latency_results[latency] = {
+                            "count": len(latency_laals),
+                            "avg_stream_laal": statistics.mean(latency_laals),
+                            "std_stream_laal": statistics.stdev(latency_laals) if len(latency_laals) > 1 else 0.0,
+                            "min_stream_laal": min(latency_laals),
+                            "max_stream_laal": max(latency_laals)
+                        }
         
         logger.info(f"📊 Summary: {self.results.completed_users} completed, {self.results.failed_users} failed")
         logger.info(f"📊 Overall streamLAAL: {self.results.avg_stream_laal:.3f}s ± {self.results.std_stream_laal:.3f}s")
+        
+        # 🔥 新增：显示latency分布
+        if self.results.latency_results:
+            logger.info(f"📊 Latency distribution:")
+            for latency, stats in sorted(self.results.latency_results.items()):
+                logger.info(f"   - Latency {latency}x: {stats['count']} users, avg streamLAAL = {stats['avg_stream_laal']:.3f}s ± {stats['std_stream_laal']:.3f}s")
     
     async def _export_results(self):
         """导出结果到文件"""
@@ -715,7 +766,8 @@ class EvaluationFramework:
                 "min_stream_laal": self.results.min_stream_laal,
                 "max_stream_laal": self.results.max_stream_laal,
                 "chinese_results": self.results.chinese_results,
-                "italian_results": self.results.italian_results
+                "italian_results": self.results.italian_results,
+                "latency_results": self.results.latency_results  # 🔥 新增：latency结果
             },
             "users": []
         }
@@ -727,6 +779,7 @@ class EvaluationFramework:
                 "language_pair": user.language_pair,
                 "video_file": user.video_file,
                 "arrival_time": user.arrival_time,
+                "latency_multiplier": user.latency_multiplier,  # 🔥 新增：latency信息
                 "start_time": user.start_time,
                 "end_time": user.end_time,
                 "stream_laal": user.stream_laal,
@@ -843,6 +896,24 @@ class EvaluationFramework:
                 f"  - Std Dev: {self.results.italian_results['std_stream_laal']:.3f}s",
                 ""
             ])
+        
+        # 🔥 新增：按latency分组的结果
+        if self.results.latency_results:
+            report_lines.extend([
+                f"Latency Multiplier Results:",
+                ""
+            ])
+            
+            for latency, stats in sorted(self.results.latency_results.items()):
+                report_lines.extend([
+                    f"Latency {latency}x:",
+                    f"  - Count: {stats['count']}",
+                    f"  - Average streamLAAL: {stats['avg_stream_laal']:.3f}s",
+                    f"  - Std Dev: {stats['std_stream_laal']:.3f}s",
+                    f"  - Min: {stats['min_stream_laal']:.3f}s",
+                    f"  - Max: {stats['max_stream_laal']:.3f}s",
+                    ""
+                ])
         
         report_lines.extend([
             "=" * 80,
