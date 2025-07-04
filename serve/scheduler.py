@@ -437,7 +437,7 @@ class LLMScheduler:
         # Configuration
         self.max_batch_size = getattr(args, 'max_batch_size', 32) if args else 32
         self.batch_timeout = getattr(args, 'batch_timeout', 0.1) if args else 0.1  # seconds
-        self.session_timeout = getattr(args, 'session_timeout', 3600) if args else 3600  # 1 hour
+        self.session_timeout = getattr(args, 'session_timeout', 300) if args else 300  # 5 minutes
         
         # 🔥 Task 3: Dynamic Scheduling Configuration
         self.use_dynamic_schedule = getattr(args, 'use_dynamic_schedule', False) if args else False
@@ -457,6 +457,10 @@ class LLMScheduler:
         
         # 🔥 Session锁保持独立，因为跨GPU访问
         self.session_lock = Lock()
+        
+        # 🔥 优化：使用hash-based锁池，避免全局锁瓶颈
+        self.session_lock_pool_size = 256  # 锁池大小
+        self.session_lock_pool = [Lock() for _ in range(self.session_lock_pool_size)]
         
         # Processing state
         self.is_running = False
@@ -511,6 +515,19 @@ class LLMScheduler:
         logger.info(f"LLMScheduler initialized with GPU mapping: {gpu_language_map}")
         logger.info(f"Max batch size: {self.max_batch_size}")
         logger.info(f"🔒 Fine-grained locks initialized: {len(self.prefill_locks)} prefill locks, {len(self.decode_locks)} decode locks")
+        logger.info(f"🔒 Hash-based session lock pool: {self.session_lock_pool_size} locks (no global lock contention)")
+    
+    def _get_session_lock(self, session_id: str) -> Lock:
+        """使用hash-based锁池，避免全局锁竞争"""
+        # 🔥 关键优化：使用session_id的hash选择锁，无需全局锁
+        lock_index = hash(session_id) % self.session_lock_pool_size
+        return self.session_lock_pool[lock_index]
+    
+    def _cleanup_session_lock(self, session_id: str):
+        """Hash-based锁池无需清理，保留接口兼容性"""
+        # 🔥 优化：hash-based锁池是预分配的，无需清理
+        # 保留此方法是为了代码兼容性，实际不执行任何操作
+        pass
     
     def start(self):
         """Start the scheduler processing loops for all GPUs"""
@@ -746,12 +763,15 @@ class LLMScheduler:
         
         🔥 关键改进：使用细粒度锁，减少锁竞争
         🔥 Task 3: Added dynamic scheduling support
+        🔥 性能优化：智能session过滤，确保batch中每个session只有一个request
+        🔥 最大化多用户并发：不同session完全并行，同session按顺序排队
         
         Scheduling Policy:
         1. If PREFILL queue has requests: Create pure PREFILL batch (up to 32 requests)
         2. If PREFILL queue is empty: Create pure DECODE batch (up to 32 requests)
         3. NEVER mix PREFILL and DECODE in the same batch
-        4. Dynamic scheduling: Dispatch based on wait time or batch size thresholds
+        4. Each session can only have ONE request per batch (智能过滤)
+        5. Dynamic scheduling: Dispatch based on wait time or batch size thresholds
         """
         batch = []
         current_time = time.time()
@@ -769,23 +789,45 @@ class LLMScheduler:
 
         prefill_queue = self.prefill_queues[gpu_id]
         if prefill_queue:
+            # 🔥 性能优化：只使用GPU级别的队列锁，避免全局锁
             with self.prefill_locks[gpu_id]:
                 print(f"🔒 [FINE-LOCK] GPU {gpu_id} checking prefill queue... {len(prefill_queue)}")
                 # 有prefill请求，创建prefill batch
                 batch_exit_time = time.time()
                 need_add_back = []
+                session_in_batch = set()  # 🔥 关键：跟踪batch中已有的session
+                
+                # 🔥 智能session过滤：确保batch中每个session只有一个request
                 while len(batch) < self.max_batch_size and prefill_queue:
                     try:
-                        # if prefill_queue[0].session and not prefill_queue[0].session.prefill_can_enter:
-                        #     print(f"🔍 [SCHEDULER-PREFILL] 请求 {prefill_queue[0].request_id}, {prefill_queue[0].session_id} {prefill_queue[0].session.prefill_can_enter} 不能进入prefill")
-                        #     continue
-
                         request = prefill_queue.popleft()
-                        if request.session and not request.session.prefill_can_enter:
-                            print(f"🔍 [SCHEDULER-PREFILL] 请求 {request.request_id}, {request.session_id} {request.session.prefill_can_enter} 不能进入prefill")
+                        
+                        # 🔥 第一层过滤：检查session是否已在当前batch中
+                        if request.session_id in session_in_batch:
+                            print(f"🔄 [SESSION-FILTER] Session {request.session_id} 已在batch中，放回前面保持顺序")
+                            need_add_back.append(request)
+                            continue
+                        
+                        # 🔥 第二层过滤：尝试获取session锁（无阻塞）
+                        session_lock = self._get_session_lock(request.session_id)
+                        can_process = False
+                        
+                        # 🔥 关键：使用trylock避免阻塞，确保调度器高效运行
+                        if session_lock.acquire(blocking=False):  # 非阻塞尝试获取锁
+                            try:
+                                if request.session and request.session.prefill_can_enter:
+                                    request.session.prefill_can_enter = False  # 原子设置
+                                    can_process = True
+                                    session_in_batch.add(request.session_id)  # 标记session已在batch
+                            finally:
+                                session_lock.release()  # 立即释放锁
+                        
+                        if not can_process:
+                            print(f"🔍 [SESSION-FILTER] 请求 {request.request_id}, session {request.session_id} 暂时无法处理，放回前面")
                             need_add_back.append(request)
                             continue
 
+                        print(f"🔒 [SESSION-FILTER] ✅ Session {request.session_id} 成功加入batch")
 
                         # 🔥 记录出队时间和等待时间
                         request.queue_exit_time = batch_exit_time
@@ -807,13 +849,24 @@ class LLMScheduler:
                         print(f"⚠️ [SCHEDULER] Prefill queue empty during pop for GPU {gpu_id}")
                         break
 
-                prefill_queue.extendleft(need_add_back)
-                
+                # 🔥 关键修复：将无法处理的请求放回队列前面，保持原有顺序
+                if need_add_back:
+                    # 🔥 逆序放回，确保原始顺序保持不变
+                    for req in reversed(need_add_back):
+                        prefill_queue.appendleft(req)  # 放到队列前面
+                    print(f"🔄 [SESSION-FILTER] 将 {len(need_add_back)} 个请求放回前面 (保持同session顺序)")
+                    # 🔥 注意：这可能导致下次get_batch再次遇到相同请求，但不会死循环
+                    # 因为我们有max_batch_size限制，最坏情况是这次batch较小
+
                 if batch:
                     assert all(req.stage.name == RequestStage.PREFILL.name for req in batch)
+                    # 验证batch中每个session都是唯一的
+                    session_ids_in_batch = [req.session_id for req in batch]
+                    assert len(session_ids_in_batch) == len(set(session_ids_in_batch)), "Batch contains duplicate sessions!"
+                    
                     # 🔥 更新队列大小统计
                     self.queue_stats[gpu_id]['prefill']['current_queue_size'] = len(prefill_queue)
-                    logger.info(f"🔒 [FINE-LOCK] Created PREFILL batch of size {len(batch)} for GPU {gpu_id}")
+                    logger.info(f"🔒 [SESSION-FILTER] Created PREFILL batch: {len(batch)} requests, {len(session_ids_in_batch)} unique sessions (hash-lock pool)")
                     return batch
         
         decode_queue = self.decode_queues[gpu_id]
@@ -822,9 +875,21 @@ class LLMScheduler:
                 print(f"🔒 [FINE-LOCK] GPU {gpu_id} checking decode queue... {len(decode_queue)}")
                 # 有decode请求，创建decode batch
                 batch_exit_time = time.time()
+                session_in_batch = set()  # 🔥 Decode队列也应用相同逻辑
+                need_add_back = []
+                
                 while len(batch) < self.max_batch_size and decode_queue:
                     try:
                         request = decode_queue.popleft()
+                        
+                        # 🔥 Decode阶段也应用session过滤（虽然通常不需要，但保持一致性）
+                        if request.session_id in session_in_batch:
+                            print(f"🔄 [SESSION-FILTER] Decode session {request.session_id} 已在batch中，放回前面保持顺序")
+                            need_add_back.append(request)
+                            continue
+                        
+                        session_in_batch.add(request.session_id)
+                        
                         # 🔥 记录出队时间和等待时间
                         request.queue_exit_time = batch_exit_time
                         if hasattr(request, 'queue_enter_time'):
@@ -845,11 +910,22 @@ class LLMScheduler:
                         print(f"⚠️ [SCHEDULER] Decode queue empty during pop for GPU {gpu_id}")
                         break
                 
+                # 🔥 修复：将decode请求也放回前面保持顺序
+                if need_add_back:
+                    # 🔥 逆序放回，确保原始顺序保持不变
+                    for req in reversed(need_add_back):
+                        decode_queue.appendleft(req)  # 放到队列前面
+                    print(f"🔄 [SESSION-FILTER] 将 {len(need_add_back)} 个decode请求放回前面 (保持顺序)")
+                
                 if batch:
                     assert all(req.stage.name == RequestStage.DECODE.name for req in batch)
+                    # 验证batch中每个session都是唯一的
+                    session_ids_in_batch = [req.session_id for req in batch]
+                    assert len(session_ids_in_batch) == len(set(session_ids_in_batch)), "Decode batch contains duplicate sessions!"
+                    
                     # 🔥 更新队列大小统计
                     self.queue_stats[gpu_id]['decode']['current_queue_size'] = len(decode_queue)
-                    logger.info(f"🔒 [FINE-LOCK] Created DECODE batch of size {len(batch)} for GPU {gpu_id}")
+                    logger.info(f"🔒 [SESSION-FILTER] Created DECODE batch: {len(batch)} requests, {len(session_ids_in_batch)} unique sessions (hash-lock pool)")
         
         return batch
     
@@ -921,10 +997,10 @@ class LLMScheduler:
                                 print(f"🔍 [SCHEDULER-DEBUG] Request {i+1} 失败详情: {result}")
                             self._update_session_with_result(request, result)
                             logger.info(f"Request {request.request_id} completed with inference engine")
-                        # else:
-                        #     # 处理缺失的结果
-                        #     print(f"   - Request {i+1} 缺失结果")
-                        #     self._handle_failed_request(request, "Missing inference result")
+                        else:
+                            # 处理缺失的结果
+                            print(f"   - Request {i+1} 缺失结果")
+                            self._handle_failed_request(request, "Missing inference result")
                     
                 except Exception as e:
                     logger.error(f"[ERROR] Inference engine failed for GPU {gpu_id}: {e}")
@@ -1054,8 +1130,11 @@ class LLMScheduler:
                             logger.info(f"🎯 [DELAY] Recorded output for session {session.session_id}: {len(generated_text)} chars")
 
                     if finished:
-                        print(f"🔍 [ORCA-SCHEDULER] Session {session.session_id} 允许新的prefill请求进入")
-                        session.prefill_can_enter = True
+                        print(f"🔍 [ORCA-SCHEDULER] Session {session.session_id} 翻译完成，允许新的prefill请求进入")
+                        # 🔥 性能优化：使用per-session锁而不是全局锁
+                        session_lock = self._get_session_lock(session.session_id)
+                        with session_lock:
+                            session.prefill_can_enter = True
                     if is_chinese_translation:
                         new_full_text = ''.join(session.target)
                     else:
@@ -1330,8 +1409,12 @@ class LLMScheduler:
             # Remove expired sessions
             for language_id, user_id in sessions_to_remove:
                 if language_id in self.user_sessions and user_id in self.user_sessions[language_id]:
+                    session = self.user_sessions[language_id][user_id]
+                    session_id = session.session_id
                     del self.user_sessions[language_id][user_id]
                     self.stats['active_sessions'] -= 1
+                    # 🔥 清理对应的session锁，避免内存泄漏
+                    self._cleanup_session_lock(session_id)
                     logger.info(f"Cleaned up expired session for user {user_id}, language {language_id}")
     
     def get_session_info(self, user_id: str, language_id: str) -> Optional[Dict[str, Any]]:
@@ -1495,6 +1578,9 @@ class LLMScheduler:
                     # 从会话字典中移除
                     del self.user_sessions[language_id][user_id]
                     self.stats['active_sessions'] -= 1
+                    
+                    # 🔥 清理对应的session锁
+                    self._cleanup_session_lock(session.session_id)
                     
                     logger.info(f"✅ 会话 {session.session_id} 清理完成")
                     return True

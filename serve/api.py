@@ -786,7 +786,7 @@ async def startup_event():
                 def __init__(self):
                     self.max_batch_size = 32  #jiaxuanluo
                     self.batch_timeout = 0.1
-                    self.session_timeout = 3600
+                    self.session_timeout = 300
             
             args_obj = Args()
             global_scheduler = LLMScheduler(gpu_language_map, args_obj)

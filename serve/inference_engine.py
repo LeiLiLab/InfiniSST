@@ -351,23 +351,15 @@ class InferenceEngine:
     
     def _process_prefill_batch(self, requests: List[InferenceRequest]) -> List[Dict[str, Any]]:
         """处理prefill阶段的请求 - ORCA风格，一次只做prefill步骤"""
-        #todo :try
         # 🔥 ORCA架构：为batch中的每个request分别构造beam_search.Request
+        # 🔥 优化：调度器已确保batch中每个session唯一，可直接并行处理
         beam_requests = []
         for req in requests:
-
-            session = req.session
-            if session and not session.prefill_can_enter:
-                print(f"🔍 [SCHEDULER-PREFILL] 请求 {req.request_id}, {req.session_id} 不能处理prefill")
-                continue
-
-            session.prefill_can_enter = False
-
-            
+            # 🔥 安全保证：调度器已设置prefill_can_enter=False，无需重复检查
             beam_req = self._create_beam_request(req)
             beam_requests.append(beam_req)
         
-        print(f"🔍 [ORCA-PREFILL] 处理batch: {len(beam_requests)} 个requests")
+        print(f"🔍 [ORCA-PREFILL] 处理batch: {len(beam_requests)} 个requests (调度器已确保session唯一)")
         
         # 直接调用beam_search的prefill函数
         from model.flashinfer.beam_search import prefill
@@ -392,6 +384,7 @@ class InferenceEngine:
         self._verify_pagetable_consistency("Prefill", speech_pagetable, llm_prefill_pagetable, llm_decode_pagetable)
         
         # 转换结果并更新每个request的cache引用
+        # 🔥 优化：由于调度器保证了batch正确性，requests和processed_requests完美对应
         results = []
         for i, (orig_req, processed_req) in enumerate(zip(requests, processed_requests)):
             result = self._convert_beam_result_to_inference_result(orig_req, processed_req, is_prefill=True)
@@ -418,7 +411,7 @@ class InferenceEngine:
             
             results.append(result)
         
-        print(f"🔍 [ORCA-PREFILL] Batch完成: {len(results)} 个结果")
+        print(f"🔍 [ORCA-PREFILL] Batch完成: {len(results)} 个结果 (完美1:1对应)")
         return results
 
 
