@@ -172,7 +172,7 @@ def allocate_paged_kv_cache(
     n,  # n是需要的token数量
     session_priority='normal',  # 🔥 新增：session优先级
     is_existing_session=True,   # 🔥 新增：是否为已有session
-    session_id=None,            # 🔥 新增：session标识符
+    session=None,            # 🔥 新增：session标识符
 ):
     # 🔍 页面分配前的状态检查
     available_pages = len(pagetable.paged_queue)
@@ -180,6 +180,7 @@ def allocate_paged_kv_cache(
     pagetable.allocation_count += 1
     
     print(f"🔍 [MEMORY] 页面分配请求 #{pagetable.allocation_count}:")
+    print(f"   - pagetable类型: {getattr(pagetable, 'wrapper_type', 'unknown')}")
     print(f"   - 需要token数: {n}")
     print(f"   - 当前页面数: {len(paged_kv_indices)}")
     print(f"   - 最后页剩余: {PAGE_SIZE - paged_kv_last_page_len} slots")
@@ -189,11 +190,11 @@ def allocate_paged_kv_cache(
     print(f"   - 使用率: {100*used_pages/pagetable.initial_pages:.1f}%")
     print(f"   - Session类型: {'已有' if is_existing_session else '新建'}")
     print(f"   - 优先级: {session_priority}")
-    print(f"   - Session ID: {session_id or 'Unknown'}")
+    print(f"   - Session ID: {session.session_id if session is not None else 'Unknown'}")
     
     # 🔥 更新session访问时间
-    if session_id and hasattr(pagetable, 'update_session_access_time'):
-        pagetable.update_session_access_time(session_id)
+    if session and hasattr(pagetable, 'update_session_access_time'):
+        pagetable.update_session_access_time(session.session_id)
     
     # 计算是否需要新页面
     if paged_kv_last_page_len + n <= PAGE_SIZE:
@@ -237,8 +238,8 @@ def allocate_paged_kv_cache(
         paged_kv_indices.extend(allocated_indices)
         
         # 🔥 新增：追踪session页面使用
-        if session_id and hasattr(pagetable, 'track_session_page_usage'):
-            pagetable.track_session_page_usage(session_id, allocated_indices)
+        if session and hasattr(pagetable, 'track_session_page_usage'):
+            pagetable.track_session_page_usage(session.session_id, allocated_indices)
         
         # 计算新的最后页长度
         paged_kv_last_page_len = (n - (PAGE_SIZE - paged_kv_last_page_len) - 1) % PAGE_SIZE + 1
@@ -263,6 +264,7 @@ def pop_paged_kv_cache(
     paged_kv_last_page_len,
     max_steps, # preserve kv cache for last max_steps of tokens
     max_steps_start=0, # preserve kv cache for first max_steps_start tokens
+    session=None
 ):
     kv_cache_size = get_cache_size(paged_kv_indices, paged_kv_last_page_len)
     kv_cache_size_start = (max_steps_start + PAGE_SIZE - 1) // PAGE_SIZE * PAGE_SIZE
@@ -273,20 +275,17 @@ def pop_paged_kv_cache(
 
         # Convert page indices to tensor for faster operations
         page_indices_to_pop = torch.tensor(paged_kv_indices[num_pages_start : num_pages_start + num_pages_to_pop])
-        
         # Batch update page counts
         pagetable.page_cnt[page_indices_to_pop] -= 1
-        
         # Get indices of pages that can be freed
         free_mask = pagetable.page_cnt[page_indices_to_pop] == 0
         free_indices = page_indices_to_pop[free_mask]
-        
         # Update paged queue and indices in one operation
         if len(free_indices) > 0:
-            # Convert to list only once for queue update
             free_indices_list = free_indices.tolist()
             pagetable.paged_queue.extend(free_indices_list)
-            
+            # 打印释放信息
+            print(f"[MEMORY-POP] pagetable类型: {getattr(pagetable, 'wrapper_type', 'unknown')}, session_id: {session.session_id if session is not None else 'Unknown'}, 释放页面: {len(free_indices_list)} 个, 索引: {free_indices_list}")
             # Update paged_kv_indices in one operation
             paged_kv_indices = paged_kv_indices[:num_pages_start] + paged_kv_indices[num_pages_start + num_pages_to_pop:]
 
@@ -324,6 +323,7 @@ def duplicate_paged_kv_cache(
     paged_kv_indices,
     paged_kv_last_page_len,
     pagetable,
+    session=None,
 ):
     # layer, max_num_pages, 2, PAGE_SIZE, kv_heads, kv_dim, 
     tgt_paged_kv_indices = paged_kv_indices[:-1]
@@ -336,7 +336,8 @@ def duplicate_paged_kv_cache(
             pagetable,
             tgt_paged_kv_indices,
             tgt_paged_kv_last_page_len,
-            paged_kv_last_page_len
+            paged_kv_last_page_len,
+            session=session
         )
 
     pagetable.paged_kv_cache[:, tgt_paged_kv_indices[-1]] = \
@@ -350,6 +351,7 @@ def move_paged_kv_cache(
     src_paged_kv_last_page_len,
     src_pagetable,
     tgt_pagetable,
+    session=None,
 ):
     if src_pagetable.paged_kv_cache.device == tgt_pagetable.paged_kv_cache.device:
         return src_pagetable, tgt_pagetable, src_paged_kv_indices, src_paged_kv_last_page_len
@@ -368,6 +370,7 @@ def move_paged_kv_cache(
             src_paged_kv_indices,
             src_paged_kv_last_page_len,
             0,
+            session=session
         )
     
     return src_pagetable, tgt_pagetable, tgt_paged_kv_indices, tgt_paged_kv_last_page_len

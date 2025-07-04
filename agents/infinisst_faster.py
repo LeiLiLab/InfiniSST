@@ -188,10 +188,10 @@ class InfiniSSTFaster(InfiniSST):
                     
                     self.args.max_cache_size,
                     states.speech_cache[i] if states.speech_cache is not None else None,
-
                     self.args.max_llm_cache_size,
                     self.system_prompt_size,
-                    states.past_key_values[i] if states.past_key_values is not None else None
+                    states.past_key_values[i] if states.past_key_values is not None else None,
+                    session=None
                 )
                 for i in range(self.pseudo_batch_size)
             ]

@@ -33,7 +33,8 @@ class Request:
         speech_cache, 
         llm_max_steps, 
         llm_max_steps_start, 
-        llm_cache
+        llm_cache,
+        session=None
     ):
         self.input_ids = input_ids
         self.speech = speech
@@ -50,6 +51,7 @@ class Request:
         self.prefill_finished = False
         self.decode_finished = False
         self.beam_state = None
+        self.session = session
 
     def get_speech_request(self):
         return {
@@ -84,7 +86,7 @@ def collect_finished_beams(request, tokenizer, length_penalty):
     request.beam_state.generated_ids = request.beam_state.generated_ids[mask]
 
 
-def finish_beam_search(request, llm_decode_pagetable, llm_prefill_pagetable):
+def finish_beam_search(request, llm_decode_pagetable, llm_prefill_pagetable, session=None):
     assert request.beam_state.num_remaining_beams == 0
     results = sorted(request.beam_state.results, key=lambda x: x["logp"], reverse=True)
     for r in results[1:]:
@@ -93,6 +95,7 @@ def finish_beam_search(request, llm_decode_pagetable, llm_prefill_pagetable):
             r['cache'].paged_kv_indices,
             r['cache'].paged_kv_last_page_len,
             0,
+            session=session
         )
     request.results = results[0]
     request.llm_cache = results[0]['cache']
@@ -104,6 +107,7 @@ def finish_beam_search(request, llm_decode_pagetable, llm_prefill_pagetable):
             request.llm_cache.paged_kv_last_page_len,
             request.llm_max_steps,
             request.llm_max_steps_start,
+            session=session
         )
     # move llm kv cache to prefill
     llm_decode_pagetable, llm_prefill_pagetable, request.llm_cache.paged_kv_indices, request.llm_cache.paged_kv_last_page_len = \
@@ -111,7 +115,8 @@ def finish_beam_search(request, llm_decode_pagetable, llm_prefill_pagetable):
             request.llm_cache.paged_kv_indices,
             request.llm_cache.paged_kv_last_page_len,
             llm_decode_pagetable,
-            llm_prefill_pagetable
+            llm_prefill_pagetable,
+            session=session
         )
     request.decode_finished = True
 
@@ -162,6 +167,7 @@ def prefill(
                 speech_cache.paged_kv_indices,
                 speech_cache.paged_kv_last_page_len,
                 request.speech_max_steps,
+                session=request.session
             )
         
         # move llm kv cache to decode
@@ -171,7 +177,8 @@ def prefill(
                 llm_cache.paged_kv_indices,
                 llm_cache.paged_kv_last_page_len,
                 llm_prefill_pagetable,
-                llm_decode_pagetable
+                llm_decode_pagetable,
+                session=request.session
             )
         
         # replicate kv cache for each beam
@@ -183,12 +190,33 @@ def prefill(
                     llm_cache.paged_kv_indices,
                     llm_cache.paged_kv_last_page_len,
                     llm_decode_pagetable,
+                    session=request.session
                 )
             beam_cache.append(cache_i)
         request.llm_cache = beam_cache
 
         # finish prefill
         request.prefill_finished = True
+
+        # 在prefill结束后统计每个request的page使用情况
+        # speech pagetable
+        speech_pages = 0
+        if hasattr(speech_pagetable, 'paged_kv_cache'):
+            speech_pages = speech_pagetable.initial_pages - len(speech_pagetable.paged_queue)
+        # llm prefill pagetable
+        llm_prefill_pages = 0
+        if hasattr(llm_prefill_pagetable, 'paged_kv_cache'):
+            llm_prefill_pages = llm_prefill_pagetable.initial_pages - len(llm_prefill_pagetable.paged_queue)
+        # llm decode pagetable
+        llm_decode_pages = 0
+        if hasattr(llm_decode_pagetable, 'paged_kv_cache'):
+            llm_decode_pages = llm_decode_pagetable.initial_pages - len(llm_decode_pagetable.paged_queue)
+        # 写入到request.session（如果有）
+        if hasattr(request, 'session') and request.session is not None:
+            request.session.update_memory_usage('speech_pages', speech_pages)
+            request.session.update_memory_usage('llm_prefill_pages', llm_prefill_pages)
+            request.session.update_memory_usage('llm_decode_pages', llm_decode_pages)
+        print(f"[PAGE-MEMORY-STAT] prefill: session={request.session.session_id if request.session else 'None'}, speech={speech_pages}, llm_prefill={llm_prefill_pages}, llm_decode={llm_decode_pages}")
 
     return requests, speech_pagetable, llm_prefill_pagetable, llm_decode_pagetable
 
@@ -215,7 +243,8 @@ def decode(
             finish_beam_search(
                 requests[i], 
                 llm_decode_pagetable, 
-                llm_prefill_pagetable
+                llm_prefill_pagetable,
+                session=requests[i].session
             )
             finished_requests.append(requests[i])
             mask.append(False)
@@ -277,6 +306,7 @@ def decode(
                     remaining_requests[i].llm_cache[beam_idx[j]].paged_kv_indices,
                     remaining_requests[i].llm_cache[beam_idx[j]].paged_kv_last_page_len,
                     llm_decode_pagetable,
+                    session=remaining_requests[i].session
                 )
             new_llm_cache.append(cache_j)
 
@@ -287,6 +317,7 @@ def decode(
                 remaining_requests[i].llm_cache[j].paged_kv_indices,
                 remaining_requests[i].llm_cache[j].paged_kv_last_page_len,
                 0,
+                session=remaining_requests[i].session
             )
         remaining_requests[i].llm_cache = new_llm_cache
             
@@ -299,13 +330,35 @@ def decode(
             finish_beam_search(
                 remaining_requests[i], 
                 llm_decode_pagetable, 
-                llm_prefill_pagetable
+                llm_prefill_pagetable,
+                session=remaining_requests[i].session
             )
     
     requests = []
     for m in mask:
         if m: requests.append(remaining_requests.pop(0))
         else: requests.append(finished_requests.pop(0))
+
+    # 在decode结束后统计每个request的page使用情况
+    for i, request in enumerate(requests):
+        # speech pagetable
+        speech_pages = 0
+        if hasattr(speech_pagetable, 'paged_kv_cache'):
+            speech_pages = speech_pagetable.initial_pages - len(speech_pagetable.paged_queue)
+        # llm prefill pagetable
+        llm_prefill_pages = 0
+        if hasattr(llm_prefill_pagetable, 'paged_kv_cache'):
+            llm_prefill_pages = llm_prefill_pagetable.initial_pages - len(llm_prefill_pagetable.paged_queue)
+        # llm decode pagetable
+        llm_decode_pages = 0
+        if hasattr(llm_decode_pagetable, 'paged_kv_cache'):
+            llm_decode_pages = llm_decode_pagetable.initial_pages - len(llm_decode_pagetable.paged_queue)
+        # 写入到request.session（如果有）
+        if hasattr(request, 'session') and request.session is not None:
+            request.session.update_memory_usage('speech_pages', speech_pages)
+            request.session.update_memory_usage('llm_prefill_pages', llm_prefill_pages)
+            request.session.update_memory_usage('llm_decode_pages', llm_decode_pages)
+        print(f"[PAGE-STAT] decode: session={request.session.session_id if request.session else 'None'}, speech={speech_pages}, llm_prefill={llm_prefill_pages}, llm_decode={llm_decode_pages}")
 
     return requests, speech_pagetable, llm_prefill_pagetable, llm_decode_pagetable
 

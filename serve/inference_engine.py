@@ -355,6 +355,15 @@ class InferenceEngine:
         # 🔥 ORCA架构：为batch中的每个request分别构造beam_search.Request
         beam_requests = []
         for req in requests:
+
+            session = req.session
+            if session and not session.prefill_can_enter:
+                print(f"🔍 [SCHEDULER-PREFILL] 请求 {req.request_id}, {req.session_id} 不能处理prefill")
+                continue
+
+            session.prefill_can_enter = False
+
+            
             beam_req = self._create_beam_request(req)
             beam_requests.append(beam_req)
         
@@ -597,7 +606,7 @@ class InferenceEngine:
         else:
             print(f"   - past_key_values_for_request: {past_key_values_for_request is not None}")
         
-        # 🔥 关键修复：按照infinisst_faster.py的Request构造方式
+        # 🔥 关键修复：按照infinisst_faster.py的Request构造方式，使用session_id和回调
         beam_req = Request(
             input_ids.view(-1),  # 按照原始代码：input_ids.view(-1)
             speech_batch.view(-1),  # 按照原始代码：speech_batch.view(-1)
@@ -611,8 +620,18 @@ class InferenceEngine:
             # LLM相关参数  
             self.model_args.max_llm_cache_size,  # llm_max_steps
             getattr(self.model, 'system_prompt_size', 0),  # llm_max_steps_start
-            past_key_values_for_request  # llm_cache
+            past_key_values_for_request,  # llm_cache
+            session=request.session
         )
+        
+        # 🔥 调试：验证session传递
+        print(f"🔍 [SESSION-DEBUG] Creating beam_req for {request.request_id}:")
+        print(f"   - request.session_id: {request.session_id}")
+        print(f"   - beam_req.session: {beam_req.session is not None}")
+        if beam_req.session:
+            print(f"   - beam_req.session.session_id: {beam_req.session.session_id}")
+        else:
+            print(f"   - beam_req.session is None")
         
         # 设置状态 - 根据request.stage判断是否已经prefill
         beam_req.prefill_finished = (request.stage == RequestStage.DECODE)
@@ -647,8 +666,15 @@ class InferenceEngine:
             'generated_tokens': [],
             'finished': False,
             'speech_cache': processed_request.speech_cache,
-            'past_key_values': processed_request.llm_cache
+            'past_key_values': processed_request.llm_cache,
+            'session': orig_request.session
         }
+        
+        # 🔥 添加内存统计信息到结果中
+        if hasattr(self, '_pending_memory_updates') and orig_request.session_id in self._pending_memory_updates:
+            result['memory_stats'] = self._pending_memory_updates[orig_request.session_id]
+            # 清除已处理的内存更新
+            del self._pending_memory_updates[orig_request.session_id]
         
         if is_prefill:
             # Prefill阶段完成

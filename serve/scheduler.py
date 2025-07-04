@@ -212,6 +212,7 @@ class UserSession:
     user_id: str
     language_id: str
     session_id: str
+    prefill_can_enter: bool = True
     
     # Speech processing state
     source: List[float] = field(default_factory=list)  # Audio samples
@@ -292,12 +293,12 @@ class UserSession:
         
         self.memory_usage['allocation_count'] += 1
         
-        print(f"🔍 [SESSION-MEMORY] {self.session_id} 内存使用:")
-        print(f"   - Speech: {self.memory_usage.get('speech_pages', 0)} 页")
-        print(f"   - LLM Prefill: {self.memory_usage.get('llm_prefill_pages', 0)} 页")
-        print(f"   - LLM Decode: {self.memory_usage.get('llm_decode_pages', 0)} 页")
-        print(f"   - 总计: {total} 页 (峰值: {self.memory_usage.get('peak_pages', 0)} 页)")
-        print(f"   - 分配次数: {self.memory_usage.get('allocation_count', 0)}")
+        print(f"🔍 SESSION-MEMORY {self.session_id} 内存使用:")
+        print(f"   MEMORY-SPEECH: {self.memory_usage.get('speech_pages', 0)} 页")
+        print(f"   MEMORY-LLM-PREFILL: {self.memory_usage.get('llm_prefill_pages', 0)} 页")
+        print(f"   MEMORY-LLM-DECODE: {self.memory_usage.get('llm_decode_pages', 0)} 页")
+        print(f"   MEMORY-TOTAL: {total} 页 (峰值: {self.memory_usage.get('peak_pages', 0)} 页)")
+        print(f"   MEMORY-ALLOCATION-COUNT: {self.memory_usage.get('allocation_count', 0)}")
     
     def get_memory_summary(self) -> Dict[str, Any]:
         """获取内存使用摘要"""
@@ -364,7 +365,6 @@ class InferenceRequest:
     language_id: str
     session_id: str
     stage: RequestStage
-    
     # Input data 
     speech_batch: torch.Tensor  # Speech input tensor
     input_ids: torch.Tensor     # Text input token IDs
@@ -386,6 +386,9 @@ class InferenceRequest:
     translations_list: List[str] = field(default_factory=list)
     
     beam_state: Optional[Any] = None
+    
+    session: Optional[UserSession] = None
+
     
     # Metadata
     timestamp: float = field(default_factory=time.time)
@@ -633,6 +636,7 @@ class LLMScheduler:
             user_id=user_id,
             language_id=language_id,
             session_id=session.session_id,
+            session=session,
             stage=stage,
             speech_batch=session.source,
             input_ids=input_ids,
@@ -715,7 +719,7 @@ class LLMScheduler:
                         last_queue_report_time = current_time
                     continue
                 
-                # 🔥 关键：process_batch不需要锁，因为每个GPU单线程处理
+
                 self._process_batch(batch, gpu_id)
                 
                 # Clean up old sessions periodically
@@ -769,9 +773,20 @@ class LLMScheduler:
                 print(f"🔒 [FINE-LOCK] GPU {gpu_id} checking prefill queue... {len(prefill_queue)}")
                 # 有prefill请求，创建prefill batch
                 batch_exit_time = time.time()
+                need_add_back = []
                 while len(batch) < self.max_batch_size and prefill_queue:
                     try:
+                        # if prefill_queue[0].session and not prefill_queue[0].session.prefill_can_enter:
+                        #     print(f"🔍 [SCHEDULER-PREFILL] 请求 {prefill_queue[0].request_id}, {prefill_queue[0].session_id} {prefill_queue[0].session.prefill_can_enter} 不能进入prefill")
+                        #     continue
+
                         request = prefill_queue.popleft()
+                        if request.session and not request.session.prefill_can_enter:
+                            print(f"🔍 [SCHEDULER-PREFILL] 请求 {request.request_id}, {request.session_id} {request.session.prefill_can_enter} 不能进入prefill")
+                            need_add_back.append(request)
+                            continue
+
+
                         # 🔥 记录出队时间和等待时间
                         request.queue_exit_time = batch_exit_time
                         if hasattr(request, 'queue_enter_time'):
@@ -791,6 +806,8 @@ class LLMScheduler:
                         # 队列为空，退出循环
                         print(f"⚠️ [SCHEDULER] Prefill queue empty during pop for GPU {gpu_id}")
                         break
+
+                prefill_queue.extendleft(need_add_back)
                 
                 if batch:
                     assert all(req.stage.name == RequestStage.PREFILL.name for req in batch)
@@ -904,10 +921,10 @@ class LLMScheduler:
                                 print(f"🔍 [SCHEDULER-DEBUG] Request {i+1} 失败详情: {result}")
                             self._update_session_with_result(request, result)
                             logger.info(f"Request {request.request_id} completed with inference engine")
-                        else:
-                            # 处理缺失的结果
-                            print(f"   - Request {i+1} 缺失结果")
-                            self._handle_failed_request(request, "Missing inference result")
+                        # else:
+                        #     # 处理缺失的结果
+                        #     print(f"   - Request {i+1} 缺失结果")
+                        #     self._handle_failed_request(request, "Missing inference result")
                     
                 except Exception as e:
                     logger.error(f"[ERROR] Inference engine failed for GPU {gpu_id}: {e}")
@@ -971,7 +988,10 @@ class LLMScheduler:
         """使用推理结果更新用户会话 - ORCA风格分步处理"""
         try:
             # 更新用户会话
-            session = self.user_sessions[request.language_id][request.user_id]
+            session = request.session
+            
+            # 🔥 更新session的内存使用统计（从beam_search中收集的信息）
+            self._update_session_memory_from_result(session, result)
             
             if result.get('success', False):
                 # 🔥 ORCA风格：根据处理阶段更新状态
@@ -1032,7 +1052,10 @@ class LLMScheduler:
                         if session.evaluation_mode and session.delay_tracker:
                             session.record_output(generated_text, output_timestamp, is_final=True)
                             logger.info(f"🎯 [DELAY] Recorded output for session {session.session_id}: {len(generated_text)} chars")
-                    
+
+                    if finished:
+                        print(f"🔍 [ORCA-SCHEDULER] Session {session.session_id} 允许新的prefill请求进入")
+                        session.prefill_can_enter = True
                     if is_chinese_translation:
                         new_full_text = ''.join(session.target)
                     else:
@@ -1101,6 +1124,57 @@ class LLMScheduler:
         except Exception as e:
             logger.error(f"Error updating session for request {request.request_id}: {e}")
             self._handle_failed_request(request, f"Session update failed: {str(e)}")
+    
+    def _update_session_memory_from_result(self, session: UserSession, result: Dict[str, Any]):
+        """从推理结果中更新session的内存使用统计"""
+        try:
+            # 从result中获取内存统计信息（如果有的话）
+            memory_stats = result.get('memory_stats', None)
+            if memory_stats:
+                # 更新各类型页面使用
+                for cache_type, pages_used in memory_stats.items():
+                    if cache_type in ['speech_pages', 'llm_prefill_pages', 'llm_decode_pages']:
+                        session.update_memory_usage(cache_type, pages_used)
+                        
+                print(f"🔍 [SCHEDULER-MEMORY] Updated session {session.session_id} memory from result")
+            else:
+                # 如果result中没有内存统计，可以从其他地方获取或者跳过
+                # 这种情况下，内存统计已经在beam_search中直接更新了session
+                pass
+                
+        except Exception as e:
+            logger.error(f"Error updating session memory from result: {e}")
+    
+    def create_memory_update_callback(self, session_id: str):
+        """创建内存更新回调函数，用于从beam_search更新session内存"""
+        def update_session_memory(session_id: str, memory_stats: Dict[str, int]):
+            """内存更新回调函数 - 直接更新session内存统计"""
+            try:
+                # 通过session_id查找session对象
+                session = None
+                with self.session_lock:
+                    for language_id, user_sessions in self.user_sessions.items():
+                        for user_id, user_session in user_sessions.items():
+                            if user_session.session_id == session_id:
+                                session = user_session
+                                break
+                        if session:
+                            break
+                
+                if session:
+                    # 更新session的内存使用统计
+                    for cache_type, pages_used in memory_stats.items():
+                        if cache_type in ['speech_pages', 'llm_prefill_pages', 'llm_decode_pages']:
+                            session.update_memory_usage(cache_type, pages_used)
+                    
+                    print(f"🔍 [MEMORY-CALLBACK] Updated session {session_id} memory: {memory_stats}")
+                else:
+                    print(f"⚠️ [MEMORY-CALLBACK] Session {session_id} not found for memory update")
+                    
+            except Exception as e:
+                logger.error(f"Error in memory update callback for session {session_id}: {e}")
+        
+        return update_session_memory
     
     def _handle_failed_request(self, request: InferenceRequest, error_msg: str):
         """处理失败的请求"""
@@ -1355,7 +1429,6 @@ class LLMScheduler:
         """Get list of supported language pairs"""
         return list(self.language_gpu_map.keys())
 
-    
     def _cleanup_session_pages(self, session: UserSession):
         """清理单个session的KV cache页面"""
         try:
@@ -1369,6 +1442,7 @@ class LLMScheduler:
                     user_id=session.user_id,
                     language_id=session.language_id,
                     session_id=session.session_id,
+                    session=session,
                     stage=RequestStage.PREFILL,
                     speech_batch=torch.empty(0),
                     input_ids=torch.empty(0, dtype=torch.long),

@@ -1095,7 +1095,8 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                             is_final=False,
                             max_new_tokens=session.get('latency_multiplier', 2) * 10,
                             result_callback=result_callback,
-                            api_session_id=session_id
+                            api_session_id=session_id,
+                            evaluation_mode=True  # 🔥 启用评估模式以收集延迟数据
                         )
 
                         # 打印结构化日志
