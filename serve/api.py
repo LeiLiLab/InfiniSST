@@ -864,6 +864,9 @@ async def initialize_translation(agent_type: str, language_pair: str, latency_mu
 @app.get("/queue_status/{session_id}")
 async def get_queue_status(session_id: str):
     """Get the current status of a queued session"""
+    # 🔍 打印调试信息，查看FastAPI是否自动解码了session_id
+    print(f"🔍 [QUEUE-STATUS] Received session_id: '{session_id}' (len={len(session_id)})")
+    
     # Check if the session is already active
     if session_id in active_sessions:
         session = active_sessions[session_id]
@@ -878,6 +881,11 @@ async def get_queue_status(session_id: str):
     if queue_position is not None:
         return {"session_id": session_id, "status": "queued", "queued": True, "queue_position": queue_position}
     
+    # 🔍 调试：打印所有活跃的session ID进行对比
+    print(f"🔍 [QUEUE-STATUS] Session not found. Active sessions:")
+    for active_id in list(active_sessions.keys())[:3]:  # 只打印前3个
+        print(f"   - '{active_id}' (len={len(active_id)})")
+    
     # Session not found
     return {"session_id": session_id, "status": "not_found", "error": "Session not found in queue or active sessions"}
 
@@ -886,7 +894,11 @@ async def get_queue_status(session_id: str):
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
     await websocket.accept()
     
+    # 🔍 打印调试信息，验证FastAPI自动解码
+    print(f"🔍 [WEBSOCKET] Received session_id: '{session_id}' (len={len(session_id)})")
+    
     if session_id not in active_sessions:
+        print(f"🔍 [WEBSOCKET] Session not found in active_sessions")
         await websocket.close(code=4000, reason="Invalid session ID")
         return
         
@@ -1565,63 +1577,310 @@ async def delete_session(request: Request, session_id: Optional[str] = None):
 @app.get("/health")
 async def health_check():
     try:
-        return {
+        # 收集所有session信息
+        sessions_info = []
+        current_time = time.time()
+        
+        for session_id, session in active_sessions.items():
+            last_activity = session_last_activity.get(session_id, current_time)
+            inactivity_time = current_time - last_activity
+            
+            # 检查是否是调度器会话
+            is_scheduler_based = isinstance(session, dict) and session.get('is_scheduler_based', False)
+            
+            if is_scheduler_based:
+                session_info = {
+                    "session_id": session_id,
+                    "type": "scheduler",
+                    "agent_type": session.get('agent_type', 'Unknown'),
+                    "language_pair": session.get('language_pair', 'Unknown'),
+                    "user_id": session.get('user_id', 'Unknown'),
+                    "latency_multiplier": session.get('latency_multiplier', 'Unknown'),
+                    "inactive_for": f"{inactivity_time:.1f}s",
+                    "created_at": session.get('created_at', 0)
+                }
+            else:
+                # 传统会话
+                process_id = 'Unknown'
+                if hasattr(session, 'process'):
+                    try:
+                        if hasattr(session.process, 'pid'):
+                            process_id = session.process.pid
+                    except:
+                        process_id = 'Error'
+                
+                session_info = {
+                    "session_id": session_id,
+                    "type": "traditional",
+                    "agent_type": getattr(session, 'agent_type', 'Unknown'),
+                    "language_pair": getattr(session, 'language_pair', 'Unknown'),
+                    "gpu_id": session_gpu_map.get(session_id, 'Unknown'),
+                    "process_id": process_id,
+                    "inactive_for": f"{inactivity_time:.1f}s",
+                    "is_ready": getattr(session, 'is_ready', 'Unknown')
+                }
+            
+            sessions_info.append(session_info)
+        
+        # 获取调度器中的session信息
+        scheduler_sessions_info = []
+        if global_scheduler:
+            try:
+                # 遍历调度器中的所有session
+                for language_id, user_sessions in global_scheduler.user_sessions.items():
+                    for user_id, scheduler_session in user_sessions.items():
+                        scheduler_session_info = {
+                            "session_id": scheduler_session.session_id,
+                            "user_id": scheduler_session.user_id,
+                            "language_id": scheduler_session.language_id,
+                            "created_at": scheduler_session.created_at,
+                            "last_activity": scheduler_session.last_activity,
+                            "evaluation_mode": scheduler_session.evaluation_mode,
+                            "segments": len(scheduler_session.target),
+                            "inactive_for": f"{current_time - scheduler_session.last_activity:.1f}s"
+                        }
+                        scheduler_sessions_info.append(scheduler_session_info)
+            except Exception as e:
+                print(f"Error getting scheduler sessions: {e}")
+        
+        health_info = {
             "status": "healthy",
             "time": int(time.time()),
             "scheduler_available": global_scheduler is not None,
-            "active_sessions": len(active_sessions),
-            "scheduler_sessions": global_scheduler.stats['active_sessions'] if global_scheduler else 0
+            "active_sessions_count": len(active_sessions),
+            "scheduler_sessions_count": global_scheduler.stats['active_sessions'] if global_scheduler else 0,
+            "active_sessions": sessions_info,
+            "scheduler_sessions": scheduler_sessions_info
         }
+        
+        # 打印详细信息到控制台
+        print(f"\n🔍 [HEALTH-CHECK] System Status at {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"   - Active API Sessions: {len(active_sessions)}")
+        print(f"   - Scheduler Sessions: {len(scheduler_sessions_info)}")
+        print(f"   - Scheduler Available: {global_scheduler is not None}")
+        
+        if sessions_info:
+            print(f"\n📋 [ACTIVE-SESSIONS] API层活跃会话:")
+            for session in sessions_info:
+                print(f"   - {session['session_id']}")
+                print(f"     Type: {session['type']}")
+                print(f"     Agent: {session['agent_type']}")
+                print(f"     Language: {session['language_pair']}")
+                if 'user_id' in session:
+                    print(f"     User: {session['user_id']}")
+                print(f"     Inactive: {session['inactive_for']}")
+        
+        if scheduler_sessions_info:
+            print(f"\n🎯 [SCHEDULER-SESSIONS] 调度器层会话:")
+            for session in scheduler_sessions_info:
+                print(f"   - {session['session_id']}")
+                print(f"     User: {session['user_id']}")
+                print(f"     Language: {session['language_id']}")
+                print(f"     Evaluation: {session['evaluation_mode']}")
+                print(f"     Segments: {session['segments']}")
+                print(f"     Inactive: {session['inactive_for']}")
+        
+        return health_info
+        
     except Exception as e:
+        print(f"❌ [HEALTH-CHECK] Error: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             "status": "error",
             "error": str(e)
         }
 
-@app.get("/diagnose")
-async def diagnose_system():
-    """🔍 诊断系统状态，特别是卡住的session"""
+# 🔥 Task 3: Dynamic Scheduling API Endpoints
+
+@app.get("/dynamic_schedule_stats")
+async def get_dynamic_schedule_stats():
+    """Get dynamic scheduling statistics"""
+    if not SCHEDULER_AVAILABLE or not global_scheduler:
+        return {"error": "Scheduler not available"}
+    
     try:
-        diagnosis = {
-            "timestamp": time.time(),
-            "traditional_sessions": {},
-            "scheduler_diagnosis": None
+        stats = global_scheduler.get_dynamic_schedule_stats()
+        return {"success": True, "stats": stats}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/configure_dynamic_schedule")
+async def configure_dynamic_schedule(
+    enabled: bool,
+    wait_threshold_ms: float = 50.0,
+    min_batch_size: int = 1,
+    max_batch_size: int = 32
+):
+    """Configure dynamic scheduling parameters"""
+    if not SCHEDULER_AVAILABLE or not global_scheduler:
+        return {"error": "Scheduler not available"}
+    
+    try:
+        # Update scheduler configuration
+        global_scheduler.use_dynamic_schedule = enabled
+        global_scheduler.dynamic_wait_threshold = wait_threshold_ms / 1000.0  # Convert to seconds
+        global_scheduler.dynamic_batch_min_size = min_batch_size
+        global_scheduler.max_batch_size = max_batch_size
+        
+        return {
+            "success": True,
+            "configuration": {
+                "enabled": enabled,
+                "wait_threshold_ms": wait_threshold_ms,
+                "min_batch_size": min_batch_size,
+                "max_batch_size": max_batch_size
+            }
         }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+# 🔥 Task 1: Evaluation Framework API Endpoints
+
+@app.post("/enable_evaluation_mode")
+async def enable_evaluation_mode(
+    session_id: str = None,
+    agent_type: str = None, 
+    language_pair: str = None, 
+    user_id: str = None
+):
+    """Enable evaluation mode for a specific session to record latency"""
+    if not SCHEDULER_AVAILABLE or not global_scheduler:
+        return {"error": "Scheduler not available"}
+    
+    try:
+        # 🔥 支持两种方式：直接传session_id或分开传参数
+        if session_id:
+            # 方式1：直接使用session_id（FastAPI已自动解码）
+            target_session_id = session_id
         
-        # 诊断传统session
-        current_time = time.time()
-        for session_id, session_info in active_sessions.items():
-            session = session_info.get('session')
-            if session:
-                last_activity = session_info.get('last_activity', 0)
-                inactive_time = current_time - last_activity
-                
-                diagnosis["traditional_sessions"][session_id] = {
-                    "session_type": "traditional",
-                    "language_pair": session_info.get('language_pair', 'unknown'),
-                    "is_ready": getattr(session, 'is_ready', False),
-                    "worker_alive": session.process.is_alive() if hasattr(session, 'process') else False,
-                    "inactive_seconds": inactive_time,
-                    "status": "normal" if inactive_time < 30 else "potentially_stuck"
-                }
+        # Find the session and enable evaluation mode
+        session_found = False
+        for language_id, user_sessions in active_sessions.items():
+            for uid, session in user_sessions.items():
+                if session.session_id == target_session_id:
+                    session.enable_evaluation_mode()
+                    session_found = True
+                    break
+            if session_found:
+                break
         
-        # 诊断scheduler系统
-        if global_scheduler:
-            scheduler_diagnosis = global_scheduler.diagnose_stuck_sessions()
-            diagnosis["scheduler_diagnosis"] = scheduler_diagnosis
+        if session_found:
+            return {"success": True, "message": f"Evaluation mode enabled for session {target_session_id}"}
+        else:
+            return {"success": False, "error": f"Session {target_session_id} not found"}
             
-            # 添加队列统计
-            queue_stats = global_scheduler.get_queue_stats()
-            diagnosis["queue_stats"] = queue_stats
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/session_delays/{session_id}")
+async def get_session_delays(session_id: str, include_details: bool = False):
+    """Get delay statistics for a specific session"""
+    if not SCHEDULER_AVAILABLE or not global_scheduler:
+        return {"error": "Scheduler not available"}
+    
+    try:
+        # 🔍 FastAPI已经自动解码路径参数，无需手动解码
+        print(f"🔍 [SESSION-DELAYS] Received session_id: '{session_id}' (len={len(session_id)})")
         
-        return diagnosis
+        # Find the session and get delay statistics
+        session_found = False
+        for language_id, user_sessions in global_scheduler.user_sessions.items():
+            for user_id, session in user_sessions.items():
+                if session.session_id == session_id:
+                    delay_stats = session.get_delay_statistics(include_details=include_details)
+                    return {"success": True, "session_id": session_id, "delays": delay_stats}
+        
+        # 🔍 调试：打印调度器中的session进行对比
+        print(f"🔍 [SESSION-DELAYS] Session not found. Scheduler sessions:")
+        for language_id, user_sessions in global_scheduler.user_sessions.items():
+            for user_id, session in list(user_sessions.items())[:2]:  # 只打印前2个
+                print(f"   - '{session.session_id}' (user: {user_id})")
+        
+        return {"success": False, "error": f"Session {session_id} not found"}
         
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e),
-            "timestamp": time.time()
-        }
+        return {"success": False, "error": str(e)}
+
+@app.get("/session_delays_by_user")
+async def get_session_delays_by_user(user_id: str, language_pair: str, include_details: bool = False):
+    """Get delay statistics for a specific session by user_id and language_pair"""
+    if not SCHEDULER_AVAILABLE or not global_scheduler:
+        return {"error": "Scheduler not available"}
+    
+    try:
+        # Find the session by user_id and language_pair
+        session_found = False
+        for language_id, user_sessions in global_scheduler.user_sessions.items():
+            for uid, session in user_sessions.items():
+                if session.user_id == user_id and session.language_id == language_pair:
+                    delay_stats = session.get_delay_statistics(include_details=include_details)
+                    return {"success": True, "session_id": session.session_id, "delays": delay_stats}
+        
+        return {"success": False, "error": f"Session not found for user {user_id} with language {language_pair}"}
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/export_session_delays")
+async def export_session_delays(session_id: str, filepath: Optional[str] = None):
+    """Export delay data for a specific session in simuleval format"""
+    if not SCHEDULER_AVAILABLE or not global_scheduler:
+        return {"error": "Scheduler not available"}
+    
+    try:
+        # 🔍 FastAPI已经自动解码路径参数，无需手动解码
+        print(f"🔍 [EXPORT-DELAYS] Received session_id: '{session_id}' (len={len(session_id)})")
+        
+        # Find the session and export delays
+        session_found = False
+        for language_id, user_sessions in global_scheduler.user_sessions.items():
+            for user_id, session in user_sessions.items():
+                if session.session_id == session_id:
+                    if not filepath:
+                        # 使用原始session_id生成安全的文件名
+                        safe_session_id = session_id.replace(" ", "_").replace("->", "To").replace("/", "_")
+                        filepath = f"evaluation_results/session_{safe_session_id}_delays.log"
+                    
+                    export_path = session.export_delays(filepath)
+                    if export_path:
+                        return {"success": True, "filepath": export_path}
+                    else:
+                        return {"success": False, "error": "No delay data to export"}
+        
+        return {"success": False, "error": f"Session {session_id} not found"}
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/export_session_delays_by_user")
+async def export_session_delays_by_user(user_id: str, language_pair: str, filepath: Optional[str] = None):
+    """Export delay data for a specific session by user_id and language_pair"""
+    if not SCHEDULER_AVAILABLE or not global_scheduler:
+        return {"error": "Scheduler not available"}
+    
+    try:
+        # Find the session by user_id and language_pair
+        session_found = False
+        for language_id, user_sessions in global_scheduler.user_sessions.items():
+            for uid, session in user_sessions.items():
+                if session.user_id == user_id and session.language_id == language_pair:
+                    if not filepath:
+                        # 使用user_id生成安全的文件名
+                        safe_user_id = user_id.replace(" ", "_").replace("->", "To").replace("/", "_")
+                        safe_language = language_pair.replace(" ", "_").replace("->", "To").replace("/", "_")
+                        filepath = f"evaluation_results/session_{safe_user_id}_{safe_language}_delays.log"
+                    
+                    export_path = session.export_delays(filepath)
+                    if export_path:
+                        return {"success": True, "filepath": export_path, "session_id": session.session_id}
+                    else:
+                        return {"success": False, "error": "No delay data to export"}
+        
+        return {"success": False, "error": f"Session not found for user {user_id} with language {language_pair}"}
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 @app.post("/load_models")
 async def load_models():
@@ -1749,7 +2008,10 @@ async def ping_session(session_id: str):
             print(f"[PING-{ping_session._call_count}] System status - CPU: {cpu}%, Memory: {memory.percent}%, Disk: {disk.percent}%{gpu_info}")
             print(f"[PING-{ping_session._call_count}] Active sessions: {len(active_sessions)}, Queue: {len(session_queue)}")
         
-        # Check if session exists
+        # 🔍 FastAPI已经自动解码查询参数，无需手动解码
+        print(f"🔍 [PING] Received session_id: '{session_id}' (len={len(session_id)})")
+        
+        # Check if session exists in API layer
         if session_id not in active_sessions:
             print(f"[PING ERROR] Session {session_id} not found in active sessions")
             return {"success": False, "error": "Invalid session ID"}
@@ -1787,17 +2049,27 @@ async def serve_test_video(filename: str):
     import os
     from pathlib import Path
     
-    # Security check - only allow specific filenames
-    allowed_filenames = ["0000AAAA.mp4", "test.mp4", "sample.mp4"]
-    if filename not in allowed_filenames:
-        raise HTTPException(status_code=404, detail="Test video not found")
+    # Security check - only allow specific filename patterns
+    allowed_patterns = [
+        "0000AAAA.mp4", "test.mp4", "sample.mp4",
+        # 评估框架使用的音频文件
+        "2022.acl-long.110.wav", "2022.acl-long.117.wav", "2022.acl-long.268.wav",
+        "2022.acl-long.367.wav", "2022.acl-long.590.wav"
+    ]
+    
+    if filename not in allowed_patterns:
+        raise HTTPException(status_code=404, detail=f"Test video '{filename}' not allowed. Allowed files: {', '.join(allowed_patterns)}")
     
     # Look for the test video in multiple locations
     test_video_paths = [
         f"serve/static/test_video/{filename}",
+        f"serve/static/{filename}",
+        f"static/test_video/{filename}", 
+        f"static/{filename}",
+        f"test_video/{filename}",
         f"~/Downloads/{filename}",
         f"/tmp/{filename}",
-        f"test_video/{filename}"
+        f"./{filename}"
     ]
     
     video_path = None
@@ -1814,7 +2086,16 @@ async def serve_test_video(filename: str):
         raise HTTPException(status_code=404, detail=error_msg)
     
     print(f"🧪 [TEST-VIDEO] Serving test video: {video_path}")
-    return FileResponse(video_path, media_type="video/mp4", filename=filename)
+    
+    # 根据文件扩展名确定媒体类型
+    if filename.endswith('.wav'):
+        media_type = "audio/wav"
+    elif filename.endswith('.mp4'):
+        media_type = "video/mp4"
+    else:
+        media_type = "application/octet-stream"
+    
+    return FileResponse(video_path, media_type=media_type, filename=filename)
 
 # Explicit root path handling
 @app.get("/")
@@ -1828,9 +2109,9 @@ if __name__ == "__main__":
     
     # Add server-specific arguments
     parser.add_argument("--host", type=str, default="0.0.0.0", 
-                       help="Host to bind the server to (default: 0.0.0.0)")
-    parser.add_argument("--port", type=int, default=8001, 
-                       help="Port to bind the server to (default: 8001)")
+                        help="Host to bind the server to (default: 0.0.0.0)")
+    parser.add_argument("--port", type=int, default=8000,
+                        help="Port to bind the server to (default: 8000)")
     parser.add_argument("--reload", action="store_true", 
                        help="Enable auto-reload for development")
     

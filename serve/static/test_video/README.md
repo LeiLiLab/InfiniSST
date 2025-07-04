@@ -7,7 +7,7 @@
 ### 方法1：URL参数
 在浏览器中访问时添加 `?test=true` 参数：
 ```
-http://localhost:8001/?test=true
+http://localhost:8000/?test=true
 ```
 
 ### 方法2：手动触发

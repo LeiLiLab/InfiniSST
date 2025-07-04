@@ -411,22 +411,8 @@ class InferenceEngine:
         
         print(f"🔍 [ORCA-PREFILL] Batch完成: {len(results)} 个结果")
         return results
-            
-        # except Exception as e:
-        #     logger.error(f"Prefill batch处理失败: {e}")
-        #     # 返回错误结果
-        #     return [
-        #         {
-        #             'request_id': req.request_id,
-        #             'success': False,
-        #             'error': str(e),
-        #             'generated_text': '',
-        #             'generated_tokens': [],
-        #             'prefill_finished': False
-        #         }
-        #         for req in requests
-        #     ]
-    
+
+
     def _process_decode_batch(self, requests: List[InferenceRequest]) -> List[Dict[str, Any]]:
         """处理decode阶段的请求 - ORCA风格，一次只生成一个token"""
         try:
@@ -940,42 +926,6 @@ class InferenceEngine:
                 
         except Exception as e:
             logger.error(f"释放页面到池时出错: {e}")
-    
-    def force_cleanup_all_sessions(self):
-        """强制清理所有session的KV cache（紧急情况使用）"""
-        try:
-            logger.warning("🚨 强制清理所有session的KV cache页面")
-            
-            # 重置所有页面池到初始状态
-            if hasattr(self.model, 'speech_pagetable'):
-                self._reset_pagetable(self.model.speech_pagetable, 'speech')
-            
-            if hasattr(self.model, 'llm_prefill_pagetable'):
-                self._reset_pagetable(self.model.llm_prefill_pagetable, 'llm_prefill')
-            
-            if hasattr(self.model, 'llm_decode_pagetable'):
-                self._reset_pagetable(self.model.llm_decode_pagetable, 'llm_decode')
-            
-            logger.info("✅ 强制清理完成，所有页面已重置")
-            
-        except Exception as e:
-            logger.error(f"强制清理时出错: {e}")
-    
-    def _reset_pagetable(self, pagetable, cache_type: str):
-        """重置页面表到初始状态"""
-        try:
-            total_pages = len(pagetable.page_cnt)
-            
-            # 重置页面引用计数
-            pagetable.page_cnt.zero_()
-            
-            # 重建可用页面队列
-            pagetable.paged_queue = list(range(total_pages))
-            
-            logger.info(f"🔄 [{cache_type}] 页面表已重置: {total_pages} 个页面全部可用")
-            
-        except Exception as e:
-            logger.error(f"重置页面表时出错: {e}")
 
 class MultiGPUInferenceEngine:
     """

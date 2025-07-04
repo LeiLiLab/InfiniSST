@@ -68,7 +68,7 @@ ngrok config add-authtoken YOUR_AUTH_TOKEN
 
 在ngrok输出中找到类似这样的信息：
 ```
-Forwarding    https://abc123.ngrok.io -> http://localhost:8001
+Forwarding    https://abc123.ngrok.io -> http://localhost:8000
 ```
 
 复制HTTPS URL（推荐使用HTTPS而不是HTTP）。

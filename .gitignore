@@ -22,3 +22,5 @@ env
 dist/
 *.err
 *.mp4
+*.json
+*.txt
