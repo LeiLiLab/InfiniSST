@@ -953,6 +953,30 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
         await websocket.close(code=4002, reason="Scheduler not available")
         return
     
+    # 🔥 记录WebSocket连接建立时间
+    websocket_start_time = time.time()
+    logger.info(f"🔗 [WEBSOCKET-START] Session {session_id}: WebSocket connected at {websocket_start_time}")
+    
+    # 🔥 关键修复：获取调度器中的实际session并设置WebSocket连接时间
+    user_id = session.get('user_id')
+    language_pair = session.get('language_pair')
+    
+    if user_id and language_pair:
+        try:
+            # 获取调度器中的实际session
+            scheduler_user_session = global_scheduler.get_or_create_session(
+                user_id=user_id,
+                language_id=language_pair,
+                session_id=session_id,
+                evaluation_mode=session.get('evaluation_mode', False),
+                websocket_start_time=websocket_start_time  # 🔥 传递WebSocket连接时间
+            )
+            logger.info(f"🔗 [WEBSOCKET-START] Updated scheduler session with WebSocket start time: {websocket_start_time}")
+        except Exception as e:
+            logger.error(f"❌ [WEBSOCKET-START] Failed to update scheduler session: {e}")
+    else:
+        logger.warning(f"⚠️ [WEBSOCKET-START] Missing user_id or language_pair in session: {session}")
+    
     await websocket.send_text("READY: Scheduler system ready")
     
     chunk_count = 0
@@ -1001,9 +1025,33 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                     control_message = message["text"]
                     
                     if control_message == "EOF":
-                        print(f"Received EOF signal for scheduler session {session_id}")
+                        # 客户端发送EOF信号，表示音频结束
+                        logger.info(f"📋 [EOF] Session {session_id}: Received EOF signal")
+                        logger.info(f"   - Total chunks processed: {chunk_count}")
+                        logger.info(f"   - WebSocket state: {websocket.client_state.name}")
+                        logger.info(f"   - Session evaluation mode: {session.get('evaluation_mode', False)}")
+                        
+                        # 🔥 新增：获取调度器中的session统计信息
+                        if global_scheduler:
+                            try:
+                                user_id = session.get('user_id')
+                                language_pair = session.get('language_pair')
+                                scheduler_session_info = global_scheduler.get_session_info(user_id, language_pair)
+                                if scheduler_session_info:
+                                    logger.info(f"   - Scheduler session info: {scheduler_session_info}")
+                                    logger.info(f"   - Source length: {scheduler_session_info.get('source_length', 0)}")
+                                    logger.info(f"   - Target segments: {scheduler_session_info.get('target_segments', 0)}")
+                                    logger.info(f"   - Segment index: {scheduler_session_info.get('segment_idx', 0)}")
+                                else:
+                                    logger.warning(f"   - No scheduler session info found for user {user_id}, language {language_pair}")
+                            except Exception as e:
+                                logger.error(f"   - Error getting scheduler session info: {e}")
+                        
                         if websocket.client_state.name == "CONNECTED":
                             await websocket.send_text("PROCESSING_COMPLETE: File processing finished")
+                            logger.info(f"✅ [EOF] Session {session_id}: Sent PROCESSING_COMPLETE message")
+                        else:
+                            logger.warning(f"⚠️ [EOF] Session {session_id}: Cannot send PROCESSING_COMPLETE, WebSocket disconnected")
                         continue
                         
                 elif "bytes" in message:
@@ -1014,8 +1062,14 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                     audio_data = np.frombuffer(data, dtype=np.float32)
                     chunk_count += 1
                     
+                    # 🔥 新增：详细的音频接收日志
+                    logger.info(f"📥 [AUDIO-RECV] Session {session_id}: Chunk {chunk_count}, {len(audio_data)} samples")
+                    logger.info(f"   - WebSocket state: {websocket.client_state.name}")
+                    logger.info(f"   - Evaluation mode: {session.get('evaluation_mode', False)}")
+                    logger.info(f"   - User ID: {session.get('user_id', 'unknown')}")
+                    
                     if len(audio_data) == 0:
-                        print(f"⚠️ Received empty audio data in chunk {chunk_count}")
+                        logger.warning(f"⚠️ [AUDIO-RECV] Session {session_id}: Received empty audio data in chunk {chunk_count}")
                         continue
                     
                     # 提交请求到调度器
@@ -1070,6 +1124,13 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                         # 获取session的evaluation_mode状态
                         evaluation_mode = session.get('evaluation_mode', False)
                         
+                        # 🔥 新增：提交前日志
+                        logger.info(f"📤 [SUBMIT] Session {session_id}: Submitting chunk {chunk_count} to scheduler")
+                        logger.info(f"   - User ID: {user_id}")
+                        logger.info(f"   - Language: {language_pair}")
+                        logger.info(f"   - Audio samples: {len(audio_data)}")
+                        logger.info(f"   - Evaluation mode: {evaluation_mode}")
+                        
                         request_id = global_scheduler.submit_request(
                             user_id=user_id,
                             language_id=language_pair,
@@ -1079,8 +1140,12 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                             max_new_tokens=20,
                             result_callback=result_callback,
                             api_session_id=session_id,
-                            evaluation_mode=evaluation_mode
+                            evaluation_mode=evaluation_mode,
+                            websocket_start_time=websocket_start_time  # 🔥 传递WebSocket连接时间
                         )
+                        
+                        # 🔥 新增：提交成功日志
+                        logger.info(f"✅ [SUBMIT] Session {session_id}: Request {request_id} submitted successfully")
                         
                     except Exception as e:
                         logger.error(f"❌ 提交调度器请求失败 {session_id}: {e}")
@@ -1088,17 +1153,24 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                             await websocket.send_text(f"ERROR: {str(e)}")
                         
             except starlette.websockets.WebSocketDisconnect:
-                print(f"WebSocket disconnected for scheduler session {session_id}")
+                logger.warning(f"🔌 [WEBSOCKET-DISCONNECT] Session {session_id}: WebSocket disconnected normally")
+                logger.info(f"   - Total chunks processed: {chunk_count}")
+                logger.info(f"   - Session details: {session}")
                 break
             except RuntimeError as e:
                 if "disconnect message has been received" in str(e):
-                    print(f"WebSocket already disconnected for scheduler session {session_id}")
+                    logger.warning(f"🔌 [WEBSOCKET-DISCONNECT] Session {session_id}: WebSocket already disconnected")
+                    logger.info(f"   - Total chunks processed: {chunk_count}")
+                    logger.info(f"   - Error: {str(e)}")
                     break
                 else:
-                    print(f"Runtime error in scheduler WebSocket for session {session_id}: {e}")
+                    logger.error(f"❌ [WEBSOCKET-ERROR] Session {session_id}: Runtime error: {e}")
+                    logger.info(f"   - Total chunks processed: {chunk_count}")
                     break
             except Exception as e:
-                logger.error(f"Error in scheduler WebSocket for session {session_id}: {e}")
+                logger.error(f"❌ [WEBSOCKET-ERROR] Session {session_id}: General error: {e}")
+                logger.info(f"   - Total chunks processed: {chunk_count}")
+                logger.info(f"   - Session details: {session}")
                 # 🔥 关键修复：在发送错误消息前检查连接状态
                 if websocket.client_state.name == "CONNECTED":
                     try:

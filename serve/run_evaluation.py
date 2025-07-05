@@ -46,14 +46,14 @@ async def run_moderate_test():
     config = TestConfig(
         num_users=16,
         language_split=0.5,
-        arrival_rate=2.0,    # 2 users per second
+        arrival_rate=2,    # 2 users per second
         test_duration=1200,   # 20 minutes
         server_url="http://localhost:8000",
         output_dir="evaluation_results/moderate_test",
         use_dynamic_schedule=False,
         max_batch_size=32,
         batch_timeout=0.1,
-        latency_range=[1, 2, 3, 4],  # 🔥 新增：测试所有latency
+        latency_range=[2],  # 🔥 新增：测试所有latency
         latency_distribution=None    # 🔥 使用均匀分布
     )
     

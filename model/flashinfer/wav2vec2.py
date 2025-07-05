@@ -451,9 +451,9 @@ class Wav2Vec2Model(BaseFairseqModel):
             cache = request['cache']
             
             if cache.src is not None:
-                print(f"📎 Existing cache.src shape: {cache.src.shape}")
+                # print(f"📎 Existing cache.src shape: {cache.src.shape}")
                 cache.src = torch.cat([cache.src, request['speech']], dim=0)
-                print(f"📎 After concatenation shape: {cache.src.shape}")
+                # print(f"📎 After concatenation shape: {cache.src.shape}")
             else:
                 offset = torch.zeros(79 + 320).to(request['speech'])
                 cache.src = torch.cat([offset, request['speech']], dim=0)

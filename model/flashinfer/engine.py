@@ -179,18 +179,18 @@ def allocate_paged_kv_cache(
     used_pages = pagetable.initial_pages - available_pages
     pagetable.allocation_count += 1
     
-    print(f"🔍 [MEMORY] 页面分配请求 #{pagetable.allocation_count}:")
-    print(f"   - pagetable类型: {getattr(pagetable, 'wrapper_type', 'unknown')}")
-    print(f"   - 需要token数: {n}")
-    print(f"   - 当前页面数: {len(paged_kv_indices)}")
-    print(f"   - 最后页剩余: {PAGE_SIZE - paged_kv_last_page_len} slots")
-    print(f"   - 可用页面池: {available_pages} 页")
-    print(f"   - 已使用页面: {used_pages} 页")
-    print(f"   - 总页面数: {pagetable.initial_pages}")
-    print(f"   - 使用率: {100*used_pages/pagetable.initial_pages:.1f}%")
-    print(f"   - Session类型: {'已有' if is_existing_session else '新建'}")
-    print(f"   - 优先级: {session_priority}")
-    print(f"   - Session ID: {session.session_id if session is not None else 'Unknown'}")
+    # print(f"🔍 [MEMORY] 页面分配请求 #{pagetable.allocation_count}:")
+    # print(f"   - pagetable类型: {getattr(pagetable, 'wrapper_type', 'unknown')}")
+    # print(f"   - 需要token数: {n}")
+    # print(f"   - 当前页面数: {len(paged_kv_indices)}")
+    # print(f"   - 最后页剩余: {PAGE_SIZE - paged_kv_last_page_len} slots")
+    # print(f"   - 可用页面池: {available_pages} 页")
+    # print(f"   - 已使用页面: {used_pages} 页")
+    # print(f"   - 总页面数: {pagetable.initial_pages}")
+    # print(f"   - 使用率: {100*used_pages/pagetable.initial_pages:.1f}%")
+    # print(f"   - Session类型: {'已有' if is_existing_session else '新建'}")
+    # print(f"   - 优先级: {session_priority}")
+    # print(f"   - Session ID: {session.session_id if session is not None else 'Unknown'}")
     
     # 🔥 更新session访问时间
     if session and hasattr(pagetable, 'update_session_access_time'):
@@ -200,11 +200,11 @@ def allocate_paged_kv_cache(
     if paged_kv_last_page_len + n <= PAGE_SIZE:
         # 当前页面足够
         paged_kv_last_page_len += n
-        print(f"✅ [MEMORY] 当前页足够，更新最后页长度: {paged_kv_last_page_len}")
+        # print(f"✅ [MEMORY] 当前页足够，更新最后页长度: {paged_kv_last_page_len}")
     else:
         # 需要新页面
         num_new_pages = (n - (PAGE_SIZE - paged_kv_last_page_len) + PAGE_SIZE - 1) // PAGE_SIZE
-        print(f"📈 [MEMORY] 需要新页面: {num_new_pages} 页")
+        # print(f"📈 [MEMORY] 需要新页面: {num_new_pages} 页")
         
         # 🔥 智能页面不足处理策略
         if available_pages < num_new_pages:
@@ -212,7 +212,7 @@ def allocate_paged_kv_cache(
             usage_rate = used_pages / pagetable.initial_pages
             
             print(f"❌ [MEMORY] 页面池不足：需要 {num_new_pages} 页，但只有 {available_pages} 页可用")
-            print(f"🔍 [MEMORY] 页面使用统计:")
+            # print(f"🔍 [MEMORY] 页面使用统计:")
             print(f"   - 使用率: {usage_rate:.1%}")
             if available_pages == 0:
                 print(f"❌ [MEMORY] 页面池完全耗尽，无法分配内存")
@@ -249,12 +249,12 @@ def allocate_paged_kv_cache(
         if current_usage > pagetable.peak_usage:
             pagetable.peak_usage = current_usage
         
-        print(f"✅ [MEMORY] 页面分配成功:")
-        print(f"   - 分配的页面: {allocated_indices}")
-        print(f"   - 新的最后页长度: {paged_kv_last_page_len}")
-        print(f"   - 当前使用: {current_usage}/{pagetable.initial_pages} 页")
-        print(f"   - 峰值使用: {pagetable.peak_usage} 页")
-        print(f"   - 剩余可用: {len(pagetable.paged_queue)} 页")
+        # print(f"✅ [MEMORY] 页面分配成功:")
+        # print(f"   - 分配的页面: {allocated_indices}")
+        # print(f"   - 新的最后页长度: {paged_kv_last_page_len}")
+        # print(f"   - 当前使用: {current_usage}/{pagetable.initial_pages} 页")
+        # print(f"   - 峰值使用: {pagetable.peak_usage} 页")
+        # print(f"   - 剩余可用: {len(pagetable.paged_queue)} 页")
     
     return pagetable, paged_kv_indices, paged_kv_last_page_len
 

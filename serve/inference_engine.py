@@ -359,7 +359,7 @@ class InferenceEngine:
             beam_req = self._create_beam_request(req)
             beam_requests.append(beam_req)
         
-        print(f"🔍 [ORCA-PREFILL] 处理batch: {len(beam_requests)} 个requests (调度器已确保session唯一)")
+        # print(f"🔍 [ORCA-PREFILL] 处理batch: {len(beam_requests)} 个requests (调度器已确保session唯一)")
         
         # 直接调用beam_search的prefill函数
         from model.flashinfer.beam_search import prefill
@@ -398,7 +398,7 @@ class InferenceEngine:
             if isinstance(processed_req.llm_cache, list):
                 # prefill返回的已经是beam cache列表，直接使用
                 orig_req.past_key_values = [processed_req.llm_cache]  # 外层列表用于session管理
-                print(f"🔍 [ORCA-CACHE] Request {orig_req.request_id} prefill完成，保存beam cache列表 (共{len(processed_req.llm_cache)}个beam)")
+                # print(f"🔍 [ORCA-CACHE] Request {orig_req.request_id} prefill完成，保存beam cache列表 (共{len(processed_req.llm_cache)}个beam)")
             else:
                 # 如果不是列表，按单个cache处理（不应该发生）
                 orig_req.past_key_values = [[processed_req.llm_cache]]
@@ -407,11 +407,11 @@ class InferenceEngine:
             # 🔥 关键修复：保存beam_state到原始request
             if hasattr(processed_req, 'beam_state'):
                 orig_req.beam_state = processed_req.beam_state
-                print(f"🔍 [ORCA-CACHE] 保存beam_state到request {orig_req.request_id}")
+                # print(f"🔍 [ORCA-CACHE] 保存beam_state到request {orig_req.request_id}")
             
             results.append(result)
         
-        print(f"🔍 [ORCA-PREFILL] Batch完成: {len(results)} 个结果 (完美1:1对应)")
+        # print(f"🔍 [ORCA-PREFILL] Batch完成: {len(results)} 个结果 (完美1:1对应)")
         return results
 
 
@@ -424,7 +424,7 @@ class InferenceEngine:
                 beam_req = self._create_beam_request(req)
                 beam_requests.append(beam_req)
             
-            print(f"🔍 [ORCA-DECODE] 处理batch: {len(beam_requests)} 个requests")
+            # print(f"🔍 [ORCA-DECODE] 处理batch: {len(beam_requests)} 个requests")
             
             # 直接调用beam_search的decode函数
             from model.flashinfer.beam_search import decode
@@ -459,25 +459,25 @@ class InferenceEngine:
                     # 如果decode完成，转换为单个cache
                     orig_req.speech_cache = [processed_req.speech_cache]
                     orig_req.past_key_values = [processed_req.llm_cache]  
-                    print(f"🔍 [ORCA-CACHE] Request {orig_req.request_id} decode完成，cache转换为单个格式")
+                    # print(f"🔍 [ORCA-CACHE] Request {orig_req.request_id} decode完成，cache转换为单个格式")
                 else:
                     # 如果decode未完成，保持beam cache列表格式
                     orig_req.speech_cache = [processed_req.speech_cache]
                     if isinstance(processed_req.llm_cache, list):
                         orig_req.past_key_values = processed_req.llm_cache  # 保持beam列表
-                        print(f"🔍 [ORCA-CACHE] Request {orig_req.request_id} decode继续，保持beam cache列表 ({len(processed_req.llm_cache)}个beam)")
+                        # print(f"🔍 [ORCA-CACHE] Request {orig_req.request_id} decode继续，保持beam cache列表 ({len(processed_req.llm_cache)}个beam)")
                     else:
                         orig_req.past_key_values = [processed_req.llm_cache]
-                        print(f"🔍 [ORCA-CACHE] Request {orig_req.request_id} decode继续，cache转换为列表格式")
+                        # print(f"🔍 [ORCA-CACHE] Request {orig_req.request_id} decode继续，cache转换为列表格式")
                 
                 # 🔥 关键修复：保存beam_state到原始request
                 if hasattr(processed_req, 'beam_state'):
                     orig_req.beam_state = processed_req.beam_state
-                    print(f"🔍 [ORCA-CACHE] 保存beam_state到request {orig_req.request_id}")
+                    # print(f"🔍 [ORCA-CACHE] 保存beam_state到request {orig_req.request_id}")
                 
                 results.append(result)
             
-            print(f"🔍 [ORCA-DECODE] Batch完成: {len(results)} 个结果")
+            # print(f"🔍 [ORCA-DECODE] Batch完成: {len(results)} 个结果")
             return results
             
         except Exception as e:
@@ -518,7 +518,7 @@ class InferenceEngine:
         speech_batch = self.model._prepare_speech(states)
         input_ids = self.model._prepare_inputs(states)
         
-        print(f"🔧 [PREPARE-DATA] 调用model._prepare_speech和_prepare_inputs完成:")
+        # print(f"🔧 [PREPARE-DATA] 调用model._prepare_speech和_prepare_inputs完成:")
         print(f"   - speech_batch shape: {speech_batch.shape}")
         print(f"   - input_ids shape: {input_ids.shape}")
         
@@ -554,7 +554,7 @@ class InferenceEngine:
                     if hasattr(first_element, 'paged_kv_indices'):
                         # 第一个元素是LLMCache对象，说明这就是beam cache列表
                         past_key_values_for_request = states.past_key_values
-                        print(f"🔍 [DECODE-CACHE] 识别为beam cache列表，长度: {len(states.past_key_values)}")
+                        # # print(f"🔍 [DECODE-CACHE] 识别为beam cache列表，长度: {len(states.past_key_values)}")
                     else:
                         # 第一个元素不是LLMCache，需要进一步解析
                         past_key_values_cache = states.past_key_values[cache_index]
@@ -563,13 +563,13 @@ class InferenceEngine:
                             if len(past_key_values_cache) > 0 and hasattr(past_key_values_cache[0], 'paged_kv_indices'):
                                 # 这是beam cache列表，直接使用
                                 past_key_values_for_request = past_key_values_cache
-                                print(f"🔍 [DECODE-CACHE] 使用嵌套beam cache列表，长度: {len(past_key_values_cache)}")
+                                # # print(f"🔍 [DECODE-CACHE] 使用嵌套beam cache列表，长度: {len(past_key_values_cache)}")
                             else:
                                 # 这是外层包装列表，需要进一步解析
                                 if len(past_key_values_cache) > 0 and isinstance(past_key_values_cache[0], list):
                                     # 双层包装：[[beam_cache_1, beam_cache_2, ...]]
                                     past_key_values_for_request = past_key_values_cache[0]
-                                    print(f"🔍 [DECODE-CACHE] 解析双层包装，beam cache列表长度: {len(past_key_values_for_request)}")
+                                    # # print(f"🔍 [DECODE-CACHE] 解析双层包装，beam cache列表长度: {len(past_key_values_for_request)}")
                                 else:
                                     # 单个cache被包装：[single_cache]
                                     past_key_values_for_request = past_key_values_cache
@@ -588,7 +588,7 @@ class InferenceEngine:
                 else:
                     past_key_values_for_request = states.past_key_values
         
-        print(f"🔍 [BEAM-CACHE] Cache状态:")
+        # print(f"🔍 [BEAM-CACHE] Cache状态:")
         print(f"   - speech_cache类型: {type(states.speech_cache)}, 长度: {len(states.speech_cache) if isinstance(states.speech_cache, list) else 'N/A'}")
         print(f"   - past_key_values类型: {type(states.past_key_values)}, 长度: {len(states.past_key_values) if isinstance(states.past_key_values, list) else 'N/A'}")
         print(f"   - 使用cache索引: {cache_index}")
@@ -618,7 +618,7 @@ class InferenceEngine:
         )
         
         # 🔥 调试：验证session传递
-        print(f"🔍 [SESSION-DEBUG] Creating beam_req for {request.request_id}:")
+        # print(f"🔍 [SESSION-DEBUG] Creating beam_req for {request.request_id}:")
         print(f"   - request.session_id: {request.session_id}")
         print(f"   - beam_req.session: {beam_req.session is not None}")
         if beam_req.session:
@@ -634,13 +634,13 @@ class InferenceEngine:
         if request.stage == RequestStage.DECODE and hasattr(request, 'beam_state') and request.beam_state is not None:
             # Decode阶段：恢复保存的beam_state
             beam_req.beam_state = request.beam_state
-            print(f"🔍 [BEAM-STATE] 恢复decode阶段的beam_state for {request.request_id}")
+            # print(f"🔍 [BEAM-STATE] 恢复decode阶段的beam_state for {request.request_id}")
         else:
             # Prefill阶段：设置为None，将由beam_search.prefill()创建
             beam_req.beam_state = None
-            print(f"🔍 [BEAM-STATE] Prefill阶段，beam_state将被创建 for {request.request_id}")
+            # print(f"🔍 [BEAM-STATE] Prefill阶段，beam_state将被创建 for {request.request_id}")
         
-        print(f"🔍 [BEAM-REQUEST] Created beam request for {request.request_id}")
+        # print(f"🔍 [BEAM-REQUEST] Created beam request for {request.request_id}")
         print(f"   - Speech shape: {speech_batch.shape}")
         print(f"   - Input IDs shape: {input_ids.shape}")
         print(f"   - Max new tokens: {beam_req.max_new_tokens}")
@@ -715,8 +715,8 @@ class InferenceEngine:
                             filtered_text = self._filter_prompt_tokens(decoded_text)
                             result['generated_text'] = filtered_text
                             
-                            print(f"🔍 [DECODE-RESULT] Generated sequence: {best_sequence} -> '{decoded_text}'")
-                            print(f"🔍 [DECODE-RESULT] Filtered translation: '{filtered_text}'")
+                            # # print(f"🔍 [DECODE-RESULT] Generated sequence: {best_sequence} -> '{decoded_text}'")
+                            # # print(f"🔍 [DECODE-RESULT] Filtered translation: '{filtered_text}'")
                         except Exception as e:
                             print(f"⚠️ [DECODE-RESULT] Failed to decode sequence {best_sequence}: {e}")
                             result['generated_text'] = ""
@@ -742,11 +742,11 @@ class InferenceEngine:
                         decoded_text = self.tokenizer.decode(sequence, skip_special_tokens=True)
                         result['generated_text'] = decoded_text
                         result['finished'] = True
-                        print(f"🔍 [DECODE-FINAL] Final result: {sequence} -> '{decoded_text}'")
+                        # # print(f"🔍 [DECODE-FINAL] Final result: {sequence} -> '{decoded_text}'")
                     except Exception as e:
                         print(f"⚠️ [DECODE-FINAL] Failed to decode final sequence {sequence}: {e}")
                         
-            print(f"🔍 [DECODE-RESULT] Request {orig_request.request_id} decode step完成, finished={result['finished']}")
+            # # print(f"🔍 [DECODE-RESULT] Request {orig_request.request_id} decode step完成, finished={result['finished']}")
         
         return result
 

@@ -276,12 +276,9 @@ class SimulatedUser:
                         resampled_buffer = np.array([], dtype=np.float32)
                         target_chunk_size = base_chunk_size * current_latency_multiplier
                         
-                        logger.info(f"   - Target chunk size: {target_chunk_size} samples ({target_chunk_size/sample_rate:.3f}s)")
-                        logger.info(f"   - Segment size: {segment_size} samples ({segment_size/sample_rate:.3f}s)")
-                        
-                        # 🎯 模拟实时音频流处理 (参照index.html的音频处理流程)
-                        audio_position = 0
-                        start_time = time.time()
+                        # 🔥 严格按照index.html逻辑：固定时间间隔发送chunk
+                        chunk_interval = target_chunk_size / sample_rate  # 每个chunk对应的时间长度
+                        websocket_start_time = time.time()  # 🔥 记录WebSocket连接时间作为基础时间
                         chunks_sent = 0
                         
                         while audio_position < len(audio_data):
@@ -289,30 +286,22 @@ class SimulatedUser:
                             if ws.closed:
                                 raise aiohttp.ClientConnectionError("WebSocket connection closed unexpectedly")
                             
-                            # 计算当前应该处理到的位置（基于实时播放）
-                            elapsed_time = time.time() - start_time
-                            expected_position = int(elapsed_time * sample_rate)
-                            
-                            # 如果我们处理得太快，等待一下以模拟实时播放
-                            if audio_position >= expected_position:
-                                sleep_time = (audio_position - expected_position) / sample_rate
-                                if sleep_time > 0:
-                                    await asyncio.sleep(min(sleep_time, 0.1))  # 最多等待100ms
-                            
-                            # 获取下一个segment（参照index.html的segment_size）
+                            # 🔥 严格按照index.html：每次处理segmentSize大小的音频
                             segment_end = min(audio_position + segment_size, len(audio_data))
                             current_segment = audio_data[audio_position:segment_end]
                             
-                            # 添加到重采样缓冲区（参照index.html的缓冲区管理）
+                            # 🔥 参照index.html：添加到重采样缓冲区
                             resampled_buffer = np.concatenate([resampled_buffer, current_segment])
                             
-                            # 记录输入时间戳（当segment进入缓冲区时）
-                            input_timestamp = time.time()
-                            
-                            # 当缓冲区足够大时，发送chunk（参照index.html的chunk发送逻辑）
+                            # 🔥 严格按照index.html逻辑：当缓冲区 >= targetChunkSize时发送
                             while len(resampled_buffer) >= target_chunk_size:
+                                # 🔥 确保每次发送的chunk大小完全一致
                                 chunk = resampled_buffer[:target_chunk_size]
                                 resampled_buffer = resampled_buffer[target_chunk_size:]
+                                
+                                # 🔥 记录chunk发送时间（用于累计时间延迟计算）
+                                chunk_send_time = time.time()
+                                relative_input_time = chunk_send_time - websocket_start_time
                                 
                                 # 发送音频chunk（参照index.html发送Float32Array）
                                 try:
@@ -321,89 +310,113 @@ class SimulatedUser:
                                         
                                     await ws.send_bytes(chunk.astype(np.float32).tobytes())
                                     chunks_sent += 1
-                                    logger.debug(f"📤 User {self.simulation.user_id}: Sent chunk {chunks_sent} ({len(chunk)} samples)")
                                     
+                                    # 🔥 添加详细的chunk发送日志
+                                    logger.info(f"📤 [CHUNK-SENT] User {self.simulation.user_id}: Chunk {chunks_sent} sent")
+                                    logger.debug(f"   - Chunk size: {len(chunk)} samples ({len(chunk)/sample_rate:.3f}s)")
+                                    logger.debug(f"   - Cumulative time: {relative_input_time:.3f}s")
+                                    logger.debug(f"   - Buffer remaining: {len(resampled_buffer)} samples")
+                                     
                                 except Exception as chunk_error:
                                     logger.error(f"❌ User {self.simulation.user_id}: Error sending chunk {chunks_sent}: {chunk_error}")
                                     raise
-                                
-                                # 接收翻译结果（非阻塞）
+                                 
+                                # 🔥 严格按照index.html：非阻塞接收翻译结果
                                 try:
-                                    msg = await asyncio.wait_for(ws.receive(), timeout=0.1)
+                                    msg = await asyncio.wait_for(ws.receive(), timeout=30)
                                     if msg.type == aiohttp.WSMsgType.TEXT:
                                         text = msg.data
                                         output_timestamp = time.time()
                                         
-                                        # 🔥 计算延迟（根据语言类型使用字符或单词级）
+                                        # 🔥 计算累计时间延迟（用户要求的指标）
                                         if text and not text.startswith("ERROR:") and not text.startswith("READY:"):
-                                            chunk_delay = output_timestamp - input_timestamp
+                                            relative_output_time = output_timestamp - websocket_start_time
+                                            cumulative_delay = relative_output_time - relative_input_time  # 🔥 累计时间延迟
+                                            
+                                            # 🔥 添加详细的延迟计算日志
+                                            logger.info(f"📤 [DELAY-CALC] User {self.simulation.user_id}: Received response")
+                                            logger.debug(f"   - Input cumulative time: {relative_input_time:.3f}s")
+                                            logger.debug(f"   - Output cumulative time: {relative_output_time:.3f}s")
+                                            logger.debug(f"   - Cumulative delay: {cumulative_delay:.3f}s")
+                                            logger.debug(f"   - Response text: '{text}'")
                                             
                                             # 🔥 根据语言类型进行不同的计数
                                             if "Chinese" in self.simulation.language_pair:
                                                 # 中文：字符级计数
                                                 for char in text:
-                                                    self.simulation.delays.append(chunk_delay)
+                                                    self.simulation.delays.append(cumulative_delay)
                                                     self.simulation.total_characters += 1
                                             else:
                                                 # 意大利语等：单词级计数
                                                 import re
                                                 words = re.findall(r'\b\w+\b', text)
                                                 for word in words:
-                                                    self.simulation.delays.append(chunk_delay)
+                                                    self.simulation.delays.append(cumulative_delay)
                                                     self.simulation.total_characters += 1  # 统一使用total_characters字段
                                             
-                                            logger.debug(f"📤 User {self.simulation.user_id}: Received '{text}' (delay: {chunk_delay:.3f}s)")
+                                            logger.debug(f"📤 User {self.simulation.user_id}: Processed '{text}' (cumulative delay: {cumulative_delay:.3f}s)")
                                     elif msg.type == aiohttp.WSMsgType.ERROR:
                                         logger.warning(f"⚠️ User {self.simulation.user_id}: WebSocket error: {msg.data}")
-                                    elif msg.type == aiohttp.WSMsgType.CLOSE:
-                                        logger.warning(f"⚠️ User {self.simulation.user_id}: WebSocket closed by server")
-                                        raise aiohttp.ClientConnectionError("WebSocket closed by server")
-                                    
                                 except asyncio.TimeoutError:
-                                    # 没有立即收到回复，继续处理
+                                    # 非阻塞，超时正常
                                     pass
-                                except Exception as receive_error:
-                                    logger.warning(f"⚠️ User {self.simulation.user_id}: Error receiving message: {receive_error}")
-                                    # 继续处理，不中断音频流
+                                except Exception as e:
+                                    logger.debug(f"🔍 User {self.simulation.user_id}: Receive error: {e}")
+                                    
+                                # 🔥 参照index.html：确保时间间隔一致
+                                # 计算下一个chunk应该发送的时间
+                                expected_next_time = websocket_start_time + (chunks_sent * chunk_interval)
+                                current_time = time.time()
+                                
+                                # 如果发送太快，等待到正确的时间
+                                if current_time < expected_next_time:
+                                    sleep_time = expected_next_time - current_time
+                                    await asyncio.sleep(sleep_time)
+                                    logger.debug(f"⏱️ User {self.simulation.user_id}: Waited {sleep_time:.3f}s for chunk timing")
                             
+                            # 移动到下一个segment
                             audio_position = segment_end
                             
-                            # 短暂休眠以避免过度占用CPU（参照index.html的处理间隔）
+                            # 短暂等待，避免过快处理
                             await asyncio.sleep(0.01)
                         
-                        # 发送剩余的缓冲区数据
+                        # 🔥 发送剩余的缓冲区数据（如果有）
                         if len(resampled_buffer) > 0:
                             try:
                                 if not ws.closed:
                                     await ws.send_bytes(resampled_buffer.astype(np.float32).tobytes())
-                                    logger.debug(f"📤 User {self.simulation.user_id}: Sent final chunk {len(resampled_buffer)} samples")
+                                    logger.info(f"📤 [FINAL-CHUNK] User {self.simulation.user_id}: Sent final chunk {len(resampled_buffer)} samples")
                             except Exception as e:
                                 logger.error(f"❌ User {self.simulation.user_id}: Error sending final chunk: {e}")
                         
                         # 发送结束信号
-                        try:
-                            if not ws.closed:
-                                await ws.send_str("EOF")
-                        except Exception as e:
-                            logger.warning(f"⚠️ User {self.simulation.user_id}: Error sending EOF: {e}")
+                        if not ws.closed:
+                            await ws.send_str("END")
+                            logger.info(f"📤 [END-SIGNAL] User {self.simulation.user_id}: Sent END signal after {chunks_sent} chunks")
                         
-                        # 等待剩余的翻译结果
+                        # 🔥 等待剩余的翻译结果
                         final_wait_start = time.time()
-                        while time.time() - final_wait_start < 5.0:
+                        while time.time() - final_wait_start < 180.0:  # 🔥 增加等待时间到30秒
                             try:
                                 if ws.closed:
                                     break
                                     
-                                msg = await asyncio.wait_for(ws.receive(), timeout=1.0)
+                                msg = await asyncio.wait_for(ws.receive(), timeout=30)  # 🔥 增加最终等待超时
                                 if msg.type == aiohttp.WSMsgType.TEXT:
                                     text = msg.data
-                                    if text.startswith("PROCESSING_COMPLETE"):
-                                        logger.info(f"✅ User {self.simulation.user_id}: Audio processing completed")
+                                    if text == "STREAM_END":
+                                        logger.info(f"📤 [STREAM-END] User {self.simulation.user_id}: Received STREAM_END")
                                         break
                                     elif text and not text.startswith("ERROR:") and not text.startswith("READY:"):
-                                        # 🔥 处理最终的翻译结果（根据语言类型）
+                                        # 🔥 处理最终的翻译结果（保持累计时间延迟）
                                         output_timestamp = time.time()
-                                        final_delay = output_timestamp - input_timestamp
+                                        relative_output_time = output_timestamp - websocket_start_time
+                                        final_delay = relative_output_time  # 🔥 从开始到现在的总累计时间
+                                        
+                                        logger.info(f"📤 [FINAL-RESULT] User {self.simulation.user_id}: Final response")
+                                        logger.debug(f"   - Total cumulative time: {relative_output_time:.3f}s")
+                                        logger.debug(f"   - Final delay: {final_delay:.3f}s")
+                                        logger.debug(f"   - Final text: '{text}'")
                                         
                                         if "Chinese" in self.simulation.language_pair:
                                             # 中文：字符级计数
@@ -416,16 +429,16 @@ class SimulatedUser:
                                             words = re.findall(r'\b\w+\b', text)
                                             for word in words:
                                                 self.simulation.delays.append(final_delay)
-                                                self.simulation.total_characters += 1  # 统一使用total_characters字段
+                                                self.simulation.total_characters += 1
                                         
                                         logger.debug(f"📤 User {self.simulation.user_id}: Final result '{text}' (delay: {final_delay:.3f}s)")
                                 elif msg.type == aiohttp.WSMsgType.CLOSE:
                                     break
-                                    
                             except asyncio.TimeoutError:
-                                continue
+                                logger.debug(f"⏱️ User {self.simulation.user_id}: Final wait timeout")
+                                break
                             except Exception as e:
-                                logger.warning(f"⚠️ User {self.simulation.user_id}: Error in final wait: {e}")
+                                logger.error(f"❌ User {self.simulation.user_id}: Final wait error: {e}")
                                 break
                         
                         logger.info(f"🏁 User {self.simulation.user_id}: Audio processing completed. Chunks sent: {chunks_sent}, Total characters: {self.simulation.total_characters}")

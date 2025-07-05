@@ -71,6 +71,9 @@ class DelayTracker:
         # 🔥 修复：添加输入segment记录
         self.input_segments: List[Dict[str, Any]] = []
         
+        # 🔥 新增：WebSocket连接时间作为基础时间
+        self.websocket_start_time: Optional[float] = None
+        
         # 根据语言类型选择不同的输入时间记录策略
         if self.is_character_based:
             self.char_input_times: List[float] = []  # 记录每个输入字符的时间
@@ -123,84 +126,92 @@ class DelayTracker:
         delays = []
         tokens = []
         
+        # 🔥 关键修复：获取当前segment对应的输入时间
+        current_segment_input_time = self.current_input_start_time
+        relative_input_time = None  # 相对于WebSocket连接的时间
+        
+        if hasattr(self, 'input_segments') and self.input_segments:
+            # 使用当前segment对应的输入时间
+            segment_index = min(self.current_segment_id, len(self.input_segments) - 1)
+            current_segment_input_time = self.input_segments[segment_index]['timestamp']
+            
+            # 🔥 计算相对于WebSocket连接的时间
+            if self.websocket_start_time:
+                relative_input_time = current_segment_input_time - self.websocket_start_time
+                logger.debug(f"🎯 [DELAY-FIX] Segment {self.current_segment_id}: input_time={current_segment_input_time}, relative_time={relative_input_time:.3f}s")
+            else:
+                logger.debug(f"🎯 [DELAY-FIX] Segment {self.current_segment_id}: using input_time={current_segment_input_time} from input_segments[{segment_index}]")
+        else:
+            logger.warning(f"⚠️ [DELAY-FIX] Segment {self.current_segment_id}: No input_segments available, using current_input_start_time={current_segment_input_time}")
+        
         if self.is_character_based:
-            # 🔥 中文：字符级处理
-            if not self.char_input_times:
-                return
-                
+            # 🔥 中文：字符级处理 - 修复延迟计算
             output_chars = list(output_text)
-            input_char_index = 0
             
             for i, output_char in enumerate(output_chars):
-                if input_char_index < len(self.char_input_times):
-                    input_time = self.char_input_times[input_char_index]
-                    delay = timestamp - input_time
-                    
-                    char_delay = CharacterDelay(
-                        char=output_char,
-                        segment_id=self.current_segment_id,
-                        char_index=i,
-                        input_time=input_time,
-                        output_time=timestamp,
-                        delay=delay
-                    )
-                    
-                    self.unit_delays.append(char_delay)
-                    delays.append(delay)
-                    tokens.append(output_char)
-                    
-                    input_char_index += 1
+                # 🔥 关键修复：所有字符使用同一个segment的输入时间
+                delay = timestamp - current_segment_input_time
+                
+                char_delay = CharacterDelay(
+                    char=output_char,
+                    segment_id=self.current_segment_id,
+                    char_index=i,
+                    input_time=current_segment_input_time,
+                    output_time=timestamp,
+                    delay=delay
+                )
+                
+                self.unit_delays.append(char_delay)
+                delays.append(delay)
+                tokens.append(output_char)
             
-            logger.info(f"🎯 [DELAY-TRACKER-CHAR] Segment {self.current_segment_id}: {len(delays)} chars, avg delay: {statistics.mean(delays):.3f}s")
+            # 🔥 改进日志：显示相对时间和绝对延迟
+            if self.websocket_start_time and relative_input_time is not None:
+                relative_output_time = timestamp - self.websocket_start_time
+                logger.info(f"🎯 [DELAY-TRACKER-CHAR] Segment {self.current_segment_id}: {len(delays)} chars")
+                logger.info(f"   - Input relative time: {relative_input_time:.3f}s")
+                logger.info(f"   - Output relative time: {relative_output_time:.3f}s") 
+                logger.info(f"   - Delay: {delays[0]:.3f}s")
+            else:
+                logger.info(f"🎯 [DELAY-TRACKER-CHAR] Segment {self.current_segment_id}: {len(delays)} chars, delay: {delays[0]:.3f}s")
         
         else:
-            # 🔥 意大利语等：单词级处理
-            if not self.word_input_times or not self.input_words:
-                return
-                
+            # 🔥 意大利语等：单词级处理 - 修复延迟计算
             import re
             output_words = re.findall(r'\b\w+\b', output_text)
-            input_word_index = 0
             
             for i, output_word in enumerate(output_words):
-                if input_word_index < len(self.word_input_times):
-                    input_time = self.word_input_times[input_word_index]
-                    delay = timestamp - input_time
-                    
-                    word_delay = WordDelay(
-                        word=output_word,
-                        segment_id=self.current_segment_id,
-                        word_index=i,
-                        input_time=input_time,
-                        output_time=timestamp,
-                        delay=delay
-                    )
-                    
-                    self.unit_delays.append(word_delay)
-                    delays.append(delay)
-                    tokens.append(output_word)
-                    
-                    input_word_index += 1
+                # 🔥 关键修复：所有单词使用同一个segment的输入时间
+                delay = timestamp - current_segment_input_time
+                
+                word_delay = WordDelay(
+                    word=output_word,
+                    segment_id=self.current_segment_id,
+                    word_index=i,
+                    input_time=current_segment_input_time,
+                    output_time=timestamp,
+                    delay=delay
+                )
+                
+                self.unit_delays.append(word_delay)
+                delays.append(delay)
+                tokens.append(output_word)
             
-            logger.info(f"🎯 [DELAY-TRACKER-WORD] Segment {self.current_segment_id}: {len(delays)} words, avg delay: {statistics.mean(delays):.3f}s")
+            logger.info(f"🎯 [DELAY-TRACKER-WORD] Segment {self.current_segment_id}: {len(delays)} words, delay: {delays[0]:.3f}s (all same)")
         
         # 创建segment日志
         if delays:
-            # 🔥 修复：使用当前segment对应的输入文本，而不是累积的buffer
+            # 🔥 修复：使用当前segment对应的输入文本，确保src信息完整
             src_text = ""
             if hasattr(self, 'input_segments') and self.input_segments:
-                # 找到当前segment对应的输入文本
-                if self.current_segment_id < len(self.input_segments):
-                    src_text = self.input_segments[self.current_segment_id]['text']
-                else:
-                    # 如果超出范围，使用最后一个segment
-                    src_text = self.input_segments[-1]['text']
+                # 🔥 改进：取当前segment对应的输入文本
+                segment_index = min(self.current_segment_id, len(self.input_segments) - 1)
+                src_text = self.input_segments[segment_index]['text']
+                logger.debug(f"🎯 [SRC-MATCH] Segment {self.current_segment_id}: using input_segments[{segment_index}] = '{src_text}'")
             else:
-                # 后备方案：使用估算的输入文本
-                if self.is_character_based:
-                    src_text = "输入文本" * max(1, len(output_text) // 4)
-                else:
-                    src_text = "input word " * max(1, len(tokens))
+                # 🔥 后备方案：使用合理的音频segment标识
+                src_text = f"[Audio segment {self.current_segment_id}] (no input recorded)"
+                logger.warning(f"⚠️ [SRC-FALLBACK] Segment {self.current_segment_id}: no input_segments available, using fallback")
                 
             segment_log = SegmentLog(
                 segment_id=self.current_segment_id,
@@ -208,7 +219,7 @@ class DelayTracker:
                 tgt=output_text,
                 tokens=tokens,
                 delays=delays,
-                input_start_time=self.current_input_start_time,
+                input_start_time=current_segment_input_time,  # 🔥 修复：使用正确的输入时间
                 output_time=timestamp,
                 average_delay=statistics.mean(delays)
             )
@@ -217,8 +228,8 @@ class DelayTracker:
         
         if is_final:
             self.current_segment_id += 1
-            # 🔥 修复：不再重置所有输入数据，保留用于后续segment匹配
-            self.current_input_start_time = 0.0
+            # 🔥 修复：不重置input_start_time，让下一个segment使用正确的输入时间
+            # self.current_input_start_time = 0.0  # 注释掉这行，避免重置为0
             
             # 🔥 注意：不再清空输入时间数组，因为可能有多个输出segment对应同一输入
             # 只有在真正需要重置时才清空
@@ -383,6 +394,9 @@ class UserSession:
     delay_tracker: Optional[DelayTracker] = None
     evaluation_mode: bool = False  # 是否启用评估模式
     
+    # 🔥 新增：WebSocket连接时间作为基础时间
+    websocket_start_time: Optional[float] = None  # WebSocket连接建立的时间
+    
     def reset(self):
         """Reset session state for new translation"""
         self.source = []
@@ -443,12 +457,21 @@ class UserSession:
         if self.evaluation_mode:
             self.delay_tracker = DelayTracker(self.session_id, self.language_id)
     
-    def enable_evaluation_mode(self):
+    def enable_evaluation_mode(self, websocket_start_time: Optional[float] = None):
         """启用评估模式，开始记录延迟"""
         self.evaluation_mode = True
         if not self.delay_tracker:
             self.delay_tracker = DelayTracker(self.session_id, self.language_id)
-        logger.info(f"🎯 [EVAL] Session {self.session_id} evaluation mode enabled")
+        
+        # 🔥 设置WebSocket连接时间作为基础时间
+        if websocket_start_time:
+            self.websocket_start_time = websocket_start_time
+            self.delay_tracker.websocket_start_time = websocket_start_time
+            logger.info(f"🎯 [EVAL] Session {self.session_id} evaluation mode enabled with WebSocket start time: {websocket_start_time}")
+        else:
+            self.websocket_start_time = time.time()
+            self.delay_tracker.websocket_start_time = self.websocket_start_time
+            logger.info(f"🎯 [EVAL] Session {self.session_id} evaluation mode enabled with current time as base")
     
     def record_input(self, text: str, timestamp: Optional[float] = None):
         """记录输入文本用于延迟计算"""
@@ -705,7 +728,7 @@ class LLMScheduler:
         self.processing_threads.clear()
         logger.info("Scheduler stopped")
     
-    def get_or_create_session(self, user_id: str, language_id: str, session_id: Optional[str] = None, evaluation_mode: bool = False) -> UserSession:
+    def get_or_create_session(self, user_id: str, language_id: str, session_id: Optional[str] = None, evaluation_mode: bool = False, websocket_start_time: Optional[float] = None) -> UserSession:
         """Get existing session or create new one"""
         with self.session_lock:
             if language_id not in self.user_sessions:
@@ -720,7 +743,8 @@ class LLMScheduler:
                     user_id=user_id,
                     language_id=language_id,
                     session_id=session_id,
-                    evaluation_mode=evaluation_mode  # 🔥 传递评估模式参数
+                    evaluation_mode=evaluation_mode,  # 🔥 传递评估模式参数
+                    websocket_start_time=websocket_start_time  # 🔥 传递WebSocket连接时间
                 )
                 self.user_sessions[language_id][user_id] = session
                 
@@ -733,7 +757,7 @@ class LLMScheduler:
                 session.last_activity = time.time()
                 # 🔥 如果现有session的evaluation_mode与请求不同，更新它
                 if evaluation_mode and not session.evaluation_mode:
-                    session.enable_evaluation_mode()
+                    session.enable_evaluation_mode(websocket_start_time)
                     logger.info(f"Enabled evaluation mode for existing session {session.session_id}")
             
             return self.user_sessions[language_id][user_id]
@@ -747,7 +771,8 @@ class LLMScheduler:
                       max_new_tokens: int = 20,
                       result_callback: Optional[Callable] = None,
                       api_session_id: Optional[str] = None,
-                      evaluation_mode: bool = False) -> str:
+                      evaluation_mode: bool = False,
+                      websocket_start_time: Optional[float] = None) -> str:
         """
         Submit a request to the appropriate queue based on language and stage
         
@@ -771,7 +796,7 @@ class LLMScheduler:
         gpu_id = self.language_gpu_map[language_id]
         
         # Get or create user session
-        session = self.get_or_create_session(user_id, language_id, api_session_id, evaluation_mode)
+        session = self.get_or_create_session(user_id, language_id, api_session_id, evaluation_mode, websocket_start_time)
         
         if isinstance(speech_data, (list, np.ndarray)):
             speech_data = torch.tensor(speech_data, dtype=torch.float32)
@@ -782,24 +807,28 @@ class LLMScheduler:
         session.source_finished = is_final
         session.last_activity = time.time()
         
-        # 🎯 记录输入延迟（用于streamLAAL计算）- 使用更真实的文本长度估算
+        # 🎯 记录输入延迟（用于streamLAAL计算）- 使用音频segment标识
         input_timestamp = time.time()
         if session.evaluation_mode and session.delay_tracker:
-            # 🔥 改进：根据音频长度估算对应的文本内容，用于延迟计算
+            # 🔥 修复：使用简洁的音频segment标识，避免重复累积
             audio_duration_seconds = len(session.source) / session.source_sample_rate if session.source_sample_rate > 0 else 0
+            current_segment_id = len(session.delay_tracker.input_segments) if hasattr(session.delay_tracker, 'input_segments') else session.segment_idx
             
-            # 根据语言类型生成合理的输入文本估算
-            if "Chinese" in language_id:
-                # 中文：假设每秒约6个字符
-                estimated_chars = int(audio_duration_seconds * 6)
-                input_text = "输入文本" * max(1, estimated_chars // 4)  # 生成估算长度的文本
-            else:
-                # 意大利语等：假设每秒约3个单词
-                estimated_words = int(audio_duration_seconds * 3)
-                input_text = "input word " * max(1, estimated_words)
+            # 创建清晰的输入文本标识
+            input_text = f"[Audio segment {current_segment_id}] ({audio_duration_seconds:.1f}s)"
             
             session.record_input(input_text, input_timestamp)
-            logger.info(f"🎯 [DELAY-INPUT] Recorded input for session {session.session_id}: {len(input_text)} chars/words from {audio_duration_seconds:.1f}s audio")
+            logger.info(f"🎯 [DELAY-INPUT] Recorded input for session {session.session_id}: {input_text}")
+            
+            # 🔥 新增：详细的音频处理状态日志
+            logger.info(f"📊 [AUDIO-STATUS] Session {session.session_id}:")
+            logger.info(f"   - Current segment: {current_segment_id}")
+            logger.info(f"   - Audio samples: {len(session.source)}")
+            logger.info(f"   - Audio duration: {audio_duration_seconds:.2f}s")
+            logger.info(f"   - Is final: {is_final}")
+            logger.info(f"   - Source finished: {session.source_finished}")
+            logger.info(f"   - Stage: {stage.value}")
+            logger.info(f"   - Total input segments recorded: {len(session.delay_tracker.input_segments) if hasattr(session.delay_tracker, 'input_segments') else 0}")
 
         
         # Prepare input data 
@@ -815,7 +844,7 @@ class LLMScheduler:
         if stage == RequestStage.DECODE:
             # 每个decode request都有独立的decode序列
             request_decode_id = f"{session.session_id}_{request_id}_{int(time.time()*1000)}"
-            print(f"🔍 [DECODE-ORDER] 创建独立DECODE请求: {request_decode_id}, decode_step=0")
+            # print(f"🔍 [DECODE-ORDER] 创建独立DECODE请求: {request_decode_id}, decode_step=0")
         else:
             # PREFILL阶段不需要decode_id
             request_decode_id = ""
@@ -1296,6 +1325,19 @@ class LLMScheduler:
                     
                     if finished and generated_text:
                         session.target.append(generated_text)
+                        # 🔥 新增：segment计数日志
+                        segment_count = len(session.target)
+                        logger.info(f"📊 [SEGMENT-COUNT] Session {session.session_id}: Added segment {segment_count}, total segments: {segment_count}")
+                        
+                        # 🔥 每10个segment报告一次详细统计
+                        if segment_count % 10 == 0:
+                            logger.info(f"📊 [SEGMENT-MILESTONE] Session {session.session_id}: Reached {segment_count} segments")
+                            logger.info(f"   - Source length: {len(session.source)}")
+                            logger.info(f"   - Source finished: {session.source_finished}")
+                            logger.info(f"   - Segment index: {session.segment_idx}")
+                            if session.delay_tracker:
+                                logger.info(f"   - Delay tracker segments: {len(session.delay_tracker.segment_logs)}")
+                                logger.info(f"   - Input segments recorded: {len(session.delay_tracker.input_segments) if hasattr(session.delay_tracker, 'input_segments') else 0}")
 
                     # 🔥 关键：request级别的decode步骤管理
                     if finished:
@@ -1327,7 +1369,7 @@ class LLMScheduler:
                     # 更新token序列
                     if generated_tokens:
                         session.target_ids = generated_tokens.copy()  # 完全替换
-                        print(f"🔍 [ORCA-SCHEDULER] 更新token序列: {len(session.target_ids)} tokens")
+                        # print(f"🔍 [ORCA-SCHEDULER] 更新token序列: {len(session.target_ids)} tokens")
                     
                     # 🔥 关键修复：更新session和request的缓存状态
                     if 'speech_cache' in result:
