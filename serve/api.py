@@ -819,8 +819,11 @@ async def startup_event():
     asyncio.create_task(process_queue())
 
 @app.post("/init")
-async def initialize_translation(agent_type: str, language_pair: str, latency_multiplier: int = 2, client_id: str = None):
+async def initialize_translation(agent_type: str, language_pair: str, latency_multiplier: int = 2, client_id: str = None, evaluation_mode: str = "false"):
     global args, global_scheduler
+    
+    # 🔥 处理evaluation_mode参数 - 将字符串转换为布尔值
+    evaluation_mode_bool = evaluation_mode.lower() in ["true", "1", "yes", "on"]
     
     # 🔥 改进：使用更清晰的session ID生成机制
     timestamp = int(time.time() * 1000)  # 毫秒级时间戳
@@ -832,13 +835,21 @@ async def initialize_translation(agent_type: str, language_pair: str, latency_mu
         # 如果没有client_id，使用agent类型 + 语言对 + 时间戳
         session_id = f"{agent_type}_{language_pair}_{timestamp}"
     
-    print(f"Initializing new session {session_id} with {agent_type} model for {language_pair}, latency: {latency_multiplier}x")
+    print(f"Initializing new session {session_id} with {agent_type} model for {language_pair}, latency: {latency_multiplier}x, evaluation_mode: {evaluation_mode_bool}")
     print(f"📊 [SESSION-STATS] 当前活跃session数: {len(active_sessions)}, 队列中session数: {len(session_queue)}")
     
     # 优先使用调度器系统（如果可用）
     if global_scheduler and SCHEDULER_AVAILABLE:
         try:
             print(f"🚀 使用调度器系统创建会话 {session_id}")
+            
+            # 🔥 在调度器中创建会话时传递evaluation_mode
+            scheduler_user_session = global_scheduler.get_or_create_session(
+                user_id=client_id or session_id,
+                language_id=language_pair,
+                session_id=session_id,
+                evaluation_mode=evaluation_mode_bool  # 🔥 传递evaluation_mode
+            )
             
             # 创建基于调度器的会话
             scheduler_session = {
@@ -850,7 +861,8 @@ async def initialize_translation(agent_type: str, language_pair: str, latency_mu
                 'created_at': time.time(),
                 'is_scheduler_based': True,  # 标记这是基于调度器的会话
                 'pending_results': {},  # 存储异步结果
-                'result_callback_map': {}  # 结果回调映射
+                'result_callback_map': {},  # 结果回调映射
+                'evaluation_mode': evaluation_mode_bool  # 🔥 保存evaluation_mode状态
             }
             
             # 添加到活跃会话
@@ -858,8 +870,8 @@ async def initialize_translation(agent_type: str, language_pair: str, latency_mu
             session_last_activity[session_id] = time.time()
             session_last_ping[session_id] = time.time()
             
-            print(f"✅ 调度器会话 {session_id} 创建成功")
-            return {"session_id": session_id, "queued": False, "queue_position": 0, "scheduler_based": True}
+            print(f"✅ 调度器会话 {session_id} 创建成功 (evaluation_mode: {evaluation_mode_bool})")
+            return {"session_id": session_id, "queued": False, "queue_position": 0, "scheduler_based": True, "evaluation_mode": evaluation_mode_bool}
             
         except Exception as e:
             print(f"❌ 调度器会话创建失败: {e}")
@@ -956,12 +968,14 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
             try:
                 # 等待结果（带超时）
                 result_text = await asyncio.wait_for(result_queue.get(), timeout=0.1)
-                await websocket.send_text(result_text)
-                print(f"📤 发送调度器结果到 {session_id}: {result_text}")
+                if websocket.client_state.name == "CONNECTED":
+                    await websocket.send_text(result_text)
+                else:
+                    break
             except asyncio.TimeoutError:
                 continue
             except Exception as e:
-                print(f"Error sending result to {session_id}: {e}")
+                logger.error(f"Error sending result to {session_id}: {e}")
                 break
     
     # 启动结果发送任务
@@ -970,6 +984,11 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
     try:
         while True:
             try:
+                # 🔥 关键修复：在接收前检查连接状态
+                if websocket.client_state.name != "CONNECTED":
+                    print(f"WebSocket disconnected for scheduler session {session_id}")
+                    break
+                
                 # Receive data from the WebSocket
                 message = await websocket.receive()
                 
@@ -980,91 +999,50 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                 # Check if this is a control message (text) or audio data (bytes)
                 if "text" in message:
                     control_message = message["text"]
-                    print(f"Received control message for scheduler session {session_id}: {control_message}")
                     
                     if control_message == "EOF":
                         print(f"Received EOF signal for scheduler session {session_id}")
-                        await websocket.send_text("PROCESSING_COMPLETE: File processing finished")
+                        if websocket.client_state.name == "CONNECTED":
+                            await websocket.send_text("PROCESSING_COMPLETE: File processing finished")
                         continue
                         
                 elif "bytes" in message:
                     # This is audio data
                     data = message["bytes"]
                     
-                    # 🔍 调试：检查接收到的原始音频数据
-                    print(f"🎤 [DEBUG] WebSocket received audio data:")
-                    print(f"   - Raw bytes length: {len(data)}")
-                    print(f"   - First 10 bytes: {data[:10] if len(data) >= 10 else data}")
-                    
                     # Convert bytes to numpy array
                     audio_data = np.frombuffer(data, dtype=np.float32)
                     chunk_count += 1
                     
-                    # 🔍 调试：检查转换后的音频数据
-                    print(f"   - Converted to numpy: shape={audio_data.shape}, dtype={audio_data.dtype}")
-                    print(f"   - Audio samples: min={audio_data.min():.6f}, max={audio_data.max():.6f}, mean={audio_data.mean():.6f}")
-                    print(f"   - Chunk {chunk_count}, size: {len(audio_data)}")
-                    
-                    # 🔍 检查是否全为零
-                    non_zero_count = np.count_nonzero(audio_data)
-                    print(f"   - Non-zero samples: {non_zero_count}/{len(audio_data)} ({100*non_zero_count/len(audio_data):.1f}%)")
-                    
                     if len(audio_data) == 0:
-                        print(f"⚠️  [WARNING] Received empty audio data in chunk {chunk_count}")
+                        print(f"⚠️ Received empty audio data in chunk {chunk_count}")
                         continue
-                    
-                    if non_zero_count == 0:
-                        print(f"⚠️  [WARNING] Received all-zero audio data in chunk {chunk_count}")
                     
                     # 提交请求到调度器
                     try:
                         user_id = session['user_id']
                         language_pair = session['language_pair']
                         
-                        print(f"📤 [DEBUG] Submitting to scheduler:")
-                        print(f"   - User ID: {user_id}")
-                        print(f"   - Language: {language_pair}")
-                        print(f"   - Audio shape: {audio_data.shape}")
-                        
-                        # 🔍 检查推理引擎状态
                         if global_inference_engine:
                             # 检查语言对是否被支持
                             if language_pair in global_scheduler.get_supported_languages():
                                 # 获取对应的GPU ID
                                 gpu_id = global_scheduler.language_gpu_map.get(language_pair)
-                                if gpu_id is not None:
-                                    engine = global_inference_engine.get_engine(gpu_id)
-                                    if engine:
-                                        engine_stats = engine.get_stats()
-                                        print(f"🔍 [ENGINE-CHECK] GPU {gpu_id} 引擎状态:")
-                                        print(f"   - is_loaded: {engine_stats['is_loaded']}")
-                                        print(f"   - is_running: {engine_stats['is_running']}")
-                                        if not engine_stats['is_loaded']:
-                                            error_msg = f"推理引擎未加载模型 (GPU {gpu_id})"
-                                            await websocket.send_text(f"ERROR: {error_msg}")
-                                            continue
-                                        if not engine_stats['is_running']:
-                                            error_msg = f"推理引擎未运行 (GPU {gpu_id})"
-                                            await websocket.send_text(f"ERROR: {error_msg}")
-                                            continue
-                                    else:
-                                        error_msg = f"GPU {gpu_id} 上没有推理引擎"
-                                        await websocket.send_text(f"ERROR: {error_msg}")
-                                        logger.error(f"❌ {error_msg}")
-                                        continue
-                                else:
-                                    error_msg = f"语言对 {language_pair} 没有分配GPU"
-                                    await websocket.send_text(f"ERROR: {error_msg}")
-                                    logger.error(f"❌ {error_msg}")
-                                    continue
+                                
+                                # 🔥 清理：移除冗余的调试日志
+                                if chunk_count % 10 == 0:  # 每10个chunk记录一次
+                                    print(f"📤 Processing chunk {chunk_count} for session {session_id}")
+                                
                             else:
                                 error_msg = f"不支持的语言对: {language_pair}"
-                                await websocket.send_text(f"ERROR: {error_msg}")
+                                if websocket.client_state.name == "CONNECTED":
+                                    await websocket.send_text(f"ERROR: {error_msg}")
                                 logger.error(f"❌ {error_msg}")
                                 continue
                         else:
                             error_msg = "推理引擎不可用"
-                            await websocket.send_text(f"ERROR: {error_msg}")
+                            if websocket.client_state.name == "CONNECTED":
+                                await websocket.send_text(f"ERROR: {error_msg}")
                             logger.error(f"❌ {error_msg}")
                             continue
                         
@@ -1074,13 +1052,13 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                             try:
                                 if result.get('success', False):
                                     text_to_send = result.get('full_translation', '')
-                                    loop.call_soon_threadsafe(result_queue.put_nowait, text_to_send)
+                                    if text_to_send:  # 🔥 只发送非空结果
+                                        loop.call_soon_threadsafe(result_queue.put_nowait, text_to_send)
                                 else:
                                     error_msg = result.get('error', 'Unknown error')
                                     loop.call_soon_threadsafe(result_queue.put_nowait, f"ERROR: {error_msg}")
-                                    print(f"📥 调度器错误入队 {session_id}: {error_msg}")
                             except Exception as e:
-                                print(f"Error in result callback for {session_id}: {e}")
+                                logger.error(f"Error in result callback for {session_id}: {e}")
                                 # 尝试发送错误信息
                                 try:
                                     loop.call_soon_threadsafe(result_queue.put_nowait, f"ERROR: Callback failed - {str(e)}")
@@ -1088,50 +1066,49 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                                     pass
                         
                         from serve.scheduler import RequestStage
-
-                        # 初始化计数器
-                        if "request_count" not in session:
-                            session["request_count"] = 0
-                        if "request_count_by_stage" not in session:
-                            session["request_count_by_stage"] = {}
-
-                        # 更新计数
-                        session["request_count"] += 1
-                        stage_str = RequestStage.PREFILL.name  # 或者 decode 阶段写成 RequestStage.DECODE.name
-                        session["request_count_by_stage"][stage_str] = session["request_count_by_stage"].get(stage_str, 0) + 1
-
-                        # 提交请求
+                        
+                        # 获取session的evaluation_mode状态
+                        evaluation_mode = session.get('evaluation_mode', False)
+                        
                         request_id = global_scheduler.submit_request(
                             user_id=user_id,
                             language_id=language_pair,
                             speech_data=audio_data,
                             stage=RequestStage.PREFILL,
                             is_final=False,
-                            max_new_tokens=session.get('latency_multiplier', 2) * 10,
+                            max_new_tokens=20,
                             result_callback=result_callback,
                             api_session_id=session_id,
-                            evaluation_mode=True  # 🔥 启用评估模式以收集延迟数据
+                            evaluation_mode=evaluation_mode
                         )
-
-                        # 打印结构化日志
-                        print(f"[{time.strftime('%H:%M:%S')}] [Session: {session_id}] [Stage: {stage_str}] ✅ 提交请求 {request_id}，累计 {session['request_count']} 次（本阶段: {session['request_count_by_stage'][stage_str]}）")
                         
                     except Exception as e:
-                        print(f"❌ 提交调度器请求失败 {session_id}: {e}")
-                        import traceback
-                        traceback.print_exc()
-                        await websocket.send_text(f"ERROR: {str(e)}")
+                        logger.error(f"❌ 提交调度器请求失败 {session_id}: {e}")
+                        if websocket.client_state.name == "CONNECTED":
+                            await websocket.send_text(f"ERROR: {str(e)}")
                         
             except starlette.websockets.WebSocketDisconnect:
                 print(f"WebSocket disconnected for scheduler session {session_id}")
                 break
+            except RuntimeError as e:
+                if "disconnect message has been received" in str(e):
+                    print(f"WebSocket already disconnected for scheduler session {session_id}")
+                    break
+                else:
+                    print(f"Runtime error in scheduler WebSocket for session {session_id}: {e}")
+                    break
             except Exception as e:
-                print(f"Error in scheduler WebSocket for session {session_id}: {e}")
-                await websocket.send_text(f"ERROR: {str(e)}")
+                logger.error(f"Error in scheduler WebSocket for session {session_id}: {e}")
+                # 🔥 关键修复：在发送错误消息前检查连接状态
+                if websocket.client_state.name == "CONNECTED":
+                    try:
+                        await websocket.send_text(f"ERROR: {str(e)}")
+                    except:
+                        pass  # 忽略发送失败，连接可能已断开
                 break
                 
     except Exception as e:
-        print(f"Fatal error in scheduler WebSocket for session {session_id}: {e}")
+        logger.error(f"Fatal error in scheduler WebSocket for session {session_id}: {e}")
     finally:
         # 清理任务
         sender_task.cancel()

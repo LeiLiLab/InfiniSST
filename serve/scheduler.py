@@ -66,8 +66,10 @@ class DelayTracker:
         self.unit_delays: List[Union[CharacterDelay, WordDelay]] = []
         self.segment_logs: List[SegmentLog] = []
         self.current_segment_id = 0
-        self.current_input_buffer = ""
         self.current_input_start_time = 0.0
+        
+        # 🔥 修复：添加输入segment记录
+        self.input_segments: List[Dict[str, Any]] = []
         
         # 根据语言类型选择不同的输入时间记录策略
         if self.is_character_based:
@@ -84,20 +86,31 @@ class DelayTracker:
         
     def record_input_segment(self, text: str, timestamp: float):
         """记录输入segment和每个单元的输入时间（字符或单词）"""
-        self.current_input_buffer += text
+        # 🔥 修复：不累积buffer，每个segment独立处理
+        # 保存当前segment的输入信息用于后续匹配
+        current_segment_text = text
         
         if self.is_character_based:
             # 🔥 中文：字符级处理
-            for char in text:
+            for char in current_segment_text:
                 self.char_input_times.append(timestamp)
         else:
             # 🔥 意大利语等：单词级处理
             import re
             # 提取单词（忽略标点符号）
-            words = re.findall(r'\b\w+\b', text)
+            words = re.findall(r'\b\w+\b', current_segment_text)
             for word in words:
                 self.word_input_times.append(timestamp)
                 self.input_words.append(word)
+        
+        # 🔥 修复：记录当前segment的文本，用于后续输出匹配
+        if not hasattr(self, 'input_segments'):
+            self.input_segments = []
+        self.input_segments.append({
+            'text': current_segment_text,
+            'timestamp': timestamp,
+            'segment_id': len(self.input_segments)
+        })
         
         if not self.current_input_start_time:
             self.current_input_start_time = timestamp
@@ -173,15 +186,25 @@ class DelayTracker:
         
         # 创建segment日志
         if delays:
-            # 根据语言类型确定源文本长度
-            if self.is_character_based:
-                src_length = len(output_text)  # 字符数
+            # 🔥 修复：使用当前segment对应的输入文本，而不是累积的buffer
+            src_text = ""
+            if hasattr(self, 'input_segments') and self.input_segments:
+                # 找到当前segment对应的输入文本
+                if self.current_segment_id < len(self.input_segments):
+                    src_text = self.input_segments[self.current_segment_id]['text']
+                else:
+                    # 如果超出范围，使用最后一个segment
+                    src_text = self.input_segments[-1]['text']
             else:
-                src_length = len(tokens)  # 单词数
+                # 后备方案：使用估算的输入文本
+                if self.is_character_based:
+                    src_text = "输入文本" * max(1, len(output_text) // 4)
+                else:
+                    src_text = "input word " * max(1, len(tokens))
                 
             segment_log = SegmentLog(
                 segment_id=self.current_segment_id,
-                src=self.current_input_buffer[:src_length] if self.is_character_based else ' '.join(self.input_words[:len(tokens)]),
+                src=src_text,
                 tgt=output_text,
                 tokens=tokens,
                 delays=delays,
@@ -194,14 +217,11 @@ class DelayTracker:
         
         if is_final:
             self.current_segment_id += 1
-            self.current_input_buffer = ""
+            # 🔥 修复：不再重置所有输入数据，保留用于后续segment匹配
             self.current_input_start_time = 0.0
             
-            if self.is_character_based:
-                self.char_input_times = []
-            else:
-                self.word_input_times = []
-                self.input_words = []
+            # 🔥 注意：不再清空输入时间数组，因为可能有多个输出segment对应同一输入
+            # 只有在真正需要重置时才清空
     
     def calculate_stream_laal(self) -> float:
         """计算streamLAAL（所有延迟单元的平均值）"""
@@ -403,12 +423,9 @@ class UserSession:
         
         self.memory_usage['allocation_count'] += 1
         
-        print(f"🔍 SESSION-MEMORY {self.session_id} 内存使用:")
-        print(f"   MEMORY-SPEECH: {self.memory_usage.get('speech_pages', 0)} 页")
-        print(f"   MEMORY-LLM-PREFILL: {self.memory_usage.get('llm_prefill_pages', 0)} 页")
-        print(f"   MEMORY-LLM-DECODE: {self.memory_usage.get('llm_decode_pages', 0)} 页")
-        print(f"   MEMORY-TOTAL: {total} 页 (峰值: {self.memory_usage.get('peak_pages', 0)} 页)")
-        print(f"   MEMORY-ALLOCATION-COUNT: {self.memory_usage.get('allocation_count', 0)}")
+        # 🔥 清理：移除冗余的内存日志，只在必要时记录
+        if total > 0 and self.memory_usage['allocation_count'] % 20 == 0:
+            logger.debug(f"SESSION-MEMORY {self.session_id}: Total={total} pages, Peak={self.memory_usage.get('peak_pages', 0)} pages")
     
     def get_memory_summary(self) -> Dict[str, Any]:
         """获取内存使用摘要"""
@@ -765,13 +782,24 @@ class LLMScheduler:
         session.source_finished = is_final
         session.last_activity = time.time()
         
-        # 🎯 记录输入延迟（用于streamLAAL计算）
+        # 🎯 记录输入延迟（用于streamLAAL计算）- 使用更真实的文本长度估算
         input_timestamp = time.time()
         if session.evaluation_mode and session.delay_tracker:
-            # 简化：将音频数据转换为模拟文本以便延迟计算
-            input_text = f"[Audio segment {len(session.source)} samples]"
+            # 🔥 改进：根据音频长度估算对应的文本内容，用于延迟计算
+            audio_duration_seconds = len(session.source) / session.source_sample_rate if session.source_sample_rate > 0 else 0
+            
+            # 根据语言类型生成合理的输入文本估算
+            if "Chinese" in language_id:
+                # 中文：假设每秒约6个字符
+                estimated_chars = int(audio_duration_seconds * 6)
+                input_text = "输入文本" * max(1, estimated_chars // 4)  # 生成估算长度的文本
+            else:
+                # 意大利语等：假设每秒约3个单词
+                estimated_words = int(audio_duration_seconds * 3)
+                input_text = "input word " * max(1, estimated_words)
+            
             session.record_input(input_text, input_timestamp)
-            logger.info(f"🎯 [DELAY] Recorded input for session {session.session_id}: {len(session.source)} audio samples")
+            logger.info(f"🎯 [DELAY-INPUT] Recorded input for session {session.session_id}: {len(input_text)} chars/words from {audio_duration_seconds:.1f}s audio")
 
         
         # Prepare input data 
@@ -824,8 +852,6 @@ class LLMScheduler:
             request.queue_enter_time = queue_enter_time
             logger.warning(f"Fixed None queue_enter_time for request {request_id}")
         
-        print(f"🔒 [FINE-LOCK] Submitting {stage.value} request to GPU {gpu_id}")
-        
         if stage.name == RequestStage.PREFILL.name:
             # 🔥 只锁定prefill队列，不影响decode队列
             with self.prefill_locks[gpu_id]:
@@ -837,9 +863,9 @@ class LLMScheduler:
                 self.queue_stats[gpu_id]['prefill']['current_queue_size'] = current_size
                 if current_size > self.queue_stats[gpu_id]['prefill']['max_queue_size']:
                     self.queue_stats[gpu_id]['prefill']['max_queue_size'] = current_size
-                    print(f"📊 [QUEUE-STATS] GPU {gpu_id} Prefill队列新峰值: {current_size}")
+                    logger.info(f"GPU {gpu_id} Prefill队列新峰值: {current_size}")
                         
-                print(f"🔒 [FINE-LOCK] ✅ Prefill request added to GPU {gpu_id}, queue size: {current_size}")
+                logger.debug(f"Prefill request added to GPU {gpu_id}, queue size: {current_size}")
         else:
             # 🔥 只锁定decode队列，不影响prefill队列
             with self.decode_locks[gpu_id]:
@@ -851,9 +877,9 @@ class LLMScheduler:
                 self.queue_stats[gpu_id]['decode']['current_queue_size'] = current_size
                 if current_size > self.queue_stats[gpu_id]['decode']['max_queue_size']:
                     self.queue_stats[gpu_id]['decode']['max_queue_size'] = current_size
-                    print(f"📊 [QUEUE-STATS] GPU {gpu_id} Decode队列新峰值: {current_size}")
+                    logger.info(f"GPU {gpu_id} Decode队列新峰值: {current_size}")
                         
-                print(f"🔒 [FINE-LOCK] ✅ Decode request added to GPU {gpu_id}, queue size: {current_size}")
+                logger.debug(f"Decode request added to GPU {gpu_id}, queue size: {current_size}")
         
         # 🔥 更新总统计（无锁，容忍短暂不一致）
         self.stats['total_requests'] += 1
@@ -960,7 +986,7 @@ class LLMScheduler:
                         
                         # 🔥 第一层过滤：检查session是否已在当前batch中
                         if request.session_id in session_in_batch:
-                            print(f"🔄 [PREFILL-SESSION] Session {request.session_id} 已在batch中，放回前面保持顺序")
+                            logger.debug(f"Session {request.session_id} 已在batch中，放回前面保持顺序")
                             need_add_back.append(request)
                             continue
                         
@@ -984,11 +1010,9 @@ class LLMScheduler:
                             skip_reason = "session_lock_busy"
                         
                         if not can_process:
-                            print(f"🔍 [PREFILL-SESSION] 请求 {request.request_id}, session {request.session_id} 暂时无法处理，原因: {skip_reason}")
+                            logger.debug(f"请求 {request.request_id}, session {request.session_id} 暂时无法处理，原因: {skip_reason}")
                             need_add_back.append(request)
                             continue
-
-                        print(f"🔒 [PREFILL-SESSION] ✅ Session {request.session_id} 成功加入batch")
 
                         # 🔥 记录出队时间和等待时间
                         request.queue_exit_time = batch_exit_time
@@ -1011,7 +1035,7 @@ class LLMScheduler:
                         self.queue_stats[gpu_id]['prefill']['current_queue_size'] = len(prefill_queue)
                     except IndexError:
                         # 队列为空，退出循环
-                        print(f"⚠️ [SCHEDULER] Prefill queue empty during pop for GPU {gpu_id}")
+                        logger.warning(f"Prefill queue empty during pop for GPU {gpu_id}")
                         break
 
                 # 🔥 关键修复：将无法处理的请求放回队列前面，保持原有顺序
@@ -1019,7 +1043,7 @@ class LLMScheduler:
                     # 🔥 逆序放回，确保原始顺序保持不变
                     for req in reversed(need_add_back):
                         prefill_queue.appendleft(req)  # 放到队列前面
-                    print(f"🔄 [PREFILL-SESSION] 将 {len(need_add_back)} 个请求放回前面 (保持session顺序)")
+                    logger.debug(f"将 {len(need_add_back)} 个请求放回前面 (保持session顺序)")
 
                 if batch:
                     assert all(req.stage.name == RequestStage.PREFILL.name for req in batch)
@@ -1027,20 +1051,15 @@ class LLMScheduler:
                     session_ids_in_batch = [req.session_id for req in batch]
                     assert len(session_ids_in_batch) == len(set(session_ids_in_batch)), "Batch contains duplicate sessions!"
                     
-                    # 🔥 打印batch详情，便于调试
-                    print(f"🔒 [PREFILL-SESSION] Prefill batch包含 {len(batch)} 个requests，来自 {len(session_ids_in_batch)} 个unique sessions")
-                    for i, req in enumerate(batch):
-                        print(f"   - Request {i+1}: session {req.session_id}, request_id={req.request_id}")
-                    
                     # 🔥 更新队列大小统计
                     self.queue_stats[gpu_id]['prefill']['current_queue_size'] = len(prefill_queue)
-                    logger.info(f"🔒 [PREFILL-SESSION] Created PREFILL batch: {len(batch)} requests from {len(session_ids_in_batch)} unique sessions (session-synchronized)")
+                    logger.info(f"Created PREFILL batch: {len(batch)} requests from {len(session_ids_in_batch)} unique sessions")
                     return batch
         
         decode_queue = self.decode_queues[gpu_id]
         if decode_queue:
             with self.decode_locks[gpu_id]:
-                print(f"🔒 [FINE-LOCK] GPU {gpu_id} checking decode queue... {len(decode_queue)}")
+                logger.debug(f"GPU {gpu_id} checking decode queue... {len(decode_queue)}")
                 # 有decode请求，创建decode batch
                 batch_exit_time = time.time()
                 
@@ -1049,9 +1068,6 @@ class LLMScheduler:
                 while len(batch) < self.max_batch_size and decode_queue:
                     try:
                         request = decode_queue.popleft()
-                        
-                        # 🔥 直接处理decode请求，无需session同步检查
-                        print(f"🔄 [DECODE-PARALLEL] Processing decode request {request.request_id} from session {request.session_id} (step={request.decode_step})")
                         
                         # 🔥 记录出队时间和等待时间
                         request.queue_exit_time = batch_exit_time
@@ -1074,7 +1090,7 @@ class LLMScheduler:
                         self.queue_stats[gpu_id]['decode']['current_queue_size'] = len(decode_queue)
                     except IndexError:
                         # 队列为空，退出循环
-                        print(f"⚠️ [SCHEDULER] Decode queue empty during pop for GPU {gpu_id}")
+                        logger.warning(f"Decode queue empty during pop for GPU {gpu_id}")
                         break
                 
                 if batch:
@@ -1083,15 +1099,10 @@ class LLMScheduler:
                     # 🔥 修正：Decode batch允许相同session的多个requests
                     session_ids_in_batch = [req.session_id for req in batch]
                     unique_sessions = len(set(session_ids_in_batch))
-                    print(f"🔄 [DECODE-PARALLEL] Decode batch包含 {len(batch)} 个requests，来自 {unique_sessions} 个unique sessions")
-                    
-                    # 🔥 打印batch详情，便于调试
-                    for i, req in enumerate(batch):
-                        print(f"   - Request {i+1}: session {req.session_id}, decode_step={req.decode_step}, request_id={req.request_id}")
                     
                     # 🔥 更新队列大小统计
                     self.queue_stats[gpu_id]['decode']['current_queue_size'] = len(decode_queue)
-                    logger.info(f"🔄 [DECODE-PARALLEL] Created DECODE batch: {len(batch)} requests from {unique_sessions} sessions (parallel decode enabled)")
+                    logger.info(f"Created DECODE batch: {len(batch)} requests from {unique_sessions} sessions")
         
         return batch
     
@@ -1107,81 +1118,82 @@ class LLMScheduler:
         
         # 🔥 开始处理时间记录
         process_start_time = time.time()
-        print(f"📊 [BATCH-TIMING] GPU {gpu_id} 开始处理 {batch_stage} batch: {len(batch)} 个请求")
+        logger.debug(f"GPU {gpu_id} 开始处理 {batch_stage} batch: {len(batch)} 个请求")
         
         # 记录每个请求的处理开始时间和等待时间统计
         for i, request in enumerate(batch):
             request.is_processing = True
             request.process_start_time = process_start_time
-            
-            # 🔥 打印等待时间信息
-            if hasattr(request, 'queue_wait_time') and request.queue_wait_time is not None:
-                wait_time_ms = request.queue_wait_time * 1000
-                print(f"   - Request {i+1}: 队列等待 {wait_time_ms:.1f}ms")
         
         logger.info(f"Processing batch of {len(batch)} requests on GPU {gpu_id} for language {language_id}")
         
-        # 🔥 添加详细的诊断信息
-        print(f"🔍 [SCHEDULER-DEBUG] Processing batch:")
-        print(f"   - GPU {gpu_id}, Language: {language_id}")
-        print(f"   - Batch size: {len(batch)}")
-        print(f"   - Stage: {batch_stage}")
-        print(f"   - Has inference_engine: {hasattr(self, 'inference_engine')}")
-        if hasattr(self, 'inference_engine'):
-            print(f"   - Inference_engine is None: {self.inference_engine is None}")
-        
         try:
-
-            if hasattr(self, 'inference_engine') and self.inference_engine:
-                print(f"🔍 [SCHEDULER-DEBUG] 推理引擎可用，开始处理...")
+            # 🔥 详细的推理引擎状态检查
+            has_inference_engine = hasattr(self, 'inference_engine')
+            engine_not_none = has_inference_engine and self.inference_engine is not None
+            
+            logger.info(f"🔍 [BATCH-DEBUG] GPU {gpu_id} 推理引擎检查:")
+            logger.info(f"   - hasattr(self, 'inference_engine'): {has_inference_engine}")
+            logger.info(f"   - self.inference_engine is not None: {engine_not_none}")
+            
+            if engine_not_none:
+                logger.info(f"   - Engine type: {type(self.inference_engine).__name__}")
+                logger.info(f"   - Engine engines count: {len(getattr(self.inference_engine, 'engines', {}))}")
+            
+            if has_inference_engine and self.inference_engine:
+                logger.info(f"🚀 GPU {gpu_id} 推理引擎可用，开始处理 {len(batch)} 个请求...")
+                
+                # 🔥 记录每个请求的详细信息
+                for i, request in enumerate(batch):
+                    logger.info(f"   Request {i+1}: {request.request_id}")
+                    logger.info(f"     - Stage: {request.stage.value}")
+                    logger.info(f"     - Session ID: {request.session_id}")
+                    logger.info(f"     - Session evaluation_mode: {request.session.evaluation_mode if request.session else 'None'}")
+                    logger.info(f"     - Speech data size: {len(request.speech_batch) if hasattr(request.speech_batch, '__len__') else 'N/A'}")
+                
                 try:
-                    # 🔍 处理前记录页面池状态
-                    print(f"📊 [SCHEDULER] GPU {gpu_id} 开始处理 {len(batch)} 个请求")
-                    for i, req in enumerate(batch):
-                        audio_len = req.speech_batch.shape[-1] if hasattr(req.speech_batch, 'shape') else len(req.speech_batch)
-                        print(f"   - Request {i+1}: {audio_len} samples, stage={req.stage.value}")
-                    
                     batch_inference_start = time.time()
-                    print(f"🔍 [SCHEDULER-DEBUG] 调用推理引擎 process_batch...")
+                    logger.info(f"🎯 [INFERENCE] Calling inference_engine.process_batch for GPU {gpu_id}...")
                     results = self.inference_engine.process_batch(gpu_id, batch)
                     batch_inference_time = time.time() - batch_inference_start
                     
-                    print(f"🔍 [SCHEDULER-DEBUG] 推理引擎调用完成，耗时: {batch_inference_time*1000:.1f}ms")
-                    print(f"🔍 [SCHEDULER-DEBUG] 返回结果数量: {len(results) if results else 0}")
+                    logger.info(f"✅ [INFERENCE] GPU {gpu_id} 推理引擎调用完成，耗时: {batch_inference_time*1000:.1f}ms")
+                    logger.info(f"📊 [INFERENCE] 返回结果数量: {len(results) if results else 0}")
                     
-                    # 🔍 处理后记录结果
-                    print(f"📊 [SCHEDULER] GPU {gpu_id} 完成处理 [{batch_stage}]: {len(batch)} 个请求 → {len(results)} 个结果, 推理耗时: {batch_inference_time*1000:.1f}ms")
+                    # 🔥 详细记录每个结果
+                    if results:
+                        for i, result in enumerate(results):
+                            logger.info(f"📝 [RESULT-{i+1}] Result details:")
+                            logger.info(f"     - Success: {result.get('success', False)}")
+                            logger.info(f"     - Error: {result.get('error', 'None')}")
+                            logger.info(f"     - Generated text: '{result.get('generated_text', '')}'")
+                            logger.info(f"     - Generated tokens: {len(result.get('generated_tokens', []))}")
+                            logger.info(f"     - Finished: {result.get('finished', False)}")
+                            logger.info(f"     - Full translation: '{result.get('full_translation', '')}'")
+                    else:
+                        logger.error(f"❌ [INFERENCE] 推理引擎返回空结果!")
                     
                     # 处理推理结果
                     for i, request in enumerate(batch):
                         if i < len(results):
                             result = results[i]
                             success = result.get('success', False)
-                            error = result.get('error', 'None')
-                            print(f"   - Request {i+1} 结果: success={success}, error={error}")
+                            logger.info(f"🔄 [PROCESSING] Processing result {i+1} for request {request.request_id}")
                             if not success:
-                                print(f"🔍 [SCHEDULER-DEBUG] Request {i+1} 失败详情: {result}")
+                                logger.warning(f"⚠️ Request {i+1} failed: {result.get('error', 'Unknown error')}")
                             self._update_session_with_result(request, result)
-                            logger.info(f"Request {request.request_id} completed with inference engine")
                         else:
                             # 处理缺失的结果
-                            print(f"   - Request {i+1} 缺失结果")
+                            logger.warning(f"❌ Request {i+1} missing result")
                             self._handle_failed_request(request, "Missing inference result")
                     
                 except Exception as e:
-                    logger.error(f"[ERROR] Inference engine failed for GPU {gpu_id}: {e}")
-                    print(f"🔍 [SCHEDULER-DEBUG] 推理引擎异常详情:")
-                    print(f"   - 异常类型: {type(e).__name__}")
-                    print(f"   - 异常消息: {str(e)}")
-                    import traceback
-                    print(f"   - 异常堆栈: {traceback.format_exc()}")
-                
+                    logger.error(f"Inference engine failed for GPU {gpu_id}: {e}")
                     # 其他错误：标记所有请求失败
                     for request in batch:
                         self._handle_failed_request(request, f"Inference engine error: {str(e)}")
             else:
                 # 没有推理引擎可用
-                print(f"🔍 [SCHEDULER-DEBUG] 推理引擎不可用!")
                 logger.error(f"No inference engine available for GPU {gpu_id}")
                 for request in batch:
                     self._handle_failed_request(request, "Inference engine not available")
@@ -1214,16 +1226,11 @@ class LLMScheduler:
             if total_process_time > 0:
                 stage_stats['throughput_per_sec'] = len(batch) / total_process_time
         
-        # 🔥 打印详细的性能统计
-        print(f"📊 [BATCH-TIMING] GPU {gpu_id} {batch_stage} batch完成:")
-        print(f"   - 批处理耗时: {total_process_time*1000:.1f}ms")
-        print(f"   - 平均每请求: {(total_process_time/len(batch))*1000:.1f}ms")
-        print(f"   - 吞吐量: {len(batch)/total_process_time:.1f} req/s")
-        print(f"   - 累计处理: {stage_stats['total_processed']} 个{batch_stage}请求")
-        print(f"   - 平均处理时间: {stage_stats['avg_process_time']*1000:.1f}ms")
-        print(f"   - 平均等待时间: {stage_stats['avg_wait_time']*1000:.1f}ms")
-        print(f"   - 最大处理时间: {stage_stats['max_process_time']*1000:.1f}ms")
-        print(f"   - 最大等待时间: {stage_stats['max_wait_time']*1000:.1f}ms")
+        # 🔥 简化：只在必要时记录性能统计
+        if stage_stats['total_processed'] % 10 == 0:  # 每处理10批次记录一次
+            logger.info(f"GPU {gpu_id} {batch_stage} 批处理统计: {stage_stats['total_processed']} 次, "
+                       f"平均时间 {stage_stats['avg_process_time']*1000:.1f}ms, "
+                       f"吞吐量 {stage_stats.get('throughput_per_sec', 0):.1f} req/s")
     
     
     def _update_session_with_result(self, request: InferenceRequest, result: Dict[str, Any]):
@@ -1242,7 +1249,7 @@ class LLMScheduler:
                 
                 if prefill_finished and not hasattr(request, '_prefill_done'):
                     # Prefill阶段刚完成
-                    print(f"🔍 [ORCA-SCHEDULER] Request {request.request_id} prefill完成")
+                    logger.debug(f"Request {request.request_id} prefill完成")
                     request._prefill_done = True
                     
                     # 将request状态切换到DECODE
@@ -1253,35 +1260,25 @@ class LLMScheduler:
                     if not request.request_decode_id:
                         request.request_decode_id = f"{session.session_id}_{request.request_id}_{int(time.time()*1000)}"
                     
-                    print(f"🔍 [DECODE-INDEPENDENT] Request {request.request_id} 初始化独立decode: decode_step=0, decode_id={request.request_decode_id}")
-                    
-                    # Prefill阶段通常不生成最终文本，只是准备beam状态
-                    generated_text = result.get('generated_text', '')
-                    if generated_text:
-                        print(f"🔍 [ORCA-SCHEDULER] Prefill生成初始文本: '{generated_text}'")
-                    
                     # 🔥 关键修复：更新session和request的缓存状态
                     if 'speech_cache' in result:
                         session.speech_cache = result['speech_cache']
                         request.speech_cache = result['speech_cache']  # 🔥 同步更新request
-                        print(f"🔍 [ORCA-CACHE] 更新speech_cache引用")
                     
                     if 'past_key_values' in result:
                         session.past_key_values = result['past_key_values']
                         request.past_key_values = result['past_key_values']  # 🔥 同步更新request
-                        print(f"🔍 [ORCA-CACHE] 更新past_key_values引用")
                         
                     # 🔥 关键修复：保存beam_state
                     if hasattr(request, 'beam_state') and request.beam_state is not None:
                         session.beam_state = request.beam_state
-                        print(f"🔍 [ORCA-CACHE] 保存beam_state到session")
                         
                     # 🔥 关键：将request重新放回DECODE队列继续处理
                     gpu_id = self.language_gpu_map[request.language_id]
                     with self.decode_locks[gpu_id]:
                         self.decode_queues[gpu_id].append(request)
                         self.stats['queue_sizes'][gpu_id]['decode'] += 1
-                    print(f"🔄 [DECODE-INDEPENDENT] Request {request.request_id} 已放回DECODE队列，decode_step=0 (cache已更新)")
+                    logger.debug(f"Request {request.request_id} 已放回DECODE队列")
                 
                 elif request.stage.name == RequestStage.DECODE.name:
                     # Decode阶段 - 生成了新的token
@@ -1289,23 +1286,20 @@ class LLMScheduler:
                     generated_tokens = result.get('generated_tokens', [])
                     finished = result.get('finished', False)
                     
-                    print(f"🔍 [DECODE-INDEPENDENT] Request {request.request_id} decode step {request.decode_step}: '{generated_text}', finished={finished}")
-
                     is_chinese_translation = "Chinese" in request.language_id or "zh" in request.language_id.lower()
+                    
+                    # 🎯 修复：只记录完成的输出结果（finished=True），包括空结果
+                    if finished and session.evaluation_mode and session.delay_tracker:
+                        output_timestamp = time.time()
+                        logger.info(f"🎯 [DELAY-RECORD] Recording finished output for session {session.session_id}: '{generated_text}' (empty={'empty' if not generated_text else 'non-empty'})")
+                        session.record_output(generated_text, output_timestamp, is_final=True)
                     
                     if finished and generated_text:
                         session.target.append(generated_text)
-                        
-                        # 🎯 记录输出延迟（用于streamLAAL计算）
-                        output_timestamp = time.time()
-                        if session.evaluation_mode and session.delay_tracker:
-                            session.record_output(generated_text, output_timestamp, is_final=True)
-                            logger.info(f"🎯 [DELAY] Recorded output for session {session.session_id}: {len(generated_text)} chars")
 
                     # 🔥 关键：request级别的decode步骤管理
                     if finished:
                         # 🔥 整个decode过程完成，释放session
-                        print(f"🔍 [DECODE-INDEPENDENT] Request {request.request_id} decode完成，允许新的prefill请求进入")
                         session_lock = self._get_session_lock(session.session_id)
                         with session_lock:
                             session.prefill_can_enter = True
@@ -1313,11 +1307,10 @@ class LLMScheduler:
                         # 🔥 当前decode步骤完成，准备下一步
                         request.decode_step += 1  # 递增到下一步
                         next_step = request.decode_step
-                        print(f"🔍 [DECODE-INDEPENDENT] Request {request.request_id} decode步骤完成，下一步: {next_step}")
                         
                         # 检查是否超过最大步骤数
                         if next_step >= request.max_decode_steps:
-                            print(f"🔍 [DECODE-INDEPENDENT] Request {request.request_id} 达到最大decode步骤 {request.max_decode_steps}，强制完成")
+                            logger.debug(f"Request {request.request_id} 达到最大decode步骤 {request.max_decode_steps}，强制完成")
                             finished = True
                             # 释放session
                             session_lock = self._get_session_lock(session.session_id)
@@ -1340,17 +1333,14 @@ class LLMScheduler:
                     if 'speech_cache' in result:
                         session.speech_cache = result['speech_cache']
                         request.speech_cache = result['speech_cache']  # 🔥 同步更新request
-                        print(f"🔍 [ORCA-CACHE] Decode阶段更新speech_cache引用")
                     
                     if 'past_key_values' in result:
                         session.past_key_values = result['past_key_values']
                         request.past_key_values = result['past_key_values']  # 🔥 同步更新request
-                        print(f"🔍 [ORCA-CACHE] Decode阶段更新past_key_values引用")
                     
                     # 🔥 关键修复：保存beam_state
                     if hasattr(request, 'beam_state') and request.beam_state is not None:
                         session.beam_state = request.beam_state
-                        print(f"🔍 [ORCA-CACHE] 保存beam_state到session")
                         
                     # 🔥 关键：如果还没完成，继续放回DECODE队列
                     if not finished and not decode_finished:
@@ -1358,12 +1348,11 @@ class LLMScheduler:
                         with self.decode_locks[gpu_id]:
                             self.decode_queues[gpu_id].append(request)
                             self.stats['queue_sizes'][gpu_id]['decode'] += 1
-                        print(f"🔄 [DECODE-INDEPENDENT] Request {request.request_id} 继续DECODE step {request.decode_step}，已重新入队 (cache已更新)")
+                        logger.debug(f"Request {request.request_id} 继续DECODE step {request.decode_step}，已重新入队")
                     else:
-                        print(f"✅ [DECODE-INDEPENDENT] Request {request.request_id} 翻译完成，decode序列结束")
+                        logger.debug(f"Request {request.request_id} 翻译完成，decode序列结束")
                         # 更新 src_len 到当前 session.source 的长度
                         session.src_len = len(session.source)
-                        print(f"🔍 [ORCA-SCHEDULER] Final src_len updated to {session.src_len}")
             
             session.last_activity = time.time()
             
@@ -1384,10 +1373,10 @@ class LLMScheduler:
                         logger.error(f"Error in result callback for request {request.request_id}: {e}")
                 
                 self.stats['completed_requests'] += 1
-                print(f"📤 [DECODE-INDEPENDENT] 发送最终结果到客户端: '{result.get('generated_text', '')}'")
+                logger.debug(f"发送最终结果到客户端: '{result.get('generated_text', '')}'")
             else:
                 # 中间步骤，不调用回调，继续处理
-                print(f"🔄 [DECODE-INDEPENDENT] Request {request.request_id} decode步骤 {request.decode_step} 完成，继续处理...")
+                logger.debug(f"Request {request.request_id} decode步骤 {request.decode_step} 完成，继续处理...")
             
         except Exception as e:
             logger.error(f"Error updating session for request {request.request_id}: {e}")
