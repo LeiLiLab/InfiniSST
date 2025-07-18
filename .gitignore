@@ -21,3 +21,4 @@ retriever/data
 *.json
 *.index
 retriever/gigaspeech/data/
+*.pt
