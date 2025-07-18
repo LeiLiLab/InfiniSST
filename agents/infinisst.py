@@ -44,8 +44,17 @@ from train.dataset import (
     normalize
 )
 
+
+import torchaudio
+from cosyvoice.cli.cosyvoice import CosyVoice2
+from cosyvoice.utils.file_utils import load_wav
+
+from collections import deque
+import threading
+import time
 import logging
 logger = logging.getLogger(__name__)
+
 
 def synchronized_timer(description: str):
     @contextlib.contextmanager
@@ -121,11 +130,39 @@ class InfiniSST(SpeechToTextAgent):
         # Add DPO sampling flag
         self.dpo_sampling = args.dpo_sampling
         self.output_file = args.output_file if hasattr(args, 'output_file') else 'translations.json'
-
         self.audio_normalize = args.audio_normalize
         
         # model
         self.load_model(args)
+
+        # CosyVoice
+        self.use_cosyvoice = getattr(args, 'use_cosyvoice', False)
+        self.cosyvoice_output_dir = getattr(args, 'cosyvoice_output_dir', './audio_output')
+        # self.cosyvoice_stream = getattr(args, 'cosyvoice_stream', False)
+        
+        if self.use_cosyvoice:
+            # Create output directory if it doesn't exist
+            os.makedirs(self.cosyvoice_output_dir, exist_ok=True)
+            
+            # Initialize CosyVoice2
+            self.cosyvoice = CosyVoice2(
+                'CosyVoice/pretrained_models/CosyVoice2-0.5B',
+                load_jit=False,
+                load_trt=False,
+                load_vllm=False,
+                fp16=False
+            )
+            
+            # Load prompt audio and set up zero-shot speaker
+            self.prompt_audio = load_wav('./CosyVoice/asset/zero_shot_prompt.wav', 16000)
+            self.reference_text = '希望你以后能够做的比我还好呦。'
+            self.cosyvoice.add_zero_shot_spk(self.reference_text, self.prompt_audio, 'my_zero_shot_spk')
+            
+            logger.info("CosyVoice2 initialized successfully")
+
+
+            self.text_queue = deque()
+            self.cosyvoice_thread = None        
     
     @staticmethod
     def add_args(parser):
@@ -145,6 +182,9 @@ class InfiniSST(SpeechToTextAgent):
         parser.add_argument("--output-file", type=str, default="translations.json", help="Output file for sampling")
         parser.add_argument("--pseudo-batch-size", type=int, default=1)
         parser.add_argument("--audio-normalize", type=int, default=0)
+        parser.add_argument('--use-cosyvoice', action='store_true', help='Enable CosyVoice2 TTS generation')
+        parser.add_argument('--cosyvoice-output-dir', type=str, default='./audio_output', help='Directory to save generated audio files')
+        parser.add_argument('--cosyvoice-stream', action='store_true', help='Enable streaming audio generation')
 
     def build_states(self):
         return S2TAgentStates(
@@ -464,6 +504,34 @@ class InfiniSST(SpeechToTextAgent):
         input_ids = input_ids.to(device=self.model.device)
         return input_ids
 
+    def cosyvoice_generator(self):
+        def text_gen():
+            while True:
+                try:
+                    next_text = self.text_queue.popleft()
+                    if next_text is None:
+                        break
+                    yield next_text
+                except IndexError:
+                    time.sleep(0.01)
+
+        logger.info("Starting CosyVoice2 streaming worker...")
+        stream_generator = self.cosyvoice.inference_zero_shot(
+            text_gen(),
+            '希望你以后能够做的比我还好呦。',
+            self.prompt_audio,
+            stream=False
+        )
+        file_num = 0
+        for chunk in stream_generator:
+            audio = chunk['tts_speech'].cpu()
+            out_path = os.path.join(self.cosyvoice_output_dir, f'current_stream_{file_num}.wav')
+            torchaudio.save(out_path, audio, self.cosyvoice.sample_rate)
+            logger.info(f"Saved audio chunk to {out_path}")
+            file_num += 1
+
+
+
     @torch.inference_mode()
     def policy(self, states: Optional[S2TAgentStates] = None):
         if states is None:
@@ -586,10 +654,27 @@ class InfiniSST(SpeechToTextAgent):
         # print(states.segment_idx, ":", translation)
         states.segment_idx += 1
 
+        # add cosyvoice 
+
+
+
+        if self.use_cosyvoice and translation:
+        
+            if self.cosyvoice_thread is None:
+                self.cosyvoice_thread = threading.Thread(target=self.cosyvoice_generator, daemon=True)
+                self.cosyvoice_thread.start()
+
+            self.text_queue.append(translation)
+
+        if self.use_cosyvoice and states.source_finished:
+            self.text_queue.append(None)
+
         if translation != '' or states.source_finished:
+        
             return WriteAction(
                 content=translation,
                 finished=states.source_finished,
             )
+            
         else:
             return ReadAction()
