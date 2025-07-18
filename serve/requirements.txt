@@ -1,0 +1,15 @@
+flask
+flask-cors
+fastapi
+uvicorn
+soundfile
+numpy
+torch
+yt-dlp
+transformers
+peft
+tqdm
+scikit-learn
+# 可选依赖项 - 完整功能需要
+# simuleval
+# flashinfer

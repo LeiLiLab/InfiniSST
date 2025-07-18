@@ -1,0 +1,68 @@
+import torch
+from model import *
+from transformers import AutoConfig, StoppingCriteria
+
+def lengths_to_padding_mask(lens):
+    bsz, max_lens = lens.size(0), torch.max(lens).item()
+    mask = torch.arange(max_lens).to(lens.device).view(1, max_lens)
+    mask = mask.expand(bsz, -1) >= lens.view(bsz, 1).expand(-1, max_lens)
+    return mask
+
+def auto_upgrade(config):
+    cfg = AutoConfig.from_pretrained(config)
+    if 'llava' in config and 'llava' not in cfg.model_type:
+        assert cfg.model_type == 'llama'
+        print("You are using newer LLaVA code base, while the checkpoint of v0 is from older code base.")
+        print("You must upgrade the checkpoint to the new code base (this can be done automatically).")
+        confirm = input("Please confirm that you want to upgrade the checkpoint. [Y/N]")
+        if confirm.lower() in ["y", "yes"]:
+            print("Upgrading checkpoint...")
+            assert len(cfg.architectures) == 1
+            setattr(cfg.__class__, "model_type", "llava")
+            cfg.architectures[0] = 'LlavaLlamaForCausalLM'
+            cfg.save_pretrained(config)
+            print("Checkpoint upgraded.")
+        else:
+            print("Checkpoint upgrade aborted.")
+            exit(1)
+
+
+
+class KeywordsStoppingCriteria(StoppingCriteria):
+    def __init__(self, keywords, tokenizer, input_ids):
+        self.keywords = keywords
+        self.keyword_ids = [tokenizer(keyword).input_ids for keyword in keywords]
+        self.keyword_ids = [keyword_id[0] for keyword_id in self.keyword_ids if type(keyword_id) is list and len(keyword_id) == 1]
+        self.tokenizer = tokenizer
+        self.start_len = None
+        self.input_ids = input_ids
+
+    def __call__(self, output_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+        if self.start_len is None:
+            self.start_len = self.input_ids.shape[1]
+        else:
+            for keyword_id in self.keyword_ids:
+                if output_ids[0, -1] == keyword_id:
+                    return True
+            outputs = self.tokenizer.batch_decode(output_ids[:, self.start_len:], skip_special_tokens=True)[0]
+            for keyword in self.keywords:
+                if keyword in outputs:
+                    return True
+        return False
+
+
+class SpaceStoppingCriteria(StoppingCriteria):
+    def __init__(self, tokenizer, n_word):
+        self.n_spaces = -1
+        self.tokenizer = tokenizer
+        self.n_word = n_word
+
+    def __call__(self, output_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+        text = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0]
+        if output_ids[0, -1] == self.tokenizer.eos_token_id:
+            return True
+        if self.n_spaces == -1:
+            self.n_spaces = len(text.split(' '))
+            return False
+        else:
+            return len(text.split(' ')) >= self.n_spaces + self.n_word

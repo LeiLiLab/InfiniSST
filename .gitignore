@@ -20,3 +20,4 @@ retriever/data
 *.err
 *.json
 *.index
+retriever/gigaspeech/data/
