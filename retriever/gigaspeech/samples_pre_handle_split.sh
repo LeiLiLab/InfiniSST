@@ -5,7 +5,7 @@
 
 #SBATCH --job-name=preprocess_split
 #SBATCH --partition=taurus
-#SBATCH --array=0-16%3
+#SBATCH --array=0-16%2
 #SBATCH --mem=32GB
 #SBATCH --cpus-per-task=1
 #SBATCH --ntasks=1
@@ -16,8 +16,10 @@ text_field=${1:-term}
 # 使用对应的命名实体文件，而不是固定使用split_0
 ner_json=${2:-data/named_entities_train_xl_split_${SLURM_ARRAY_TASK_ID}.json}
 
+
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate infinisst
+export NLTK_DATA=/mnt/data/jiaxuanluo
 
 # 分片TSV路径
 SPLIT_TSV="data/split_tsv/train_xl_split_${SLURM_ARRAY_TASK_ID}.tsv"

@@ -394,7 +394,8 @@ if __name__ == "__main__":
     prefix = "data/samples/xl"
     os.makedirs(prefix, exist_ok=True)
     
-    start_idx = args.split_id * 1000000
+
+    start_idx = args.split_id * 500000
     end_idx = start_idx + len(samples)
     out_path = f"{prefix}/{sample_path}_{start_idx}_{end_idx}.json"
     
