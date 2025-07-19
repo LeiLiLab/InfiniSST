@@ -109,7 +109,7 @@ def find_terms_in_text_chunk(chunk_text: str, ground_truth_terms: List[str]) -> 
 
 
 def extract_chunk_audio_simple(original_audio_path: str, chunk_start: float, chunk_end: float, 
-                               segment_id: str, output_dir: str = "/mnt/data/jiaxuanluo/audio_chunks") -> str:
+                               segment_id: str, output_dir: str = "/mnt/gemini/data1/jiaxuanluo/audio_chunks") -> str:
     """
     从原始音频中提取chunk片段
     """

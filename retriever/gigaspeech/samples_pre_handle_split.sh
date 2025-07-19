@@ -39,10 +39,18 @@ if [[ ! -f "$ner_json" ]]; then
     exit 1
 fi
 
+
+# 判断是否为最后一个任务（ID 16）
+is_last=false
+if [[ ${SLURM_ARRAY_TASK_ID} -eq 16 ]]; then
+    is_last=true
+fi
+
 PYTHONUNBUFFERED=1 python3 train_samples_pre_handle.py \
     --tsv_path="${SPLIT_TSV}" \
     --split_id=${SLURM_ARRAY_TASK_ID} \
     --text_field=${text_field} \
-    --ner_json="${ner_json}"
+    --ner_json="${ner_json}" \
+    --is_last=${is_last}
 
 echo "[INFO] Task ${SLURM_ARRAY_TASK_ID} completed successfully"

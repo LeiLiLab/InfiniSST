@@ -40,7 +40,7 @@ fi
 
 # 确保输出目录存在
 mkdir -p $(dirname "$output_json")
-mkdir -p /mnt/data/jiaxuanluo/audio_chunks
+mkdir -p /mnt/gemini/data1/jiaxuanluo/audio_chunks
 
 echo "[INFO] Starting MFA chunk processing..."
 

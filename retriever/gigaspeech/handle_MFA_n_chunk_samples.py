@@ -325,7 +325,7 @@ def extract_chunk_text_from_sample(original_text: str, chunk_start: float, chunk
 
 
 def extract_chunk_audio(original_audio_path: str, chunk_start: float, chunk_end: float, 
-                       segment_id: str, output_dir: str = "/mnt/data/jiaxuanluo/audio_chunks") -> str:
+                       segment_id: str, output_dir: str = "/mnt/gemini/data1/jiaxuanluo/audio_chunks") -> str:
     """
     从原始音频中提取chunk片段
     """

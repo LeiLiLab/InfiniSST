@@ -72,7 +72,7 @@ class InBatchDataset(Dataset):
         
         print(f"[INFO] Filtered {len(valid_samples)} valid samples from {len(all_samples)} total samples")
         
-        # 数据分割：99%训练，1%测试
+        # 数据分割：99.9%训练，1%测试
         import random
         random.seed(42)  # 固定随机种子确保可复现
         random.shuffle(valid_samples)

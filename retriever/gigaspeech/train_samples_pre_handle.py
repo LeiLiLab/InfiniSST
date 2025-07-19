@@ -393,12 +393,14 @@ if __name__ == "__main__":
     sample_path = f'{args.text_field}_preprocessed_samples' if args.text_field == 'term' else f'preprocessed_samples'
     prefix = "data/samples/xl"
     os.makedirs(prefix, exist_ok=True)
-    
 
     start_idx = args.split_id * 500000
     end_idx = start_idx + len(samples)
-    out_path = f"{prefix}/{sample_path}_{start_idx}_{end_idx}.json"
-    
+    if args.is_last:
+        out_path = f"{prefix}/{sample_path}_{start_idx}_end.json"
+    else:
+        out_path = f"{prefix}/{sample_path}_{start_idx}_{end_idx}.json"
+
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(json_ready, f, indent=2, ensure_ascii=False)
 

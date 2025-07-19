@@ -8,7 +8,43 @@ n=${1:-3}  # 默认n=3
 text_field=${2:-term}  # 默认使用term字段
 single_slice=${3:-false}  # 默认使用完整数据集
 
-$mfa_job = 3
+
+# === 3. Handle MFA n-chunk samples ===
+echo "[INFO] Step 3: Handling MFA ${n}-chunk samples..." | tee -a "$LOG_FILE"
+
+if [[ "$single_slice" == "true" ]]; then
+    # 单分片MFA处理
+    if [[ "$text_field" == "term" ]]; then
+        input_samples="data/samples/xl/term_preprocessed_samples_0_500000.json"
+        output_samples="data/samples/xl/mfa_${n}chunks_samples_single_0_500000.json"
+    else
+        input_samples="data/samples/xl/preprocessed_samples_0_500000.json"
+        output_samples="data/samples/xl/mfa_${n}chunks_samples_single_0_500000.json"
+    fi
+    
+    mfa_job=$(sbatch \
+        --job-name=train_mfa_single_n${n} \
+        --partition=taurus \
+        --mem=32GB \
+        --cpus-per-task=4 \
+        --ntasks=1 \
+        --output=logs/train_mfa_single_n${n}_%j.out \
+        --error=logs/train_mfa_single_n${n}_%j.err \
+        --wrap="#!/bin/bash
+cd /home/jiaxuanluo/InfiniSST/retriever/gigaspeech
+. ~/miniconda3/etc/profile.d/conda.sh
+conda activate infinisst
+python3 handle_MFA_n_chunk_samples.py --input_json=${input_samples} --output_json=${output_samples} --n=${n} --chunk_len=0.96 --textgrid_dir=/mnt/data/siqiouyang/datasets/gigaspeech/textgrids" | awk '{print $4}')
+    
+    echo "train_mfa_single: $mfa_job" | tee -a "$LOG_FILE"
+else
+    # 完整数据集MFA处理
+    mfa_job=$(sbatch handle_MFA_n_chunk_samples.sh ${n} 0.96 ${text_field}_preprocessed_samples | awk '{print $4}')
+    echo "train_mfa_chunks: $mfa_job" | tee -a "$LOG_FILE"
+fi
+
+# $mfa_job = 3
+
 # 训练数据集路径
 TRAIN_TSV="/mnt/data/siqiouyang/datasets/gigaspeech/manifests/train_xl.tsv"
 
