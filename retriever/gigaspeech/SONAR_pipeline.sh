@@ -74,7 +74,7 @@ if [[ "$single_slice" == "true" ]]; then
 cd /home/jiaxuanluo/InfiniSST/retriever/gigaspeech
 . ~/miniconda3/etc/profile.d/conda.sh
 conda activate infinisst
-python3 train_samples_pre_handle.py --tsv_path=data/split_tsv/train_xl_split_0.tsv --split_id=0 --text_field=${text_field} --ner_json=data/named_entities_train_xl_split_0.json" | awk '{print $4}')
+python3 train_samples_pre_handle.py --tsv_path=data/split_tsv/train_xl_split_0.tsv --split_id=0 --text_field=${text_field} --ner_json=data/named_entities_train_xl_split_0.json --is_last=false" | awk '{print $4}')
     
     echo "train_preprocess_single: $preprocess_job" | tee -a "$LOG_FILE"
 else
