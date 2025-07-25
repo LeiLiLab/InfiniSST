@@ -370,6 +370,7 @@ if __name__ == "__main__":
         '--text_field', type=str, default="term", choices=["term", "short_description"],
         help="Which field to use as input text (term: comma-split title, short_description: full description)"
     )
+    parser.add_argument("--is_last", type=bool, default=False, help="Whether this is the last split")
     args = parser.parse_args()
     
     term_set_path = "data/terms/term_set.txt"

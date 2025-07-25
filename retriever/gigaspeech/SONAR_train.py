@@ -18,7 +18,7 @@ from sonar.inference_pipelines.text import TextToEmbeddingModelPipeline
 
 
 class ContrastiveSpeechTextModel(nn.Module):
-    def __init__(self, speech_encoder, text_encoder, hidden_dim=1024, proj_dim=512):
+    def __init__(self, speech_encoder, text_encoder, hidden_dim=1024, proj_dim=512, unfreeze_layers=10):
         super().__init__()
         self.speech_encoder = speech_encoder
         self.text_encoder = text_encoder
@@ -27,11 +27,48 @@ class ContrastiveSpeechTextModel(nn.Module):
         self.proj_speech = nn.Linear(hidden_dim, proj_dim)
         self.proj_text = nn.Linear(hidden_dim, proj_dim)
 
-        # freeze encoder weights
+        # 首先冻结所有参数
         for param in self.speech_encoder.model.parameters():
             param.requires_grad = False
         for param in self.text_encoder.model.parameters():
             param.requires_grad = False
+        
+        # 解冻语音编码器的后几层
+        self._unfreeze_last_layers(self.speech_encoder.model, unfreeze_layers, "Speech")
+        
+        # 解冻文本编码器的后几层  
+        self._unfreeze_last_layers(self.text_encoder.model, unfreeze_layers, "Text")
+    
+    def _unfreeze_last_layers(self, model, num_layers, model_type):
+        """解冻模型的后几层参数"""
+        # 获取所有可训练的层
+        layers = []
+        for name, module in model.named_modules():
+            if any(layer_type in name.lower() for layer_type in ['layer', 'block', 'transformer', 'encoder']):
+                if hasattr(module, 'weight') or any(hasattr(module, param) for param in ['weight', 'bias']):
+                    layers.append((name, module))
+        
+        # 如果找不到标准的层结构，尝试按参数组解冻
+        if not layers:
+            all_params = list(model.named_parameters())
+            # 解冻最后 num_layers * 10 个参数（粗略估计）
+            unfreeze_count = min(num_layers * 10, len(all_params))
+            for name, param in all_params[-unfreeze_count:]:
+                param.requires_grad = True
+                print(f"[INFO] {model_type} - Unfrozen parameter: {name}")
+            return
+        
+        # 解冻后几层
+        unfreeze_count = min(num_layers, len(layers))
+        unfrozen_layers = layers[-unfreeze_count:]
+        
+        print(f"[INFO] {model_type} encoder - Unfreezing last {unfreeze_count} layers:")
+        for name, module in unfrozen_layers:
+            for param_name, param in module.named_parameters():
+                param.requires_grad = True
+                print(f"[INFO] {model_type} - Unfrozen: {name}.{param_name}")
+        
+        print(f"[INFO] {model_type} encoder - Total unfrozen layers: {unfreeze_count}/{len(layers)}")
 
     def encode_audio(self, audio_paths):
         speech_embeddings = self.speech_encoder.predict(audio_paths)  # [B, 1024]
@@ -52,7 +89,7 @@ class ContrastiveSpeechTextModel(nn.Module):
 
 
 class InBatchDataset(Dataset):
-    def __init__(self, path="data/samples/xl/test_mfa_3chunks_samples_0_500000.json", split="train", train_ratio=0.99):
+    def __init__(self, path="data/samples/xl/test_mfa_3chunks_samples_0_500000.json", split="train", train_ratio=0.999):
         print(f"[INFO] Loading MFA chunk samples from {path}")
         with open(path, "r") as f:
             all_samples = json.load(f)
@@ -72,7 +109,7 @@ class InBatchDataset(Dataset):
         
         print(f"[INFO] Filtered {len(valid_samples)} valid samples from {len(all_samples)} total samples")
         
-        # 数据分割：99.9%训练，1%测试
+        # 数据分割：99%训练，1%测试
         import random
         random.seed(42)  # 固定随机种子确保可复现
         random.shuffle(valid_samples)
@@ -222,10 +259,12 @@ def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--epochs', type=int, default=30)
-    parser.add_argument('--batch_size', type=int, default=32)  # 减小batch size因为使用chunk数据
-    parser.add_argument('--lr', type=float, default=1e-4)
-    parser.add_argument('--patience', type=int, default=5)
+    parser.add_argument('--epochs', type=int, default=20)
+    parser.add_argument('--batch_size', type=int, default=256)  # 增大batch size适应大数据集
+    parser.add_argument('--lr', type=float, default=5e-5)  # 降低学习率，适合微调
+    parser.add_argument('--patience', type=int, default=3)  # 减少patience，大数据集下更快收敛
+    parser.add_argument('--unfreeze_layers', type=int, default=10, 
+                       help="Number of last layers to unfreeze in both encoders (default: 10)")
     parser.add_argument('--train_samples_path', type=str, 
                        default="data/samples/xl/test_mfa_3chunks_samples_0_500000.json",
                        help="Path to MFA chunk samples (will be split into 99% train, 1% test)")
@@ -252,8 +291,33 @@ def main():
         dtype=torch.float32,
     )
 
-    model = ContrastiveSpeechTextModel(speech_encoder, text_encoder).to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
+    model = ContrastiveSpeechTextModel(
+        speech_encoder, text_encoder, 
+        unfreeze_layers=args.unfreeze_layers
+    ).to(device)
+    
+    # 为不同的参数组设置不同的学习率
+    encoder_params = []
+    projection_params = []
+    
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            if 'proj_' in name:
+                projection_params.append(param)
+            else:
+                encoder_params.append(param)
+    
+    # 投影层使用更高的学习率，编码器使用较低的学习率
+    optimizer = torch.optim.AdamW([
+        {'params': encoder_params, 'lr': args.lr},
+        {'params': projection_params, 'lr': args.lr * 10}  # 投影层学习率更高
+    ])
+    
+    # 添加学习率调度器
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode='max', factor=0.5, patience=2, verbose=True
+    )
+    
     if torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
 
@@ -284,16 +348,27 @@ def main():
     # 打印模型参数信息
     print("[DEBUG] Trainable parameters:")
     trainable_params = 0
+    encoder_params_count = 0
+    projection_params_count = 0
+    
     for name, param in model.named_parameters():
         if param.requires_grad:
-            print(f" - {name}: {param.shape}")
+            if 'proj_' in name:
+                projection_params_count += param.numel()
+                print(f" - [PROJ] {name}: {param.shape}")
+            else:
+                encoder_params_count += param.numel()
+                print(f" - [ENC] {name}: {param.shape}")
             trainable_params += param.numel()
 
     frozen = sum(p.numel() for p in model.parameters() if not p.requires_grad)
     total = sum(p.numel() for p in model.parameters())
     print(f"[INFO] Frozen parameters: {frozen:,} / {total:,} ({frozen / total:.2%})")
     print(f"[INFO] Trainable parameters: {trainable_params:,}")
+    print(f"[INFO]   - Encoder parameters: {encoder_params_count:,} ({encoder_params_count/trainable_params:.1%})")
+    print(f"[INFO]   - Projection parameters: {projection_params_count:,} ({projection_params_count/trainable_params:.1%})")
     print(f"[INFO] Training with {len(train_dataset)} MFA chunk samples")
+    print(f"[INFO] Unfrozen layers: {args.unfreeze_layers}")
 
     best_recall = 0.0
     no_improve_epochs = 0
@@ -328,6 +403,14 @@ def main():
         
         # 使用 Recall@10 作为早停指标
         current_recall = sum(recall_results[10]) / len(recall_results[10]) if recall_results[10] else 0.0
+        
+        # 更新学习率调度器
+        scheduler.step(current_recall)
+        
+        # 打印当前学习率
+        current_lr = optimizer.param_groups[0]['lr']
+        current_proj_lr = optimizer.param_groups[1]['lr']
+        print(f"[INFO] Current LR - Encoder: {current_lr:.2e}, Projection: {current_proj_lr:.2e}")
         
         if current_recall > best_recall:
             best_recall = current_recall
