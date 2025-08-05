@@ -3,11 +3,11 @@ from torch.utils.data import DataLoader, Dataset
 import numpy as np
 import json
 from tqdm import tqdm
-from new_giga_speech import load_preprocessed_samples
 import argparse, os, sys
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import faiss
 from new_retrieve import Retriever
+import soundfile as sf
 
 import torch
 import torch.nn as nn
@@ -16,88 +16,85 @@ from torch.utils.data import DataLoader
 from sonar.inference_pipelines.speech import SpeechToEmbeddingModelPipeline
 from sonar.inference_pipelines.text import TextToEmbeddingModelPipeline
 
+# 导入原有的模型结构和一些函数
+from SONAR_train import ContrastiveSpeechTextModel, load_glossary_terms, encode_texts_in_batches, encode_audios_in_batches
 
-class ContrastiveSpeechTextModel(nn.Module):
-    def __init__(self, speech_encoder, text_encoder, hidden_dim=1024, proj_dim=512, unfreeze_layers=10):
-        super().__init__()
-        self.speech_encoder = speech_encoder
-        self.text_encoder = text_encoder
 
-        # projection layers
-        self.proj_speech = nn.Linear(hidden_dim, proj_dim)
-        self.proj_text = nn.Linear(hidden_dim, proj_dim)
-
-        # 首先冻结所有参数
-        for param in self.speech_encoder.model.parameters():
-            param.requires_grad = False
-        for param in self.text_encoder.model.parameters():
-            param.requires_grad = False
+def is_audio_valid(audio_path, min_duration=0.01, max_duration=30.0):
+    """检查音频文件是否有效"""
+    try:
+        if not os.path.exists(audio_path):
+            return False, "File does not exist"
         
-        # 解冻语音编码器的后几层
-        self._unfreeze_last_layers(self.speech_encoder.model, unfreeze_layers, "Speech")
+        data, sr = sf.read(audio_path)
         
-        # 解冻文本编码器的后几层  
-        self._unfreeze_last_layers(self.text_encoder.model, unfreeze_layers, "Text")
+        # 检查基本属性
+        if len(data) == 0:
+            return False, "Empty audio file"
+        
+        duration = len(data) / sr
+        if duration < min_duration:
+            return False, f"Too short ({duration:.3f}s < {min_duration}s)"
+        
+        if duration > max_duration:
+            return False, f"Too long ({duration:.3f}s > {max_duration}s)"
+        
+        # 检查是否全静音
+        if np.allclose(data, 0, atol=1e-6):
+            return False, "All silence"
+        
+        # 检查是否有NaN或Inf
+        if np.isnan(data).any():
+            return False, "Contains NaN values"
+        
+        if np.isinf(data).any():
+            return False, "Contains Inf values"
+        
+        # 检查动态范围
+        data_std = np.std(data)
+        if data_std < 1e-6:
+            return False, f"Very low dynamic range (std={data_std:.2e})"
+        
+        return True, "Valid"
+        
+    except Exception as e:
+        return False, f"Failed to read: {str(e)}"
+
+
+def validate_audio_batch(audio_paths, verbose=False):
+    """批量验证音频文件，返回有效的路径列表和对应的原始索引"""
+    valid_paths = []
+    valid_indices = []
+    invalid_count = 0
     
-    def _unfreeze_last_layers(self, model, num_layers, model_type):
-        """解冻模型的后几层参数"""
-        # 获取所有可训练的层
-        layers = []
-        for name, module in model.named_modules():
-            if any(layer_type in name.lower() for layer_type in ['layer', 'block', 'transformer', 'encoder']):
-                if hasattr(module, 'weight') or any(hasattr(module, param) for param in ['weight', 'bias']):
-                    layers.append((name, module))
-        
-        # 如果找不到标准的层结构，尝试按参数组解冻
-        if not layers:
-            all_params = list(model.named_parameters())
-            # 解冻最后 num_layers * 10 个参数（粗略估计）
-            unfreeze_count = min(num_layers * 10, len(all_params))
-            for name, param in all_params[-unfreeze_count:]:
-                param.requires_grad = True
-                print(f"[INFO] {model_type} - Unfrozen parameter: {name}")
-            return
-        
-        # 解冻后几层
-        unfreeze_count = min(num_layers, len(layers))
-        unfrozen_layers = layers[-unfreeze_count:]
-        
-        print(f"[INFO] {model_type} encoder - Unfreezing last {unfreeze_count} layers:")
-        for name, module in unfrozen_layers:
-            for param_name, param in module.named_parameters():
-                param.requires_grad = True
-                print(f"[INFO] {model_type} - Unfrozen: {name}.{param_name}")
-        
-        print(f"[INFO] {model_type} encoder - Total unfrozen layers: {unfreeze_count}/{len(layers)}")
-
-    def encode_audio(self, audio_paths):
-        speech_embeddings = self.speech_encoder.predict(audio_paths)  # [B, 1024]
-        if isinstance(speech_embeddings, np.ndarray):
-            speech_embeddings = torch.from_numpy(speech_embeddings)
-        speech_embeddings = speech_embeddings.clone().detach().to(self.proj_speech.weight.device).requires_grad_(True)
-        return F.normalize(self.proj_speech(speech_embeddings), dim=-1)
-
-    def encode_text(self, texts, source_lang="eng_Latn"):
-        with torch.no_grad():
-            text_embeddings = self.text_encoder.predict(texts, source_lang=source_lang)  # numpy 或 tensor
-
-        if isinstance(text_embeddings, np.ndarray):
-            text_embeddings = torch.from_numpy(text_embeddings)
-
-        text_embeddings = text_embeddings.clone().detach().to(self.proj_text.weight.device).requires_grad_(True)
-        return F.normalize(self.proj_text(text_embeddings), dim=-1)
+    for i, path in enumerate(audio_paths):
+        is_valid, reason = is_audio_valid(path)
+        if is_valid:
+            valid_paths.append(path)
+            valid_indices.append(i)
+        else:
+            invalid_count += 1
+            if verbose or invalid_count <= 5:  # 只打印前5个无效文件
+                print(f"[WARN] Invalid audio {i}: {path} - {reason}")
+    
+    if invalid_count > 5:
+        print(f"[WARN] ... and {invalid_count - 5} more invalid audio files")
+    
+    return valid_paths, valid_indices
 
 
-class InBatchDataset(Dataset):
-    def __init__(self, path="data/samples/xl/test_mfa_3chunks_samples_0_500000.json", split="train", train_ratio=0.99):
-        print(f"[INFO] Loading MFA chunk samples from {path}")
+class TermLevelDataset(Dataset):
+    def __init__(self, path="data/xl_term_level_chunks_merged.json", split="train", train_ratio=0.99):
+        print(f"[INFO] Loading term-level chunk samples from {path}")
         with open(path, "r") as f:
             all_samples = json.load(f)
-
+        
         # 过滤有效样本：必须有音频文件、chunk文本和ground truth terms
         valid_samples = []
-        for s in all_samples:
-            terms = s.get('n_chunk_audio_ground_truth_terms')
+        invalid_audio_count = 0
+        
+        for i, s in enumerate(all_samples):
+            terms = s.get('term_chunk_audio_ground_truth_terms')
             if not (terms and isinstance(terms, list)):
                 continue
             # 过滤术语
@@ -111,40 +108,54 @@ class InBatchDataset(Dataset):
                 continue
             # 替换原列表为过滤后的术语
             s = dict(s)  # 避免直接修改原始数据
-            s['n_chunk_audio_ground_truth_terms'] = filtered_terms
-            # 检查其他条件
-            if (
-                s.get('n_chunk_text', '').strip()
-                and s.get('n_chunk_audio', '')
-                and os.path.exists(s.get("n_chunk_audio", ""))
-            ):
+            s['term_chunk_audio_ground_truth_terms'] = filtered_terms
+            
+            # 检查基本条件
+            if not (s.get('term_chunk_text', '').strip() and s.get('term_chunk_audio', '')):
+                continue
+            
+            # 检查音频文件有效性
+            audio_path = s.get("term_chunk_audio", "")
+            is_valid, reason = is_audio_valid(audio_path)
+            
+            if is_valid:
                 valid_samples.append(s)
-
-        print(f"[INFO] Filtered {len(valid_samples)} valid samples from {len(all_samples)} total samples")
-
+            else:
+                invalid_audio_count += 1
+                # 只打印前10个无效音频的详细信息
+                if invalid_audio_count <= 10:
+                    print(f"[WARN] Skipping sample {i}: {audio_path} - {reason}")
+        
+        if invalid_audio_count > 10:
+            print(f"[WARN] ... and {invalid_audio_count - 10} more samples with invalid audio")
+            
+        print(f"[INFO] Audio validation: {len(valid_samples)} valid, {invalid_audio_count} invalid")
+        
+        print(f"[INFO] Filtered {len(valid_samples)} valid term-level samples from {len(all_samples)} total samples")
+        
         # 数据分割：99%训练，1%测试
         import random
         random.seed(42)  # 固定随机种子确保可复现
         random.shuffle(valid_samples)
-
+        
         split_idx = int(len(valid_samples) * train_ratio)
-
+        
         if split == "train":
             self.samples = valid_samples[:split_idx]
-            print(f"[INFO] Training split: {len(self.samples)} samples")
+            print(f"[INFO] Training split: {len(self.samples)} term-level samples")
         elif split == "test":
             self.samples = valid_samples[split_idx:]
-            print(f"[INFO] Test split: {len(self.samples)} samples")
+            print(f"[INFO] Test split: {len(self.samples)} term-level samples")
         else:
             raise ValueError(f"Invalid split: {split}. Must be 'train' or 'test'")
-
-        print(f"[INFO] Loaded {len(self.samples)} samples for {split} split")
+        
+        print(f"[INFO] Loaded {len(self.samples)} term-level samples for {split} split")
 
     def __getitem__(self, idx):
         sample = self.samples[idx]
-        audio_path = sample["n_chunk_audio"]  # 使用chunk音频
-        chunk_text = sample["n_chunk_text"]   # 使用chunk文本
-        ground_truth_terms = sample.get('n_chunk_audio_ground_truth_terms', [])
+        audio_path = sample["term_chunk_audio"]  # 使用term chunk音频
+        chunk_text = sample["term_chunk_text"]   # 使用term chunk文本
+        ground_truth_terms = sample.get('term_chunk_audio_ground_truth_terms', [])
         
         return ground_truth_terms, audio_path, chunk_text, True
 
@@ -167,25 +178,112 @@ def train_step(model, batch, device, temperature=0.07):
     chunk_texts = [text.lower() if isinstance(text, str) else "" for text in chunk_texts]
 
     # === 编码音频和文本 ===
-    audio_emb = raw_model.encode_audio(audio_paths)  # [B, proj_dim]
-    text_emb = raw_model.encode_text(chunk_texts)    # [B, proj_dim]
+    try:
+        # 先验证音频文件批次
+        print(f"[DEBUG] Processing batch with {len(audio_paths)} audio files")
+        valid_audio_paths, valid_audio_indices = validate_audio_batch(audio_paths, verbose=True)
+        
+        if len(valid_audio_paths) == 0:
+            print(f"[ERROR] No valid audio files in batch, skipping")
+            return torch.tensor(0.0, requires_grad=True).to(device)
+        
+        if len(valid_audio_paths) != len(audio_paths):
+            print(f"[WARN] Only {len(valid_audio_paths)}/{len(audio_paths)} audio files are valid")
+            # 重新组织batch，只保留有效的样本
+            valid_batch_data = []
+            for idx in valid_audio_indices:
+                valid_batch_data.append((
+                    ground_truth_terms_list[idx],
+                    audio_paths[idx], 
+                    chunk_texts[idx],
+                    has_targets[idx]
+                ))
+            
+            # 如果有效样本太少，跳过这个batch
+            if len(valid_batch_data) < 2:
+                print(f"[ERROR] Too few valid samples ({len(valid_batch_data)}), skipping batch")
+                return torch.tensor(0.0, requires_grad=True).to(device)
+            
+            # 重新提取数据
+            ground_truth_terms_list, audio_paths, chunk_texts, has_targets = zip(*valid_batch_data)
+            ground_truth_terms_list = list(ground_truth_terms_list)
+            audio_paths = list(audio_paths)
+            chunk_texts = list(chunk_texts)
+            has_targets = list(has_targets)
+        
+        # 编码音频
+        print(f"[DEBUG] Encoding {len(audio_paths)} audio files...")
+        audio_emb = raw_model.encode_audio(audio_paths)  # [B, proj_dim]
+        
+        # 检查音频embedding
+        if torch.isnan(audio_emb).any() or torch.isinf(audio_emb).any():
+            print(f"[ERROR] NaN/Inf detected in audio embeddings after encoding!")
+            # 逐个检查音频文件
+            for i, path in enumerate(audio_paths):
+                try:
+                    single_emb = raw_model.encode_audio([path])
+                    if torch.isnan(single_emb).any() or torch.isinf(single_emb).any():
+                        print(f"[ERROR] Bad audio embedding from: {path}")
+                        # 检查音频文件详细信息
+                        try:
+                            data, sr = sf.read(path)
+                            print(f"[DEBUG] Audio stats - Duration: {len(data)/sr:.3f}s, "
+                                  f"Shape: {data.shape}, Mean: {np.mean(data):.6f}, "
+                                  f"Std: {np.std(data):.6f}, Min: {np.min(data):.6f}, Max: {np.max(data):.6f}")
+                        except Exception as ae:
+                            print(f"[ERROR] Failed to read audio file: {ae}")
+                except Exception as ee:
+                    print(f"[ERROR] Failed to encode single audio {path}: {ee}")
+            return torch.tensor(0.0, requires_grad=True).to(device)
+        
+        # 编码文本
+        print(f"[DEBUG] Encoding {len(chunk_texts)} text chunks...")
+        text_emb = raw_model.encode_text(chunk_texts)    # [B, proj_dim]
+        
+        # 检查文本embedding
+        if torch.isnan(text_emb).any() or torch.isinf(text_emb).any():
+            print(f"[ERROR] NaN/Inf detected in text embeddings!")
+            print(f"[DEBUG] Text samples: {chunk_texts[:3]}...")
+            return torch.tensor(0.0, requires_grad=True).to(device)
+        
+        print(f"[DEBUG] Embeddings OK - Audio: {audio_emb.shape}, Text: {text_emb.shape}")
+        
+    except Exception as e:
+        print(f"[ERROR] Failed to encode audio/text: {e}")
+        import traceback
+        traceback.print_exc()
+        return torch.tensor(0.0, requires_grad=True).to(device)
 
     # === 计算音频-文本对比损失 ===
-    # 音频和对应的chunk文本应该相似
+    # 对于term-level数据，音频和对应的term文本应该高度相似
     sim_matrix = (audio_emb @ text_emb.T) / temperature  # [B, B]
     
+    # 数值稳定性检查
+    if torch.isnan(sim_matrix).any() or torch.isinf(sim_matrix).any():
+        print(f"[ERROR] NaN/Inf in contrastive sim_matrix, skipping batch")
+        return torch.tensor(0.0, requires_grad=True).to(device)
+    
     # 创建正样本mask（对角线为1，表示音频i和文本i是正样本对）
-    batch_size = len(audio_paths)
+    batch_size = len(audio_paths)  # 使用实际的batch size（可能已经过滤）
     labels = torch.arange(batch_size).to(device)
     
     # 计算对称的对比损失
-    loss_audio_to_text = F.cross_entropy(sim_matrix, labels)
-    loss_text_to_audio = F.cross_entropy(sim_matrix.T, labels)
-    
-    contrastive_loss = (loss_audio_to_text + loss_text_to_audio) / 2
+    try:
+        loss_audio_to_text = F.cross_entropy(sim_matrix, labels)
+        loss_text_to_audio = F.cross_entropy(sim_matrix.T, labels)
+        
+        if torch.isnan(loss_audio_to_text) or torch.isnan(loss_text_to_audio):
+            print(f"[ERROR] NaN in contrastive cross_entropy, skipping batch")
+            return torch.tensor(0.0, requires_grad=True).to(device)
+        
+        contrastive_loss = (loss_audio_to_text + loss_text_to_audio) / 2
+    except Exception as e:
+        print(f"[ERROR] Failed to compute contrastive loss: {e}")
+        return torch.tensor(0.0, requires_grad=True).to(device)
 
     # === 计算音频-术语对比损失 ===
-    # 收集batch中所有的ground truth terms
+    # 对于term-level数据，每个样本的ground_truth_terms通常只有一个term
+    # 但仍然使用相同的逻辑以保持一致性
     all_gt_terms = []
     audio_term_pairs = []  # (audio_idx, term_idx) 正样本对
     
@@ -203,8 +301,15 @@ def train_step(model, batch, device, temperature=0.07):
         # 计算音频-术语相似度矩阵
         audio_term_sim = (audio_emb @ terms_emb.T) / temperature  # [B, N_terms]
         
+        # 数值稳定性检查
+        if torch.isnan(audio_term_sim).any() or torch.isinf(audio_term_sim).any():
+            print(f"[ERROR] NaN/Inf detected in audio_term_sim, skipping batch")
+            print(f"[DEBUG] audio_emb stats: mean={audio_emb.mean().item():.4f}, std={audio_emb.std().item():.4f}")
+            print(f"[DEBUG] terms_emb stats: mean={terms_emb.mean().item():.4f}, std={terms_emb.std().item():.4f}")
+            print(f"[DEBUG] temperature: {temperature}")
+            return torch.tensor(0.0, requires_grad=True).to(device)
+        
         # 构建正样本标签
-        # 为每个音频样本，找到它对应的正样本术语
         audio_term_labels = []
         for i in range(batch_size):
             # 找到audio i对应的所有positive term indices
@@ -214,7 +319,7 @@ def train_step(model, batch, device, temperature=0.07):
                 import random
                 audio_term_labels.append(random.choice(positive_terms))
             else:
-                # 如果没有正样本，跳过这个样本（在损失计算中会被mask掉）
+                # 如果没有正样本，跳过这个样本
                 audio_term_labels.append(-1)
         
         # 计算损失，只对有正样本的音频样本计算
@@ -257,8 +362,16 @@ def train_step(model, batch, device, temperature=0.07):
         audio_term_loss = torch.tensor(0.0, device=device)
 
     # === 组合总损失 ===
-    # 音频-文本损失权重为0.3，音频-术语损失权重为0.7（因为术语检索是主要任务）
+    # 与MFA chunk训练保持一致的权重：弱化audio-text loss，强化audio-term loss
+    # 音频-术语检索是主要任务
     total_loss = 0.3 * contrastive_loss + 0.7 * audio_term_loss
+    
+    # 最终数值稳定性检查
+    if torch.isnan(total_loss) or torch.isinf(total_loss):
+        print(f"[ERROR] NaN/Inf total loss detected, skipping batch")
+        print(f"[DEBUG] contrastive_loss: {contrastive_loss.item():.4f}")
+        print(f"[DEBUG] audio_term_loss: {audio_term_loss.item():.4f}")
+        return torch.tensor(0.0, requires_grad=True).to(device)
     
     return total_loss
 
@@ -266,105 +379,64 @@ def train_step(model, batch, device, temperature=0.07):
 def extract_all_used_terms(dataset):
     """提取数据集中所有使用的术语"""
     used_terms = set()
-    for sample in dataset:
+    processed_samples = 0
+    valid_samples = 0
+    
+    for i, sample in enumerate(dataset):
         if sample is None:
             continue
+        processed_samples += 1
         ground_truth_terms, audio_path, chunk_text, has_target = sample
+        
         if has_target and ground_truth_terms:
-            used_terms.update(t.lower() for t in ground_truth_terms if isinstance(t, str))
+            valid_samples += 1
+            for t in ground_truth_terms:
+                if isinstance(t, str) and len(t.strip()) > 0:
+                    used_terms.add(t.lower())
+            
+            # 调试前几个样本
+            if i < 5:
+                print(f"[DEBUG] extract_all_used_terms - Sample {i}: ground_truth_terms={ground_truth_terms}, chunk_text='{chunk_text}'")
+    
+    print(f"[DEBUG] extract_all_used_terms - Processed {processed_samples} samples, {valid_samples} valid samples, {len(used_terms)} unique terms")
     return list(used_terms)
 
 
-def load_glossary_terms(glossary_path):
-    """加载完整的术语表"""
-    print(f"[INFO] Loading glossary from {glossary_path}")
-    with open(glossary_path, "r") as f:
-        glossary = json.load(f)
-    
-    # 提取所有术语，处理不同的数据格式
-    terms = []
-    if isinstance(glossary, list):
-        for item in glossary:
-            if isinstance(item, dict):
-                # 如果是字典，尝试获取 'term' 或 'text' 字段
-                term = item.get('term') or item.get('text') or item.get('word')
-                if term:
-                    terms.append(term.lower())
-            elif isinstance(item, str):
-                terms.append(item.lower())
-    elif isinstance(glossary, dict):
-        # 如果是字典格式，提取所有值
-        for key, value in glossary.items():
-            if isinstance(value, str):
-                terms.append(value.lower())
-            elif isinstance(value, dict) and 'term' in value:
-                terms.append(value['term'].lower())
-    
-    # 去重并过滤
-    terms = list(set(term for term in terms if term and len(term.strip()) >= 2))
-    print(f"[INFO] Loaded {len(terms)} unique terms from glossary")
-    return terms
-
-
-def encode_texts_in_batches(model, texts, batch_size=512, device="cuda"):
-    all_embeddings = []
-    for i in range(0, len(texts), batch_size):
-        batch = texts[i:i + batch_size]
-        with torch.no_grad():
-            emb = model.encode_text(batch).cpu()
-            all_embeddings.append(emb)
-    return torch.cat(all_embeddings, dim=0)
-
-
-def encode_audios_in_batches(model, audio_paths, batch_size=32, device="cuda"):
-    """分批编码音频"""
-    all_embeddings = []
-    print(f"[INFO] Encoding {len(audio_paths)} audio files in batches of {batch_size}")
-    
-    for i in range(0, len(audio_paths), batch_size):
-        batch_paths = audio_paths[i:i + batch_size]
-        print(f"[INFO] Processing audio batch {i//batch_size + 1}/{(len(audio_paths) + batch_size - 1)//batch_size}")
-        
-        with torch.no_grad():
-            try:
-                emb = model.encode_audio(batch_paths).cpu()
-                all_embeddings.append(emb)
-            except Exception as e:
-                print(f"[ERROR] Failed to encode audio batch {i//batch_size + 1}: {e}")
-                print(f"[INFO] Trying smaller batch size for this batch...")
-                # 如果batch失败，尝试单个处理
-                for single_path in batch_paths:
-                    try:
-                        single_emb = model.encode_audio([single_path]).cpu()
-                        all_embeddings.append(single_emb)
-                    except Exception as e2:
-                        print(f"[ERROR] Failed to encode single audio {single_path}: {e2}")
-                        # 跳过这个音频文件
-                        continue
-    
-    if not all_embeddings:
-        raise RuntimeError("No audio files were successfully encoded")
-    
-    return torch.cat(all_embeddings, dim=0)
-
-
 def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), max_eval=1000, field="term", train_terms=None):
-    """评估top-k召回率，使用n_chunk_audio_ground_truth_terms作为目标
-    
-    Args:
-        train_terms: 仅来自训练集的术语列表，用于区分seen/unseen terms
-    """
+    """评估top-k召回率，适配term-level数据格式"""
     model.eval()
     recall_dict = {k: [] for k in top_ks}
 
     # === 重建索引 ===
     text_terms = [term['term'] for term in retriever.term_list]
-    print(f'[DEBUG] text_terms: {len(text_terms)}')
+    print(f'[DEBUG] Building index with {len(text_terms)} terms')
+    print(f'[DEBUG] First 10 terms: {text_terms[:10]}')
+    print(f'[DEBUG] Last 10 terms: {text_terms[-10:]}')
+    
+    # 检查是否有重复terms
+    unique_terms = set(text_terms)
+    print(f'[DEBUG] Unique terms: {len(unique_terms)} / {len(text_terms)}')
+    if len(unique_terms) != len(text_terms):
+        print(f'[WARNING] Found duplicate terms in retriever.term_list!')
+    
     raw_model = model.module if isinstance(model, torch.nn.DataParallel) else model
     text_emb = encode_texts_in_batches(raw_model, text_terms, device=device)
+    
+    print(f'[DEBUG] Text embeddings shape: {text_emb.shape}')
+    print(f'[DEBUG] Text embeddings stats: mean={text_emb.mean().item():.4f}, std={text_emb.std().item():.4f}')
+    
+    # 检查embedding是否都相同
+    if text_emb.shape[0] > 1:
+        first_emb = text_emb[0:1]
+        similarities = F.cosine_similarity(first_emb, text_emb, dim=1)
+        identical_count = (similarities > 0.99).sum().item()
+        print(f'[DEBUG] Embeddings identical to first: {identical_count} / {text_emb.shape[0]}')
+        if identical_count > text_emb.shape[0] * 0.8:
+            print(f'[ERROR] Most embeddings are identical! This will cause retrieval issues.')
 
     retriever.index.reset()
     retriever.index.add(text_emb)
+    print(f'[DEBUG] Index built with {retriever.index.ntotal} vectors')
 
     print(f"[INFO] Dataset size: {len(dataset)}")
     import random
@@ -381,9 +453,26 @@ def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), 
 
     print(f"[INFO] Selected {len(eval_indices)} samples randomly, {len(valid_samples)} are valid for evaluation")
     print(f"[INFO] Filtered out {len(eval_indices) - len(valid_samples)} samples (no ground truth terms or has_target=False)")
-
-    # 使用chunk音频进行编码（分批处理）
-    audio_paths = [sample[1] for sample in valid_samples]  # n_chunk_audio paths
+    
+    # 使用term chunk音频进行编码（分批处理）
+    audio_paths = [sample[1] for sample in valid_samples]  # term_chunk_audio paths
+    
+    # 验证音频文件
+    print(f"[DEBUG] Validating {len(audio_paths)} audio files for evaluation...")
+    valid_audio_paths, valid_audio_indices = validate_audio_batch(audio_paths, verbose=False)
+    
+    if len(valid_audio_paths) != len(audio_paths):
+        print(f"[WARN] Evaluation: Only {len(valid_audio_paths)}/{len(audio_paths)} audio files are valid")
+        # 过滤掉无效的样本
+        valid_samples = [valid_samples[i] for i in valid_audio_indices]
+        valid_indices = [valid_indices[i] for i in valid_audio_indices]
+        audio_paths = valid_audio_paths
+    
+    if len(audio_paths) == 0:
+        print(f"[ERROR] No valid audio files for evaluation!")
+        return {k: [] for k in top_ks}
+    
+    print(f"[DEBUG] Encoding {len(audio_paths)} valid audio files...")
     audio_embs = encode_audios_in_batches(raw_model, audio_paths, batch_size=1000, device=device).numpy()
 
     for j, (i, sample) in enumerate(zip(valid_indices, valid_samples)):
@@ -393,7 +482,7 @@ def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), 
         for top_k in top_ks:
             D, I = retriever.index.search(audio_emb, top_k)
             retrieved_terms = [retriever.term_list[idx][field].lower() for idx in I[0]]
-            gt_terms = [t.lower() for t in ground_truth_terms]  # 使用n_chunk_audio_ground_truth_terms
+            gt_terms = [t.lower() for t in ground_truth_terms]  # 使用term_chunk_audio_ground_truth_terms
 
             matched = sum(gt in retrieved_terms for gt in gt_terms)
             recall = matched / len(gt_terms) if gt_terms else 0.0
@@ -401,11 +490,22 @@ def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), 
 
             if j < 3 and top_k == top_ks[0]:  # 只打印前3个样本的详细信息
                 print(f"[DEBUG] Sample {i}:")
-                print(f"[DEBUG] Chunk text: {chunk_text[:100]}...")
+                print(f"[DEBUG] Audio path: {audio_path}")
+                print(f"[DEBUG] Chunk text: {chunk_text}")
                 print(f"[DEBUG] GT terms: {gt_terms}")
+                print(f"[DEBUG] Audio embedding stats: mean={audio_emb.mean():.4f}, std={audio_emb.std():.4f}")
+                print(f"[DEBUG] Retrieved indices: {I[0]}")
+                print(f"[DEBUG] Retrieved distances: {D[0]}")
                 print(f"[DEBUG] Retrieved terms: {retrieved_terms}")
                 print(f"[DEBUG] Match count: {matched}/{len(gt_terms)}")
                 print(f"[DEBUG] Recall: {recall:.2%}")
+                
+                # 额外检查：看看距离最近的几个terms
+                if len(D[0]) > 0:
+                    print(f"[DEBUG] Closest term distance: {D[0][0]:.4f}")
+                    if len(set(retrieved_terms)) == 1:
+                        print(f"[ERROR] All retrieved terms are identical: '{retrieved_terms[0]}'")
+                print(f"[DEBUG] ---")
 
     # 打印统计结果
     for top_k in top_ks:
@@ -438,18 +538,18 @@ def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=20)
-    parser.add_argument('--batch_size', type=int, default=256)  # 增大batch size适应大数据集
-    parser.add_argument('--lr', type=float, default=5e-5)  # 降低学习率，适合微调
-    parser.add_argument('--patience', type=int, default=3)  # 减少patience，大数据集下更快收敛
+    parser.add_argument('--batch_size', type=int, default=256)  # 可能需要适当调整
+    parser.add_argument('--lr', type=float, default=5e-5)  
+    parser.add_argument('--patience', type=int, default=3)  
     parser.add_argument('--unfreeze_layers', type=int, default=10, 
                        help="Number of last layers to unfreeze in both encoders (default: 10)")
     parser.add_argument('--train_samples_path', type=str, 
-                       default="data/samples/xl/test_mfa_3chunks_samples_0_500000.json",
-                       help="Path to MFA chunk samples (will be split into 99% train, 1% test)")
+                       default="data/xl_term_level_chunks_merged.json",
+                       help="Path to term-level chunk samples")
     parser.add_argument('--train_ratio', type=float, default=0.99,
                        help="Ratio of samples to use for training (default: 0.99)")
     parser.add_argument('--glossary_path', type=str, default="data/terms/glossary_filtered.json")
-    parser.add_argument('--save_path', type=str, default="data/clap_mfa_chunks.pt")
+    parser.add_argument('--save_path', type=str, default="data/clap_term_level.pt")
     parser.add_argument('--enable_full_eval', action='store_true', 
                        help="Enable full evaluation with complete glossary at the end of training")
     parser.add_argument('--full_eval_every_n_epochs', type=int, default=5,
@@ -500,24 +600,35 @@ def main():
         optimizer, mode='max', factor=0.5, patience=2, verbose=True
     )
     
+    # 自动多GPU包装
     if torch.cuda.device_count() > 1:
-        model = torch.nn.DataParallel(model)
+        print(f"[INFO] 🚀 Detected {torch.cuda.device_count()} GPUs, wrapping with DataParallel")
+        available_gpus = list(range(torch.cuda.device_count()))
+        model = torch.nn.DataParallel(model, device_ids=available_gpus)
+        print(f"[INFO] ✅ DataParallel enabled on GPUs: {available_gpus}")
+    else:
+        print(f"[INFO] Single GPU mode")
 
     # === 加载数据集 ===
-    print(f"[INFO] Loading dataset from {args.train_samples_path}")
+    print(f"[INFO] Loading term-level dataset from {args.train_samples_path}")
     print(f"[INFO] Using train ratio: {args.train_ratio:.1%} train, {1-args.train_ratio:.1%} test")
-    train_dataset = InBatchDataset(args.train_samples_path, split="train", train_ratio=args.train_ratio)
-    test_dataset = InBatchDataset(args.train_samples_path, split="test", train_ratio=args.train_ratio)
+    train_dataset = TermLevelDataset(args.train_samples_path, split="train", train_ratio=args.train_ratio)
+    test_dataset = TermLevelDataset(args.train_samples_path, split="test", train_ratio=args.train_ratio)
     
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=lambda x: x)
     
     print(f"[INFO] Training samples: {len(train_dataset)}")
     print(f"[INFO] Test samples: {len(test_dataset)}")
     
-    # === 构建术语词表用于评估 ===
+    # === 构建术语词表用于评估（使用训练时的used_terms） ===
     print(f"[INFO] Building term vocabulary from training + test data...")
     used_terms_train = extract_all_used_terms(train_dataset)
     used_terms_test = extract_all_used_terms(test_dataset)
+
+    print(f"[DEBUG] Raw training terms count: {len(used_terms_train)}")
+    print(f"[DEBUG] Raw test terms count: {len(used_terms_test)}")
+    print(f"[DEBUG] First 10 training terms: {used_terms_train[:10] if used_terms_train else []}")
+    print(f"[DEBUG] First 10 test terms: {used_terms_test[:10] if used_terms_test else []}")
 
     # 合并、去重并小写
     used_terms = list(set(t.lower() for t in (used_terms_train + used_terms_test)))
@@ -525,12 +636,23 @@ def main():
     print(f"[INFO] Training-only terms: {len(used_terms_train)}")
     print(f"[INFO] Test-only terms: {len(used_terms_test)}")
     
+    print(f"[DEBUG] Final unique terms sample: {used_terms[:20] if len(used_terms) >= 20 else used_terms}")
+    
     # 分析train/test术语重叠
     train_set = set(used_terms_train)
     test_set = set(used_terms_test)
     overlap = train_set.intersection(test_set)
     print(f"[INFO] Terms overlap between train/test: {len(overlap)} terms")
     print(f"[INFO] Test terms that are unseen in training: {len(test_set - train_set)} terms")
+    
+    # 检查是否有异常的术语重复
+    term_counts = {}
+    for t in (used_terms_train + used_terms_test):
+        term_counts[t.lower()] = term_counts.get(t.lower(), 0) + 1
+    
+    frequent_terms = [(term, count) for term, count in term_counts.items() if count > 10]
+    if frequent_terms:
+        print(f"[DEBUG] Most frequent terms: {sorted(frequent_terms, key=lambda x: x[1], reverse=True)[:10]}")
 
     # === 初始化 retriever 用于评估（使用训练时的used_terms） ===
     retriever = Retriever(enable_fusion=True, device=device)
@@ -572,7 +694,7 @@ def main():
     print(f"[INFO] Trainable parameters: {trainable_params:,}")
     print(f"[INFO]   - Encoder parameters: {encoder_params_count:,} ({encoder_params_count/trainable_params:.1%})")
     print(f"[INFO]   - Projection parameters: {projection_params_count:,} ({projection_params_count/trainable_params:.1%})")
-    print(f"[INFO] Training with {len(train_dataset)} MFA chunk samples")
+    print(f"[INFO] Training with {len(train_dataset)} term-level chunk samples")
     print(f"[INFO] Unfrozen layers: {args.unfreeze_layers}")
 
     best_recall = 0.0
@@ -585,17 +707,24 @@ def main():
         # 训练循环
         for batch in tqdm(train_dataloader, desc=f"[Epoch {epoch+1}/{args.epochs}]"):
             loss = train_step(model, batch, device)
-            if loss.requires_grad:
+            if loss.requires_grad and not torch.isnan(loss) and not torch.isinf(loss):
                 loss.backward()
+                
+                # 梯度裁剪防止梯度爆炸
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                
                 optimizer.step()
                 optimizer.zero_grad()
                 total_loss += loss.item()
+            elif torch.isnan(loss) or torch.isinf(loss):
+                print(f"[WARNING] Skipping batch due to NaN/Inf loss: {loss.item()}")
+                optimizer.zero_grad()  # 清理梯度
 
         avg_loss = total_loss / len(train_dataloader) if len(train_dataloader) > 0 else 0.0
         print(f"[INFO] Epoch {epoch+1} avg loss: {avg_loss:.4f}")
 
         # === 保存检查点 ===
-        ckpt_path = f"data/clap_mfa_epoch{epoch+1}.pt"
+        ckpt_path = f"data/clap_term_level_epoch{epoch+1}.pt"
         torch.save(model.state_dict(), ckpt_path)
         print(f"[INFO] Model saved to {ckpt_path}")
 
@@ -617,7 +746,7 @@ def main():
                 print(f"\n[INFO] Epoch {epoch+1} - Full evaluation with complete glossary:")
                 full_recall_results = evaluate_topk_recall(
                     model, full_retriever, test_dataset, device,
-                    top_ks=(5, 10, 20), max_eval=min(1000, len(test_dataset)),
+                    top_ks=(5, 10), max_eval=min(1000, len(test_dataset)),
                     train_terms=used_terms_train  # 传入仅来自训练集的术语
                 )
         
@@ -665,4 +794,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main() 
