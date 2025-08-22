@@ -106,6 +106,7 @@ class InBatchDataset(Dataset):
                 if isinstance(t, str)
                 and len(t) >= 3
                 and sum(c.isdigit() for c in t) <= len(t) // 2
+                and len(t.strip().split()) <= 5 # 过滤长术语
             ]
             if not filtered_terms:
                 continue
@@ -152,7 +153,7 @@ class InBatchDataset(Dataset):
         return len(self.samples)
 
 
-def train_step(model, batch, device, temperature=0.07):
+def train_step(model, batch, device, args, temperature=0.07):
     raw_model = model.module if isinstance(model, torch.nn.DataParallel) else model
 
     if len(batch) < 2:
@@ -168,21 +169,23 @@ def train_step(model, batch, device, temperature=0.07):
 
     # === 编码音频和文本 ===
     audio_emb = raw_model.encode_audio(audio_paths)  # [B, proj_dim]
-    text_emb = raw_model.encode_text(chunk_texts)    # [B, proj_dim]
-
-    # === 计算音频-文本对比损失 ===
-    # 音频和对应的chunk文本应该相似
-    sim_matrix = (audio_emb @ text_emb.T) / temperature  # [B, B]
-    
-    # 创建正样本mask（对角线为1，表示音频i和文本i是正样本对）
-    batch_size = len(audio_paths)
-    labels = torch.arange(batch_size).to(device)
-    
-    # 计算对称的对比损失
-    loss_audio_to_text = F.cross_entropy(sim_matrix, labels)
-    loss_text_to_audio = F.cross_entropy(sim_matrix.T, labels)
-    
-    contrastive_loss = (loss_audio_to_text + loss_text_to_audio) / 2
+    if args.audio_text_loss_ratio>0:
+        text_emb = raw_model.encode_text(chunk_texts)    # [B, proj_dim]
+        # === 计算音频-文本对比损失 ===
+        # 音频和对应的chunk文本应该相似
+        sim_matrix = (audio_emb @ text_emb.T) / temperature  # [B, B]
+        
+        # 创建正样本mask（对角线为1，表示音频i和文本i是正样本对）
+        batch_size = len(audio_paths)
+        labels = torch.arange(batch_size).to(device)
+        
+        # 计算对称的对比损失
+        loss_audio_to_text = F.cross_entropy(sim_matrix, labels)
+        loss_text_to_audio = F.cross_entropy(sim_matrix.T, labels)
+        
+        contrastive_loss = (loss_audio_to_text + loss_text_to_audio) / 2
+    else:
+        contrastive_loss = torch.tensor(0.0, device=device)
 
     # === 计算音频-术语对比损失 ===
     # 收集batch中所有的ground truth terms
@@ -257,8 +260,8 @@ def train_step(model, batch, device, temperature=0.07):
         audio_term_loss = torch.tensor(0.0, device=device)
 
     # === 组合总损失 ===
-    # 音频-文本损失权重为0.3，音频-术语损失权重为0.7（因为术语检索是主要任务）
-    total_loss = 0.3 * contrastive_loss + 0.7 * audio_term_loss
+    # 使用可配置的损失权重
+    total_loss = args.audio_text_loss_ratio * contrastive_loss + args.audio_term_loss_ratio * audio_term_loss
     
     return total_loss
 
@@ -306,7 +309,7 @@ def load_glossary_terms(glossary_path):
     return terms
 
 
-def encode_texts_in_batches(model, texts, batch_size=512, device="cuda"):
+def encode_texts_in_batches(model, texts, batch_size=1000, device="cuda"):
     all_embeddings = []
     for i in range(0, len(texts), batch_size):
         batch = texts[i:i + batch_size]
@@ -454,6 +457,10 @@ def main():
                        help="Enable full evaluation with complete glossary at the end of training")
     parser.add_argument('--full_eval_every_n_epochs', type=int, default=5,
                        help="Run full evaluation every N epochs (requires --enable_full_eval)")
+    parser.add_argument('--audio_text_loss_ratio', type=float, default=0.3,
+                       help="Weight for audio-text contrastive loss (default: 0.3)")
+    parser.add_argument('--audio_term_loss_ratio', type=float, default=0.7,
+                       help="Weight for audio-term contrastive loss (default: 0.7)")
 
     args = parser.parse_args()
 
@@ -574,6 +581,7 @@ def main():
     print(f"[INFO]   - Projection parameters: {projection_params_count:,} ({projection_params_count/trainable_params:.1%})")
     print(f"[INFO] Training with {len(train_dataset)} MFA chunk samples")
     print(f"[INFO] Unfrozen layers: {args.unfreeze_layers}")
+    print(f"[INFO] Loss ratios - Audio-Text: {args.audio_text_loss_ratio:.1f}, Audio-Term: {args.audio_term_loss_ratio:.1f}")
 
     best_recall = 0.0
     no_improve_epochs = 0
@@ -584,7 +592,7 @@ def main():
         
         # 训练循环
         for batch in tqdm(train_dataloader, desc=f"[Epoch {epoch+1}/{args.epochs}]"):
-            loss = train_step(model, batch, device)
+            loss = train_step(model, batch, device, args)
             if loss.requires_grad:
                 loss.backward()
                 optimizer.step()

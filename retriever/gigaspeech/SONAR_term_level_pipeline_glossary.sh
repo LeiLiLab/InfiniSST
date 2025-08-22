@@ -4,10 +4,11 @@
 # 为每个ground truth term生成单独的chunk进行训练
 # 参数: $1 = text_field (可选，默认为term), $2 = single_slice (可选，用于快速验证)
 #       $3 = audio_text_loss_ratio (可选，默认0.3), $4 = audio_term_loss_ratio (可选，默认0.7)
-#       $5 = test_samples_path (可选，默认为data/samples/xl/term_level_chunks_500000_1000000.json)
+#       $5 = enable_full_eval (可选，true|false，默认false)
 #       $6 = enable_hard_neg (可选，true|false，默认true)
-#       $7 = enable_full_eval (可选，true|false，默认true)
-#       $8 = full_eval_every_n_epochs (可选，整数，默认1)
+#       $7 = full_eval_every_n_epochs (可选，整数，默认1)
+#       $8 = test_samples_path (可选，默认为data/samples/xl/term_level_chunks_500000_1000000.json)
+#       $9 = best_model_path (可选，默认data/clap_sonar_full_n2_best.pt)
 
 # 设置参数
 text_field=${1:-term}  # 默认使用term字段
@@ -18,6 +19,7 @@ enable_full_eval=${5:-false}
 enable_hard_neg=${6:-true}
 full_eval_every_n_epochs=${7:-1}
 test_samples_path=${8:-"data/samples/xl/term_level_chunks_500000_1000000.json"}  # 默认测试数据集路径
+best_model_path=${9:-"data/clap_sonar_term_level_single_best.pt"}  # 默认best model路径
 
 # 训练数据集路径
 TRAIN_TSV="/mnt/data/siqiouyang/datasets/gigaspeech/manifests/train_xl.tsv"
@@ -37,6 +39,7 @@ echo "  - test_samples_path: ${test_samples_path}" | tee -a "$LOG_FILE"
 echo "  - enable_hard_neg: ${enable_hard_neg}" | tee -a "$LOG_FILE"
 echo "  - enable_full_eval: ${enable_full_eval}" | tee -a "$LOG_FILE"
 echo "  - full_eval_every_n_epochs: ${full_eval_every_n_epochs}" | tee -a "$LOG_FILE"
+echo "  - best_model_path: ${best_model_path}" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
 # === 1. Handle MFA term-level chunks ===
@@ -192,6 +195,13 @@ fi
 extra_flags=""
 if [[ "$enable_hard_neg" == "true" ]]; then
   extra_flags+=" --enable_hard_neg"
+  extra_flags+=" --hard_neg_source glossary"
+  extra_flags+=" --hard_neg_index_path data/glossary_emb.ivfpq.faiss"
+  extra_flags+=" --hard_neg_term2idx_path data/glossary_term2idx.json"
+  extra_flags+=" --hard_neg_metric ip"
+  extra_flags+=" --hard_neg_nprobe 16"
+  extra_flags+=" --hard_neg_candidates 100"
+  extra_flags+=" --hard_neg_k 10"
 fi
 if [[ "$enable_full_eval" == "true" ]]; then
   extra_flags+=" --enable_full_eval --full_eval_every_n_epochs=${full_eval_every_n_epochs}"
@@ -204,25 +214,27 @@ train_job=$(sbatch \
     --partition=taurus \
     --nodes=1 \
     --ntasks=1 \
-    --cpus-per-task=8 \
-    --gres=gpu:1 \
-    --mem=32GB \
+    --cpus-per-task=16 \
+    --gres=gpu:2 \
+    --mem=64GB \
     --output=logs/${job_name}_%j.out \
     --error=logs/${job_name}_%j.err \
     --wrap="#!/bin/bash
 cd /home/jiaxuanluo/InfiniSST/retriever/gigaspeech
 . ~/miniconda3/etc/profile.d/conda.sh
 conda activate infinisst
-python3 SONAR_term_level_train.py \
+python3 SONAR_term_level_train_glossary.py \
     --train_samples_path=${final_samples} \
     --test_samples_path=${test_samples_path} \
     --epochs=20 \
     --batch_size=512 \
     --lr=5e-5 \
     --save_path=${model_save_path} \
+    --best_model_path=${best_model_path} \
     --audio_text_loss_ratio=${audio_text_loss_ratio} \
     --audio_term_loss_ratio=${audio_term_loss_ratio} \
-    --glossary_path=data/terms/glossary_filtered.json ${extra_flags}" | awk '{print $4}')
+    --glossary_path=data/terms/glossary_filtered.json \
+    --unfreeze_layers=10 ${extra_flags}" | awk '{print $4}')
 
 echo "sonar_term_level_train: $train_job" | tee -a "$LOG_FILE"
 dependency_job_step3=$train_job
@@ -295,11 +307,13 @@ echo "" | tee -a "$LOG_FILE"
 
 echo "Usage examples:" | tee -a "$LOG_FILE"
 echo "  # Full term-level pipeline with default test samples" | tee -a "$LOG_FILE"
-echo "  bash SONAR_term_level_pipeline.sh term" | tee -a "$LOG_FILE"
+echo "  bash SONAR_term_level_pipeline_glossary.sh term" | tee -a "$LOG_FILE"
 echo "  # Single slice quick validation" | tee -a "$LOG_FILE"
-echo "  bash SONAR_term_level_pipeline.sh term true" | tee -a "$LOG_FILE"
+echo "  bash SONAR_term_level_pipeline_glossary.sh term true" | tee -a "$LOG_FILE"
 echo "  # Custom test samples path" | tee -a "$LOG_FILE"
-echo "  # Enable hard neg & full eval every epoch" | tee -a "$LOG_FILE"
-echo "  bash SONAR_term_level_pipeline.sh term ${single_slice} ${audio_text_loss_ratio} ${audio_term_loss_ratio} ${test_samples_path} true true 1" | tee -a "$LOG_FILE"
+echo "  # Enable hard neg & full eval every epoch with custom best model" | tee -a "$LOG_FILE"
+echo "  bash SONAR_term_level_pipeline_glossary.sh term ${single_slice} ${audio_text_loss_ratio} ${audio_term_loss_ratio} true true 1 ${test_samples_path} ${best_model_path}" | tee -a "$LOG_FILE"
 echo "  # Disable full eval & hard neg" | tee -a "$LOG_FILE"
-echo "  bash SONAR_term_level_pipeline.sh term ${single_slice} ${audio_text_loss_ratio} ${audio_term_loss_ratio} ${test_samples_path} false false 1" | tee -a "$LOG_FILE"
+echo "  bash SONAR_term_level_pipeline_glossary.sh term ${single_slice} ${audio_text_loss_ratio} ${audio_term_loss_ratio} false false 1 ${test_samples_path} ${best_model_path}" | tee -a "$LOG_FILE"
+echo "  # Load from specific best model" | tee -a "$LOG_FILE"
+echo "  bash SONAR_term_level_pipeline_glossary.sh term false 0.3 0.7 true true 1 ${test_samples_path} data/your_best_model.pt" | tee -a "$LOG_FILE"

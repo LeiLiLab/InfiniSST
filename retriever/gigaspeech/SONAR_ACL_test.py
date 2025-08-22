@@ -678,6 +678,7 @@ def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), 
         return {k: [] for k in top_ks}
     
     print(f"[DEBUG] Encoding {len(audio_paths)} valid audio files...")
+    raw_model = model.module if isinstance(model, torch.nn.DataParallel) else model
     audio_embs = encode_audios_in_batches(raw_model, audio_paths, batch_size=1000, device=device).numpy()
 
     for j, (i, sample) in enumerate(zip(valid_indices, valid_samples)):
@@ -959,21 +960,184 @@ def load_model(model_path, device):
     return model
 
 
+def load_acl_terminology(glossary_csv_path):
+    """从ACL术语词汇表中加载英文术语"""
+    print(f"[INFO] Loading ACL terminology from {glossary_csv_path}")
+    sys.stdout.flush()
+    
+    terms = []
+    with open(glossary_csv_path, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+        if len(lines) > 1:
+            # 跳过header行，第一列是英文术语
+            for line in lines[1:]:
+                parts = line.strip().split(',')
+                if len(parts) > 0 and parts[0]:
+                    english_term = parts[0].strip().lower()
+                    if len(english_term) >= 2:
+                        terms.append(english_term)
+    
+    # 去重
+    terms = list(set(terms))
+    print(f"[INFO] Loaded {len(terms)} unique English terms from ACL glossary")
+    sys.stdout.flush()
+    return terms
+
+
+def parse_acl_tagged_text(tagged_text_path):
+    """解析ACL标注的文本文件，提取术语"""
+    print(f"[INFO] Parsing ACL tagged text from {tagged_text_path}")
+    sys.stdout.flush()
+    
+    terms = set()
+    with open(tagged_text_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            
+            # 提取方括号中的术语 [term]
+            import re
+            tagged_terms = re.findall(r'\[([^\]]+)\]', line)
+            for term in tagged_terms:
+                term = term.strip().lower()
+                if len(term) >= 2:
+                    terms.add(term)
+    
+    terms_list = list(terms)
+    print(f"[INFO] Extracted {len(terms_list)} unique terms from {tagged_text_path}")
+    sys.stdout.flush()
+    return terms_list
+
+
+class ACLDataset(Dataset):
+    """ACL数据集类，用于加载ACL segmented音频和对应的术语"""
+    
+    def __init__(self, acl_root_dir, split="dev", segmentation="gold"):
+        """
+        Args:
+            acl_root_dir: ACL数据集根目录 (如 data/acl-6060/2/acl_6060)
+            split: "dev" 或 "eval"
+            segmentation: "gold" 或 "shas"
+        """
+        self.acl_root_dir = acl_root_dir
+        self.split = split
+        self.segmentation = segmentation
+        
+        # 构建路径
+        self.audio_dir = os.path.join(acl_root_dir, split, "segmented_wavs", segmentation)
+        self.text_dir = os.path.join(acl_root_dir, split, "text", "tagged_terminology")
+        
+        print(f"[INFO] Loading ACL {split} dataset with {segmentation} segmentation")
+        print(f"[INFO] Audio dir: {self.audio_dir}")
+        print(f"[INFO] Text dir: {self.text_dir}")
+        
+        # 加载音频文件列表
+        self.audio_files = []
+        if os.path.exists(self.audio_dir):
+            for f in os.listdir(self.audio_dir):
+                if f.endswith('.wav'):
+                    self.audio_files.append(f)
+        
+        self.audio_files.sort()  # 按文件名排序
+        
+        # 加载对应的术语标注文件 (使用英文版本)
+        tagged_file = os.path.join(self.text_dir, f"ACL.6060.{split}.tagged.en-xx.en.txt")
+        self.tagged_terms = []
+        self.sentence_to_terms = {}  # 句子ID到术语的映射
+        
+        if os.path.exists(tagged_file):
+            with open(tagged_file, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                for i, line in enumerate(lines):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    
+                    # 提取方括号中的术语
+                    import re
+                    tagged_terms = re.findall(r'\[([^\]]+)\]', line)
+                    clean_terms = [term.strip().lower() for term in tagged_terms if len(term.strip()) >= 2]
+                    
+                    # 句子ID直接从行号+1开始（对应sent_1.wav, sent_2.wav, ...）
+                    sent_id = i + 1
+                    if clean_terms:
+                        self.sentence_to_terms[sent_id] = clean_terms
+        
+        print(f"[INFO] Loaded {len(self.sentence_to_terms)} sentences with terms from tagged file")
+        
+        # 过滤出有术语标注的音频文件
+        self.valid_samples = []
+        for audio_file in self.audio_files:
+            # 从文件名提取句子ID (如 sent_1.wav -> 1, sent_401.wav -> 401)
+            import re
+            match = re.search(r'sent_(\d+)\.wav', audio_file)
+            if match:
+                sent_id = int(match.group(1))
+                if sent_id in self.sentence_to_terms:
+                    audio_path = os.path.join(self.audio_dir, audio_file)
+                    terms = self.sentence_to_terms[sent_id]
+                    
+                    # 验证音频文件
+                    is_valid, reason = is_audio_valid(audio_path)
+                    if is_valid:
+                        self.valid_samples.append({
+                            'audio_path': audio_path,
+                            'terms': terms,
+                            'sent_id': sent_id
+                        })
+                    else:
+                        print(f"[WARN] Invalid audio {audio_path}: {reason}")
+                else:
+                    # 对于没有术语标注的句子，我们跳过
+                    pass
+        
+        print(f"[INFO] ACL {split} dataset: {len(self.valid_samples)} valid samples with terms")
+        print(f"[INFO] Sentence ID range: {min(s['sent_id'] for s in self.valid_samples)} - {max(s['sent_id'] for s in self.valid_samples)}")
+        sys.stdout.flush()
+    
+    def __len__(self):
+        return len(self.valid_samples)
+    
+    def __getitem__(self, idx):
+        sample = self.valid_samples[idx]
+        return sample['terms'], sample['audio_path'], f"sent_{sample['sent_id']}", True
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Full evaluation with complete glossary")
+    parser = argparse.ArgumentParser(description="Full evaluation with complete glossary or ACL dataset")
     parser.add_argument('--model_path', type=str, required=True,
                        help="Path to trained model (.pt file)")
+    
+    # === ACL evaluation mode ===
+    parser.add_argument('--acl_mode', action='store_true',
+                       help="Enable ACL evaluation mode")
+    parser.add_argument('--acl_root_dir', type=str, 
+                       default="data/acl-6060/2/acl_6060",
+                       help="Path to ACL dataset root directory")
+    parser.add_argument('--acl_glossary_path', type=str,
+                       default="data/acl-6060/2/intermediate_files/terminology_glossary.csv",
+                       help="Path to ACL terminology glossary CSV file")
+    parser.add_argument('--acl_test_split', type=str, default="eval", choices=["dev", "eval"],
+                       help="ACL split to use for testing")
+    parser.add_argument('--acl_index_split', type=str, default="dev", choices=["dev", "eval"],
+                       help="ACL split to use for building index (terminology source)")
+    parser.add_argument('--acl_segmentation', type=str, default="gold", choices=["gold", "shas"],
+                       help="ACL segmentation type to use")
+    
+    # === Original evaluation mode ===
     parser.add_argument('--test_samples_path', type=str, 
                        default="data/xl_term_level_chunks_merged.json",
-                       help="Path to test samples")
+                       help="Path to test samples (for non-ACL mode)")
     parser.add_argument('--glossary_path', type=str, 
                        default="data/terms/glossary_filtered.json",
-                       help="Path to complete glossary file")
+                       help="Path to complete glossary file (for non-ACL mode)")
     parser.add_argument('--glossary_emb_path', type=str, default=None,
                        help="Path to pre-built glossary embedding index (.faiss file). If provided, will skip text encoding")
     parser.add_argument('--train_samples_path', type=str,
                        default="data/samples/xl/term_level_chunks_single_0_500000.json",
-                       help="Path to training samples for seen/unseen analysis")
+                       help="Path to training samples for seen/unseen analysis (for non-ACL mode)")
+    
     parser.add_argument('--max_eval', type=int, default=1000,
                        help="Maximum number of samples to evaluate")
     parser.add_argument('--batch_size', type=int, default=512,
@@ -1006,6 +1170,90 @@ def main():
     # === 加载模型 ===
     device = torch.device(device)  # 转换为torch.device对象
     model = load_model(args.model_path, device)
+
+    # === ACL evaluation mode ===
+    if args.acl_mode:
+        print("\n" + "="*50)
+        print("ACL EVALUATION MODE")
+        print("="*50)
+        sys.stdout.flush()
+        
+        # 1. 从ACL glossary或dev set构建术语索引
+        print(f"[INFO] Building index from ACL {args.acl_index_split} split")
+        
+        # 方法1: 使用ACL术语词汇表
+        if os.path.exists(args.acl_glossary_path):
+            print(f"[INFO] Using ACL terminology glossary: {args.acl_glossary_path}")
+            index_terms = load_acl_terminology(args.acl_glossary_path)
+        else:
+            # 方法2: 从dev set的tagged文本中提取术语
+            print(f"[INFO] Extracting terms from ACL {args.acl_index_split} tagged text")
+            tagged_file = os.path.join(args.acl_root_dir, args.acl_index_split, "text", "tagged_terminology", f"ACL.6060.{args.acl_index_split}.tagged.en-xx.en.txt")
+            if os.path.exists(tagged_file):
+                index_terms = parse_acl_tagged_text(tagged_file)
+            else:
+                raise FileNotFoundError(f"ACL tagged text file not found: {tagged_file}")
+        
+        print(f"[INFO] Building index with {len(index_terms)} ACL terms")
+        
+        # 2. 加载ACL测试数据集
+        test_dataset = ACLDataset(
+            acl_root_dir=args.acl_root_dir,
+            split=args.acl_test_split,
+            segmentation=args.acl_segmentation
+        )
+        
+        # 3. 初始化检索器
+        retriever = Retriever(enable_fusion=True, device=device)
+        raw_model = model.module if isinstance(model, torch.nn.DataParallel) else model
+        retriever.model = raw_model
+        retriever.index = faiss.IndexFlatL2(512)
+        retriever.term_list = [{'term': t} for t in index_terms]
+        
+        # 4. 执行ACL评估
+        print(f"\n[INFO] ACL Evaluation Setup:")
+        print(f"[INFO] - Index split: {args.acl_index_split} ({len(index_terms)} terms)")
+        print(f"[INFO] - Test split: {args.acl_test_split} ({len(test_dataset)} samples)")
+        print(f"[INFO] - Segmentation: {args.acl_segmentation}")
+        sys.stdout.flush()
+        
+        recall_results = evaluate_topk_recall(
+            model, retriever, test_dataset, device,
+            top_ks=(1, 5, 10),
+            max_eval=min(args.max_eval, len(test_dataset)),
+            train_terms=None,  # ACL模式下不做seen/unseen分析
+            show_missed_terms=True,
+            glossary_emb_path=None  # ACL模式下不使用预构建索引
+        )
+        
+        # 5. 保存ACL评估结果
+        results_path = args.model_path.replace('.pt', f'_acl_{args.acl_test_split}_eval_results.json')
+        eval_summary = {
+            'model_path': args.model_path,
+            'acl_mode': True,
+            'acl_root_dir': args.acl_root_dir,
+            'acl_glossary_path': args.acl_glossary_path,
+            'acl_test_split': args.acl_test_split,
+            'acl_index_split': args.acl_index_split,
+            'acl_segmentation': args.acl_segmentation,
+            'index_terms_count': len(index_terms),
+            'test_samples': len(test_dataset),
+            'evaluated_samples': min(args.max_eval, len(test_dataset)),
+            'results': {}
+        }
+        
+        for top_k in [1, 5, 10]:
+            if top_k in recall_results and recall_results[top_k]:
+                avg_recall = sum(recall_results[top_k]) / len(recall_results[top_k])
+                eval_summary['results'][f'recall@{top_k}'] = float(avg_recall)
+        
+        with open(results_path, 'w') as f:
+            json.dump(eval_summary, f, indent=2)
+        
+        print(f"\n[INFO] ACL evaluation results saved to {results_path}")
+        print(f"[INFO] ACL evaluation completed!")
+        sys.stdout.flush()
+        return
 
     # === Offline asset building path ===
     if args.build_offline_assets:
@@ -1071,6 +1319,7 @@ def main():
         sys.stdout.flush()
         return
 
+    # === 原有的正常评估模式 ===
     # === 加载测试数据集（独立文件，不按比例切分） ===
     print(f"[INFO] Loading test dataset from {args.test_samples_path}")
     sys.stdout.flush()

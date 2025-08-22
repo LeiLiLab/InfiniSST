@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 基于 MFA 对齐信息，为每个 ground truth term 生成单独的 term-level chunk 音频片段
-每个 chunk 只覆盖一个完整的 term，不被截断
+每个 chunk 只覆盖一个完整的 term，不被截断，并在前后各扩展1秒上下文
 """
 
 import os
@@ -190,10 +190,63 @@ def find_term_time_spans(words: List[Dict], ground_truth_terms: List[str]) -> Tu
     return term_spans, unmatched_terms
 
 
-def extract_term_audio(original_audio_path: str, term_start: float, term_end: float, 
-                      segment_id: str, term: str, output_dir: str = "/mnt/gemini/data1/jiaxuanluo/term_chunks") -> str:
+def extract_chunk_text(words: List[Dict], chunk_start: float, chunk_end: float) -> str:
     """
-    从原始音频中提取单个term的音频片段
+    根据时间范围从words中提取对应的文本
+    """
+    chunk_words = []
+    
+    for word in words:
+        word_start = word["start"]
+        word_end = word["end"]
+        
+        # 检查单词是否与chunk时间范围有重叠
+        if not (chunk_end <= word_start or chunk_start >= word_end):
+            chunk_words.append(word["word"])
+    
+    return " ".join(chunk_words)
+
+
+def extract_chunk_text_from_sample(original_text: str, chunk_start: float, chunk_end: float, total_duration: float) -> str:
+    """
+    从原始样本文本中按时间比例提取chunk对应的文本
+    """
+    if not original_text or total_duration <= 0:
+        return ""
+    
+    # 计算时间比例
+    start_ratio = chunk_start / total_duration
+    end_ratio = chunk_end / total_duration
+    
+    # 确保比例在有效范围内
+    start_ratio = max(0, min(1, start_ratio))
+    end_ratio = max(start_ratio, min(1, end_ratio))
+    
+    # 按字符位置截取文本
+    text_length = len(original_text)
+    start_pos = int(start_ratio * text_length)
+    end_pos = int(end_ratio * text_length)
+    
+    # 确保位置有效
+    start_pos = max(0, min(text_length, start_pos))
+    end_pos = max(start_pos, min(text_length, end_pos))
+    
+    chunk_text = original_text[start_pos:end_pos].strip()
+    
+    # 如果截取的文本太短或为空，尝试扩展一些
+    if len(chunk_text) < 10 and end_pos < text_length:
+        # 向后扩展一些字符
+        extended_end = min(text_length, end_pos + 20)
+        chunk_text = original_text[start_pos:extended_end].strip()
+    
+    return chunk_text
+
+
+def extract_term_audio(original_audio_path: str, term_start: float, term_end: float, 
+                      segment_id: str, term: str, output_dir: str = "/mnt/gemini/data1/jiaxuanluo/term_chunks",
+                      context_seconds: float = 1.0) -> str:
+    """
+    从原始音频中提取单个term的音频片段，前后各扩展context_seconds秒
     """
     try:
         # 创建输出目录结构
@@ -204,7 +257,7 @@ def extract_term_audio(original_audio_path: str, term_start: float, term_end: fl
         
         # 生成输出文件名，包含term信息（清理特殊字符）
         safe_term = re.sub(r'[^\w\s-]', '', term).strip().replace(' ', '_')[:20]  # 限制长度
-        chunk_filename = f"{segment_id}_term_{safe_term}_{term_start:.2f}_{term_end:.2f}.wav"
+        chunk_filename = f"{segment_id}_term_{safe_term}_{term_start:.2f}_{term_end:.2f}_ctx{context_seconds:.1f}s.wav"
         chunk_path = os.path.join(chunk_dir, chunk_filename)
         
         # 如果文件已存在，直接返回
@@ -218,9 +271,13 @@ def extract_term_audio(original_audio_path: str, term_start: float, term_end: fl
             
         audio_data, sr = sf.read(original_audio_path)
         
+        # 计算扩展后的时间范围（前后各加context_seconds秒）
+        extended_start = term_start - context_seconds
+        extended_end = term_end + context_seconds
+        
         # 计算样本索引
-        start_sample = int(term_start * sr)
-        end_sample = int(term_end * sr)
+        start_sample = int(extended_start * sr)
+        end_sample = int(extended_end * sr)
         
         # 确保索引在有效范围内
         start_sample = max(0, start_sample)
@@ -233,9 +290,9 @@ def extract_term_audio(original_audio_path: str, term_start: float, term_end: fl
         # 提取音频片段
         term_audio = audio_data[start_sample:end_sample]
         
-        # 检查音频长度是否太短
-        if len(term_audio) < sr * 0.1:  # 少于0.1秒
-            print(f"[WARNING] Term audio too short for {segment_id}: {term} ({len(term_audio)/sr:.3f}s)")
+        # 检查音频长度是否太短（扩展后的最小长度检查）
+        if len(term_audio) < sr * 0.5:  # 少于0.5秒（考虑到扩展了上下文）
+            print(f"[WARNING] Extended term audio too short for {segment_id}: {term} ({len(term_audio)/sr:.3f}s)")
             # 可以选择跳过或者扩展，这里选择继续保存
         
         # 保存term音频
@@ -248,9 +305,9 @@ def extract_term_audio(original_audio_path: str, term_start: float, term_end: fl
         return None
 
 
-def process_sample(sample: Dict, textgrid_base_dir: str) -> List[Dict]:
+def process_sample(sample: Dict, textgrid_base_dir: str, context_seconds: float = 1.0) -> List[Dict]:
     """
-    处理单个样本，为每个ground truth term生成单独的chunk
+    处理单个样本，为每个ground truth term生成单独的chunk，前后各扩展context_seconds秒
     返回term-level chunk样本列表
     """
     segment_id = sample["segment_id"]
@@ -327,35 +384,70 @@ def process_sample(sample: Dict, textgrid_base_dir: str) -> List[Dict]:
                 # 跳过这个术语
                 continue
         
-        # 提取term音频
-        term_audio_path = extract_term_audio(audio_path, term_start_rel, term_end_rel, segment_id, term)
+        # 提取term音频（前后各扩展指定秒数）
+        term_audio_path = extract_term_audio(audio_path, term_start_rel, term_end_rel, segment_id, term, 
+                                           context_seconds=context_seconds)
         
         if not term_audio_path:
             print(f"[SKIP] Failed to extract term audio for {segment_id} - {term}")
             continue
         
-        # 构建term-level chunk样本
+        # 计算扩展后的时间范围
+        extended_start_rel = max(0, term_start_rel - context_seconds)
+        extended_end_rel = min(segment_duration, term_end_rel + context_seconds)
+        
+        # 提取扩展后chunk的文本内容
+        # 优先使用MFA对齐的words来提取精确的文本
+        chunk_text = ""
+        if words:
+            # 使用MFA words提取扩展后时间范围内的文本
+            chunk_text = extract_chunk_text(words, extended_start_rel, extended_end_rel)
+        
+        # 如果MFA文本提取失败或为空，回退到原始文本的时间比例提取
+        if not chunk_text.strip() and original_text:
+            chunk_text = extract_chunk_text_from_sample(
+                original_text, extended_start_rel, extended_end_rel, segment_duration
+            )
+        
+        # 如果仍然没有文本，使用原始term作为回退
+        if not chunk_text.strip():
+            chunk_text = term
+            print(f"[WARNING] Using term as fallback text for {segment_id} - {term}")
+        
+        # 构建term-level chunk样本（包含上下文扩展信息）
         term_chunk = {
             "segment_id": segment_id,
             "term_chunk_audio": term_audio_path,
-            "term_chunk_text": term,  # 使用原始term作为文本
+            "term_chunk_text": chunk_text,  # 使用扩展后chunk对应的文本
             "term_chunk_audio_ground_truth_terms": [term],  # 只包含这一个term
-            "term_start_time": term_start_rel,      # 相对于音频片段的时间
-            "term_end_time": term_end_rel,          # 相对于音频片段的时间
-            "term_start_time_abs": term_start_abs,  # 相对于原始长音频的绝对时间
-            "term_end_time_abs": term_end_abs,      # 相对于原始长音频的绝对时间
-            "term_duration": term_end_rel - term_start_rel
+            "term_start_time": term_start_rel,      # 相对于音频片段的时间（原始term边界）
+            "term_end_time": term_end_rel,          # 相对于音频片段的时间（原始term边界）
+            "term_start_time_abs": term_start_abs,  # 相对于原始长音频的绝对时间（原始term边界）
+            "term_end_time_abs": term_end_abs,      # 相对于原始长音频的绝对时间（原始term边界）
+            "term_duration": term_end_rel - term_start_rel,  # 原始term时长
+            # 扩展后的信息
+            "extended_start_time": extended_start_rel,      # 扩展后的开始时间
+            "extended_end_time": extended_end_rel,          # 扩展后的结束时间
+            "extended_duration": extended_end_rel - extended_start_rel,  # 扩展后的总时长
+            "context_seconds": context_seconds,             # 前后扩展的秒数
+            "actual_extended_start": term_start_rel - context_seconds,  # 理论扩展开始时间（可能为负）
+            "actual_extended_end": term_end_rel + context_seconds       # 理论扩展结束时间（可能超出边界）
         }
         
         term_chunks.append(term_chunk)
     
     print(f"[INFO] Generated {len(term_chunks)} term chunks for {segment_id} (out of {len(ground_truth_terms)} terms)")
     
+    # 打印前几个chunk的文本提取信息用于调试
+    for i, chunk in enumerate(term_chunks[:3]):  # 只打印前3个
+        chunk_text_preview = chunk["term_chunk_text"][:50] + "..." if len(chunk["term_chunk_text"]) > 50 else chunk["term_chunk_text"]
+        print(f"[DEBUG] Chunk {i+1} - Term: '{chunk['term_chunk_audio_ground_truth_terms'][0]}', Text: '{chunk_text_preview}'")
+    
     return term_chunks
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Extract term-level audio chunks based on MFA alignment")
+    parser = argparse.ArgumentParser(description="Extract term-level audio chunks based on MFA alignment with context extension")
     parser.add_argument("--input_json", type=str, required=True, help="Input samples JSON file")
     parser.add_argument("--output_json", type=str, required=True, help="Output term-level chunks JSON file")
     parser.add_argument("--textgrid_dir", type=str, 
@@ -364,6 +456,8 @@ def main():
     parser.add_argument("--output_audio_dir", type=str,
                        default="/mnt/gemini/data1/jiaxuanluo/term_chunks",
                        help="Output directory for term audio chunks")
+    parser.add_argument("--context_seconds", type=float, default=1.0,
+                       help="Number of seconds to extend before and after each term (default: 1.0)")
     
     args = parser.parse_args()
     
@@ -373,7 +467,7 @@ def main():
     with open(args.input_json, 'r', encoding='utf-8') as f:
         samples = json.load(f)
     
-    print(f"[INFO] Processing {len(samples)} samples for term-level chunks")
+    print(f"[INFO] Processing {len(samples)} samples for term-level chunks with {args.context_seconds}s context extension")
     
     # 确保输出音频目录存在
     os.makedirs(args.output_audio_dir, exist_ok=True)
@@ -386,7 +480,7 @@ def main():
     
     for sample in tqdm(samples, desc="Processing samples"):
         try:
-            term_chunks = process_sample(sample, args.textgrid_dir)
+            term_chunks = process_sample(sample, args.textgrid_dir, args.context_seconds)
             all_term_chunks.extend(term_chunks)
             total_terms_processed += len(term_chunks)
             processed_samples += 1
@@ -405,6 +499,7 @@ def main():
     print(f"[INFO] - Successfully processed samples: {processed_samples}")
     print(f"[INFO] - Skipped samples: {skipped_samples}")
     print(f"[INFO] - Generated term chunks: {total_terms_processed}")
+    print(f"[INFO] - Context extension: ±{args.context_seconds}s per term")
     print(f"[INFO] - Average chunks per processed sample: {total_terms_processed/processed_samples:.2f}" if processed_samples > 0 else "[INFO] - No samples processed successfully")
     
     # 保存结果
@@ -413,7 +508,11 @@ def main():
         json.dump(all_term_chunks, f, indent=2, ensure_ascii=False)
     
     print(f"✅ Results saved to {args.output_json}")
-    print(f"✅ Term audio chunks saved to {args.output_audio_dir}")
+    print(f"✅ Term audio chunks (with ±{args.context_seconds}s context) saved to {args.output_audio_dir}")
+    print(f"📊 Each chunk contains:")
+    print(f"   - Original term boundaries and timing information")
+    print(f"   - Extended audio with ±{args.context_seconds}s context")
+    print(f"   - Metadata about actual vs. theoretical extension ranges")
 
 
 if __name__ == "__main__":

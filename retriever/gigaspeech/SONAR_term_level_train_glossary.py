@@ -6,6 +6,7 @@ from tqdm import tqdm
 import argparse, os, sys
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import faiss
+import mmap
 from new_retrieve import Retriever
 import soundfile as sf
 
@@ -20,12 +21,33 @@ from sonar.inference_pipelines.text import TextToEmbeddingModelPipeline
 
 from SONAR_train import ContrastiveSpeechTextModel, load_glossary_terms, encode_texts_in_batches, encode_audios_in_batches
 
+
 # === Hard Negative Mining Context Helper ===
 class HardNegContext:
-    def __init__(self, terms=None, term2idx=None, emb_tensor=None):
+    """
+    Dual-mode hard negative context:
+      1) In-memory tensor mode (small bank): provide emb_tensor [N, D] (L2-normalized) and term2idx dict.
+      2) FAISS index mode (large bank): provide faiss_index (IVF/HNSW/Flat etc.) and term2idx dict.
+    """
+    def __init__(self, terms=None, term2idx=None, emb_tensor=None, faiss_index=None, metric='ip'):
         self.terms = terms or []
         self.term2idx = term2idx or {}
-        self.emb_tensor = emb_tensor  # torch.FloatTensor [N, D] on device
+        self.emb_tensor = emb_tensor  # torch.FloatTensor [N, D] on device (normalized)
+        self.faiss_index = faiss_index  # faiss.Index or None
+        # metric: 'ip' (inner product) or 'l2'
+        self.metric = metric
+
+
+# === Utility to load term2idx JSON ===
+def load_term2idx_json(path):
+    if path is None:
+        return {}
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"[WARN] Failed to load term2idx from {path}: {e}")
+        return {}
 
 
 def is_audio_valid(audio_path, min_duration=0.01, max_duration=30.0):
@@ -401,70 +423,101 @@ def train_step(model, batch, device, args, hn_ctx=None, temperature=0.07):
 
     # === (Optional) Hard Negative Mining: push away top-k retrieved non-GT terms ===
     hard_neg_loss = torch.tensor(0.0, device=device)
-    if getattr(args, "enable_hard_neg", False) and hn_ctx is not None and hn_ctx.emb_tensor is not None:
+    if getattr(args, "enable_hard_neg", False) and hn_ctx is not None:
         try:
-            # Normalize audio embeddings to match normalized term embeddings
+            # Normalize audio embeddings for cosine/IP stability
             audio_emb_norm = torch.nn.functional.normalize(audio_emb, p=2, dim=1)
 
-            # 确保hard negative embedding张量在正确的设备上
-            hn_emb_tensor = hn_ctx.emb_tensor.to(device)
-            
-            # Full similarity to the hard-neg term bank: [B, N_terms]
-            sim_full = audio_emb_norm @ hn_emb_tensor.T
+            # Build one positive text embedding per sample (detach & normalize)
+            sample_pos_emb = [None] * batch_size
+            seen_pos = set()
+            for (a_i, t_idx) in audio_term_pairs:
+                if a_i not in seen_pos:
+                    pos_e = terms_emb[t_idx].detach()
+                    pos_e = torch.nn.functional.normalize(pos_e, p=2, dim=0)
+                    sample_pos_emb[a_i] = pos_e
+                    seen_pos.add(a_i)
 
-            margin = float(getattr(args, "hard_neg_margin", 0.1))
             k = int(getattr(args, "hard_neg_k", 10))
-            if k < 0:
-                k = 0
+            cand = int(getattr(args, "hard_neg_candidates", max(50, 5 * k)))
+            margin = float(getattr(args, "hard_neg_margin", 0.1))
 
-            if k > 0 and sim_full.shape[1] > 0:
-                losses = []
+            losses = []
 
-                # Build a mapping: sample index -> one positive term embedding (use the first available)
-                sample_pos_emb = [None] * batch_size
-                seen_pos = set()
-                for (a_i, t_idx) in audio_term_pairs:
-                    if a_i not in seen_pos:
-                        # Detach to avoid double-updating text tower via this path
-                        pos_e = torch.nn.functional.normalize(terms_emb[t_idx].detach(), p=2, dim=0)
-                        sample_pos_emb[a_i] = pos_e
-                        seen_pos.add(a_i)
+            # Case A: FAISS index mode (preferred for large glossary)
+            if getattr(hn_ctx, "faiss_index", None) is not None:
+                # Prepare query matrix on CPU float32 (FAISS expects np.float32)
+                queries = audio_emb_norm.detach().to("cpu").float().numpy()
+                # Perform ANN search
+                D, I = hn_ctx.faiss_index.search(queries, cand)  # D: similarity for IP / distance for L2
 
+                # Per-sample hinge over top-k after filtering GT terms
                 for i in range(batch_size):
                     pos_emb_i = sample_pos_emb[i]
                     if pos_emb_i is None:
                         continue
 
-                    # Find GT indices in hard-neg ctx for this sample to filter them out
+                    # Filter out GT indices (mapped through term2idx)
                     gt_terms_i = set(t for t in ground_truth_terms_list[i] if isinstance(t, str))
-                    gt_idx_in_ctx = [hn_ctx.term2idx[t] for t in gt_terms_i if t in hn_ctx.term2idx]
+                    gt_idx_in_ctx = set(hn_ctx.term2idx[t] for t in gt_terms_i if t in hn_ctx.term2idx)
 
-                    # Take more than k to have slack, then filter GT
-                    take_n = min(sim_full.shape[1], k + max(0, len(gt_idx_in_ctx)))
-                    if take_n == 0:
+                    if I.shape[0] == 0:
                         continue
-                    top_vals, top_idx = torch.topk(sim_full[i], k=take_n, largest=True)
+                    cand_idx = I[i].tolist()
+                    cand_scores = D[i].tolist()
 
-                    if len(gt_idx_in_ctx) > 0:
-                        mask = ~torch.isin(top_idx, torch.tensor(gt_idx_in_ctx, device=top_idx.device))
-                        top_idx = top_idx[mask]
-                        top_vals = top_vals[mask]
-
-                    if top_idx.numel() == 0:
+                    # Keep only non-GT candidates, then take top-k
+                    filtered = [(idx, score) for idx, score in zip(cand_idx, cand_scores) if idx not in gt_idx_in_ctx and idx >= 0]
+                    if not filtered:
                         continue
-                    if top_idx.numel() > k:
-                        top_idx = top_idx[:k]
-                        top_vals = top_vals[:k]
+                    filtered = filtered[:k] if len(filtered) > k else filtered
 
-                    neg_embs = hn_emb_tensor[top_idx]  # [k, D], already normalized
-                    sim_pos = torch.sum(audio_emb_norm[i] * pos_emb_i)  # scalar
-                    sim_negs = (audio_emb_norm[i:i+1] @ neg_embs.T).squeeze(0)  # [k]
+                    # Compute sim_pos on torch
+                    sim_pos = torch.sum(audio_emb_norm[i] * pos_emb_i)
 
+                    # sim_neg comes directly from FAISS results:
+                    #  - if metric='ip' (recommended with normalized vectors), D are inner products in [-1,1] (higher is closer)
+                    #  - if metric='l2', FAISS returns squared L2 distances, we convert to cosine-like similarity by negative distance
+                    if hn_ctx.metric == 'l2':
+                        sim_negs_vals = [-float(score) for _, score in filtered]
+                    else:
+                        sim_negs_vals = [float(score) for _, score in filtered]
+
+                    sim_negs = torch.tensor(sim_negs_vals, device=device, dtype=sim_pos.dtype)
                     loss_i = torch.relu(margin + sim_negs - sim_pos).mean()
                     losses.append(loss_i)
 
                 if len(losses) > 0:
                     hard_neg_loss = torch.stack(losses).mean()
+
+            # Case B: In-memory tensor mode (small bank fallback)
+            elif getattr(hn_ctx, "emb_tensor", None) is not None:
+                hn_emb_tensor = hn_ctx.emb_tensor.to(device)
+                sim_full = audio_emb_norm @ hn_emb_tensor.T
+                if k > 0 and sim_full.shape[1] > 0:
+                    for i in range(batch_size):
+                        pos_emb_i = sample_pos_emb[i]
+                        if pos_emb_i is None:
+                            continue
+                        gt_terms_i = set(t for t in ground_truth_terms_list[i] if isinstance(t, str))
+                        gt_idx_in_ctx = [hn_ctx.term2idx[t] for t in gt_terms_i if t in hn_ctx.term2idx]
+                        take_n = min(sim_full.shape[1], max(k, cand) + max(0, len(gt_idx_in_ctx)))
+                        if take_n == 0:
+                            continue
+                        top_vals, top_idx = torch.topk(sim_full[i], k=take_n, largest=True)
+                        if len(gt_idx_in_ctx) > 0:
+                            mask = ~torch.isin(top_idx, torch.tensor(gt_idx_in_ctx, device=top_idx.device))
+                            top_idx = top_idx[mask]
+                            top_vals = top_vals[mask]
+                        if top_idx.numel() == 0:
+                            continue
+                        if top_idx.numel() > k:
+                            top_vals = top_vals[:k]
+                        sim_pos = torch.sum(audio_emb_norm[i] * pos_emb_i)
+                        loss_i = torch.relu(margin + top_vals - sim_pos).mean()
+                        losses.append(loss_i)
+                    if len(losses) > 0:
+                        hard_neg_loss = torch.stack(losses).mean()
         except Exception as e:
             print(f"[WARN] Hard-negative mining failed: {e}")
             hard_neg_loss = torch.tensor(0.0, device=device)
@@ -516,16 +569,12 @@ def extract_all_used_terms(dataset):
 # === Helper to build hard-neg context ===
 def build_hardneg_ctx(raw_model, source_terms, device, batch_size=2048):
     """
-    Build a HardNegContext by encoding source_terms with the current text encoder.
-    Returns HardNegContext with:
-      - terms: lower-cased unique terms
-      - term2idx: mapping from term to index
-      - emb_tensor: torch.FloatTensor [N, D] on `device` (L2-normalized)
+    Legacy helper retained for small-bank mode: encodes `source_terms` into an in-memory
+    normalized tensor. For large glossary, prefer FAISS index mode (see epoch setup).
     """
     if not source_terms:
         return None
 
-    # Lowercase, deduplicate, and filter very short strings
     cleaned = []
     seen = set()
     for t in source_terms:
@@ -542,19 +591,14 @@ def build_hardneg_ctx(raw_model, source_terms, device, batch_size=2048):
     if len(cleaned) == 0:
         return None
 
-    # Encode terms using current text encoder
     text_emb = encode_texts_in_batches(raw_model, cleaned, device=device)
     if text_emb is None or text_emb.numel() == 0:
         return None
 
-    # 确保张量在正确的设备上
     text_emb = text_emb.to(device)
-    
-    # L2-normalize for cosine-like dot similarity stability
     text_emb = torch.nn.functional.normalize(text_emb, p=2, dim=1)
-
     term2idx = {t: i for i, t in enumerate(cleaned)}
-    return HardNegContext(terms=cleaned, term2idx=term2idx, emb_tensor=text_emb)
+    return HardNegContext(terms=cleaned, term2idx=term2idx, emb_tensor=text_emb, faiss_index=None, metric='ip')
 
 
 def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), max_eval=1000, field="term", train_terms=None, show_missed_terms=True):
@@ -844,6 +888,8 @@ def main():
                        help="Ratio of samples to use for training (default: 0.99, only used when test_samples_path is not provided)")
     parser.add_argument('--glossary_path', type=str, default="data/terms/glossary_filtered.json")
     parser.add_argument('--save_path', type=str, default="data/clap_term_level.pt")
+    parser.add_argument('--best_model_path', type=str, default=None,
+                       help="Path to best model checkpoint (.pt file) to continue training from")
     parser.add_argument('--enable_full_eval', action='store_true', 
                        help="Enable full evaluation with complete glossary at the end of training")
     parser.add_argument('--full_eval_every_n_epochs', type=int, default=5,
@@ -863,6 +909,17 @@ def main():
                         help="Weight for hard negative hinge loss")
     parser.add_argument('--hard_neg_margin', type=float, default=0.1,
                         help="Margin for hinge loss: max(0, margin + sim_neg - sim_pos)")
+
+    parser.add_argument('--hard_neg_index_path', type=str, default=None,
+                        help="Path to FAISS ANN index for the full glossary (IVF/HNSW/Flat). If set, enables large-bank hard negatives.")
+    parser.add_argument('--hard_neg_term2idx_path', type=str, default=None,
+                        help="Path to JSON mapping term_string -> int_index that matches the FAISS index order.")
+    parser.add_argument('--hard_neg_candidates', type=int, default=100,
+                        help="Number of ANN candidates to fetch before filtering GT (then take top-k).")
+    parser.add_argument('--hard_neg_nprobe', type=int, default=16,
+                        help="FAISS nprobe / efSearch parameter for IVF/HNSW-like indices.")
+    parser.add_argument('--hard_neg_metric', type=str, default='ip', choices=['ip', 'l2'],
+                        help="Similarity metric of the FAISS index: 'ip' for inner product (recommended with normalized vectors) or 'l2'.")
 
     args = parser.parse_args()
 
@@ -888,6 +945,28 @@ def main():
         speech_encoder, text_encoder, 
         unfreeze_layers=args.unfreeze_layers
     ).to(device)
+    
+    # 如果提供了best model路径，加载预训练权重
+    if args.best_model_path and os.path.exists(args.best_model_path):
+        print(f"[INFO] Loading pre-trained weights from {args.best_model_path}")
+        try:
+            state_dict = torch.load(args.best_model_path, map_location=device)
+            
+            # 处理 DataParallel 的情况
+            if list(state_dict.keys())[0].startswith('module.'):
+                # 移除 'module.' 前缀
+                new_state_dict = {}
+                for k, v in state_dict.items():
+                    new_state_dict[k[7:]] = v  # 移除 'module.' (7个字符)
+                state_dict = new_state_dict
+            
+            model.load_state_dict(state_dict)
+            print(f"[INFO] Successfully loaded pre-trained weights")
+        except Exception as e:
+            print(f"[WARNING] Failed to load pre-trained weights: {e}")
+            print(f"[INFO] Continuing with random initialization")
+    else:
+        print(f"[INFO] No pre-trained weights provided, using random initialization")
     
     # 为不同的参数组设置不同的学习率
     encoder_params = []
@@ -1027,19 +1106,45 @@ def main():
             hardneg_source_terms = used_terms
             print(f"[INFO] Hard-neg source: used terms ({len(hardneg_source_terms)} terms)")
 
+    # === Optional: Prepare FAISS index / term2idx for large-bank hard-neg ===
+    faiss_index = None
+    term2idx_map = {}
+    if args.enable_hard_neg and args.hard_neg_source == 'glossary' and args.hard_neg_index_path:
+        try:
+            print(f"[INFO] Loading FAISS index from: {args.hard_neg_index_path}")
+            faiss_index = faiss.read_index(args.hard_neg_index_path)
+            # Try to set nprobe/efSearch if available
+            try:
+                if hasattr(faiss_index, 'nprobe'):
+                    faiss_index.nprobe = int(args.hard_neg_nprobe)
+                    print(f"[INFO] Set index.nprobe = {faiss_index.nprobe}")
+            except Exception as e:
+                print(f"[WARN] Could not set nprobe: {e}")
+            term2idx_map = load_term2idx_json(args.hard_neg_term2idx_path)
+            print(f"[INFO] term2idx loaded: {len(term2idx_map)} entries")
+        except Exception as e:
+            print(f"[WARN] Failed to load FAISS index ({args.hard_neg_index_path}): {e}")
+            faiss_index = None
+
     best_recall = 0.0
     no_improve_epochs = 0
 
     for epoch in range(args.epochs):
         # Refresh hard-negative context at the start of each epoch
         hn_ctx = None
-        if args.enable_hard_neg and hardneg_source_terms:
-            raw_model = model.module if isinstance(model, torch.nn.DataParallel) else model
-            hn_ctx = build_hardneg_ctx(raw_model, hardneg_source_terms, device=device)
-            if hn_ctx is not None:
-                print(f"[INFO] Hard-neg context built: {len(hn_ctx.terms)} terms, emb_tensor: {tuple(hn_ctx.emb_tensor.shape)}")
-            else:
-                print(f"[WARN] Hard-neg context not available this epoch")
+        if args.enable_hard_neg:
+            # Prefer FAISS index mode if provided
+            if faiss_index is not None and term2idx_map:
+                hn_ctx = HardNegContext(terms=None, term2idx=term2idx_map, emb_tensor=None,
+                                        faiss_index=faiss_index, metric=getattr(args, "hard_neg_metric", "ip"))
+                print(f"[INFO] Hard-neg (FAISS) ready: {len(term2idx_map)} term ids, metric={hn_ctx.metric}, nprobe={getattr(faiss_index, 'nprobe', 'N/A')}")
+            elif hardneg_source_terms:
+                raw_model = model.module if isinstance(model, torch.nn.DataParallel) else model
+                hn_ctx = build_hardneg_ctx(raw_model, hardneg_source_terms, device=device)
+                if hn_ctx is not None and hn_ctx.emb_tensor is not None:
+                    print(f"[INFO] Hard-neg (in-memory) built: {len(hn_ctx.terms)} terms, emb_tensor: {tuple(hn_ctx.emb_tensor.shape)}")
+                else:
+                    print(f"[WARN] Hard-neg context not available this epoch")
 
         model.train()
         total_loss = 0.0
@@ -1063,7 +1168,8 @@ def main():
         avg_loss = total_loss / len(train_dataloader) if len(train_dataloader) > 0 else 0.0
         print(f"[INFO] Epoch {epoch+1} avg loss: {avg_loss:.4f}")
         if args.enable_hard_neg:
-            print(f"[INFO] Hard-neg settings: k={args.hard_neg_k}, weight={args.hard_neg_weight:.3f}, margin={args.hard_neg_margin:.3f}, source={args.hard_neg_source}")
+            mode = "FAISS" if (faiss_index is not None and term2idx_map) else ("in-memory" if hardneg_source_terms else "disabled")
+            print(f"[INFO] Hard-neg settings: mode={mode}, k={args.hard_neg_k}, candidates={args.hard_neg_candidates}, weight={args.hard_neg_weight:.3f}, margin={args.hard_neg_margin:.3f}, source={args.hard_neg_source}, metric={args.hard_neg_metric}, nprobe={args.hard_neg_nprobe}")
 
         # === 保存检查点 ===
         ckpt_path = f"data/clap_term_level_epoch{epoch+1}.pt"
