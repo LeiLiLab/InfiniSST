@@ -27,16 +27,16 @@ w2v2_type=w2v2
 ctc_finetuned=True
 
 ROOT=/compute/babel-14-5/siqiouya
-lang_code=de
-lang=German
+lang_code=zh
+lang=Chinese
 
-# if evaluating on German and Spanish
-tokenizer=13a
-unit=word
-
-# if evaluating on Chinese
-# tokenizer=zh
-# unit=char
+if [ ${lang_code} == "zh" ]; then
+    tokenizer=zh
+    unit=char
+else
+    tokenizer=13a
+    unit=word
+fi
 
 # agent specific parameters
 src_segment_size=$(($SLURM_ARRAY_TASK_ID * 960))

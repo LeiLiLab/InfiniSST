@@ -381,7 +381,7 @@ class InfiniSST(SpeechToTextAgent):
                     print(f"Error writing translations to file: {e}")
         # print(f"{length_in_seconds / 60:.2f}", ':', self.tokenizer.decode(states.target_ids))
         # print(f"Speech length in minutes: {length_in_seconds / 60:.2f}")
-        print(states.past_key_values[0][0].size(2), ' '.join(states.target))
+        print(states.past_key_values[0][0].size(2), (' ' if self.target_lang != 'Chinese' else '').join(states.target))
 
         # print(states.segment_idx, ":", translation)
         states.segment_idx += 1
