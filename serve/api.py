@@ -1100,6 +1100,12 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                             logger.error(f"❌ {error_msg}")
                             continue
                         
+                        # 🔥 从language_pair提取目标语言
+                        target_language = None
+                        if language_pair in LANGUAGE_PAIRS:
+                            source_lang, target_lang, src_code, tgt_code = LANGUAGE_PAIRS[language_pair]
+                            target_language = target_lang  # 例如: "Chinese", "Italian", etc.
+                        
                         # 创建结果回调函数（使用线程安全的队列）
                         def result_callback(result):
                             """处理调度器返回的结果"""
@@ -1107,6 +1113,12 @@ async def _handle_scheduler_websocket(websocket: WebSocket, session_id: str, ses
                                 if result.get('success', False):
                                     text_to_send = result.get('full_translation', '')
                                     if text_to_send:  # 🔥 只发送非空结果
+                                        # 在这里添加TTS处理
+                                        print(f"🔍 [TTS] Processing text: {text_to_send}")
+                                        print(f"🔍 [TTS] Target language: {target_language}")
+                                        print(f"🔍 [TTS] Language pair: {language_pair}")
+                                        #audio_data = await generate_tts(text_to_send, target_language)
+
                                         loop.call_soon_threadsafe(result_queue.put_nowait, text_to_send)
                                 else:
                                     error_msg = result.get('error', 'Unknown error')
