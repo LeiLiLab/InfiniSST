@@ -7,6 +7,7 @@ import argparse, os, sys
 import faiss
 from new_retrieve import Retriever
 import soundfile as sf
+from chunk_splitter import split_audio_from_path, create_chunked_samples
 
 import torch
 import torch.nn as nn
@@ -459,7 +460,7 @@ def encode_texts_in_batches(model, texts, batch_size=512, device="cuda", auto_ba
         
         with torch.no_grad():
             try:
-                emb = model.encode_text(batch).cpu()
+                emb = model.encode_text(batch).detach().cpu()
                 all_embeddings.append(emb)
                 
                 # 强制清理显存，防止累积
@@ -477,7 +478,7 @@ def encode_texts_in_batches(model, texts, batch_size=512, device="cuda", auto_ba
                 for j in range(0, len(batch), batch_size // 4):
                     mini_batch = batch[j:j + batch_size // 4]
                     try:
-                        emb = model.encode_text(mini_batch).cpu()
+                        emb = model.encode_text(mini_batch).detach().cpu()
                         all_embeddings.append(emb)
                         if torch.cuda.is_available():
                             torch.cuda.empty_cache()
@@ -556,7 +557,7 @@ def encode_audios_in_batches(model, audio_paths, batch_size=1000, device="cuda",
         
         with torch.no_grad():
             try:
-                emb = model.encode_audio(batch_paths).cpu()
+                emb = model.encode_audio(batch_paths).detach().cpu()
                 all_embeddings.append(emb)
             except Exception as e:
                 print(f"[ERROR] Failed to encode audio batch {batch_num}: {e}")
@@ -566,7 +567,7 @@ def encode_audios_in_batches(model, audio_paths, batch_size=1000, device="cuda",
                 # 如果batch失败，尝试单个处理
                 for single_path in batch_paths:
                     try:
-                        single_emb = model.encode_audio([single_path]).cpu()
+                        single_emb = model.encode_audio([single_path]).detach().cpu()
                         all_embeddings.append(single_emb)
                     except Exception as e2:
                         print(f"[ERROR] Failed to encode single audio {single_path}: {e2}")
@@ -583,7 +584,7 @@ def encode_audios_in_batches(model, audio_paths, batch_size=1000, device="cuda",
     return result
 
 
-def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), max_eval=1000, field="term", train_terms=None, show_missed_terms=True, glossary_emb_path=None):
+def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), max_eval=1000, field="term", train_terms=None, show_missed_terms=True, glossary_emb_path=None, relaxed_chunk_eval=False):
     """评估top-k召回率，使用sample-level平均，同时收集term-level信息用于分析"""
     model.eval()
     
@@ -659,27 +660,114 @@ def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), 
     print(f"[INFO] Selected {len(eval_indices)} samples randomly, {len(valid_samples)} are valid for evaluation")
     print(f"[INFO] Filtered out {len(eval_indices) - len(valid_samples)} samples (no ground truth terms or has_target=False)")
     
-    # 使用term chunk音频进行编码（分批处理）
-    audio_paths = [sample[1] for sample in valid_samples]  # term_chunk_audio paths
+    # 检查是否是chunked dataset
+    is_chunked_dataset = hasattr(dataset, 'get_audio_tensor')
     
-    # 验证音频文件
-    print(f"[DEBUG] Validating {len(audio_paths)} audio files for evaluation...")
-    valid_audio_paths, valid_audio_indices = validate_audio_batch(audio_paths, verbose=False)
+    # 检查是否使用relaxed evaluation模式
+    use_relaxed_eval = is_chunked_dataset and hasattr(dataset, 'relaxed_eval') and dataset.relaxed_eval
+    if use_relaxed_eval:
+        print(f"[INFO] Using relaxed chunk evaluation: all sentence terms assigned to each chunk")
+    elif relaxed_chunk_eval:
+        print(f"[INFO] Relaxed evaluation requested but dataset doesn't support it")
+        use_relaxed_eval = relaxed_chunk_eval  # 兼容手动设置
     
-    if len(valid_audio_paths) != len(audio_paths):
-        print(f"[WARN] Evaluation: Only {len(valid_audio_paths)}/{len(audio_paths)} audio files are valid")
-        # 过滤掉无效的样本
-        valid_samples = [valid_samples[i] for i in valid_audio_indices]
-        valid_indices = [valid_indices[i] for i in valid_audio_indices]
-        audio_paths = valid_audio_paths
-    
-    if len(audio_paths) == 0:
-        print(f"[ERROR] No valid audio files for evaluation!")
-        return {k: [] for k in top_ks}
-    
-    print(f"[DEBUG] Encoding {len(audio_paths)} valid audio files...")
-    raw_model = model.module if isinstance(model, torch.nn.DataParallel) else model
-    audio_embs = encode_audios_in_batches(raw_model, audio_paths, batch_size=1000, device=device).numpy()
+    if is_chunked_dataset:
+        print(f"[DEBUG] Using chunked dataset with audio tensors...")
+        # 从chunked dataset获取音频tensors
+        audio_tensors = []
+        chunk_info_list = []
+        
+        for i in valid_indices:
+            audio_tensor = dataset.get_audio_tensor(i)
+            chunk_info = dataset.get_chunk_info(i)
+            audio_tensors.append(audio_tensor)
+            chunk_info_list.append(chunk_info)
+        
+        print(f"[DEBUG] Collected {len(audio_tensors)} audio tensors for evaluation...")
+        
+        # 对于chunked数据，我们需要特殊处理音频编码
+        # 使用音频tensor而不是文件路径进行编码
+        raw_model = model.module if isinstance(model, torch.nn.DataParallel) else model
+        
+        # 分批处理音频tensors
+        all_audio_embs = []
+        batch_size = 100  # 对于tensors，使用较小的batch size
+        
+        for i in range(0, len(audio_tensors), batch_size):
+            batch_tensors = audio_tensors[i:i + batch_size]
+            
+            # 将tensors保存为临时文件进行编码
+            import tempfile
+            temp_paths = []
+            
+            try:
+                for j, tensor in enumerate(batch_tensors):
+                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_file:
+                        # 确保tensor是正确的格式
+                        if tensor.dim() > 1:
+                            tensor = tensor.squeeze()
+                        
+                        # 重采样到16kHz进行SONAR编码
+                        if hasattr(torch.nn.functional, 'interpolate'):
+                            # 从48kHz重采样到16kHz
+                            target_length = int(tensor.shape[-1] * 16000 / 48000)
+                            tensor_16k = torch.nn.functional.interpolate(
+                                tensor.unsqueeze(0).unsqueeze(0), 
+                                size=target_length, 
+                                mode='linear', 
+                                align_corners=False
+                            ).squeeze()
+                        else:
+                            # 简单的下采样
+                            step = 48000 // 16000
+                            tensor_16k = tensor[::step]
+                        
+                        sf.write(tmp_file.name, tensor_16k.detach().numpy(), 16000)
+                        temp_paths.append(tmp_file.name)
+                
+                # 批量编码
+                batch_embs = raw_model.encode_audio(temp_paths).detach().cpu()
+                all_audio_embs.append(batch_embs)
+                
+            finally:
+                # 清理临时文件
+                for temp_path in temp_paths:
+                    try:
+                        os.unlink(temp_path)
+                    except:
+                        pass
+        
+        audio_embs = torch.cat(all_audio_embs, dim=0).detach().numpy()
+        
+        # 统计chunk信息
+        short_chunks = sum(1 for info in chunk_info_list if info['is_short_chunk'])
+        print(f"[DEBUG] Audio encoding completed for chunked dataset")
+        print(f"[DEBUG] - Total chunks: {len(chunk_info_list)}")
+        print(f"[DEBUG] - Short chunks (< 1s): {short_chunks} ({short_chunks/len(chunk_info_list)*100:.1f}%)")
+        
+    else:
+        print(f"[DEBUG] Using traditional dataset with audio paths...")
+        # 原有的音频文件路径处理逻辑
+        audio_paths = [sample[1] for sample in valid_samples]  # term_chunk_audio paths
+        
+        # 验证音频文件
+        print(f"[DEBUG] Validating {len(audio_paths)} audio files for evaluation...")
+        valid_audio_paths, valid_audio_indices = validate_audio_batch(audio_paths, verbose=False)
+        
+        if len(valid_audio_paths) != len(audio_paths):
+            print(f"[WARN] Evaluation: Only {len(valid_audio_paths)}/{len(audio_paths)} audio files are valid")
+            # 过滤掉无效的样本
+            valid_samples = [valid_samples[i] for i in valid_audio_indices]
+            valid_indices = [valid_indices[i] for i in valid_audio_indices]
+            audio_paths = valid_audio_paths
+        
+        if len(audio_paths) == 0:
+            print(f"[ERROR] No valid audio files for evaluation!")
+            return {k: [] for k in top_ks}
+        
+        print(f"[DEBUG] Encoding {len(audio_paths)} valid audio files...")
+        raw_model = model.module if isinstance(model, torch.nn.DataParallel) else model
+        audio_embs = encode_audios_in_batches(raw_model, audio_paths, batch_size=1000, device=device).detach().numpy()
 
     for j, (i, sample) in enumerate(zip(valid_indices, valid_samples)):
         ground_truth_terms, audio_path, chunk_text, has_target = sample
@@ -694,8 +782,16 @@ def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), 
             retrieval_results[top_k] = (D[0], I[0], retrieved_terms)
             
             # 计算sample-level召回率
-            matched = sum(gt_term in retrieved_terms for gt_term in gt_terms)
-            sample_recall = matched / len(gt_terms) if gt_terms else 0.0
+            if use_relaxed_eval:
+                # 宽松模式：只要有任何一个术语命中就算成功
+                has_match = any(gt_term in retrieved_terms for gt_term in gt_terms)
+                sample_recall = 1.0 if has_match else 0.0
+
+            else:
+                # 严格模式：按比例计算
+                matched = sum(gt_term in retrieved_terms for gt_term in gt_terms)
+                sample_recall = matched / len(gt_terms) if gt_terms else 0.0
+
             recall_dict[top_k].append(sample_recall)
             
             # 同时收集term-level信息用于分析未命中术语
@@ -751,7 +847,8 @@ def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), 
     for top_k in top_ks:
         # Sample-level平均召回率
         avg_recall = sum(recall_dict[top_k]) / len(recall_dict[top_k]) if recall_dict[top_k] else 0.0
-        print(f"[EVAL] Sample-level Average Recall@{top_k}: {avg_recall:.2%}")
+        eval_mode = " (Relaxed)" if use_relaxed_eval else " (Strict)"
+        print(f"[EVAL] Sample-level Average Recall@{top_k}{eval_mode}: {avg_recall:.2%}")
         
         # Term-level微平均召回率
         term_retrieval_pairs = all_gt_terms_with_retrieval[top_k]
@@ -931,7 +1028,7 @@ def load_model(model_path, device):
     ).to(device)
     
     # 加载训练好的参数
-    state_dict = torch.load(model_path, map_location=device)
+    state_dict = torch.load(model_path, map_location=device, weights_only=False)
     
     # 处理 DataParallel 的情况
     if list(state_dict.keys())[0].startswith('module.'):
@@ -1104,6 +1201,460 @@ class ACLDataset(Dataset):
         return sample['terms'], sample['audio_path'], f"sent_{sample['sent_id']}", True
 
 
+class ACLChunkedDataset(Dataset):
+    """ACL数据集的chunked版本，将sentence-level音频切分成2秒固定chunk"""
+    
+    def __init__(self, acl_root_dir, split="dev", segmentation="gold", 
+                 chunk_duration=2.0, target_sr=48000, overlap=0.0, 
+                 min_chunk_duration=1.0, term_filtering_method="position",
+                 save_chunks=False, chunk_save_dir="/mnt/gemini/data/jiaxuanluo/acl_chunks",
+                 relaxed_eval=False):
+        """
+        Args:
+            acl_root_dir: ACL数据集根目录 (如 data/acl-6060/2/acl_6060)
+            split: "dev" 或 "eval"
+            segmentation: "gold" 或 "shas"
+            chunk_duration: 每个chunk的时长（秒）
+            target_sr: 目标采样率
+            overlap: chunk之间的重叠（秒）
+            min_chunk_duration: 最小chunk时长，低于此值的chunk会被标记
+            term_filtering_method: 术语过滤方法 ("position", "asr", "none")
+                - "position": 基于术语在文本中的位置进行分配
+                - "asr": 使用ASR转录进行术语匹配（需要额外实现）
+                - "none": 不进行过滤，所有chunk包含所有术语（原始方法）
+            save_chunks: 是否保存chunk数据到文件
+            chunk_save_dir: chunk数据保存目录
+            relaxed_eval: 是否使用宽松评估模式（所有sentence术语分配给每个chunk）
+        """
+        self.acl_root_dir = acl_root_dir
+        self.split = split
+        self.segmentation = segmentation
+        self.chunk_duration = chunk_duration
+        self.target_sr = target_sr
+        self.overlap = overlap
+        self.min_chunk_duration = min_chunk_duration
+        self.term_filtering_method = term_filtering_method
+        self.save_chunks = save_chunks
+        self.chunk_save_dir = chunk_save_dir
+        self.relaxed_eval = relaxed_eval
+        
+        # 构建路径
+        self.audio_dir = os.path.join(acl_root_dir, split, "segmented_wavs", segmentation)
+        self.text_dir = os.path.join(acl_root_dir, split, "text", "tagged_terminology")
+        
+        print(f"[INFO] Loading ACL {split} chunked dataset with {segmentation} segmentation")
+        print(f"[INFO] Chunk duration: {chunk_duration}s, Min chunk: {min_chunk_duration}s")
+        print(f"[INFO] Term filtering method: {term_filtering_method}")
+        print(f"[INFO] Relaxed evaluation mode: {relaxed_eval}")
+        print(f"[INFO] Audio dir: {self.audio_dir}")
+        print(f"[INFO] Text dir: {self.text_dir}")
+        
+        # 首先加载原始ACL数据
+        original_dataset = ACLDataset(acl_root_dir, split, segmentation)
+        
+        # 加载原始文本（不带标记的版本）用于术语位置分析
+        self.sentence_to_raw_text = {}
+        if term_filtering_method == "position":
+            raw_text_file = os.path.join(self.text_dir, f"ACL.6060.{split}.tagged.en-xx.en.txt")
+            if os.path.exists(raw_text_file):
+                with open(raw_text_file, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                    for i, line in enumerate(lines):
+                        sent_id = i + 1
+                        # 移除术语标记 [term] 获得纯文本
+                        import re
+                        raw_text = re.sub(r'\[([^\]]+)\]', r'\1', line.strip())
+                        self.sentence_to_raw_text[sent_id] = raw_text.lower()
+                print(f"[INFO] Loaded raw text for {len(self.sentence_to_raw_text)} sentences for position-based filtering")
+        
+        # 开始chunk切分
+        self.chunked_samples = []
+        short_chunks_count = 0
+        total_chunks_count = 0
+        term_filtering_stats = {
+            'original_terms': 0,
+            'filtered_terms': 0,
+            'chunks_with_terms': 0,
+            'chunks_without_terms': 0
+        }
+        
+        print(f"[INFO] Processing {len(original_dataset)} original sentences...")
+        
+        for idx in range(len(original_dataset)):
+            terms, audio_path, sent_text, has_target = original_dataset[idx]
+            
+            # 加载和切分音频
+            try:
+                # 获取音频信息
+                data, sr = sf.read(audio_path)
+                original_duration = len(data) / sr
+                
+                # 使用chunk_splitter进行切分
+                audio_chunks = split_audio_from_path(
+                    audio_path, 
+                    chunk_duration=chunk_duration, 
+                    target_sr=target_sr, 
+                    overlap=overlap
+                )
+                
+                if not audio_chunks:
+                    print(f"[WARN] No chunks generated for {audio_path}")
+                    continue
+                
+                # 为每个chunk创建样本
+                for chunk_idx, chunk_tensor in enumerate(audio_chunks):
+                    chunk_samples = chunk_tensor.shape[-1]
+                    actual_chunk_duration = chunk_samples / target_sr
+                    
+                    # 检查chunk是否过短
+                    is_short_chunk = actual_chunk_duration < min_chunk_duration
+                    if is_short_chunk:
+                        short_chunks_count += 1
+                    
+                    total_chunks_count += 1
+                    
+                    # 进行术语过滤
+                    sent_id = original_dataset.valid_samples[idx]['sent_id']
+                    if self.relaxed_eval:
+                        # 宽松模式：所有chunk使用完整的sentence术语
+                        filtered_terms = terms
+
+                    else:
+                        # 严格模式：根据设定的方法进行过滤
+                        filtered_terms = self._filter_terms_for_chunk(
+                            terms, sent_id, chunk_idx, len(audio_chunks), original_duration
+                        )
+
+                    
+                    # 更新统计
+                    term_filtering_stats['original_terms'] += len(terms)
+                    term_filtering_stats['filtered_terms'] += len(filtered_terms)
+                    if len(filtered_terms) > 0:
+                        term_filtering_stats['chunks_with_terms'] += 1
+                    else:
+                        term_filtering_stats['chunks_without_terms'] += 1
+                    
+                    # 创建chunk样本信息
+                    chunk_sample = {
+                        'terms': filtered_terms,  # 使用过滤后的术语
+                        'original_terms': terms,  # 保留原始术语用于调试
+                        'audio_path': audio_path,  # 原始音频路径（用于调试）
+                        'audio_tensor': chunk_tensor,  # chunk音频tensor
+                        'chunk_id': f"sent_{sent_id}_chunk_{chunk_idx}",
+                        'original_sent_id': sent_id,
+                        'chunk_index': chunk_idx,
+                        'total_chunks': len(audio_chunks),
+                        'chunk_duration': actual_chunk_duration,
+                        'original_duration': original_duration,
+                        'is_short_chunk': is_short_chunk,  # 标记短chunk
+                        'is_chunked': True,
+                        'has_target': has_target and (len(filtered_terms) > 0 or self.relaxed_eval)  # 基于过滤后的术语，relaxed模式保留所有chunk
+                    }
+                    
+                    self.chunked_samples.append(chunk_sample)
+                    
+            except Exception as e:
+                print(f"[ERROR] Failed to process {audio_path}: {e}")
+                continue
+        
+        # 统计信息
+        valid_chunks = [s for s in self.chunked_samples if s['has_target']]
+        print(f"[INFO] ACL chunked dataset statistics:")
+        print(f"[INFO] - Total chunks: {total_chunks_count}")
+        print(f"[INFO] - Valid chunks (with terms): {len(valid_chunks)}")
+        print(f"[INFO] - Short chunks (< {min_chunk_duration}s): {short_chunks_count} ({short_chunks_count/total_chunks_count*100:.1f}%)")
+        print(f"[INFO] - Average chunks per sentence: {total_chunks_count / len(original_dataset):.2f}")
+        
+        # 术语过滤统计
+        if term_filtering_method != "none" or relaxed_eval:
+            total_original = term_filtering_stats['original_terms']
+            total_filtered = term_filtering_stats['filtered_terms']
+            chunks_with = term_filtering_stats['chunks_with_terms']
+            chunks_without = term_filtering_stats['chunks_without_terms']
+            
+            if relaxed_eval:
+                filtering_desc = f"relaxed (all sentence terms)"
+            else:
+                filtering_desc = term_filtering_method
+            
+            print(f"[INFO] Term assignment statistics ({filtering_desc}):")
+            print(f"[INFO] - Original terms: {total_original}")
+            print(f"[INFO] - Assigned terms: {total_filtered} ({total_filtered/total_original*100:.1f}% retained)")
+            print(f"[INFO] - Chunks with terms: {chunks_with}")
+            print(f"[INFO] - Chunks without terms: {chunks_without} ({chunks_without/total_chunks_count*100:.1f}%)")
+        
+        # 只保留有术语的chunks
+        self.chunked_samples = valid_chunks
+        print(f"[INFO] Final chunked dataset size: {len(self.chunked_samples)}")
+        
+        # 保存chunk数据（如果启用）
+        if save_chunks:
+            self._save_chunks_to_files()
+        
+        sys.stdout.flush()
+    
+    def __len__(self):
+        return len(self.chunked_samples)
+    
+    def __getitem__(self, idx):
+        chunk_sample = self.chunked_samples[idx]
+        return (
+            chunk_sample['terms'], 
+            chunk_sample['chunk_id'],  # 使用chunk_id作为标识
+            chunk_sample['chunk_id'],  # chunk text标识
+            chunk_sample['has_target']
+        )
+    
+    def get_audio_tensor(self, idx):
+        """获取chunk的音频tensor"""
+        return self.chunked_samples[idx]['audio_tensor']
+    
+    def get_chunk_info(self, idx):
+        """获取chunk的详细信息"""
+        chunk = self.chunked_samples[idx]
+        return {
+            'chunk_id': chunk['chunk_id'],
+            'original_sent_id': chunk['original_sent_id'],
+            'chunk_index': chunk['chunk_index'],
+            'total_chunks': chunk['total_chunks'],
+            'chunk_duration': chunk['chunk_duration'],
+            'original_duration': chunk['original_duration'],
+            'is_short_chunk': chunk['is_short_chunk'],
+            'terms': chunk['terms'],
+            'original_terms': chunk.get('original_terms', chunk['terms'])
+        }
+    
+    def _filter_terms_for_chunk(self, terms, sent_id, chunk_idx, total_chunks, original_duration):
+        """
+        根据不同策略过滤术语，确保每个chunk只包含实际在其内容中的术语
+        
+        Args:
+            terms: 原始术语列表
+            sent_id: 句子ID
+            chunk_idx: chunk索引
+            total_chunks: 总chunk数
+            original_duration: 原始音频时长
+            
+        Returns:
+            过滤后的术语列表
+        """
+        if self.term_filtering_method == "none":
+            # 不进行过滤，返回所有术语
+            return terms
+        
+        elif self.term_filtering_method == "position":
+            # 基于术语在文本中的位置进行过滤
+            return self._filter_terms_by_position(terms, sent_id, chunk_idx, total_chunks)
+        
+        elif self.term_filtering_method == "asr":
+            # 基于ASR的术语过滤（待实现）
+            print(f"[WARN] ASR-based term filtering not implemented, falling back to position-based")
+            return self._filter_terms_by_position(terms, sent_id, chunk_idx, total_chunks)
+        
+        else:
+            print(f"[WARN] Unknown term filtering method: {self.term_filtering_method}, using 'none'")
+            return terms
+    
+    def _filter_terms_by_position(self, terms, sent_id, chunk_idx, total_chunks):
+        """
+        基于术语在文本中的位置进行chunk级别的术语过滤
+        
+        这是一个启发式方法，假设：
+        1. 术语在文本中的相对位置对应其在音频中的相对位置
+        2. 每个chunk覆盖句子的一个连续时间段
+        """
+        if sent_id not in self.sentence_to_raw_text:
+            # 如果没有原始文本，返回所有术语
+            return terms
+        
+        raw_text = self.sentence_to_raw_text[sent_id]
+        text_length = len(raw_text)
+        
+        if text_length == 0:
+            return []
+        
+        # 计算chunk在文本中的覆盖范围
+        chunk_start_ratio = chunk_idx / total_chunks
+        chunk_end_ratio = (chunk_idx + 1) / total_chunks
+        
+        # 转换为文本位置
+        text_start = int(chunk_start_ratio * text_length)
+        text_end = int(chunk_end_ratio * text_length)
+        
+        # 扩展边界以处理术语跨边界的情况（添加10%的缓冲区）
+        buffer_size = max(10, int(0.1 * (text_end - text_start)))
+        text_start = max(0, text_start - buffer_size)
+        text_end = min(text_length, text_end + buffer_size)
+        
+        chunk_text = raw_text[text_start:text_end]
+        
+        # 过滤术语：只保留在chunk文本范围内的术语
+        filtered_terms = []
+        for term in terms:
+            term_lower = term.lower()
+            # 检查术语是否在chunk文本中出现
+            if term_lower in chunk_text:
+                # 进一步检查：确保是完整的词（避免部分匹配）
+                import re
+                pattern = r'\b' + re.escape(term_lower) + r'\b'
+                if re.search(pattern, chunk_text):
+                    filtered_terms.append(term)
+        
+        return filtered_terms
+    
+    def _save_chunks_to_files(self):
+        """保存chunk数据到文件，包括音频文件和元数据JSON"""
+        import os
+        from pathlib import Path
+        import json
+        import soundfile as sf
+        
+        # 创建保存目录
+        save_dir = Path(self.chunk_save_dir)
+        audio_dir = save_dir / "audio"
+        metadata_dir = save_dir / "metadata"
+        
+        audio_dir.mkdir(parents=True, exist_ok=True)
+        metadata_dir.mkdir(parents=True, exist_ok=True)
+        
+        print(f"[INFO] Saving {len(self.chunked_samples)} chunks to {save_dir}")
+        
+        # 准备元数据
+        chunks_metadata = []
+        sample_chunks = []  # 用于抽样检查
+        
+        for idx, chunk_sample in enumerate(self.chunked_samples):
+            chunk_id = chunk_sample['chunk_id']
+            
+            # 保存音频文件
+            audio_tensor = chunk_sample['audio_tensor']
+            if audio_tensor.dim() > 1:
+                audio_tensor = audio_tensor.squeeze()
+            
+            audio_filename = f"{chunk_id}.wav"
+            audio_path = audio_dir / audio_filename
+            
+            # 保存为16kHz的wav文件（适合SONAR）
+            audio_16k = self._resample_to_16k(audio_tensor)
+            sf.write(str(audio_path), audio_16k.detach().numpy(), 16000)
+            
+            # 准备元数据
+            metadata = {
+                'chunk_id': chunk_id,
+                'original_sent_id': chunk_sample['original_sent_id'],
+                'chunk_index': chunk_sample['chunk_index'],
+                'total_chunks': chunk_sample['total_chunks'],
+                'chunk_duration': chunk_sample['chunk_duration'],
+                'original_duration': chunk_sample['original_duration'],
+                'is_short_chunk': chunk_sample['is_short_chunk'],
+                'audio_file': audio_filename,
+                'audio_path_relative': f"audio/{audio_filename}",
+                'terms': chunk_sample['terms'],
+                'original_terms': chunk_sample.get('original_terms', chunk_sample['terms']),
+                'term_filtering_method': self.term_filtering_method,
+                'original_audio_path': chunk_sample['audio_path']
+            }
+            
+            chunks_metadata.append(metadata)
+            
+            # 收集前10个chunk用于抽样检查
+            if idx < 10:
+                sample_chunks.append(metadata)
+        
+        # 保存完整元数据
+        metadata_file = metadata_dir / f"chunks_{self.split}_{self.segmentation}_{self.term_filtering_method}.json"
+        with open(metadata_file, 'w', encoding='utf-8') as f:
+            json.dump(chunks_metadata, f, indent=2, ensure_ascii=False)
+        
+        # 保存抽样检查数据
+        sample_file = metadata_dir / f"sample_chunks_{self.split}_{self.segmentation}_{self.term_filtering_method}.json"
+        with open(sample_file, 'w', encoding='utf-8') as f:
+            json.dump(sample_chunks, f, indent=2, ensure_ascii=False)
+        
+        # 创建检查报告
+        self._create_inspection_report(save_dir, chunks_metadata, sample_chunks)
+        
+        print(f"[INFO] ✅ Chunks saved successfully:")
+        print(f"[INFO]   - Audio files: {audio_dir} ({len(chunks_metadata)} files)")
+        print(f"[INFO]   - Metadata: {metadata_file}")
+        print(f"[INFO]   - Sample data: {sample_file}")
+        print(f"[INFO]   - Inspection report: {save_dir}/inspection_report.txt")
+    
+    def _resample_to_16k(self, audio_tensor):
+        """将音频从48kHz重采样到16kHz"""
+        if audio_tensor.shape[0] == 0:
+            return torch.zeros(0)
+        
+        # 简单的下采样：每3个采样点取1个 (48000/16000 = 3)
+        step = 3
+        resampled = audio_tensor[::step]
+        
+        return resampled
+    
+    def _create_inspection_report(self, save_dir, chunks_metadata, sample_chunks):
+        """创建详细的检查报告"""
+        report_path = save_dir / "inspection_report.txt"
+        
+        with open(report_path, 'w', encoding='utf-8') as f:
+            f.write("ACL Chunked Dataset Inspection Report\n")
+            f.write("=" * 50 + "\n\n")
+            
+            # 基本统计
+            f.write("📊 Basic Statistics:\n")
+            f.write(f"  - Total chunks: {len(chunks_metadata)}\n")
+            f.write(f"  - Split: {self.split}\n")
+            f.write(f"  - Segmentation: {self.segmentation}\n")
+            f.write(f"  - Chunk duration: {self.chunk_duration}s\n")
+            f.write(f"  - Term filtering method: {self.term_filtering_method}\n")
+            f.write(f"  - Target sample rate: {self.target_sr}Hz\n\n")
+            
+            # 术语统计
+            all_terms = []
+            all_original_terms = []
+            short_chunks = 0
+            
+            for chunk in chunks_metadata:
+                all_terms.extend(chunk['terms'])
+                all_original_terms.extend(chunk['original_terms'])
+                if chunk['is_short_chunk']:
+                    short_chunks += 1
+            
+            f.write("🔍 Term Filtering Analysis:\n")
+            f.write(f"  - Original terms (total): {len(all_original_terms)}\n")
+            f.write(f"  - Filtered terms (total): {len(all_terms)}\n")
+            f.write(f"  - Retention rate: {len(all_terms)/len(all_original_terms)*100:.1f}%\n")
+            f.write(f"  - Unique original terms: {len(set(all_original_terms))}\n")
+            f.write(f"  - Unique filtered terms: {len(set(all_terms))}\n")
+            f.write(f"  - Short chunks: {short_chunks} ({short_chunks/len(chunks_metadata)*100:.1f}%)\n\n")
+            
+            # 抽样检查
+            f.write("🔬 Sample Inspection (First 10 chunks):\n")
+            f.write("-" * 50 + "\n")
+            
+            for i, chunk in enumerate(sample_chunks):
+                f.write(f"\nChunk {i+1}: {chunk['chunk_id']}\n")
+                f.write(f"  📁 Audio file: {chunk['audio_file']}\n")
+                f.write(f"  ⏱️  Duration: {chunk['chunk_duration']:.2f}s")
+                if chunk['is_short_chunk']:
+                    f.write(" (SHORT)")
+                f.write("\n")
+                f.write(f"  📝 Original sentence: {chunk['original_sent_id']}\n")
+                f.write(f"  🧩 Chunk position: {chunk['chunk_index']}/{chunk['total_chunks']-1}\n")
+                f.write(f"  📚 Original terms: {chunk['original_terms']}\n")
+                f.write(f"  ✅ Filtered terms: {chunk['terms']}\n")
+                
+                if chunk['original_terms'] != chunk['terms']:
+                    removed = set(chunk['original_terms']) - set(chunk['terms'])
+                    f.write(f"  ❌ Removed terms: {list(removed)}\n")
+                
+                f.write(f"  🎵 Original audio: {chunk['original_audio_path']}\n")
+            
+            f.write("\n" + "=" * 50 + "\n")
+            f.write("💡 Usage: Check sample chunks to verify term filtering accuracy\n")
+            f.write("🎧 Listen to audio files to confirm terms are actually present\n")
+            f.write("📈 Compare filtered vs original terms to assess filtering quality\n")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Full evaluation with complete glossary or ACL dataset")
     parser.add_argument('--model_path', type=str, required=True,
@@ -1124,6 +1675,21 @@ def main():
                        help="ACL split to use for building index (terminology source)")
     parser.add_argument('--acl_segmentation', type=str, default="gold", choices=["gold", "shas"],
                        help="ACL segmentation type to use")
+    parser.add_argument('--acl_chunked', action='store_true',
+                       help="Use chunked ACL dataset (2-second chunks)")
+    parser.add_argument('--chunk_duration', type=float, default=2.0,
+                       help="Duration of each chunk in seconds (for chunked mode)")
+    parser.add_argument('--min_chunk_duration', type=float, default=1.0,
+                       help="Minimum chunk duration to avoid marking as short")
+    parser.add_argument('--term_filtering_method', type=str, default="position", 
+                       choices=["position", "asr", "none"],
+                       help="Term filtering method for chunked mode")
+    parser.add_argument('--save_chunks', action='store_true',
+                       help="Save chunked audio and metadata to files for inspection")
+    parser.add_argument('--chunk_save_dir', type=str, default="/mnt/gemini/data/jiaxuanluo/acl_chunks",
+                       help="Directory to save chunk files")
+    parser.add_argument('--relaxed_chunk_eval', action='store_true',
+                       help="Use relaxed evaluation: assign all sentence terms to chunks, match if any candidate hits")
     
     # === Original evaluation mode ===
     parser.add_argument('--test_samples_path', type=str, 
@@ -1197,11 +1763,28 @@ def main():
         print(f"[INFO] Building index with {len(index_terms)} ACL terms")
         
         # 2. 加载ACL测试数据集
-        test_dataset = ACLDataset(
-            acl_root_dir=args.acl_root_dir,
-            split=args.acl_test_split,
-            segmentation=args.acl_segmentation
-        )
+        if args.acl_chunked:
+            print(f"[INFO] Using chunked ACL dataset (chunks: {args.chunk_duration}s)")
+            test_dataset = ACLChunkedDataset(
+                acl_root_dir=args.acl_root_dir,
+                split=args.acl_test_split,
+                segmentation=args.acl_segmentation,
+                chunk_duration=args.chunk_duration,
+                target_sr=48000,
+                overlap=0.0,
+                min_chunk_duration=args.min_chunk_duration,
+                term_filtering_method=args.term_filtering_method,
+                save_chunks=args.save_chunks,
+                chunk_save_dir=args.chunk_save_dir,
+                relaxed_eval=args.relaxed_chunk_eval
+            )
+        else:
+            print(f"[INFO] Using sentence-level ACL dataset")
+            test_dataset = ACLDataset(
+                acl_root_dir=args.acl_root_dir,
+                split=args.acl_test_split,
+                segmentation=args.acl_segmentation
+            )
         
         # 3. 初始化检索器
         retriever = Retriever(enable_fusion=True, device=device)
@@ -1223,14 +1806,22 @@ def main():
             max_eval=min(args.max_eval, len(test_dataset)),
             train_terms=None,  # ACL模式下不做seen/unseen分析
             show_missed_terms=True,
-            glossary_emb_path=None  # ACL模式下不使用预构建索引
+            glossary_emb_path=None,  # ACL模式下不使用预构建索引
+            relaxed_chunk_eval=args.relaxed_chunk_eval
         )
         
         # 5. 保存ACL评估结果
-        results_path = args.model_path.replace('.pt', f'_acl_{args.acl_test_split}_eval_results.json')
+        chunked_suffix = '_chunked' if args.acl_chunked else ''
+        relaxed_suffix = '_relaxed' if args.relaxed_chunk_eval else ''
+        results_path = args.model_path.replace('.pt', f'_acl_{args.acl_test_split}{chunked_suffix}{relaxed_suffix}_eval_results.json')
         eval_summary = {
             'model_path': args.model_path,
             'acl_mode': True,
+            'acl_chunked': args.acl_chunked,
+            'relaxed_chunk_eval': args.relaxed_chunk_eval,
+            'chunk_duration': args.chunk_duration if args.acl_chunked else None,
+            'min_chunk_duration': args.min_chunk_duration if args.acl_chunked else None,
+            'term_filtering_method': args.term_filtering_method if args.acl_chunked else None,
             'acl_root_dir': args.acl_root_dir,
             'acl_glossary_path': args.acl_glossary_path,
             'acl_test_split': args.acl_test_split,
@@ -1268,7 +1859,7 @@ def main():
         # 2) Encode texts using the SAME text encoder as training
         raw_model = model.module if isinstance(model, torch.nn.DataParallel) else model
         text_emb_t = encode_texts_in_batches(raw_model, glossary_terms, batch_size=args.batch_size, device=device)
-        text_emb = text_emb_t.cpu().numpy()
+        text_emb = text_emb_t.detach().cpu().numpy()
 
         # 3) L2 normalize if we plan to use IP (cosine via inner product)
         if args.use_ip:

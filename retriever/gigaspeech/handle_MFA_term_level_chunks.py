@@ -305,10 +305,11 @@ def extract_term_audio(original_audio_path: str, term_start: float, term_end: fl
         return None
 
 
-def process_sample(sample: Dict, textgrid_base_dir: str, context_seconds: float = 1.0) -> List[Dict]:
+def process_sample(sample: Dict, textgrid_base_dir: str, context_seconds: float = 1.0, generate_no_term_ratio: float = 0.1) -> List[Dict]:
     """
     处理单个样本，为每个ground truth term生成单独的chunk，前后各扩展context_seconds秒
-    返回term-level chunk样本列表
+    同时根据generate_no_term_ratio比例生成一些no-term chunks用于训练拒答能力
+    返回term-level chunk样本列表（包括term chunks和no-term chunks）
     """
     segment_id = sample["segment_id"]
     begin_time = sample.get("begin_time", 0)
@@ -443,7 +444,116 @@ def process_sample(sample: Dict, textgrid_base_dir: str, context_seconds: float 
         chunk_text_preview = chunk["term_chunk_text"][:50] + "..." if len(chunk["term_chunk_text"]) > 50 else chunk["term_chunk_text"]
         print(f"[DEBUG] Chunk {i+1} - Term: '{chunk['term_chunk_audio_ground_truth_terms'][0]}', Text: '{chunk_text_preview}'")
     
-    return term_chunks
+    # === 生成no-term chunks ===
+    no_term_chunks = []
+    if generate_no_term_ratio > 0 and len(term_chunks) > 0:
+        # 计算需要生成的no-term chunk数量
+        target_no_term_count = max(1, int(len(term_chunks) * generate_no_term_ratio))
+        
+        # 找到所有术语覆盖的时间区间（扩展后的）
+        covered_intervals = []
+        for chunk in term_chunks:
+            start_time = chunk["extended_start_time"]
+            end_time = chunk["extended_end_time"]
+            covered_intervals.append((start_time, end_time))
+        
+        # 合并重叠的区间
+        covered_intervals.sort()
+        merged_intervals = []
+        for start, end in covered_intervals:
+            if merged_intervals and start <= merged_intervals[-1][1]:
+                # 合并重叠区间
+                merged_intervals[-1] = (merged_intervals[-1][0], max(merged_intervals[-1][1], end))
+            else:
+                merged_intervals.append((start, end))
+        
+        # 找到空白区间（未被术语覆盖的区域）
+        gap_intervals = []
+        prev_end = 0
+        for start, end in merged_intervals:
+            if start > prev_end:
+                gap_intervals.append((prev_end, start))
+            prev_end = end
+        
+        # 添加最后一个空白区间
+        if prev_end < segment_duration:
+            gap_intervals.append((prev_end, segment_duration))
+        
+        # 过滤掉太短的空白区间（至少需要2*context_seconds + 0.5秒）
+        min_gap_duration = 2 * context_seconds + 0.5
+        valid_gaps = [(start, end) for start, end in gap_intervals if (end - start) >= min_gap_duration]
+        
+        print(f"[DEBUG] {segment_id} - Found {len(valid_gaps)} valid gaps for no-term chunks (min duration: {min_gap_duration:.1f}s)")
+        
+        # 在有效空白区间中随机采样生成no-term chunks
+        import random
+        random.seed(42)  # 固定随机种子确保可复现
+        
+        generated_no_term = 0
+        for gap_start, gap_end in valid_gaps:
+            if generated_no_term >= target_no_term_count:
+                break
+            
+            # 在这个空白区间中生成一个no-term chunk
+            gap_duration = gap_end - gap_start
+            chunk_duration = 2 * context_seconds + random.uniform(0.5, min(2.0, gap_duration - 2 * context_seconds))
+            
+            # 随机选择chunk在gap中的位置
+            max_start = gap_end - chunk_duration
+            chunk_start = random.uniform(gap_start, max_start)
+            chunk_end = chunk_start + chunk_duration
+            
+            # 提取no-term chunk的音频
+            no_term_audio_path = extract_term_audio(
+                audio_path, chunk_start, chunk_end, segment_id, 
+                f"no_term_{generated_no_term}", context_seconds=0  # no-term chunk不需要额外扩展
+            )
+            
+            if no_term_audio_path:
+                # 提取chunk的文本内容
+                chunk_text = ""
+                if words:
+                    chunk_text = extract_chunk_text(words, chunk_start, chunk_end)
+                
+                if not chunk_text.strip() and original_text:
+                    chunk_text = extract_chunk_text_from_sample(
+                        original_text, chunk_start, chunk_end, segment_duration
+                    )
+                
+                # 如果仍然没有文本，使用空字符串
+                if not chunk_text.strip():
+                    chunk_text = ""
+                
+                # 构建no-term chunk样本
+                no_term_chunk = {
+                    "segment_id": segment_id + f"_no_term_{generated_no_term}",
+                    "term_chunk_audio": no_term_audio_path,
+                    "term_chunk_text": chunk_text,
+                    "term_chunk_audio_ground_truth_terms": [],  # 空术语列表
+                    "term_start_time": chunk_start,
+                    "term_end_time": chunk_end,
+                    "term_start_time_abs": chunk_start,
+                    "term_end_time_abs": chunk_end,
+                    "term_duration": chunk_end - chunk_start,
+                    "extended_start_time": chunk_start,
+                    "extended_end_time": chunk_end,
+                    "extended_duration": chunk_end - chunk_start,
+                    "context_seconds": 0,  # no-term chunk不需要context扩展
+                    "actual_extended_start": chunk_start,
+                    "actual_extended_end": chunk_end,
+                    "is_no_term_chunk": True  # 标记为no-term chunk
+                }
+                
+                no_term_chunks.append(no_term_chunk)
+                generated_no_term += 1
+                
+                print(f"[DEBUG] Generated no-term chunk {generated_no_term} at {chunk_start:.2f}-{chunk_end:.2f}s, text: '{chunk_text[:30]}...'")
+    
+    all_chunks = term_chunks + no_term_chunks
+    if no_term_chunks:
+        print(f"[INFO] Generated {len(no_term_chunks)} no-term chunks for {segment_id}")
+    
+    return all_chunks
 
 
 def main():
@@ -458,6 +568,8 @@ def main():
                        help="Output directory for term audio chunks")
     parser.add_argument("--context_seconds", type=float, default=1.0,
                        help="Number of seconds to extend before and after each term (default: 1.0)")
+    parser.add_argument("--generate_no_term_ratio", type=float, default=0.1,
+                       help="Ratio of no-term chunks to generate relative to term chunks (default: 0.1)")
     
     args = parser.parse_args()
     
@@ -480,7 +592,7 @@ def main():
     
     for sample in tqdm(samples, desc="Processing samples"):
         try:
-            term_chunks = process_sample(sample, args.textgrid_dir, args.context_seconds)
+            term_chunks = process_sample(sample, args.textgrid_dir, args.context_seconds, args.generate_no_term_ratio)
             all_term_chunks.extend(term_chunks)
             total_terms_processed += len(term_chunks)
             processed_samples += 1
@@ -494,11 +606,18 @@ def main():
             skipped_samples += 1
             continue
     
+    # 统计term chunks和no-term chunks
+    term_chunks_count = sum(1 for chunk in all_term_chunks if not chunk.get('is_no_term_chunk', False))
+    no_term_chunks_count = sum(1 for chunk in all_term_chunks if chunk.get('is_no_term_chunk', False))
+    
     print(f"[INFO] Processing completed!")
     print(f"[INFO] - Total input samples: {len(samples)}")
     print(f"[INFO] - Successfully processed samples: {processed_samples}")
     print(f"[INFO] - Skipped samples: {skipped_samples}")
-    print(f"[INFO] - Generated term chunks: {total_terms_processed}")
+    print(f"[INFO] - Generated term chunks: {term_chunks_count}")
+    print(f"[INFO] - Generated no-term chunks: {no_term_chunks_count}")
+    print(f"[INFO] - Total chunks: {total_terms_processed}")
+    print(f"[INFO] - No-term ratio: {no_term_chunks_count/total_terms_processed:.1%}" if total_terms_processed > 0 else "[INFO] - No chunks generated")
     print(f"[INFO] - Context extension: ±{args.context_seconds}s per term")
     print(f"[INFO] - Average chunks per processed sample: {total_terms_processed/processed_samples:.2f}" if processed_samples > 0 else "[INFO] - No samples processed successfully")
     

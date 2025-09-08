@@ -129,23 +129,24 @@ class TermLevelDataset(Dataset):
                 all_samples = json.load(f)
             use_split_logic = True
         
-        # 过滤有效样本：必须有音频文件、chunk文本和ground truth terms
+        # 过滤有效样本：包括有术语和无术语的样本
         valid_samples = []
         invalid_audio_count = 0
+        term_samples_count = 0
+        no_term_samples_count = 0
         
         for i, s in enumerate(all_samples):
             terms = s.get('term_chunk_audio_ground_truth_terms')
-            if not (terms and isinstance(terms, list)):
-                continue
-            # 过滤术语
+            if not isinstance(terms, list):
+                terms = []
+            
+            # 过滤术语（如果有的话）
             filtered_terms = [
                 t for t in terms
                 if isinstance(t, str)
                 and len(t) >= 3
                 and sum(c.isdigit() for c in t) <= len(t) // 2
             ]
-            if not filtered_terms:
-                continue
 
             # 过滤前后缀
             black_words = ['yeah','this ']
@@ -156,8 +157,7 @@ class TermLevelDataset(Dataset):
                 and not any(t.lower().endswith(suffix.lower()) for suffix in black_suffixes)
             ]
             
-            
-            # 替换原列表为过滤后的术语
+            # 替换原列表为过滤后的术语（允许为空列表）
             s = dict(s)  # 避免直接修改原始数据
             s['term_chunk_audio_ground_truth_terms'] = filtered_terms
             
@@ -171,6 +171,11 @@ class TermLevelDataset(Dataset):
             
             if is_valid:
                 valid_samples.append(s)
+                # 统计术语和无术语样本
+                if filtered_terms:
+                    term_samples_count += 1
+                else:
+                    no_term_samples_count += 1
             else:
                 invalid_audio_count += 1
                 # 只打印前10个无效音频的详细信息
@@ -181,6 +186,9 @@ class TermLevelDataset(Dataset):
             print(f"[WARN] ... and {invalid_audio_count - 10} more samples with invalid audio")
             
         print(f"[INFO] Audio validation: {len(valid_samples)} valid, {invalid_audio_count} invalid")
+        print(f"[INFO] Dataset composition: {term_samples_count} term samples + {no_term_samples_count} no-term samples = {len(valid_samples)} total")
+        if len(valid_samples) > 0:
+            print(f"[INFO] No-term ratio: {no_term_samples_count/len(valid_samples):.1%}")
         
         print(f"[INFO] Filtered {len(valid_samples)} valid term-level samples from {len(all_samples)} total samples")
         
@@ -194,16 +202,21 @@ class TermLevelDataset(Dataset):
             
             if split == "train":
                 self.samples = valid_samples[:split_idx]
-                print(f"[INFO] Training split: {len(self.samples)} term-level samples")
+                # 统计训练集中的no-term样本
+                train_no_term_count = sum(1 for s in self.samples if not s.get('term_chunk_audio_ground_truth_terms'))
+                print(f"[INFO] Training split: {len(self.samples)} samples ({train_no_term_count} no-term, {len(self.samples)-train_no_term_count} term)")
             elif split == "test":
                 self.samples = valid_samples[split_idx:]
-                print(f"[INFO] Test split: {len(self.samples)} term-level samples")
+                # 统计测试集中的no-term样本
+                test_no_term_count = sum(1 for s in self.samples if not s.get('term_chunk_audio_ground_truth_terms'))
+                print(f"[INFO] Test split: {len(self.samples)} samples ({test_no_term_count} no-term, {len(self.samples)-test_no_term_count} term)")
             else:
                 raise ValueError(f"Invalid split: {split}. Must be 'train' or 'test'")
         else:
             # 独立测试集，直接使用所有有效样本
             self.samples = valid_samples
-            print(f"[INFO] Using separate test dataset: {len(self.samples)} term-level samples")
+            test_no_term_count = sum(1 for s in self.samples if not s.get('term_chunk_audio_ground_truth_terms'))
+            print(f"[INFO] Using separate test dataset: {len(self.samples)} samples ({test_no_term_count} no-term, {len(self.samples)-test_no_term_count} term)")
         
         print(f"[INFO] Loaded {len(self.samples)} term-level samples for {split} split")
 
@@ -212,8 +225,9 @@ class TermLevelDataset(Dataset):
         audio_path = sample["term_chunk_audio"]  # 使用term chunk音频
         chunk_text = sample["term_chunk_text"]   # 使用term chunk文本
         ground_truth_terms = sample.get('term_chunk_audio_ground_truth_terms', [])
+        has_target = bool(ground_truth_terms and len(ground_truth_terms) > 0)
         
-        return ground_truth_terms, audio_path, chunk_text, True
+        return ground_truth_terms, audio_path, chunk_text, has_target
 
     def __len__(self):
         return len(self.samples)
@@ -421,6 +435,88 @@ def train_step(model, batch, device, args, hn_ctx=None, temperature=0.07):
     else:
         audio_term_loss = torch.tensor(0.0, device=device)
 
+    # === No-term margin loss (拒答能力) ===
+    no_term_loss = torch.tensor(0.0, device=device)
+    no_term_stats = {
+        'no_term_count': 0,
+        's_max_values': [],
+        'margin_violations': 0,
+        'avg_s_max': 0.0
+    }
+
+    if getattr(args, "use_no_term_loss", False):
+        # 构造 no-term 掩码：has_targets 来自 batch
+        has_term_tensor = torch.tensor([bool(x) for x in has_targets], device=device)
+        no_term_mask = ~has_term_tensor
+        no_term_count = no_term_mask.sum().item()
+        no_term_stats['no_term_count'] = no_term_count
+
+        if no_term_mask.any():
+            # 获取无术语样本的音频embeddings
+            no_term_audio_emb = audio_emb[no_term_mask]  # [B_no_term, D]
+            no_term_audio_emb_norm = F.normalize(no_term_audio_emb, p=2, dim=1)
+            
+            # 使用FAISS全库检索计算s_max（如果有FAISS索引）
+            if hn_ctx is not None and getattr(hn_ctx, "faiss_index", None) is not None:
+                try:
+                    # 使用FAISS索引进行全库检索
+                    top_m = int(getattr(args, "no_term_top_m", 100))  # 检索top-M候选
+                    queries = no_term_audio_emb_norm.detach().to("cpu").float().numpy()
+                    D, I = hn_ctx.faiss_index.search(queries, top_m)  # D: similarity for IP / distance for L2
+                    
+                    # 转换为相似度分数
+                    if hn_ctx.metric == 'l2':
+                        # L2距离转换为相似度（距离越小相似度越高）
+                        sim_scores = -torch.tensor(D, device=device, dtype=torch.float32)
+                    else:
+                        # IP分数直接作为相似度
+                        sim_scores = torch.tensor(D, device=device, dtype=torch.float32)
+                    
+                    # 取每个no-term样本的最大相似度
+                    s_max = sim_scores.max(dim=1).values  # [B_no_term]
+                    no_term_stats['s_max_values'] = s_max.detach().cpu().tolist()
+                    no_term_stats['avg_s_max'] = s_max.mean().item()
+                    
+                    # 计算margin loss
+                    margin = float(getattr(args, "no_term_margin", 0.15))
+                    margin_violations = (s_max > margin).sum().item()
+                    no_term_stats['margin_violations'] = margin_violations
+                    no_term_loss = F.relu(s_max - margin).mean()
+                    
+                    print(f"[DEBUG] No-term FAISS: {no_term_count} samples, avg_s_max={no_term_stats['avg_s_max']:.4f}, violations={margin_violations}/{no_term_count}, loss={no_term_loss.item():.4f}")
+                    
+                except Exception as e:
+                    print(f"[WARN] FAISS no-term loss failed, falling back to batch terms: {e}")
+                    # 回退到batch内术语的方式
+                    if 'terms_emb' in locals() and terms_emb is not None and terms_emb.numel() > 0:
+                        t_norm = F.normalize(terms_emb, p=2, dim=1)
+                        sim_all = no_term_audio_emb_norm @ t_norm.T  # [B_no_term, N_terms_in_batch]
+                        s_max = sim_all.max(dim=1).values
+                        no_term_stats['s_max_values'] = s_max.detach().cpu().tolist()
+                        no_term_stats['avg_s_max'] = s_max.mean().item()
+                        margin = float(getattr(args, "no_term_margin", 0.15))
+                        margin_violations = (s_max > margin).sum().item()
+                        no_term_stats['margin_violations'] = margin_violations
+                        no_term_loss = F.relu(s_max - margin).mean()
+                        print(f"[DEBUG] No-term batch fallback: {no_term_count} samples, avg_s_max={no_term_stats['avg_s_max']:.4f}, violations={margin_violations}/{no_term_count}, loss={no_term_loss.item():.4f}")
+            
+            # 如果没有FAISS索引，使用batch内术语（原有逻辑）
+            elif 'terms_emb' in locals() and terms_emb is not None and terms_emb.numel() > 0:
+                t_norm = F.normalize(terms_emb, p=2, dim=1)
+                sim_all = no_term_audio_emb_norm @ t_norm.T  # [B_no_term, N_terms_in_batch]
+                s_max = sim_all.max(dim=1).values
+                no_term_stats['s_max_values'] = s_max.detach().cpu().tolist()
+                no_term_stats['avg_s_max'] = s_max.mean().item()
+                margin = float(getattr(args, "no_term_margin", 0.15))
+                margin_violations = (s_max > margin).sum().item()
+                no_term_stats['margin_violations'] = margin_violations
+                no_term_loss = F.relu(s_max - margin).mean()
+                print(f"[DEBUG] No-term batch only: {no_term_count} samples, avg_s_max={no_term_stats['avg_s_max']:.4f}, violations={margin_violations}/{no_term_count}, loss={no_term_loss.item():.4f}")
+            else:
+                print(f"[DEBUG] No-term: {no_term_count} samples, but no terms available for comparison, loss=0.0")
+        else:
+            print(f"[DEBUG] No-term: 0 samples in batch")
+
     # === (Optional) Hard Negative Mining: push away top-k retrieved non-GT terms ===
     hard_neg_loss = torch.tensor(0.0, device=device)
     if getattr(args, "enable_hard_neg", False) and hn_ctx is not None:
@@ -530,14 +626,22 @@ def train_step(model, batch, device, args, hn_ctx=None, temperature=0.07):
         hn_weight = float(getattr(args, "hard_neg_weight", 0.2))
         total_loss = total_loss + hn_weight * hard_neg_loss
     
+    # 添加无术语margin损失
+    if getattr(args, "use_no_term_loss", False):
+        lambda_no_term = float(getattr(args, "lambda_no_term", 0.5))
+        total_loss = total_loss + lambda_no_term * no_term_loss
+    
     # 最终数值稳定性检查
     if torch.isnan(total_loss) or torch.isinf(total_loss):
         print(f"[ERROR] NaN/Inf total loss detected, skipping batch")
         print(f"[DEBUG] contrastive_loss: {contrastive_loss.item():.4f}")
         print(f"[DEBUG] audio_term_loss: {audio_term_loss.item():.4f}")
+        print(f"[DEBUG] hard_neg_loss: {hard_neg_loss.item():.4f}")
+        print(f"[DEBUG] no_term_loss: {no_term_loss.item():.4f}")
         return torch.tensor(0.0, requires_grad=True).to(device)
     
-    return total_loss
+    # 返回损失和统计信息
+    return total_loss, no_term_stats
 
 
 def extract_all_used_terms(dataset):
@@ -601,8 +705,8 @@ def build_hardneg_ctx(raw_model, source_terms, device, batch_size=2048):
     return HardNegContext(terms=cleaned, term2idx=term2idx, emb_tensor=text_emb, faiss_index=None, metric='ip')
 
 
-def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), max_eval=1000, field="term", train_terms=None, show_missed_terms=True):
-    """评估top-k召回率，使用sample-level平均，同时收集term-level信息用于分析"""
+def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), max_eval=1000, field="term", train_terms=None, show_missed_terms=True, no_term_margin=0.15):
+    """评估top-k召回率，包括no-term样本的拒答能力评估"""
     model.eval()
     
     # 用于存储sample-level召回率
@@ -611,6 +715,9 @@ def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), 
     # 用于存储所有GT术语和对应的检索结果（用于分析未命中术语）
     all_gt_terms_with_retrieval = {k: [] for k in top_ks}  # 每个元素是 (gt_term, is_retrieved, sample_info)
     sample_info_for_debug = []  # 用于调试输出
+    
+    # 用于存储no-term样本的拒答能力评估
+    no_term_stats = {k: {'total': 0, 'correct_rejections': 0, 'max_sims': [], 'violations': 0} for k in top_ks}
 
     # === 重建索引 ===
     text_terms = [term['term'] for term in retriever.term_list]
@@ -644,97 +751,185 @@ def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), 
     import random
     random.seed(42)  # 固定随机种子确保可复现
     eval_indices = random.sample(range(len(dataset)), min(max_eval, len(dataset)))
-    valid_samples = []
-    valid_indices = []
+    
+    # 分离有术语和无术语的样本
+    term_samples = []
+    term_indices = []
+    no_term_samples = []
+    no_term_indices = []
     
     for i in eval_indices:
         sample = dataset[i]
-        if sample is not None and sample[3] and sample[0]:  # has_target=True and has ground_truth_terms
-            valid_samples.append(sample)
-            valid_indices.append(i)
+        if sample is not None:
+            ground_truth_terms, audio_path, chunk_text, has_target = sample
+            if has_target and ground_truth_terms:  # 有术语的样本
+                term_samples.append(sample)
+                term_indices.append(i)
+            elif not has_target or not ground_truth_terms:  # 无术语的样本
+                no_term_samples.append(sample)
+                no_term_indices.append(i)
 
-    print(f"[INFO] Selected {len(eval_indices)} samples randomly, {len(valid_samples)} are valid for evaluation")
-    print(f"[INFO] Filtered out {len(eval_indices) - len(valid_samples)} samples (no ground truth terms or has_target=False)")
+    print(f"[INFO] Selected {len(eval_indices)} samples randomly:")
+    print(f"[INFO]   - {len(term_samples)} term samples (for recall evaluation)")
+    print(f"[INFO]   - {len(no_term_samples)} no-term samples (for rejection evaluation)")
     
-    # 使用term chunk音频进行编码（分批处理）
-    audio_paths = [sample[1] for sample in valid_samples]  # term_chunk_audio paths
+    # === 处理有术语的样本 ===
+    if len(term_samples) > 0:
+        # 使用term chunk音频进行编码（分批处理）
+        term_audio_paths = [sample[1] for sample in term_samples]  # term_chunk_audio paths
+        
+        # 验证音频文件
+        print(f"[DEBUG] Validating {len(term_audio_paths)} term audio files for evaluation...")
+        valid_term_audio_paths, valid_term_audio_indices = validate_audio_batch(term_audio_paths, verbose=False)
+        
+        if len(valid_term_audio_paths) != len(term_audio_paths):
+            print(f"[WARN] Term evaluation: Only {len(valid_term_audio_paths)}/{len(term_audio_paths)} audio files are valid")
+            # 过滤掉无效的样本
+            term_samples = [term_samples[i] for i in valid_term_audio_indices]
+            term_indices = [term_indices[i] for i in valid_term_audio_indices]
+            term_audio_paths = valid_term_audio_paths
+        
+        if len(term_audio_paths) > 0:
+            print(f"[DEBUG] Encoding {len(term_audio_paths)} valid term audio files...")
+            term_audio_embs = encode_audios_in_batches(raw_model, term_audio_paths, batch_size=1000, device=device).numpy()
+        else:
+            term_audio_embs = np.array([])
+    else:
+        term_audio_embs = np.array([])
     
-    # 验证音频文件
-    print(f"[DEBUG] Validating {len(audio_paths)} audio files for evaluation...")
-    valid_audio_paths, valid_audio_indices = validate_audio_batch(audio_paths, verbose=False)
-    
-    if len(valid_audio_paths) != len(audio_paths):
-        print(f"[WARN] Evaluation: Only {len(valid_audio_paths)}/{len(audio_paths)} audio files are valid")
-        # 过滤掉无效的样本
-        valid_samples = [valid_samples[i] for i in valid_audio_indices]
-        valid_indices = [valid_indices[i] for i in valid_audio_indices]
-        audio_paths = valid_audio_paths
-    
-    if len(audio_paths) == 0:
-        print(f"[ERROR] No valid audio files for evaluation!")
-        return {k: [] for k in top_ks}
-    
-    print(f"[DEBUG] Encoding {len(audio_paths)} valid audio files...")
-    audio_embs = encode_audios_in_batches(raw_model, audio_paths, batch_size=1000, device=device).numpy()
+    # === 处理无术语的样本 ===
+    if len(no_term_samples) > 0:
+        # 使用no-term chunk音频进行编码
+        no_term_audio_paths = [sample[1] for sample in no_term_samples]
+        
+        # 验证音频文件
+        print(f"[DEBUG] Validating {len(no_term_audio_paths)} no-term audio files for evaluation...")
+        valid_no_term_audio_paths, valid_no_term_audio_indices = validate_audio_batch(no_term_audio_paths, verbose=False)
+        
+        if len(valid_no_term_audio_paths) != len(no_term_audio_paths):
+            print(f"[WARN] No-term evaluation: Only {len(valid_no_term_audio_paths)}/{len(no_term_audio_paths)} audio files are valid")
+            # 过滤掉无效的样本
+            no_term_samples = [no_term_samples[i] for i in valid_no_term_audio_indices]
+            no_term_indices = [no_term_indices[i] for i in valid_no_term_audio_indices]
+            no_term_audio_paths = valid_no_term_audio_paths
+        
+        if len(no_term_audio_paths) > 0:
+            print(f"[DEBUG] Encoding {len(no_term_audio_paths)} valid no-term audio files...")
+            no_term_audio_embs = encode_audios_in_batches(raw_model, no_term_audio_paths, batch_size=1000, device=device).numpy()
+        else:
+            no_term_audio_embs = np.array([])
+    else:
+        no_term_audio_embs = np.array([])
 
-    for j, (i, sample) in enumerate(zip(valid_indices, valid_samples)):
-        ground_truth_terms, audio_path, chunk_text, has_target = sample
-        audio_emb = audio_embs[j:j+1]  # shape: [1, 512]
-        gt_terms = [t.lower() for t in ground_truth_terms]  # 使用term_chunk_audio_ground_truth_terms
+    # === 评估有术语的样本 ===
+    if len(term_samples) > 0 and term_audio_embs.size > 0:
+        print(f"[INFO] Evaluating {len(term_samples)} term samples for recall...")
+        for j, (i, sample) in enumerate(zip(term_indices, term_samples)):
+            ground_truth_terms, audio_path, chunk_text, has_target = sample
+            audio_emb = term_audio_embs[j:j+1]  # shape: [1, 512]
+            gt_terms = [t.lower() for t in ground_truth_terms]  # 使用term_chunk_audio_ground_truth_terms
 
-        # 对每个top_k进行检索
-        retrieval_results = {}
-        for top_k in top_ks:
-            D, I = retriever.index.search(audio_emb, top_k)
-            retrieved_terms = [retriever.term_list[idx][field].lower() for idx in I[0]]
-            retrieval_results[top_k] = (D[0], I[0], retrieved_terms)
-            
-            # 计算sample-level召回率
-            matched = sum(gt_term in retrieved_terms for gt_term in gt_terms)
-            sample_recall = matched / len(gt_terms) if gt_terms else 0.0
-            recall_dict[top_k].append(sample_recall)
-            
-            # 同时收集term-level信息用于分析未命中术语
-            for gt_term in gt_terms:
-                is_retrieved = gt_term in retrieved_terms
-                sample_info = {
+            # 对每个top_k进行检索
+            retrieval_results = {}
+            for top_k in top_ks:
+                D, I = retriever.index.search(audio_emb, top_k)
+                retrieved_terms = [retriever.term_list[idx][field].lower() for idx in I[0]]
+                retrieval_results[top_k] = (D[0], I[0], retrieved_terms)
+                
+                # 计算sample-level召回率
+                matched = sum(gt_term in retrieved_terms for gt_term in gt_terms)
+                sample_recall = matched / len(gt_terms) if gt_terms else 0.0
+                recall_dict[top_k].append(sample_recall)
+                
+                # 同时收集term-level信息用于分析未命中术语
+                for gt_term in gt_terms:
+                    is_retrieved = gt_term in retrieved_terms
+                    sample_info = {
+                        'sample_idx': i,
+                        'audio_path': audio_path,
+                        'chunk_text': chunk_text,
+                        'all_gt_terms': gt_terms,
+                        'retrieved_terms': retrieved_terms  # 添加检索到的候选术语
+                    }
+                    all_gt_terms_with_retrieval[top_k].append((gt_term, is_retrieved, sample_info))
+
+            # 存储样本信息用于调试（只存储前3个样本的详细信息）
+            if j < 3:  # 只保存前3个样本的详细信息
+                first_top_k = top_ks[0]
+                D, I, retrieved_terms = retrieval_results[first_top_k]
+                matched = sum(gt_term in retrieved_terms for gt_term in gt_terms)
+                sample_info_for_debug.append({
                     'sample_idx': i,
                     'audio_path': audio_path,
                     'chunk_text': chunk_text,
-                    'all_gt_terms': gt_terms,
-                    'retrieved_terms': retrieved_terms  # 添加检索到的候选术语
-                }
-                all_gt_terms_with_retrieval[top_k].append((gt_term, is_retrieved, sample_info))
+                    'gt_terms': gt_terms,
+                    'audio_emb': audio_emb,
+                    'retrieved_indices': I,
+                    'retrieved_distances': D,
+                    'retrieved_terms': retrieved_terms,
+                    'matched_count': matched,
+                    'total_gt_count': len(gt_terms),
+                    'sample_type': 'term'
+                })
+    
+    # === 评估无术语样本的拒答能力 ===
+    if len(no_term_samples) > 0 and no_term_audio_embs.size > 0:
+        print(f"[INFO] Evaluating {len(no_term_samples)} no-term samples for rejection ability...")
+        for j, (i, sample) in enumerate(zip(no_term_indices, no_term_samples)):
+            ground_truth_terms, audio_path, chunk_text, has_target = sample
+            audio_emb = no_term_audio_embs[j:j+1]  # shape: [1, 512]
+            
+            # 对每个top_k进行检索
+            for top_k in top_ks:
+                D, I = retriever.index.search(audio_emb, top_k)
+                retrieved_terms = [retriever.term_list[idx][field].lower() for idx in I[0]]
+                
+                # 计算最大相似度 (使用负距离作为相似度，因为FAISS返回的是L2距离)
+                max_sim = -D[0][0] if len(D[0]) > 0 else -float('inf')  # 最相似的术语
+                
+                # 统计拒答能力
+                no_term_stats[top_k]['total'] += 1
+                no_term_stats[top_k]['max_sims'].append(max_sim)
+                
+                # 判断是否正确拒答（最大相似度低于阈值）
+                if max_sim < -no_term_margin:  # 注意这里用负值，因为我们用的是负L2距离
+                    no_term_stats[top_k]['correct_rejections'] += 1
+                else:
+                    no_term_stats[top_k]['violations'] += 1
+                
+                # 存储前几个no-term样本的详细信息用于调试
+                if j < 3 and top_k == top_ks[0]:  # 只为第一个top_k存储调试信息
+                    sample_info_for_debug.append({
+                        'sample_idx': i,
+                        'audio_path': audio_path,
+                        'chunk_text': chunk_text,
+                        'gt_terms': [],  # no-term样本没有ground truth terms
+                        'audio_emb': audio_emb,
+                        'retrieved_indices': I,
+                        'retrieved_distances': D,
+                        'retrieved_terms': retrieved_terms,
+                        'max_sim': max_sim,
+                        'should_reject': max_sim < -no_term_margin,
+                        'sample_type': 'no_term'
+                    })
 
-        # 存储样本信息用于调试（只存储第一个top_k的结果）
-        if j < 3:  # 只保存前3个样本的详细信息
-            first_top_k = top_ks[0]
-            D, I, retrieved_terms = retrieval_results[first_top_k]
-            matched = sum(gt_term in retrieved_terms for gt_term in gt_terms)
-            sample_info_for_debug.append({
-                'sample_idx': i,
-                'audio_path': audio_path,
-                'chunk_text': chunk_text,
-                'gt_terms': gt_terms,
-                'audio_emb': audio_emb,
-                'retrieved_indices': I,
-                'retrieved_distances': D,
-                'retrieved_terms': retrieved_terms,
-                'matched_count': matched,
-                'total_gt_count': len(gt_terms)
-            })
-
-    # 打印调试信息（前3个样本）
+    # 打印调试信息（前3个term样本和前3个no-term样本）
     for debug_info in sample_info_for_debug:
-        print(f"[DEBUG] Sample {debug_info['sample_idx']}:")
+        print(f"[DEBUG] Sample {debug_info['sample_idx']} ({debug_info['sample_type']}):")
         print(f"[DEBUG] Audio path: {debug_info['audio_path']}")
         print(f"[DEBUG] Chunk text: {debug_info['chunk_text']}")
-        print(f"[DEBUG] GT terms: {debug_info['gt_terms']}")
         print(f"[DEBUG] Audio embedding stats: mean={debug_info['audio_emb'].mean():.4f}, std={debug_info['audio_emb'].std():.4f}")
         print(f"[DEBUG] Retrieved indices: {debug_info['retrieved_indices']}")
         print(f"[DEBUG] Retrieved distances: {debug_info['retrieved_distances']}")
         print(f"[DEBUG] Retrieved terms: {debug_info['retrieved_terms']}")
-        print(f"[DEBUG] Match count: {debug_info['matched_count']}/{debug_info['total_gt_count']}")
+        
+        if debug_info['sample_type'] == 'term':
+            print(f"[DEBUG] GT terms: {debug_info['gt_terms']}")
+            print(f"[DEBUG] Match count: {debug_info['matched_count']}/{debug_info['total_gt_count']}")
+        else:  # no_term
+            print(f"[DEBUG] GT terms: [] (no-term sample)")
+            print(f"[DEBUG] Max similarity: {debug_info['max_sim']:.4f}")
+            print(f"[DEBUG] Should reject: {debug_info['should_reject']} (threshold: {-no_term_margin:.4f})")
         
         # 额外检查：看看距离最近的几个terms
         if len(debug_info['retrieved_distances']) > 0:
@@ -745,25 +940,51 @@ def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), 
 
     # 计算sample-level和term-level召回率
     for top_k in top_ks:
-        # Sample-level平均召回率
-        avg_recall = sum(recall_dict[top_k]) / len(recall_dict[top_k]) if recall_dict[top_k] else 0.0
-        print(f"[EVAL] Sample-level Average Recall@{top_k}: {avg_recall:.2%}")
+        print(f"\n=== Evaluation Results for Top-{top_k} ===")
         
-        # Term-level微平均召回率
-        term_retrieval_pairs = all_gt_terms_with_retrieval[top_k]
-        total_terms = len(term_retrieval_pairs)
-        hit_terms = sum(1 for _, is_retrieved, _ in term_retrieval_pairs if is_retrieved)
-        term_micro_avg_recall = hit_terms / total_terms if total_terms > 0 else 0.0
-        print(f"[EVAL] Term-level Micro-Average Recall@{top_k}: {term_micro_avg_recall:.2%} ({hit_terms}/{total_terms} terms)")
-        
-        # 计算差异
-        diff = avg_recall - term_micro_avg_recall
-        if diff > 0:
-            print(f"[EVAL] Multi-term sample penalty: -{diff:.2%} (sample-level higher, indicating multi-term samples hurt overall recall)")
-        elif diff < 0:
-            print(f"[EVAL] Multi-term sample benefit: +{abs(diff):.2%} (term-level higher, indicating multi-term samples help overall recall)")
+        # === Term样本召回率评估 ===
+        if len(recall_dict[top_k]) > 0:
+            # Sample-level平均召回率
+            avg_recall = sum(recall_dict[top_k]) / len(recall_dict[top_k])
+            print(f"[EVAL] Term Samples - Sample-level Average Recall@{top_k}: {avg_recall:.2%} ({len(recall_dict[top_k])} samples)")
+            
+            # Term-level微平均召回率
+            term_retrieval_pairs = all_gt_terms_with_retrieval[top_k]
+            total_terms = len(term_retrieval_pairs)
+            hit_terms = sum(1 for _, is_retrieved, _ in term_retrieval_pairs if is_retrieved)
+            term_micro_avg_recall = hit_terms / total_terms if total_terms > 0 else 0.0
+            print(f"[EVAL] Term Samples - Term-level Micro-Average Recall@{top_k}: {term_micro_avg_recall:.2%} ({hit_terms}/{total_terms} terms)")
+            
+            # 计算差异
+            diff = avg_recall - term_micro_avg_recall
+            if diff > 0:
+                print(f"[EVAL] Multi-term sample penalty: -{diff:.2%} (sample-level higher)")
+            elif diff < 0:
+                print(f"[EVAL] Multi-term sample benefit: +{abs(diff):.2%} (term-level higher)")
+            else:
+                print(f"[EVAL] No difference between sample-level and term-level recall")
         else:
-            print(f"[EVAL] No difference between sample-level and term-level recall")
+            print(f"[EVAL] Term Samples - No term samples evaluated for Recall@{top_k}")
+        
+        # === No-term样本拒答能力评估 ===
+        no_term_stat = no_term_stats[top_k]
+        if no_term_stat['total'] > 0:
+            rejection_rate = no_term_stat['correct_rejections'] / no_term_stat['total']
+            violation_rate = no_term_stat['violations'] / no_term_stat['total']
+            avg_max_sim = sum(no_term_stat['max_sims']) / len(no_term_stat['max_sims'])
+            
+            print(f"[EVAL] No-term Samples - Rejection Rate@{top_k}: {rejection_rate:.2%} ({no_term_stat['correct_rejections']}/{no_term_stat['total']} samples)")
+            print(f"[EVAL] No-term Samples - Violation Rate@{top_k}: {violation_rate:.2%} ({no_term_stat['violations']}/{no_term_stat['total']} samples)")
+            print(f"[EVAL] No-term Samples - Average Max Similarity: {avg_max_sim:.4f} (threshold: {-no_term_margin:.4f})")
+            
+            # 分析相似度分布
+            max_sims = no_term_stat['max_sims']
+            if len(max_sims) > 0:
+                import numpy as np
+                print(f"[EVAL] No-term Samples - Max Similarity Stats: min={min(max_sims):.4f}, max={max(max_sims):.4f}, std={np.std(max_sims):.4f}")
+        else:
+            print(f"[EVAL] No-term Samples - No no-term samples evaluated for Top-{top_k}")
+        
         print()
         
     # === 统计和打印未命中的术语 ===
@@ -921,15 +1142,50 @@ def main():
     parser.add_argument('--hard_neg_metric', type=str, default='ip', choices=['ip', 'l2'],
                         help="Similarity metric of the FAISS index: 'ip' for inner product (recommended with normalized vectors) or 'l2'.")
 
+    # 拒答相关参数
+    parser.add_argument('--use_no_term_loss', action='store_true',
+                        help="Enable max-sim margin loss for no-term samples")
+    parser.add_argument('--no_term_margin', type=float, default=0.15,
+                        help="Margin m for max-sim loss: relu(s_max - m)")
+    parser.add_argument('--lambda_no_term', type=float, default=0.5,
+                        help="Weight for no-term margin loss")
+    parser.add_argument('--no_term_top_m', type=int, default=100,
+                        help="Top-M candidates to retrieve from FAISS for no-term loss computation")
+
+    # GPU设备选择
+    parser.add_argument('--gpu_ids', type=str, default=None,
+                        help="GPU IDs to use (e.g., '0,1' or '2'). If not specified, use all available GPUs.")
+
     args = parser.parse_args()
 
     print(f"[DEBUG] audio_text_loss_ratio={args.audio_text_loss_ratio}, audio_term_loss_ratio={args.audio_term_loss_ratio}")
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    # GPU设备设置
+    if args.gpu_ids is not None:
+        # 设置CUDA_VISIBLE_DEVICES环境变量
+        import os
+        os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_ids
+        gpu_list = [int(x.strip()) for x in args.gpu_ids.split(',') if x.strip().isdigit()]
+        print(f"[INFO] Setting CUDA_VISIBLE_DEVICES={args.gpu_ids}")
+        print(f"[INFO] Will use GPUs: {gpu_list}")
+        
+        # 重新检查CUDA设备
+        if torch.cuda.is_available():
+            available_gpus = torch.cuda.device_count()
+            print(f"[INFO] Available GPUs after setting CUDA_VISIBLE_DEVICES: {available_gpus}")
+            device = torch.device("cuda")
+        else:
+            print("[WARNING] CUDA not available after setting CUDA_VISIBLE_DEVICES, falling back to CPU")
+            device = torch.device("cpu")
+    else:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device == "cuda":
+            available_gpus = torch.cuda.device_count()
+            print(f"[INFO] Using all available GPUs: {available_gpus}")
+        
     print(f"[INFO] Using device: {device}")
 
     # === 模型初始化 ===
-    device = torch.device("cuda")
     speech_encoder = SpeechToEmbeddingModelPipeline(
         encoder="sonar_speech_encoder_eng", device=device
     )
@@ -993,11 +1249,22 @@ def main():
     # 自动多GPU包装
     if torch.cuda.device_count() > 1:
         print(f"[INFO] 🚀 Detected {torch.cuda.device_count()} GPUs, wrapping with DataParallel")
-        available_gpus = list(range(torch.cuda.device_count()))
+        if args.gpu_ids is not None:
+            # 使用指定的GPU（已通过CUDA_VISIBLE_DEVICES设置，所以这里使用连续编号）
+            available_gpus = list(range(torch.cuda.device_count()))
+            print(f"[INFO] Using specified GPUs (remapped): {available_gpus} (original: {args.gpu_ids})")
+        else:
+            # 使用所有可用GPU
+            available_gpus = list(range(torch.cuda.device_count()))
+            print(f"[INFO] Using all available GPUs: {available_gpus}")
+        
         model = torch.nn.DataParallel(model, device_ids=available_gpus)
         print(f"[INFO] ✅ DataParallel enabled on GPUs: {available_gpus}")
     else:
-        print(f"[INFO] Single GPU mode")
+        if args.gpu_ids is not None:
+            print(f"[INFO] Single GPU mode (using specified GPU: {args.gpu_ids})")
+        else:
+            print(f"[INFO] Single GPU mode")
 
     # === 加载数据集 ===
     print(f"[INFO] Loading term-level dataset from {args.train_samples_path}")
@@ -1150,8 +1417,28 @@ def main():
         total_loss = 0.0
 
         # 训练循环
-        for batch in tqdm(train_dataloader, desc=f"[Epoch {epoch+1}/{args.epochs}]"):
-            loss = train_step(model, batch, device, args, hn_ctx=hn_ctx)
+        epoch_no_term_stats = {
+            'total_no_term_samples': 0,
+            'total_violations': 0,
+            'avg_s_max_sum': 0.0,
+            'batch_count': 0
+        }
+        
+        for batch_idx, batch in enumerate(tqdm(train_dataloader, desc=f"[Epoch {epoch+1}/{args.epochs}]")):
+            result = train_step(model, batch, device, args, hn_ctx=hn_ctx)
+            
+            # 处理返回结果（可能是单个loss或(loss, stats)元组）
+            if isinstance(result, tuple):
+                loss, no_term_batch_stats = result
+                # 累积no-term统计信息
+                if no_term_batch_stats['no_term_count'] > 0:
+                    epoch_no_term_stats['total_no_term_samples'] += no_term_batch_stats['no_term_count']
+                    epoch_no_term_stats['total_violations'] += no_term_batch_stats['margin_violations']
+                    epoch_no_term_stats['avg_s_max_sum'] += no_term_batch_stats['avg_s_max'] * no_term_batch_stats['no_term_count']
+                    epoch_no_term_stats['batch_count'] += 1
+            else:
+                loss = result
+            
             if loss.requires_grad and not torch.isnan(loss) and not torch.isinf(loss):
                 loss.backward()
 
@@ -1167,6 +1454,20 @@ def main():
 
         avg_loss = total_loss / len(train_dataloader) if len(train_dataloader) > 0 else 0.0
         print(f"[INFO] Epoch {epoch+1} avg loss: {avg_loss:.4f}")
+        
+        # 打印no-term loss统计信息
+        if args.use_no_term_loss:
+            print(f"[INFO] No-term loss settings: enabled=True, margin={args.no_term_margin:.3f}, weight={args.lambda_no_term:.3f}, top_m={args.no_term_top_m}")
+            
+            if epoch_no_term_stats['total_no_term_samples'] > 0:
+                epoch_avg_s_max = epoch_no_term_stats['avg_s_max_sum'] / epoch_no_term_stats['total_no_term_samples']
+                violation_rate = epoch_no_term_stats['total_violations'] / epoch_no_term_stats['total_no_term_samples']
+                print(f"[INFO] No-term epoch stats: {epoch_no_term_stats['total_no_term_samples']} samples, "
+                      f"avg_s_max={epoch_avg_s_max:.4f}, violation_rate={violation_rate:.2%} "
+                      f"({epoch_no_term_stats['total_violations']}/{epoch_no_term_stats['total_no_term_samples']})")
+            else:
+                print(f"[WARN] No-term: 0 samples processed in this epoch")
+        
         if args.enable_hard_neg:
             mode = "FAISS" if (faiss_index is not None and term2idx_map) else ("in-memory" if hardneg_source_terms else "disabled")
             print(f"[INFO] Hard-neg settings: mode={mode}, k={args.hard_neg_k}, candidates={args.hard_neg_candidates}, weight={args.hard_neg_weight:.3f}, margin={args.hard_neg_margin:.3f}, source={args.hard_neg_source}, metric={args.hard_neg_metric}, nprobe={args.hard_neg_nprobe}")
@@ -1183,7 +1484,8 @@ def main():
             model, retriever, test_dataset, device, 
             top_ks=(5, 10), max_eval=min(1000, len(test_dataset)),  # 最多评估1000个样本
             train_terms=used_terms_train,  # 传入仅来自训练集的术语
-            show_missed_terms=(epoch + 1) % 2 == 0 or epoch == args.epochs - 1  # 每5个epoch或最后一个epoch显示详细信息
+            show_missed_terms=(epoch + 1) % 2 == 0 or epoch == args.epochs - 1,  # 每2个epoch或最后一个epoch显示详细信息
+            no_term_margin=args.no_term_margin  # 传入no-term阈值
         )
         
         # 使用 Recall@10 作为早停指标
@@ -1197,7 +1499,8 @@ def main():
                     model, full_retriever, test_dataset, device,
                     top_ks=(5, 10), max_eval=min(1000, len(test_dataset)),
                     train_terms=used_terms_train,  # 传入仅来自训练集的术语
-                    show_missed_terms=False  # Full evaluation时不显示详细信息以避免过多输出
+                    show_missed_terms=False,  # Full evaluation时不显示详细信息以避免过多输出
+                    no_term_margin=args.no_term_margin  # 传入no-term阈值
                 )
         
         # 更新学习率调度器
@@ -1237,7 +1540,8 @@ def main():
             model, full_retriever, test_dataset, device,
             top_ks=(1, 5, 10), max_eval=min(1000, len(test_dataset)),
             train_terms=used_terms_train,  # 传入仅来自训练集的术语
-            show_missed_terms=True  # 最终评估显示详细的未命中信息
+            show_missed_terms=True,  # 最终评估显示详细的未命中信息
+            no_term_margin=args.no_term_margin  # 传入no-term阈值
         )
         print(f"[INFO] Final full evaluation completed")
         print(f"[INFO] To run full evaluation separately, use:")

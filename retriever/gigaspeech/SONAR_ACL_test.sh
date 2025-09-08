@@ -2,7 +2,7 @@
 
 # SONAR完整评估脚本（srun 版，非交互）
 # 支持原有评估模式和新的ACL评估模式
-# 参数: $1 = n, $2 = text_field, $3 = single_slice, $4 = test_samples_path, $5 = acl_mode
+# 参数: $1 = n, $2 = text_field, $3 = single_slice, $4 = test_samples_path, $5 = acl_mode, $6 = acl_chunked, $7 = relaxed_eval
 
 set -euo pipefail
 
@@ -12,6 +12,8 @@ text_field=${2:-term}
 single_slice=${3:-true}
 test_samples_path=${4:-"data/samples/xl/term_level_chunks_500000_1000000.json"}
 acl_mode=${5:-false}  # 新增ACL模式开关
+acl_chunked=${6:-false}  # 新增ACL chunked模式开关
+relaxed_eval=${7:-false}  # 新增relaxed evaluation开关
 
 # --- Model path & job name ---
 model_save_path="data/clap_sonar_term_level_single.pt"
@@ -28,6 +30,12 @@ fi
 # ACL模式调整
 if [[ "$acl_mode" == "true" ]]; then
   job_name="${job_name}_acl"
+  if [[ "$acl_chunked" == "true" ]]; then
+    job_name="${job_name}_chunked"
+    if [[ "$relaxed_eval" == "true" ]]; then
+      job_name="${job_name}_relaxed"
+    fi
+  fi
 fi
 
 # --- Logs ---
@@ -39,6 +47,14 @@ err_log="logs/${job_name}_${ts}.err"
 # --- Command to run inside allocation ---
 if [[ "$acl_mode" == "true" ]]; then
   # ACL评估模式
+  acl_chunked_flag=""
+  if [[ "$acl_chunked" == "true" ]]; then
+    acl_chunked_flag="--acl_chunked --chunk_duration=2.0 --min_chunk_duration=1.0 --term_filtering_method=position --save_chunks --chunk_save_dir=/mnt/gemini/data/jiaxuanluo/acl_chunks"
+    if [[ "$relaxed_eval" == "true" ]]; then
+      acl_chunked_flag="$acl_chunked_flag --relaxed_chunk_eval"
+    fi
+  fi
+  
   inner_cmd=$(cat <<EOF
 cd /home/jiaxuanluo/InfiniSST/retriever/gigaspeech
 . ~/miniconda3/etc/profile.d/conda.sh
@@ -51,7 +67,8 @@ python3 SONAR_ACL_test.py \
   --acl_test_split="eval" \
   --acl_index_split="dev" \
   --acl_segmentation="gold" \
-  --max_eval=1000
+  --max_eval=1000 \
+  $acl_chunked_flag
 EOF
 )
 else
@@ -106,8 +123,12 @@ echo ""
 echo "=== Usage Examples ==="
 echo "Standard evaluation:"
 echo "  bash SONAR_ACL_test.sh 2 term true"
-echo "ACL evaluation:"
-echo "  bash SONAR_ACL_test.sh 2 term true data/samples/xl/term_level_chunks_500000_1000000.json true"
+echo "ACL sentence-level evaluation:"
+echo "  bash SONAR_ACL_test.sh 2 term true \"\" true false false"
+echo "ACL chunked evaluation (2s chunks, strict):"
+echo "  bash SONAR_ACL_test.sh 2 term true \"\" true true false"
+echo "ACL chunked evaluation (2s chunks, relaxed):"
+echo "  bash SONAR_ACL_test.sh 2 term true \"\" true true true"
 echo ""
 
 exit $exit_code

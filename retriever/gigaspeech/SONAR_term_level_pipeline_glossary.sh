@@ -9,6 +9,7 @@
 #       $7 = full_eval_every_n_epochs (可选，整数，默认1)
 #       $8 = test_samples_path (可选，默认为data/samples/xl/term_level_chunks_500000_1000000.json)
 #       $9 = best_model_path (可选，默认data/clap_sonar_full_n2_best.pt)
+#       $10 = gpu_ids (可选，指定GPU编号，如"0,1"或"2"，默认为空使用所有可用GPU)
 
 # 设置参数
 text_field=${1:-term}  # 默认使用term字段
@@ -20,6 +21,7 @@ enable_hard_neg=${6:-true}
 full_eval_every_n_epochs=${7:-1}
 test_samples_path=${8:-"data/samples/xl/term_level_chunks_500000_1000000.json"}  # 默认测试数据集路径
 best_model_path=${9:-"data/clap_sonar_term_level_single_best.pt"}  # 默认best model路径
+gpu_ids=${10:-"5"}  # GPU编号，默认为空使用所有可用GPU
 
 # 训练数据集路径
 TRAIN_TSV="/mnt/data/siqiouyang/datasets/gigaspeech/manifests/train_xl.tsv"
@@ -40,6 +42,7 @@ echo "  - enable_hard_neg: ${enable_hard_neg}" | tee -a "$LOG_FILE"
 echo "  - enable_full_eval: ${enable_full_eval}" | tee -a "$LOG_FILE"
 echo "  - full_eval_every_n_epochs: ${full_eval_every_n_epochs}" | tee -a "$LOG_FILE"
 echo "  - best_model_path: ${best_model_path}" | tee -a "$LOG_FILE"
+echo "  - gpu_ids: ${gpu_ids:-'auto (all available)'}" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
 # === 1. Handle MFA term-level chunks ===
@@ -49,7 +52,7 @@ if [[ "$single_slice" == "true" ]]; then
     # 单分片term-level处理
     if [[ "$text_field" == "term" ]]; then
         input_samples="data/samples/xl/term_preprocessed_samples_0_500000.json"
-        output_samples="data/samples/xl/term_level_chunks_single_0_500000.json"
+        output_samples="data/samples/xl/term_level_chunks_0_500000.json"
     else
         input_samples="data/samples/xl/preprocessed_samples_0_500000.json"
         output_samples="data/samples/xl/term_level_chunks_single_0_500000.json"
@@ -208,22 +211,8 @@ if [[ "$enable_full_eval" == "true" ]]; then
 fi
 
 # 创建适配term-level数据格式的训练脚本
-train_job=$(sbatch \
-    $dependency_option \
-    --job-name=$job_name \
-    --partition=taurus \
-    --nodes=1 \
-    --ntasks=1 \
-    --cpus-per-task=16 \
-    --gres=gpu:2 \
-    --mem=64GB \
-    --output=logs/${job_name}_%j.out \
-    --error=logs/${job_name}_%j.err \
-    --wrap="#!/bin/bash
-cd /home/jiaxuanluo/InfiniSST/retriever/gigaspeech
-. ~/miniconda3/etc/profile.d/conda.sh
-conda activate infinisst
-python3 SONAR_term_level_train_glossary.py \
+# 构建Python命令
+python_cmd="python3 SONAR_term_level_train_glossary.py \
     --train_samples_path=${final_samples} \
     --test_samples_path=${test_samples_path} \
     --epochs=20 \
@@ -234,7 +223,36 @@ python3 SONAR_term_level_train_glossary.py \
     --audio_text_loss_ratio=${audio_text_loss_ratio} \
     --audio_term_loss_ratio=${audio_term_loss_ratio} \
     --glossary_path=data/terms/glossary_filtered.json \
-    --unfreeze_layers=10 ${extra_flags}" | awk '{print $4}')
+    --unfreeze_layers=10 \
+    --use_no_term_loss \
+    --no_term_margin=0.15 \
+    --lambda_no_term=0.5 \
+    --no_term_top_m=100"
+
+# 如果指定了GPU，则添加GPU参数
+if [[ -n "$gpu_ids" ]]; then
+    python_cmd+=" --gpu_ids=${gpu_ids}"
+fi
+
+# 添加其他额外参数
+python_cmd+=" ${extra_flags}"
+
+# 执行命令并获取job ID
+train_job=$(sbatch \
+    $dependency_option \
+    --job-name=$job_name \
+    --partition=taurus \
+    --nodes=1 \
+    --ntasks=1 \
+    --cpus-per-task=16 \
+    --mem=64GB \
+    --output=logs/${job_name}_%j.out \
+    --error=logs/${job_name}_%j.err \
+    --wrap="#!/bin/bash
+cd /home/jiaxuanluo/InfiniSST/retriever/gigaspeech
+. ~/miniconda3/etc/profile.d/conda.sh
+conda activate infinisst
+$python_cmd" | awk '{print $4}')
 
 echo "sonar_term_level_train: $train_job" | tee -a "$LOG_FILE"
 dependency_job_step3=$train_job
@@ -300,6 +318,7 @@ echo "Key features:" | tee -a "$LOG_FILE"
 echo "  - Each term gets its own audio chunk (no aggregation)" | tee -a "$LOG_FILE"
 echo "  - Perfect MFA alignment for each term" | tee -a "$LOG_FILE"
 echo "  - Specialized training for term-level retrieval" | tee -a "$LOG_FILE"
+echo "  - Rejection capability for no-term samples (Max-Sim Margin Loss)" | tee -a "$LOG_FILE"
 echo "  - Baseline evaluation without noise interference" | tee -a "$LOG_FILE"
 echo "  - Intelligent step skipping when files already exist" | tee -a "$LOG_FILE"
 echo "  - Automatic dependency management" | tee -a "$LOG_FILE"
@@ -317,3 +336,7 @@ echo "  # Disable full eval & hard neg" | tee -a "$LOG_FILE"
 echo "  bash SONAR_term_level_pipeline_glossary.sh term ${single_slice} ${audio_text_loss_ratio} ${audio_term_loss_ratio} false false 1 ${test_samples_path} ${best_model_path}" | tee -a "$LOG_FILE"
 echo "  # Load from specific best model" | tee -a "$LOG_FILE"
 echo "  bash SONAR_term_level_pipeline_glossary.sh term false 0.3 0.7 true true 1 ${test_samples_path} data/your_best_model.pt" | tee -a "$LOG_FILE"
+echo "  # Specify specific GPUs (e.g., use GPU 0 and 1)" | tee -a "$LOG_FILE"
+echo "  bash SONAR_term_level_pipeline_glossary.sh term false 0.3 0.7 true true 1 ${test_samples_path} ${best_model_path} \"0,1\"" | tee -a "$LOG_FILE"
+echo "  # Use only GPU 2" | tee -a "$LOG_FILE"
+echo "  bash SONAR_term_level_pipeline_glossary.sh term false 0.3 0.7 true true 1 ${test_samples_path} ${best_model_path} \"2\"" | tee -a "$LOG_FILE"
