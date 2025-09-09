@@ -3,7 +3,9 @@ from torch.utils.data import DataLoader, Dataset
 import numpy as np
 import json
 from tqdm import tqdm
-import argparse, os, sys
+import argparse
+import os
+import sys
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import faiss
 import mmap
@@ -118,9 +120,11 @@ def validate_audio_batch(audio_paths, verbose=False):
 
 
 class TermLevelDataset(Dataset):
-    def __init__(self, path="data/xl_term_level_chunks_merged.json", split="train", train_ratio=0.99, test_path=None, enable_no_term=True):
+    def __init__(self, path="data/xl_term_level_chunks_merged.json", split="train", train_ratio=0.99, test_path=None, enable_no_term=False, filter_no_term=True):
         self.enable_no_term = enable_no_term
+        self.filter_no_term = filter_no_term
         print(f"[INFO] No-term samples enabled: {enable_no_term}")
+        print(f"[INFO] Filter no-term samples: {filter_no_term}")
         
         if split == "test" and test_path is not None:
             # 使用独立的测试数据集
@@ -177,16 +181,16 @@ class TermLevelDataset(Dataset):
             is_valid, reason = is_audio_valid(audio_path)
             
             if is_valid:
-                # 根据enable_no_term配置决定是否包含无术语样本
+                # 根据filter_no_term配置决定是否包含无术语样本
                 if filtered_terms:
                     # 有术语的样本总是包含
                     valid_samples.append(s)
                     term_samples_count += 1
-                elif self.enable_no_term:
-                    # 只有在启用no-term时才包含无术语样本
+                elif not self.filter_no_term:
+                    # 只有在不过滤no-term时才包含无术语样本
                     valid_samples.append(s)
                     no_term_samples_count += 1
-                # 如果enable_no_term=False且无术语，则跳过该样本
+                # 如果filter_no_term=True且无术语，则跳过该样本
             else:
                 invalid_audio_count += 1
                 # 只打印前10个无效音频的详细信息
@@ -201,8 +205,8 @@ class TermLevelDataset(Dataset):
         if len(valid_samples) > 0:
             print(f"[INFO] No-term ratio: {no_term_samples_count/len(valid_samples):.1%}")
         
-        if not self.enable_no_term and no_term_samples_count == 0:
-            print(f"[INFO] No-term samples filtered out (enable_no_term=False)")
+        if self.filter_no_term and no_term_samples_count == 0:
+            print(f"[INFO] No-term samples filtered out (filter_no_term=True)")
         
         print(f"[INFO] Filtered {len(valid_samples)} valid term-level samples from {len(all_samples)} total samples")
         
@@ -680,7 +684,7 @@ def extract_all_used_terms(dataset):
     return list(used_terms)
 
 
-def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), max_eval=1000, field="term", train_terms=None, show_missed_terms=True, no_term_margin=0.15, enable_no_term=True):
+def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), max_eval=1000, field="term", train_terms=None, show_missed_terms=True, no_term_margin=0.15, enable_no_term=False, filter_no_term=True):
     """评估top-k召回率，包括no-term样本的拒答能力评估"""
     model.eval()
     print(f"[INFO] Evaluation no-term samples enabled: {enable_no_term}")
@@ -724,7 +728,7 @@ def evaluate_topk_recall(model, retriever, dataset, device, top_ks=(5, 10, 20), 
             if has_target and ground_truth_terms:  # 有术语的样本
                 term_samples.append(sample)
                 term_indices.append(i)
-            elif (not has_target or not ground_truth_terms) and enable_no_term:  # 无术语的样本（仅在启用时评估）
+            elif (not has_target or not ground_truth_terms) and enable_no_term and not filter_no_term:  # 无术语的样本（仅在启用且不过滤时评估）
                 no_term_samples.append(sample)
                 no_term_indices.append(i)
 
@@ -840,12 +844,12 @@ def main():
                        help="Weight for audio-term contrastive loss (default: 0.7)")
 
     # 拒答相关参数
-    parser.add_argument('--enable_no_term', action='store_true', default=True,
-                        help="Enable no-term samples in dataset and evaluation (default: True)")
-    parser.add_argument('--disable_no_term', action='store_true',
-                        help="Disable no-term samples (overrides --enable_no_term)")
-    parser.add_argument('--use_no_term_loss', action='store_true',
-                        help="Enable max-sim margin loss for no-term samples")
+    parser.add_argument('--enable_no_term', action='store_true', default=False,
+                        help="Enable no-term samples in dataset and evaluation (default: False)")
+    parser.add_argument('--filter_no_term', action='store_true', default=True,
+                        help="Filter out no-term samples from dataset (default: True)")
+    parser.add_argument('--use_no_term_loss', action='store_true', default=False,
+                        help="Enable max-sim margin loss for no-term samples (default: False)")
     parser.add_argument('--no_term_margin', type=float, default=0.15,
                         help="Margin m for max-sim loss: relu(s_max - m)")
     parser.add_argument('--lambda_no_term', type=float, default=0.5,
@@ -854,10 +858,12 @@ def main():
                         help="Top-M candidates to retrieve from FAISS for no-term loss computation")
 
     # Hard negative mining相关参数
-    parser.add_argument('--enable_hard_neg', action='store_true',
-                        help="Enable hard negative mining against top-k retrieved non-GT terms")
+    parser.add_argument('--enable_hard_neg', action='store_true', default=False,
+                        help="Enable hard negative mining against top-k retrieved non-GT terms (default: False)")
     parser.add_argument('--hard_neg_source', type=str, default='used', choices=['used', 'glossary'],
-                        help="Source corpus for mining hard negatives: 'used' (train+test used terms) or 'glossary'")
+                        help="Source corpus for mining hard negatives: 'used' (train+test used terms) or 'glossary' (default: used)")
+    parser.add_argument('--enable_glossary_hard_neg', action='store_true', default=False,
+                        help="Enable glossary-based hard negative mining with FAISS index (default: False, use used terms only)")
     parser.add_argument('--hard_neg_k', type=int, default=10,
                         help="Number of hard negatives per sample (top-k)")
     parser.add_argument('--hard_neg_weight', type=float, default=0.2,
@@ -886,18 +892,18 @@ def main():
 
     args = parser.parse_args()
 
-    # 处理no-term配置
-    if args.disable_no_term:
-        args.enable_no_term = False
+    # 处理no-term配置逻辑
+    # 如果enable_no_term=False，则自动设置filter_no_term=True
+    if not args.enable_no_term:
+        args.filter_no_term = True
     
     print(f"[DEBUG] audio_text_loss_ratio={args.audio_text_loss_ratio}, audio_term_loss_ratio={args.audio_term_loss_ratio}")
-    print(f"[DEBUG] enable_no_term={args.enable_no_term}, use_no_term_loss={args.use_no_term_loss}")
-    print(f"[DEBUG] enable_hard_neg={args.enable_hard_neg}")
+    print(f"[DEBUG] enable_no_term={args.enable_no_term}, filter_no_term={args.filter_no_term}, use_no_term_loss={args.use_no_term_loss}")
+    print(f"[DEBUG] enable_hard_neg={args.enable_hard_neg}, enable_glossary_hard_neg={args.enable_glossary_hard_neg}")
 
     # GPU设备设置
     if args.gpu_ids is not None:
         # 设置CUDA_VISIBLE_DEVICES环境变量
-        import os
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_ids
         gpu_list = [int(x.strip()) for x in args.gpu_ids.split(',') if x.strip().isdigit()]
         print(f"[INFO] Setting CUDA_VISIBLE_DEVICES={args.gpu_ids}")
@@ -1005,12 +1011,12 @@ def main():
     print(f"[INFO] Loading term-level dataset from {args.train_samples_path}")
     if args.test_samples_path:
         print(f"[INFO] Using separate test dataset: {args.test_samples_path}")
-        train_dataset = TermLevelDataset(args.train_samples_path, split="train", train_ratio=1.0, enable_no_term=args.enable_no_term)  # 使用全部训练数据
-        test_dataset = TermLevelDataset(None, split="test", train_ratio=args.train_ratio, test_path=args.test_samples_path, enable_no_term=args.enable_no_term)
+        train_dataset = TermLevelDataset(args.train_samples_path, split="train", train_ratio=1.0, enable_no_term=args.enable_no_term, filter_no_term=args.filter_no_term)  # 使用全部训练数据
+        test_dataset = TermLevelDataset(None, split="test", train_ratio=args.train_ratio, test_path=args.test_samples_path, enable_no_term=args.enable_no_term, filter_no_term=args.filter_no_term)
     else:
         print(f"[INFO] Using train ratio: {args.train_ratio:.1%} train, {1-args.train_ratio:.1%} test")
-        train_dataset = TermLevelDataset(args.train_samples_path, split="train", train_ratio=args.train_ratio, enable_no_term=args.enable_no_term)
-        test_dataset = TermLevelDataset(args.train_samples_path, split="test", train_ratio=args.train_ratio, enable_no_term=args.enable_no_term)
+        train_dataset = TermLevelDataset(args.train_samples_path, split="train", train_ratio=args.train_ratio, enable_no_term=args.enable_no_term, filter_no_term=args.filter_no_term)
+        test_dataset = TermLevelDataset(args.train_samples_path, split="test", train_ratio=args.train_ratio, enable_no_term=args.enable_no_term, filter_no_term=args.filter_no_term)
     
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=lambda x: x)
     
@@ -1064,7 +1070,7 @@ def main():
     term2idx_map = {}
     
     if args.enable_hard_neg:
-        if args.hard_neg_source == 'glossary':
+        if args.enable_glossary_hard_neg and args.hard_neg_source == 'glossary':
             try:
                 hardneg_source_terms = load_glossary_terms(args.glossary_path)
                 print(f"[INFO] Hard-neg source: glossary with {len(hardneg_source_terms)} terms")
@@ -1075,8 +1081,8 @@ def main():
             hardneg_source_terms = used_terms
             print(f"[INFO] Hard-neg source: used terms ({len(hardneg_source_terms)} terms)")
         
-        # 加载FAISS索引（如果提供）
-        if args.hard_neg_index_path:
+        # 加载FAISS索引（仅当启用glossary hard neg时）
+        if args.enable_glossary_hard_neg and args.hard_neg_index_path:
             try:
                 print(f"[INFO] Loading FAISS index from: {args.hard_neg_index_path}")
                 faiss_index = faiss.read_index(args.hard_neg_index_path)
@@ -1102,8 +1108,8 @@ def main():
         # 构建hard negative上下文（每个epoch刷新）
         hn_ctx = None
         if args.enable_hard_neg:
-            # 优先使用FAISS索引模式
-            if faiss_index is not None and term2idx_map:
+            # 优先使用FAISS索引模式（仅当启用glossary hard neg时）
+            if args.enable_glossary_hard_neg and faiss_index is not None and term2idx_map:
                 hn_ctx = HardNegContext(terms=None, term2idx=term2idx_map, emb_tensor=None,
                                         faiss_index=faiss_index, metric=getattr(args, "hard_neg_metric", "ip"))
                 print(f"[INFO] Hard-neg (FAISS) ready: {len(term2idx_map)} term ids, metric={hn_ctx.metric}, nprobe={getattr(faiss_index, 'nprobe', 'N/A')}")
@@ -1173,8 +1179,8 @@ def main():
             print(f"[INFO] No-term processing disabled")
         
         if args.enable_hard_neg:
-            mode = "FAISS" if (faiss_index is not None and term2idx_map) else ("in-memory" if hardneg_source_terms else "disabled")
-            print(f"[INFO] Hard-neg settings: mode={mode}, k={args.hard_neg_k}, candidates={args.hard_neg_candidates}, weight={args.hard_neg_weight:.3f}, margin={args.hard_neg_margin:.3f}, source={args.hard_neg_source}, metric={args.hard_neg_metric}, nprobe={args.hard_neg_nprobe}")
+            mode = "FAISS" if (args.enable_glossary_hard_neg and faiss_index is not None and term2idx_map) else ("in-memory" if hardneg_source_terms else "disabled")
+            print(f"[INFO] Hard-neg settings: mode={mode}, k={args.hard_neg_k}, candidates={args.hard_neg_candidates}, weight={args.hard_neg_weight:.3f}, margin={args.hard_neg_margin:.3f}, source={args.hard_neg_source}, glossary_enabled={args.enable_glossary_hard_neg}, metric={args.hard_neg_metric}, nprobe={args.hard_neg_nprobe}")
         else:
             print(f"[INFO] Hard negative mining disabled")
 
@@ -1191,7 +1197,8 @@ def main():
             train_terms=used_terms_train,  # 传入仅来自训练集的术语
             show_missed_terms=(epoch + 1) % 2 == 0 or epoch == args.epochs - 1,  # 每2个epoch或最后一个epoch显示详细信息
             no_term_margin=args.no_term_margin,  # 传入no-term阈值
-            enable_no_term=args.enable_no_term  # 传入no-term启用状态
+            enable_no_term=args.enable_no_term,  # 传入no-term启用状态
+            filter_no_term=args.filter_no_term  # 传入no-term过滤状态
         )
         
         # 使用 Recall@10 作为早停指标

@@ -21,7 +21,7 @@ enable_hard_neg=${6:-true}
 full_eval_every_n_epochs=${7:-1}
 test_samples_path=${8:-"data/samples/xl/term_level_chunks_500000_1000000.json"}  # 默认测试数据集路径
 best_model_path=${9:-"data/qwen2_audio_term_level_best.pt"}  # 默认best model路径
-gpu_ids=${10:-"5"}  # GPU编号，默认为空使用所有可用GPU
+gpu_ids=${10:-""}  # GPU编号，默认为空使用所有可用GPU
 
 # 训练数据集路径
 TRAIN_TSV="/mnt/data/siqiouyang/datasets/gigaspeech/manifests/train_xl.tsv"
@@ -198,12 +198,15 @@ fi
 extra_flags=""
 if [[ "$enable_hard_neg" == "true" ]]; then
   extra_flags+=" --enable_hard_neg"
-  extra_flags+=" --hard_neg_source glossary"
-  extra_flags+=" --hard_neg_index_path data/glossary_emb.ivfpq.faiss"
-  extra_flags+=" --hard_neg_term2idx_path data/glossary_term2idx.json"
-  extra_flags+=" --hard_neg_metric ip"
-  extra_flags+=" --hard_neg_nprobe 16"
-  extra_flags+=" --hard_neg_candidates 100"
+  extra_flags+=" --hard_neg_source used"  # 默认使用used terms，速度更快
+  # 如果需要启用glossary hard negative，取消下面的注释并设置相应参数
+  # extra_flags+=" --enable_glossary_hard_neg"
+  # extra_flags+=" --hard_neg_source glossary"
+  # extra_flags+=" --hard_neg_index_path data/glossary_emb.ivfpq.faiss"
+  # extra_flags+=" --hard_neg_term2idx_path data/glossary_term2idx.json"
+  # extra_flags+=" --hard_neg_metric ip"
+  # extra_flags+=" --hard_neg_nprobe 16"
+  # extra_flags+=" --hard_neg_candidates 100"
   extra_flags+=" --hard_neg_k 10"
 fi
 if [[ "$enable_full_eval" == "true" ]]; then
@@ -223,10 +226,7 @@ python_cmd="python3 Qwen2_Audio_term_level_train.py \
     --audio_term_loss_ratio=${audio_term_loss_ratio} \
     --glossary_path=data/terms/glossary_filtered.json \
     --unfreeze_layers=0 \
-    --use_no_term_loss \
-    --no_term_margin=0.15 \
-    --lambda_no_term=0.5 \
-    --no_term_top_m=100 \
+    --filter_no_term \
     --model_name=Qwen/Qwen2-Audio-7B-Instruct"
 
 # 如果指定了GPU，则添加GPU参数
@@ -246,7 +246,7 @@ train_job=$(sbatch \
     --ntasks=1 \
     --cpus-per-task=16 \
     --mem=64GB \
-    --gres=gpu:8 \
+    --gres=gpu:2 \
     --output=logs/${job_name}_%j.out \
     --error=logs/${job_name}_%j.err \
     --wrap="#!/bin/bash
@@ -318,10 +318,10 @@ echo "Key features:" | tee -a "$LOG_FILE"
 echo "  - Each term gets its own audio chunk (no aggregation)" | tee -a "$LOG_FILE"
 echo "  - Perfect MFA alignment for each term" | tee -a "$LOG_FILE"
 echo "  - Specialized training for term-level retrieval" | tee -a "$LOG_FILE"
-echo "  - Rejection capability for no-term samples (Max-Sim Margin Loss)" | tee -a "$LOG_FILE"
+echo "  - Optional rejection capability for no-term samples (disabled by default)" | tee -a "$LOG_FILE"
 echo "  - Qwen2-Audio-7B-Instruct based encoder" | tee -a "$LOG_FILE"
 echo "  - Multi-GPU support with DataParallel" | tee -a "$LOG_FILE"
-echo "  - Hard negative mining with FAISS index" | tee -a "$LOG_FILE"
+echo "  - Hard negative mining (in-memory mode by default, FAISS optional)" | tee -a "$LOG_FILE"
 echo "  - Baseline evaluation without noise interference" | tee -a "$LOG_FILE"
 echo "  - Intelligent step skipping when files already exist" | tee -a "$LOG_FILE"
 echo "  - Automatic dependency management" | tee -a "$LOG_FILE"
