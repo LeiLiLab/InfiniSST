@@ -1,0 +1,2123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>InfiniSST Translation Demo</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #a0a0a0;
+            font-weight: 300;
+        }
+
+        .main-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .controls-section {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            align-items: end;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-group label {
+            font-size: 0.9rem;
+            color: #a0a0a0;
+            font-weight: 500;
+        }
+
+        select, .btn {
+            padding: 12px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        select:focus, .btn:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.2);
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+            border: none;
+            font-weight: 600;
+            min-width: 140px;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .input-section {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 20px;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
+        }
+
+        .input-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-item.youtube-section {
+            flex-direction: row;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .upload-btn, .record-btn {
+            padding: 16px 24px;
+            border: none;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 56px;
+            white-space: nowrap;
+            width: 100%;
+        }
+
+        .upload-btn {
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .record-btn {
+            background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .record-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(245, 87, 108, 0.4);
+        }
+
+        .record-btn.recording {
+            background: linear-gradient(45deg, #ff6b6b 0%, #ee5a24 100%);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 107, 107, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+        }
+
+        .play-btn {
+            width: 60px;
+            height: 60px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .play-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 10px 25px rgba(79, 172, 254, 0.4);
+        }
+
+        .url-input {
+            flex: 1;
+            padding: 16px 20px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            min-height: 56px;
+        }
+
+        .url-input:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.2);
+        }
+
+        .url-input::placeholder {
+            color: #888;
+        }
+
+        .video-section {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-placeholder {
+            color: #666;
+            font-size: 1.2rem;
+            text-align: center;
+        }
+
+        audio, video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Floating Translation Panel */
+        .translation-panel {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 60px);
+            max-width: 1160px;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            transition: all 0.3s ease;
+            cursor: move;
+            user-select: none;
+        }
+
+        .translation-panel.minimized {
+            height: 60px;
+            overflow: hidden;
+        }
+
+        .translation-panel.dragging {
+            transition: none;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
+        }
+
+        .translation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: move;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .translation-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin: 0;
+        }
+
+        .panel-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .status-indicator {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-indicator.ready {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .status-indicator.processing {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .status-indicator.error {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .panel-btn {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .panel-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .panel-btn svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .panel-btn.reset-btn {
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            width: auto;
+            height: auto;
+        }
+
+        .panel-btn.reset-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(79, 172, 254, 0.3);
+        }
+
+        .panel-btn.reset-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .translation-content {
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .translation-output {
+            min-height: 120px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 1rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            color: #ffffff;
+        }
+
+        .volume-indicator {
+            margin-top: 15px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .volume-level {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4caf50 0%, #8bc34a 50%, #ffeb3b 75%, #ff9800 90%, #f44336 100%);
+            transition: width 0.1s ease;
+            border-radius: 4px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .mic-status {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #a0a0a0;
+            text-align: center;
+        }
+
+        @media (max-width: 1024px) {
+            .input-section {
+                grid-template-columns: 1fr;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .controls-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .main-panel {
+                padding: 20px;
+            }
+
+            .translation-panel {
+                left: 15px;
+                right: 15px;
+                bottom: 15px;
+                width: auto;
+                max-width: none;
+                transform: none;
+            }
+        }
+
+        /* Icon styles */
+        .icon {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        /* Loading animation */
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #4facfe;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Resize handle */
+        .resize-handle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 20px;
+            height: 20px;
+            cursor: nw-resize;
+            background: linear-gradient(-45deg, transparent 0%, transparent 40%, rgba(255,255,255,0.1) 40%, rgba(255,255,255,0.1) 60%, transparent 60%);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>InfiniSST Translation Demo</h1>
+            <p>Simultaneous end-to-end speech translation powered by LLM</p>
+        </div>
+
+        <div class="main-panel">
+            <!-- Model Configuration -->
+            <div class="controls-section">
+                <div class="control-group">
+                    <label>Model</label>
+                    <select id="agentType">
+                        <option value="InfiniSST">InfiniSST</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label>Language Pair</label>
+                    <select id="languagePair">
+                        <option value="English -> Chinese">English → Chinese</option>
+                        <option value="English -> Italian">English → Italian</option>
+<!--                        TODO 暂时没训练-->
+<!--                        <option value="English -> German">English → German</option>-->
+<!--                        <option value="English -> Spanish">English → Spanish</option>-->
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label>Latency</label>
+                    <select id="latencyMultiplier">
+                        <option value="1">1x (Fastest)</option>
+                        <option value="2" selected>2x (Default)</option>
+                        <option value="3">3x (More Accurate)</option>
+                        <option value="4">4x (Most Accurate)</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label>&nbsp;</label>
+                    <button id="loadModel" class="btn">Load Model</button>
+                </div>
+                
+                <div class="control-group">
+                    <label>&nbsp;</label>
+                    <button id="updateLatency" class="btn" disabled>Update Latency</button>
+                </div>
+            </div>
+
+            <!-- Audio Input Section -->
+            <div class="input-section">
+                <div class="input-item">
+                    <button class="upload-btn" type="button" id="uploadBtn">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                        </svg>
+                        Upload Video/Audio
+                    </button>
+                    <input type="file" id="audioFile" class="file-input" accept="audio/*,video/*" />
+                </div>
+                
+                <div class="input-item youtube-section">
+                    <input type="url" id="youtubeUrl" class="url-input" placeholder="https://www.youtube.com/watch?v=..." />
+                    <button id="playBtn" class="play-btn">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M8,5.14V19.14L19,12.14L8,5.14Z"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="input-item">
+                    <button id="toggleMic" class="record-btn">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>
+                        </svg>
+                        Record Audio
+                    </button>
+                </div>
+            </div>
+
+            <!-- Microphone Status -->
+            <div id="micStatus" class="mic-status"></div>
+            <div class="volume-indicator hidden" id="volumeIndicator">
+                <div id="volumeLevel" class="volume-level"></div>
+            </div>
+
+            <!-- Video/Audio Player -->
+            <div class="video-section">
+                <div class="video-container" id="mediaContainer">
+                    <div class="video-placeholder">
+                        <p>Upload a video/audio file or enter a YouTube URL to begin</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Translation Panel -->
+    <div id="translationPanel" class="translation-panel">
+        <div class="translation-header" id="panelHeader">
+            <div class="header-left">
+                <h3>Ready to translate</h3>
+                <div id="statusIndicator" class="status-indicator ready">
+                    <div class="loading hidden" id="loadingSpinner"></div>
+                    <span id="statusText">Ready</span>
+                </div>
+            </div>
+            <div class="panel-controls">
+                <button id="resetTranslation" class="panel-btn reset-btn" disabled>Reset</button>
+                <button id="minimizeBtn" class="panel-btn" title="Minimize">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19,13H5V11H19V13Z"/>
+                    </svg>
+                </button>
+                <button id="closeBtn" class="panel-btn" title="Close">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="translation-content" id="translationContent">
+            <div id="translationOutput" class="translation-output">
+                Translation will appear here...
+            </div>
+        </div>
+        <div class="resize-handle" id="resizeHandle"></div>
+    </div>
+
+    <script>
+        let ws = null;
+        let sessionId = null;
+        let audioContext = null;
+        let audioSource = null;
+        let processor = null;
+        const segmentSize = 4096;
+        const targetSampleRate = 16000;
+        const baseChunkSize = 960 * 16;
+        let currentLatencyMultiplier = 2;
+        let audioBuffer = new Float32Array();
+        let resampledBuffer = new Float32Array();
+        let firstChunkSent = false;
+        let translationPaused = true;
+        
+        const PRE_BUFFER_DELAY_MS = 300;
+        let idleTimer = null;
+        const IDLE_TIMEOUT = 5 * 60 * 1000;
+        let pingInterval = null;
+        const PING_INTERVAL = 5000;
+        let deleteRetryInterval = null;
+        const SESSION_DELETE_RETRY_INTERVAL = 10000;
+        const QUEUE_CHECK_INTERVAL = 2000;
+        let queueCheckInterval = null;
+        let isQueued = false;
+        let clientId = null;
+        
+        let translationInitialized = false;
+        let micStream = null;
+        let micRecorder = null;
+        let isMicRecording = false;
+        let audioElementConnected = false;
+        let currentMediaElement = null;
+
+        // Panel dragging variables
+        let isDragging = false;
+        let isResizing = false;
+        let dragOffset = { x: 0, y: 0 };
+        let isMinimized = false;
+
+        // UI Elements
+        const agentType = document.getElementById('agentType');
+        const languagePair = document.getElementById('languagePair');
+        const latencyMultiplier = document.getElementById('latencyMultiplier');
+        const loadModel = document.getElementById('loadModel');
+        const updateLatency = document.getElementById('updateLatency');
+        const audioFile = document.getElementById('audioFile');
+        const youtubeUrl = document.getElementById('youtubeUrl');
+        const playBtn = document.getElementById('playBtn');
+        const resetTranslation = document.getElementById('resetTranslation');
+        const translationOutput = document.getElementById('translationOutput');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const toggleMic = document.getElementById('toggleMic');
+        const micStatus = document.getElementById('micStatus');
+        const volumeLevel = document.getElementById('volumeLevel');
+        const volumeIndicator = document.getElementById('volumeIndicator');
+        const mediaContainer = document.getElementById('mediaContainer');
+        const uploadBtn = document.getElementById('uploadBtn');
+        
+        // Panel elements
+        const translationPanel = document.getElementById('translationPanel');
+        const panelHeader = document.getElementById('panelHeader');
+        const translationContent = document.getElementById('translationContent');
+        const minimizeBtn = document.getElementById('minimizeBtn');
+        const closeBtn = document.getElementById('closeBtn');
+        const resizeHandle = document.getElementById('resizeHandle');
+
+        // Electron 集成检测和初始化
+        let isElectron = false;
+        let serverConfig = null; // 添加服务器配置
+        let translationWindowShown = false; // 跟踪翻译窗口状态
+
+        // 检测是否在 Electron 环境中运行
+        if (typeof window !== 'undefined' && window.electronAPI) {
+            isElectron = true;
+            
+            // 在Electron环境中隐藏主窗口的翻译面板
+            const mainTranslationPanel = document.getElementById('translationPanel');
+            if (mainTranslationPanel) {
+                mainTranslationPanel.style.display = 'none';
+            }
+            
+            // 从当前URL获取服务器配置
+            const currentUrl = new URL(window.location.href);
+            serverConfig = {
+                protocol: currentUrl.protocol.replace(':', ''),
+                host: currentUrl.hostname,
+                port: currentUrl.port || (currentUrl.protocol === 'https:' ? '443' : '80')
+            };
+            
+            console.log('Electron environment detected, server config:', serverConfig);
+            
+            // 立即显示独立翻译窗口
+            setTimeout(() => {
+                showElectronTranslationWindow();
+                updateElectronStatus('欢迎使用InfiniSST翻译！请先加载模型。', 'ready');
+            }, 500);
+            
+            // 显示版本信息
+            const versionInfo = document.getElementById('versionInfo');
+            if (versionInfo && window.electronAPI.versions) {
+                versionInfo.innerHTML = `
+                    Electron: ${window.electronAPI.versions.electron}<br>
+                    Node: ${window.electronAPI.versions.node}<br>
+                    Chrome: ${window.electronAPI.versions.chrome}
+                `;
+                versionInfo.classList.remove('hidden');
+            }
+            
+            // 监听菜单文件打开事件
+            window.electronAPI.onMenuOpenFile(() => {
+                // 触发文件选择器
+                if (audioFile) {
+                    audioFile.click();
+                }
+            });
+        }
+
+        // Electron翻译窗口辅助函数
+        function showElectronTranslationWindow() {
+            if (isElectron) {
+                try {
+                    window.electronAPI.showTranslationWindow();
+                    translationWindowShown = true;
+                    console.log('Electron translation window shown');
+                } catch (error) {
+                    console.error('Error showing translation window:', error);
+                }
+            }
+        }
+
+        function updateElectronTranslation(text) {
+            if (isElectron) {
+                // 确保翻译窗口已显示
+                if (!translationWindowShown) {
+                    showElectronTranslationWindow();
+                }
+                // 发送翻译更新
+                try {
+                    window.electronAPI.updateTranslation({ text: text });
+                    console.log('Translation updated to Electron window:', text.substring(0, 50) + '...');
+                } catch (error) {
+                    console.error('Error updating Electron translation:', error);
+                }
+            }
+        }
+
+        function updateElectronStatus(text, type = 'ready') {
+            if (isElectron) {
+                // 确保翻译窗口已显示
+                if (!translationWindowShown) {
+                    showElectronTranslationWindow();
+                }
+                // 发送状态更新
+                try {
+                    window.electronAPI.updateTranslationStatus({ text: text, type: type });
+                    console.log('Status updated to Electron window:', text, type);
+                } catch (error) {
+                    console.error('Error updating Electron status:', error);
+                }
+            }
+        }
+
+        // 获取WebSocket URL的辅助函数
+        function getWebSocketUrl(sessionId) {
+            if (isElectron && serverConfig) {
+                // 在Electron环境中，使用服务器配置构造WebSocket URL
+                const wsProtocol = serverConfig.protocol === 'https' ? 'wss' : 'ws';
+                const port = serverConfig.port ? `:${serverConfig.port}` : '';
+                return `${wsProtocol}://${serverConfig.host}${port}/wss/${sessionId}`;
+            } else {
+                // 在浏览器环境中，使用当前页面的协议和主机
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                return `${protocol}//${window.location.host}/wss/${sessionId}`;
+            }
+        }
+
+        // Panel drag functionality
+        function initializePanelDragging() {
+            panelHeader.addEventListener('mousedown', startDragging);
+            resizeHandle.addEventListener('mousedown', startResizing);
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', stopDragging);
+
+            minimizeBtn.addEventListener('click', toggleMinimize);
+            closeBtn.addEventListener('click', closePanel);
+        }
+
+        function startDragging(e) {
+            if (e.target === minimizeBtn || e.target === closeBtn || e.target.closest('.panel-btn')) {
+                return;
+            }
+            
+            isDragging = true;
+            translationPanel.classList.add('dragging');
+            
+            const rect = translationPanel.getBoundingClientRect();
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+            
+            e.preventDefault();
+        }
+
+        function startResizing(e) {
+            isResizing = true;
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function handleMouseMove(e) {
+            if (isDragging) {
+                const x = e.clientX - dragOffset.x;
+                const y = e.clientY - dragOffset.y;
+                
+                // Keep panel within viewport bounds
+                const maxX = window.innerWidth - translationPanel.offsetWidth;
+                const maxY = window.innerHeight - translationPanel.offsetHeight;
+                
+                const boundedX = Math.max(0, Math.min(x, maxX));
+                const boundedY = Math.max(0, Math.min(y, maxY));
+                
+                translationPanel.style.left = boundedX + 'px';
+                translationPanel.style.top = boundedY + 'px';
+                translationPanel.style.bottom = 'auto';
+                translationPanel.style.transform = 'none';
+            } else if (isResizing) {
+                const rect = translationPanel.getBoundingClientRect();
+                const newWidth = Math.max(300, e.clientX - rect.left);
+                const newHeight = Math.max(200, e.clientY - rect.top);
+                
+                translationPanel.style.width = newWidth + 'px';
+                translationPanel.style.height = newHeight + 'px';
+            }
+        }
+
+        function stopDragging() {
+            if (isDragging) {
+                isDragging = false;
+                translationPanel.classList.remove('dragging');
+            }
+            if (isResizing) {
+                isResizing = false;
+            }
+        }
+
+        function toggleMinimize() {
+            isMinimized = !isMinimized;
+            translationPanel.classList.toggle('minimized', isMinimized);
+            
+            minimizeBtn.innerHTML = isMinimized ? 
+                '<svg viewBox="0 0 24 24"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>' :
+                '<svg viewBox="0 0 24 24"><path d="M19,13H5V11H19V13Z"/></svg>';
+            
+            minimizeBtn.title = isMinimized ? 'Restore' : 'Minimize';
+        }
+
+        function closePanel() {
+            translationPanel.style.display = 'none';
+        }
+
+        function showPanel() {
+            if (isElectron) {
+                // 在Electron环境中只显示独立翻译窗口，不显示主窗口面板
+                showElectronTranslationWindow();
+            } else {
+                // 在浏览器环境中显示主窗口面板
+                translationPanel.style.display = 'block';
+            }
+        }
+
+        // Generate unique client ID
+        function generateClientId() {
+            return 'client_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        }
+        
+        function ensureClientId() {
+            if (!clientId) {
+                clientId = generateClientId();
+                console.log(`Generated new client ID: ${clientId} for this browser tab`);
+            }
+            return clientId;
+        }
+
+        // Update status display
+        function updateStatus(text, type = 'ready') {
+            if (isElectron) {
+                // 在Electron环境中只更新独立翻译窗口的状态
+                updateElectronStatus(text, type);
+            } else {
+                // 在浏览器环境中更新主窗口面板的状态
+                statusText.textContent = text;
+                statusIndicator.className = `status-indicator ${type}`;
+                
+                // Update panel header title
+                const headerTitle = panelHeader.querySelector('h3');
+                if (type === 'processing') {
+                    headerTitle.textContent = 'Processing...';
+                    loadingSpinner.classList.remove('hidden');
+                } else if (type === 'error') {
+                    headerTitle.textContent = 'Error';
+                    loadingSpinner.classList.add('hidden');
+                } else {
+                    headerTitle.textContent = 'Ready to translate';
+                    loadingSpinner.classList.add('hidden');
+                }
+            }
+        }
+
+        // Scroll translation to bottom
+        function scrollTranslationToBottom() {
+            translationOutput.scrollTop = translationOutput.scrollHeight;
+            resetIdleTimer();
+        }
+
+        // Create media element (audio or video)
+        function createMediaElement(file) {
+            // Remove existing media
+            const existingMedia = mediaContainer.querySelector('audio, video');
+            if (existingMedia) {
+                existingMedia.remove();
+            }
+
+            // Determine if it's video or audio
+            const isVideo = file.type.startsWith('video/');
+            const mediaElement = document.createElement(isVideo ? 'video' : 'audio');
+            
+            mediaElement.controls = true;
+            mediaElement.style.width = '100%';
+            mediaElement.style.height = '100%';
+            mediaElement.src = URL.createObjectURL(file);
+            
+            // Hide placeholder
+            const placeholder = mediaContainer.querySelector('.video-placeholder');
+            if (placeholder) {
+                placeholder.style.display = 'none';
+            }
+            
+            mediaContainer.appendChild(mediaElement);
+            currentMediaElement = mediaElement;
+            
+            // Add event listeners
+            addMediaEventListeners(mediaElement);
+            
+            // Show translation panel
+            showPanel();
+            
+            return mediaElement;
+        }
+
+        // Add event listeners to media element
+        function addMediaEventListeners(mediaElement) {
+            mediaElement.addEventListener('play', async () => {
+                if (!translationInitialized && sessionId) {
+                    try {
+                        const currentTime = mediaElement.currentTime;
+                        mediaElement.pause();
+                        updateStatus('Initializing translation system...', 'processing');
+                        
+                        await initializeTranslation(mediaElement);
+                        mediaElement.currentTime = currentTime;
+                        translationPaused = false;
+                        
+                        if (audioContext && audioContext.state === 'suspended') {
+                            await audioContext.resume();
+                        }
+                        
+                        setTimeout(() => {
+                            mediaElement.play().then(() => {
+                                updateStatus('Playing and translating...', 'processing');
+                                resetIdleTimer();
+                            }).catch(e => {
+                                console.error('Error playing media after initialization:', e);
+                                updateStatus('Error playing media: ' + e, 'error');
+                            });
+                        }, 50);
+                        
+                        resetIdleTimer();
+                    } catch (error) {
+                        console.error('Error initializing translation:', error);
+                        updateStatus('Error initializing translation: ' + error, 'error');
+                    }
+                } else if (translationInitialized) {
+                    translationPaused = false;
+                    updateStatus('Playing and translating...', 'processing');
+                    
+                    if (audioContext && audioContext.state === 'suspended') {
+                        audioContext.resume().catch(e => {
+                            console.error('Error resuming audio context:', e);
+                        });
+                    }
+                    
+                    resetIdleTimer();
+                }
+            });
+            
+            mediaElement.addEventListener('pause', () => {
+                if (translationInitialized) {
+                    translationPaused = true;
+                    updateStatus('Translation paused', 'ready');
+                    
+                    if (audioContext && audioContext.state === 'running') {
+                        audioContext.suspend().catch(e => {
+                            console.error('Error suspending audio context:', e);
+                        });
+                    }
+                }
+            });
+
+            mediaElement.addEventListener('ended', () => {
+                if (resampledBuffer.length > 0) {
+                    const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
+                    const finalChunk = new Float32Array(targetChunkSize);
+                    finalChunk.set(resampledBuffer);
+                    if (ws) ws.send(finalChunk.buffer);
+                }
+                
+                if (ws) ws.close();
+                if (processor) processor.disconnect();
+                if (audioContext) audioContext.suspend();
+                
+                updateStatus('Translation completed', 'ready');
+                translationInitialized = false;
+            });
+        }
+
+        // Initialize translation system
+        async function initializeTranslation(mediaElement = currentMediaElement) {
+            if (!sessionId || translationInitialized) return;
+            
+            try {
+                translationOutput.textContent = '';
+                translationPaused = false;
+                
+                const wsUrl = getWebSocketUrl(sessionId);
+                console.log(`Connecting to WebSocket at: ${wsUrl}`);
+                ws = new WebSocket(wsUrl);
+                
+                ws.onmessage = (event) => {
+                    const message = event.data;
+                    
+                    if (typeof message === 'string' && message.startsWith('INITIALIZING:')) {
+                        updateStatus(message.substring('INITIALIZING:'.length).trim(), 'processing');
+                        return;
+                    } else if (typeof message === 'string' && message.startsWith('READY:')) {
+                        updateStatus('Model is ready. Processing audio...', 'processing');
+                        return;
+                    } else if (typeof message === 'string' && message.startsWith('ERROR:')) {
+                        updateStatus(message, 'error');
+                        return;
+                    }
+                    
+                    if (!translationPaused) {
+                        if (isElectron) {
+                            // 在Electron环境中只更新独立翻译窗口
+                            updateElectronTranslation(message);
+                        } else {
+                            // 在浏览器环境中更新主窗口面板
+                            translationOutput.textContent = message;
+                            scrollTranslationToBottom();
+                        }
+                    }
+                };
+                
+                ws.onerror = (error) => {
+                    updateStatus('WebSocket error: ' + error, 'error');
+                };
+                
+                return new Promise((resolve, reject) => {
+                    ws.onopen = async () => {
+                        try {
+                            if (audioElementConnected && mediaElement) {
+                                console.log('Audio element already connected, recreating it');
+                                
+                                if (audioContext) {
+                                    try {
+                                        await audioContext.close();
+                                        console.log('Previous AudioContext closed');
+                                    } catch (e) {
+                                        console.error('Error closing previous AudioContext:', e);
+                                    }
+                                    audioContext = null;
+                                }
+                                
+                                audioElementConnected = false;
+                            }
+                            
+                            audioContext = new AudioContext();
+                            console.log('New AudioContext created with sample rate:', audioContext.sampleRate);
+                            
+                            if (mediaElement) {
+                                audioSource = audioContext.createMediaElementSource(mediaElement);
+                                console.log('New MediaElementSource created');
+                                audioElementConnected = true;
+                            }
+                            
+                            const originalSampleRate = audioContext.sampleRate;
+                            const resampleRatio = targetSampleRate / originalSampleRate;
+                            
+                            processor = audioContext.createScriptProcessor(segmentSize, 1, 1);
+                            
+                            processor.onaudioprocess = (e) => {
+                                if (ws && ws.readyState === WebSocket.OPEN && !translationPaused) {
+                                    const inputData = e.inputBuffer.getChannelData(0);
+                                    
+                                    const resampledLength = Math.floor(inputData.length * resampleRatio);
+                                    const resampledChunk = new Float32Array(resampledLength);
+                                    
+                                    for (let i = 0; i < resampledLength; i++) {
+                                        const originalIndex = Math.floor(i / resampleRatio);
+                                        resampledChunk[i] = inputData[originalIndex];
+                                    }
+                                    
+                                    const newBuffer = new Float32Array(resampledBuffer.length + resampledChunk.length);
+                                    newBuffer.set(resampledBuffer);
+                                    newBuffer.set(resampledChunk, resampledBuffer.length);
+                                    resampledBuffer = newBuffer;
+                                    
+                                    const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
+                                    
+                                    while (resampledBuffer.length >= targetChunkSize) {
+                                        const chunk = resampledBuffer.slice(0, targetChunkSize);
+                                        ws.send(chunk.buffer);
+                                        resampledBuffer = resampledBuffer.slice(targetChunkSize);
+                                    }
+                                }
+                            };
+                            
+                            if (audioSource) {
+                                audioSource.connect(processor);
+                                processor.connect(audioContext.destination);
+                                audioSource.connect(audioContext.destination);
+                            }
+                            
+                            translationInitialized = true;
+                            updateStatus('Playing and translating...', 'processing');
+                            resetIdleTimer();
+                            
+                            resolve();
+                        } catch (error) {
+                            console.error('Error:', error);
+                            updateStatus('Error initializing audio: ' + error, 'error');
+                            if (ws) ws.close();
+                            translationInitialized = false;
+                            reject(error);
+                        }
+                    };
+                });
+            } catch (error) {
+                updateStatus('Error: ' + error, 'error');
+                translationInitialized = false;
+                throw error;
+            }
+        }
+
+        // Clean up audio resources
+        function cleanupAudioResources() {
+            if (ws) {
+                try {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.close();
+                    }
+                } catch (e) {
+                    console.error('Error closing WebSocket:', e);
+                }
+                ws = null;
+            }
+            
+            if (micStream) {
+                micStream.getTracks().forEach(track => {
+                    track.stop();
+                    console.log('Microphone track stopped');
+                });
+                micStream = null;
+            }
+            
+            if (processor) {
+                try {
+                    processor.disconnect();
+                } catch (e) {
+                    console.error('Error disconnecting processor:', e);
+                }
+                processor = null;
+            }
+            
+            if (audioSource) {
+                try {
+                    audioSource.disconnect();
+                    console.log('Audio source disconnected');
+                } catch (e) {
+                    console.error('Error disconnecting audio source:', e);
+                }
+                audioSource = null;
+            }
+            
+            if (audioContext) {
+                try {
+                    audioContext.close().then(() => {
+                        console.log('AudioContext closed successfully');
+                        audioContext = null;
+                    }).catch(e => {
+                        console.error('Error closing audio context:', e);
+                    });
+                } catch (e) {
+                    console.error('Error in audio context cleanup:', e);
+                }
+            }
+            
+            resampledBuffer = new Float32Array();
+            audioBuffer = new Float32Array();
+            firstChunkSent = false;
+            
+            if (isMicRecording) {
+                isMicRecording = false;
+                toggleMic.innerHTML = `
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>
+                    </svg>
+                    Record Audio
+                `;
+                toggleMic.classList.remove('recording');
+                micStatus.textContent = '';
+                volumeIndicator.classList.add('hidden');
+            }
+            
+            audioElementConnected = false;
+        }
+
+        // Session management functions (keeping existing logic)
+        function resetIdleTimer() {
+            if (idleTimer) {
+                clearTimeout(idleTimer);
+                console.log('Idle timer reset due to user activity');
+            }
+            
+            if (sessionId) {
+                idleTimer = setTimeout(async () => {
+                    if (translationInitialized && !translationPaused) {
+                        console.log('Translation is active, not closing session due to inactivity');
+                        resetIdleTimer();
+                        return;
+                    }
+                    
+                    console.log('Application idle for 5 minutes, releasing resources...');
+                    await cleanupSession();
+                    updateStatus('Session closed due to inactivity', 'error');
+                }, IDLE_TIMEOUT);
+            }
+        }
+
+        // handle youtube player
+        playBtn.addEventListener("click", async () => {
+            if (!youtubeUrl || !youtubeUrl.value || !sessionId) {
+                alert("Please enter a YouTube URL and ensure a session is active.");
+                updateStatus("Please enter a YouTube URL and ensure a session is active",'error')
+                return;
+            }
+
+            // Show loading state before requesting backend
+            updateStatus("downloading audio first due to Youtube sandbox protection", "processing");
+
+            try {
+                const response = await fetch('/download_youtube?' + new URLSearchParams({
+                    url: youtubeUrl.value,
+                    session_id: sessionId
+                }), {
+                    method: 'POST'
+                });
+
+                //复用代码
+
+
+                const blob = await response.blob();
+                const fileType = blob.type;
+
+                if (!fileType.startsWith('video/')) {
+                    throw new Error('Expected video file, got: ' + fileType);
+                }
+
+                // Reuse upload logic
+                const file = new File([blob], 'youtube_video.mp4', { type: fileType });
+                createMediaElement(file);
+                translationInitialized = false;
+                updateStatus('Audio loaded from YouTube. Press play to start translation.', 'ready');
+                resetIdleTimer();
+
+                // Show translation panel
+                showPanel();
+                resetIdleTimer();
+            } catch (error) {
+                console.error('Error downloading or playing YouTube video:', error);
+                updateStatus('Failed to load YouTube video: ' + error, 'error');
+            }
+        });
+
+        async function cleanupSession() {
+            try {
+                stopPinging();
+                stopQueueCheck();
+                
+                if (isMicRecording) {
+                    stopMicrophone(false);
+                } else {
+                    volumeLevel.style.width = '0%';
+                    volumeIndicator.classList.add('hidden');
+                }
+                
+                micStatus.textContent = '';
+                
+                if (currentMediaElement) {
+                    currentMediaElement.pause();
+                    currentMediaElement.currentTime = 0;
+                }
+                
+                cleanupAudioResources();
+                
+                if (audioContext) {
+                    try {
+                        if (audioContext.state !== 'closed') {
+                            await audioContext.close();
+                        }
+                        audioContext = null;
+                    } catch (e) {
+                        console.error('Error closing AudioContext:', e);
+                    }
+                }
+                
+                if (sessionId) {
+                    console.log(`Deleting session ${sessionId} from client side`);
+                    try {
+                        const response = await fetch('/delete_session?' + new URLSearchParams({
+                            session_id: sessionId
+                        }), {
+                            method: 'POST'
+                        });
+                        
+                        const data = await response.json();
+                        if (!data.success) {
+                            console.error('Failed to delete session:', data.error);
+                        } else {
+                            console.log('Session successfully deleted from server');
+                        }
+                    } catch (e) {
+                        console.error('Error deleting session:', e);
+                    }
+                    
+                    localStorage.removeItem('translationSessionId_' + clientId);
+                    sessionId = null;
+                    isQueued = false;
+                }
+                
+                translationOutput.textContent = 'Translation will appear here...';
+                updateLatency.disabled = true;
+                resetTranslation.disabled = true;
+                
+            } catch (error) {
+                console.error('Error cleaning up session:', error);
+            }
+        }
+
+        // Ping and queue management (keeping existing logic)
+        function startPinging() {
+            if (pingInterval) {
+                clearInterval(pingInterval);
+            }
+            
+            if (!sessionId) {
+                return;
+            }
+            
+            sendPing();
+            pingInterval = setInterval(sendPing, PING_INTERVAL);
+            console.log(`Started ping interval (${PING_INTERVAL}ms)`);
+        }
+        
+        function stopPinging() {
+            if (pingInterval) {
+                clearInterval(pingInterval);
+                pingInterval = null;
+                console.log('Stopped ping interval');
+            }
+        }
+        
+        async function sendPing() {
+            if (!sessionId) {
+                stopPinging();
+                return;
+            }
+            
+            try {
+                const response = await fetch('/ping?' + new URLSearchParams({
+                    session_id: sessionId
+                }), {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (!data.success) {
+                    console.warn('Failed to send ping:', data.error);
+                    if (data.error === 'Invalid session ID') {
+                        stopPinging();
+                        sessionId = null;
+                        localStorage.removeItem('translationSessionId_' + clientId);
+                    }
+                }
+            } catch (error) {
+                console.error('Error sending ping:', error);
+            }
+        }
+
+        async function checkQueueStatus(sessionId) {
+            if (!sessionId || !isQueued) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/queue_status/${sessionId}`);
+                const data = await response.json();
+                
+                if (data.status === 'active') {
+                    isQueued = false;
+                    if (queueCheckInterval) {
+                        clearInterval(queueCheckInterval);
+                        queueCheckInterval = null;
+                    }
+                    
+                    updateStatus('Model loaded successfully. Upload audio and press play to start translation.', 'ready');
+                    updateElectronStatus('Model loaded successfully. Upload audio and press play to start translation.', 'ready');
+                    updateLatency.disabled = false;
+                    resetTranslation.disabled = false;
+                    console.log('Model loaded successfully:', {
+                        model: agentType.value,
+                        languagePair: languagePair.value,
+                        latency: latencyMultiplier.value + 'x'
+                    });
+                    startPinging();
+                    resetIdleTimer();
+                } else if (data.status === 'initializing') {
+                    updateStatus('Model is initializing, please wait...', 'processing');
+                    updateElectronStatus('Model is initializing, please wait...', 'processing');
+                } else if (data.status === 'queued') {
+                    updateStatus(`Waiting in queue... Position: ${data.queue_position}`, 'processing');
+                    updateElectronStatus(`Waiting in queue... Position: ${data.queue_position}`, 'processing');
+                } else {
+                    updateStatus('Error: Session not found in queue or active sessions', 'error');
+                    updateElectronStatus('Error: Session not found in queue or active sessions', 'error');
+                    isQueued = false;
+                    if (queueCheckInterval) {
+                        clearInterval(queueCheckInterval);
+                        queueCheckInterval = null;
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking queue status:', error);
+                updateStatus('Error checking queue status: ' + error, 'error');
+            }
+        }
+        
+        function startQueueCheck(sessionId) {
+            if (queueCheckInterval) {
+                clearInterval(queueCheckInterval);
+            }
+            
+            checkQueueStatus(sessionId);
+            queueCheckInterval = setInterval(() => checkQueueStatus(sessionId), QUEUE_CHECK_INTERVAL);
+            console.log(`Started queue status check interval (${QUEUE_CHECK_INTERVAL}ms)`);
+        }
+        
+        function stopQueueCheck() {
+            if (queueCheckInterval) {
+                clearInterval(queueCheckInterval);
+                queueCheckInterval = null;
+                console.log('Stopped queue status check interval');
+            }
+        }
+
+        // Event Listeners
+        loadModel.addEventListener('click', async () => {
+            try {
+                await cleanupSession();
+                updateStatus('Loading model...', 'processing');
+                
+                // 在Electron环境中，立即显示翻译窗口以提供反馈
+                if (isElectron) {
+                    showElectronTranslationWindow();
+                    // 更新翻译窗口的状态
+                    updateElectronStatus('Loading model...', 'processing');
+                }
+                
+                currentLatencyMultiplier = parseInt(latencyMultiplier.value);
+                const response = await fetch('/init?' + new URLSearchParams({
+                    agent_type: agentType.value,
+                    language_pair: languagePair.value,
+                    latency_multiplier: currentLatencyMultiplier,
+                    client_id: clientId
+                }), {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                sessionId = data.session_id;
+                localStorage.setItem('translationSessionId_' + clientId, sessionId);
+                startPinging();
+                
+                // Log settings to console
+                console.log('Model configuration:', {
+                    model: agentType.value,
+                    languagePair: languagePair.value,
+                    latency: latencyMultiplier.value + 'x',
+                    sessionId: sessionId
+                });
+                
+                if (data.queued) {
+                    isQueued = true;
+                    updateStatus(`Waiting in queue... Position: ${data.queue_position}`, 'processing');
+                    updateElectronStatus(`Waiting in queue... Position: ${data.queue_position}`, 'processing');
+                    startQueueCheck(sessionId);
+                    updateLatency.disabled = true;
+                    resetTranslation.disabled = true;
+                } else if (data.initializing) {
+                    updateStatus('Model is initializing, please wait...', 'processing');
+                    updateElectronStatus('Model is initializing, please wait...', 'processing');
+                    updateLatency.disabled = true;
+                    resetTranslation.disabled = true;
+                    isQueued = true;
+                    startQueueCheck(sessionId);
+                } else {
+                    isQueued = false;
+                    translationInitialized = false;
+                    updateLatency.disabled = false;
+                    resetTranslation.disabled = false;
+                    updateStatus('Model loaded successfully. Upload audio and press play to start translation.', 'ready');
+                    updateElectronStatus('Model loaded successfully. Upload audio and press play to start translation.', 'ready');
+                    console.log('Model loaded successfully:', {
+                        model: agentType.value,
+                        languagePair: languagePair.value,
+                        latency: latencyMultiplier.value + 'x'
+                    });
+                    startPinging();
+                    resetIdleTimer();
+                }
+            } catch (error) {
+                updateStatus('Error loading model: ' + error, 'error');
+                console.error('Error loading model:', error);
+            }
+        });
+
+        audioFile.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                createMediaElement(file);
+                translationInitialized = false;
+                updateStatus('Audio loaded. Press play to start translation.', 'ready');
+                resetIdleTimer();
+            }
+        });
+
+        // Upload button click handler
+        uploadBtn.addEventListener('click', () => {
+            audioFile.click();
+        });
+
+        // Microphone functionality
+        toggleMic.addEventListener('click', async () => {
+            if (isMicRecording) {
+                stopMicrophone(true);
+            } else {
+                startMicrophone();
+            }
+        });
+
+        async function startMicrophone() {
+            try {
+                if (!sessionId) {
+                    micStatus.textContent = 'Please load a model first';
+                    console.warn('Microphone access attempted without loaded model');
+                    updateStatus('Please load a model first', 'error');
+                    return;
+                }
+                
+                console.log('Starting microphone with session ID:', sessionId);
+                
+                // Show translation panel
+                showPanel();
+                
+                // 确保在Electron环境中翻译窗口已显示并更新状态
+                if (isElectron) {
+                    console.log('Electron environment detected, ensuring translation window is shown');
+                    updateStatus('Requesting microphone access...', 'processing');
+                }
+            
+            try {
+                console.log('Requesting microphone access...');
+                updateStatus('Requesting microphone access...', 'processing');
+                
+                micStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+                
+                console.log('Microphone access granted, stream obtained:', micStream);
+                updateStatus('Microphone access granted, connecting...', 'processing');
+                
+                const wsUrl = getWebSocketUrl(sessionId);
+                console.log(`Connecting to WebSocket at: ${wsUrl}`);
+                
+                ws = new WebSocket(wsUrl);
+                
+                ws.onmessage = (event) => {
+                    console.log('WebSocket message received:', event.data);
+                    if (isElectron) {
+                        // 在Electron环境中只更新独立翻译窗口
+                        updateElectronTranslation(event.data);
+                    } else {
+                        // 在浏览器环境中更新主窗口面板
+                        translationOutput.textContent = event.data;
+                        scrollTranslationToBottom();
+                    }
+                };
+                
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    const errorMsg = 'WebSocket connection error';
+                    micStatus.textContent = errorMsg;
+                    updateStatus(errorMsg, 'error');
+                    stopMicrophone(false);
+                };
+                
+                ws.onclose = (event) => {
+                    console.log('WebSocket closed:', event.code, event.reason);
+                    if (event.code !== 1000) { // Not a normal closure
+                        updateStatus('Connection lost: ' + (event.reason || 'Unknown error'), 'error');
+                    }
+                };
+                
+                ws.onopen = () => {
+                    console.log('WebSocket connected successfully');
+                    
+                    try {
+                        console.log('Creating AudioContext...');
+                        audioContext = new AudioContext();
+                        console.log('AudioContext created with sample rate:', audioContext.sampleRate);
+                        
+                        console.log('Creating MediaStreamSource...');
+                        const micSource = audioContext.createMediaStreamSource(micStream);
+                        console.log('MediaStreamSource created');
+                        
+                        console.log('Creating ScriptProcessor...');
+                        processor = audioContext.createScriptProcessor(4096, 1, 1);
+                        console.log('ScriptProcessor created');
+                        
+                        const originalSampleRate = audioContext.sampleRate;
+                        const resampleRatio = targetSampleRate / originalSampleRate;
+                        console.log('Resample ratio:', resampleRatio);
+                        
+                        processor.onaudioprocess = (e) => {
+                            if (ws && ws.readyState === WebSocket.OPEN) {
+                                const inputData = e.inputBuffer.getChannelData(0);
+                                
+                                let hasSound = false;
+                                let volumeSum = 0;
+                                for (let i = 0; i < inputData.length; i++) {
+                                    const volume = Math.abs(inputData[i]);
+                                    volumeSum += volume;
+                                    if (volume > 0.01) {
+                                        hasSound = true;
+                                    }
+                                }
+                                
+                                const averageVolume = volumeSum / inputData.length;
+                                const volumePercent = Math.min(100, Math.round(averageVolume * 1000));
+                                volumeLevel.style.width = volumePercent + '%';
+                                
+                                if (hasSound) {
+                                    resetIdleTimer();
+                                }
+                                
+                                const resampledLength = Math.floor(inputData.length * resampleRatio);
+                                const resampledChunk = new Float32Array(resampledLength);
+                                
+                                for (let i = 0; i < resampledLength; i++) {
+                                    const originalIndex = Math.floor(i / resampleRatio);
+                                    resampledChunk[i] = inputData[originalIndex];
+                                }
+                                
+                                const newBuffer = new Float32Array(resampledBuffer.length + resampledChunk.length);
+                                newBuffer.set(resampledBuffer);
+                                newBuffer.set(resampledChunk, resampledBuffer.length);
+                                resampledBuffer = newBuffer;
+                                
+                                const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
+                                
+                                while (resampledBuffer.length >= targetChunkSize) {
+                                    const chunk = resampledBuffer.slice(0, targetChunkSize);
+                                    try {
+                                        if (ws.readyState === WebSocket.OPEN) {
+                                            ws.send(chunk.buffer);
+                                        }
+                                    } catch (error) {
+                                        console.error('Error sending audio data:', error);
+                                        updateStatus('Error sending audio data: ' + error.message, 'error');
+                                        stopMicrophone(false);
+                                        return;
+                                    }
+                                    resampledBuffer = resampledBuffer.slice(targetChunkSize);
+                                }
+                            }
+                        };
+                        
+                        console.log('Connecting audio nodes...');
+                        micSource.connect(processor);
+                        processor.connect(audioContext.destination);
+                        console.log('Audio nodes connected');
+                        
+                        translationPaused = false;
+                        
+                        toggleMic.innerHTML = `
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>
+                            </svg>
+                            Pause Microphone
+                        `;
+                        toggleMic.classList.add('recording');
+                        micStatus.textContent = 'Microphone active. Speaking will be translated in real-time.';
+                        volumeIndicator.classList.remove('hidden');
+                        isMicRecording = true;
+                        updateStatus('Translating from microphone...', 'processing');
+                        resetIdleTimer();
+                        
+                        console.log('Sending initial silent chunk...');
+                        const silentChunk = new Float32Array(baseChunkSize * currentLatencyMultiplier);
+                        try {
+                            if (ws.readyState === WebSocket.OPEN) {
+                                ws.send(silentChunk.buffer);
+                                console.log('Initial silent chunk sent successfully');
+                            }
+                        } catch (error) {
+                            console.error('Error sending initial silent chunk:', error);
+                            updateStatus('Error initializing audio stream: ' + error.message, 'error');
+                            stopMicrophone(false);
+                        }
+                        
+                    } catch (audioError) {
+                        console.error('Error setting up audio processing:', audioError);
+                        updateStatus('Error setting up audio processing: ' + audioError.message, 'error');
+                        stopMicrophone(false);
+                    }
+                };
+                
+            } catch (error) {
+                console.error('Microphone access error:', error);
+                let errorMessage = 'Error accessing microphone: ';
+                
+                if (error.name === 'NotAllowedError') {
+                    errorMessage += 'Permission denied. Please allow microphone access and try again.';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage += 'No microphone found. Please connect a microphone and try again.';
+                } else if (error.name === 'NotReadableError') {
+                    errorMessage += 'Microphone is already in use by another application.';
+                } else {
+                    errorMessage += error.message;
+                }
+                
+                micStatus.textContent = errorMessage;
+                updateStatus(errorMessage, 'error');
+                console.error('Full error details:', error);
+            }
+            } catch (outerError) {
+                console.error('Unexpected error in startMicrophone:', outerError);
+                updateStatus('Unexpected error starting microphone: ' + outerError.message, 'error');
+            }
+        }
+
+        function stopMicrophone(isManualPause = false) {
+            if (ws && ws.readyState === WebSocket.OPEN && resampledBuffer.length > 0) {
+                const targetChunkSize = baseChunkSize * currentLatencyMultiplier;
+                const finalChunk = new Float32Array(targetChunkSize);
+                finalChunk.set(resampledBuffer);
+                try {
+                    ws.send(finalChunk.buffer);
+                } catch (error) {
+                    console.error('Error sending final audio chunk:', error);
+                }
+            }
+            
+            if (ws) {
+                try {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.close();
+                    }
+                } catch (e) {
+                    console.error('Error closing WebSocket:', e);
+                }
+                ws = null;
+            }
+            
+            if (micStream) {
+                micStream.getTracks().forEach(track => {
+                    track.stop();
+                });
+                micStream = null;
+            }
+            
+            if (processor) {
+                try {
+                    processor.disconnect();
+                } catch (e) {
+                    console.error('Error disconnecting processor:', e);
+                }
+                processor = null;
+            }
+            
+            if (audioContext) {
+                try {
+                    if (audioContext.state !== 'closed') {
+                        audioContext.close().catch(e => {
+                            console.error('Error closing audio context:', e);
+                        });
+                    }
+                } catch (e) {
+                    console.error('Error in audio context cleanup:', e);
+                }
+                audioContext = null;
+            }
+            
+            resampledBuffer = new Float32Array();
+            volumeLevel.style.width = '0%';
+            volumeIndicator.classList.add('hidden');
+            
+            toggleMic.innerHTML = `
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>
+                </svg>
+                Record Audio
+            `;
+            toggleMic.classList.remove('recording');
+            
+            if (isManualPause) {
+                micStatus.textContent = 'Microphone paused.';
+            } else {
+                micStatus.textContent = '';
+            }
+            
+            isMicRecording = false;
+            translationPaused = true;
+            translationInitialized = false;
+        }
+
+        // Reset translation
+        resetTranslation.addEventListener('click', async () => {
+            if (!sessionId) return;
+            
+            try {
+                if (isMicRecording) {
+                    stopMicrophone(false);
+                } else {
+                    volumeLevel.style.width = '0%';
+                    volumeIndicator.classList.add('hidden');
+                    micStatus.textContent = '';
+                }
+                
+                cleanupAudioResources();
+                
+                if (audioContext) {
+                    try {
+                        if (audioContext.state !== 'closed') {
+                            await audioContext.close();
+                        }
+                        audioContext = null;
+                    } catch (e) {
+                        console.error('Error closing AudioContext:', e);
+                    }
+                }
+                
+                audioElementConnected = false;
+                
+                // Reset media container
+                const existingMedia = mediaContainer.querySelector('audio, video');
+                if (existingMedia) {
+                    existingMedia.remove();
+                }
+                
+                const placeholder = mediaContainer.querySelector('.video-placeholder');
+                if (placeholder) {
+                    placeholder.style.display = 'block';
+                }
+                
+                currentMediaElement = null;
+                
+                if (audioFile) {
+                    audioFile.value = '';
+                }
+                
+                if (youtubeUrl) {
+                    youtubeUrl.value = '';
+                }
+                
+                volumeLevel.style.width = '0%';
+                volumeIndicator.classList.add('hidden');
+                translationInitialized = false;
+                
+                const response = await fetch('/reset_translation?' + new URLSearchParams({
+                    session_id: sessionId
+                }), {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    if (!isElectron) {
+                        // 只在非Electron环境下更新主窗口面板
+                        translationOutput.textContent = 'Translation will appear here...';
+                    }
+                    updateStatus(data.message || 'Translation reset successfully. Please select an audio source.', 'ready');
+                    updateLatency.disabled = false;
+                    console.log('Translation reset successfully');
+                } else {
+                    updateStatus('Failed to reset translation: ' + data.error, 'error');
+                    console.error('Failed to reset translation:', data.error);
+                }
+            } catch (error) {
+                updateStatus('Error resetting translation: ' + error, 'error');
+                console.error('Error resetting translation:', error);
+            }
+        });
+
+        // Update latency
+        updateLatency.addEventListener('click', async () => {
+            if (!sessionId) return;
+            
+            try {
+                currentLatencyMultiplier = parseInt(latencyMultiplier.value);
+                const response = await fetch('/update_latency?' + new URLSearchParams({
+                    session_id: sessionId,
+                    latency_multiplier: currentLatencyMultiplier
+                }), {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    updateStatus('Latency updated successfully', 'ready');
+                    console.log('Latency updated to:', latencyMultiplier.value + 'x');
+                } else {
+                    updateStatus('Failed to update latency: ' + data.error, 'error');
+                    console.error('Failed to update latency:', data.error);
+                }
+            } catch (error) {
+                updateStatus('Error updating latency: ' + error, 'error');
+                console.error('Error updating latency:', error);
+            }
+        });
+
+        // 供Electron调用的重置翻译函数
+        window.resetTranslationFromElectron = async function() {
+            if (!sessionId) return;
+            
+            try {
+                if (isMicRecording) {
+                    stopMicrophone(false);
+                } else {
+                    volumeLevel.style.width = '0%';
+                    volumeIndicator.classList.add('hidden');
+                    micStatus.textContent = '';
+                }
+                
+                cleanupAudioResources();
+                
+                if (audioContext) {
+                    try {
+                        if (audioContext.state !== 'closed') {
+                            await audioContext.close();
+                        }
+                        audioContext = null;
+                    } catch (e) {
+                        console.error('Error closing AudioContext:', e);
+                    }
+                }
+                
+                audioElementConnected = false;
+                
+                // Reset media container
+                const existingMedia = mediaContainer.querySelector('audio, video');
+                if (existingMedia) {
+                    existingMedia.remove();
+                }
+                
+                const placeholder = mediaContainer.querySelector('.video-placeholder');
+                if (placeholder) {
+                    placeholder.style.display = 'block';
+                }
+                
+                currentMediaElement = null;
+                
+                if (audioFile) {
+                    audioFile.value = '';
+                }
+                
+                if (youtubeUrl) {
+                    youtubeUrl.value = '';
+                }
+                
+                volumeLevel.style.width = '0%';
+                volumeIndicator.classList.add('hidden');
+                translationInitialized = false;
+                
+                const response = await fetch('/reset_translation?' + new URLSearchParams({
+                    session_id: sessionId
+                }), {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    updateStatus(data.message || 'Translation reset successfully. Please select an audio source.', 'ready');
+                    updateLatency.disabled = false;
+                    console.log('Translation reset successfully from Electron');
+                } else {
+                    updateStatus('Failed to reset translation: ' + data.error, 'error');
+                    console.error('Failed to reset translation:', data.error);
+                }
+            } catch (error) {
+                updateStatus('Error resetting translation: ' + error, 'error');
+                console.error('Error resetting translation:', error);
+            }
+        };
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            ensureClientId();
+            initializePanelDragging();
+            
+            const userEvents = ['mousedown', 'keypress', 'scroll', 'touchstart'];
+            userEvents.forEach(eventType => {
+                document.addEventListener(eventType, resetIdleTimer);
+            });
+            
+            resetIdleTimer();
+            
+            const storedSessionId = localStorage.getItem('translationSessionId_' + clientId);
+            if (storedSessionId) {
+                checkSessionStatus(storedSessionId);
+            }
+            
+            const pendingDeleteSessions = JSON.parse(localStorage.getItem('pendingDeleteSessions_' + clientId) || '{}');
+            if (Object.keys(pendingDeleteSessions).length > 0) {
+                console.log(`Found ${Object.keys(pendingDeleteSessions).length} orphaned sessions to delete`);
+                // Add session cleanup logic here if needed
+            }
+        });
+
+        async function checkSessionStatus(checkSessionId) {
+            try {
+                const response = await fetch('/delete_session?' + new URLSearchParams({
+                    session_id: checkSessionId
+                }), {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    console.log('Session exists and was deleted:', checkSessionId);
+                    localStorage.removeItem('translationSessionId_' + clientId);
+                } else if (data.error && data.error.includes('Invalid session ID')) {
+                    console.log('Stored session no longer exists:', checkSessionId);
+                    localStorage.removeItem('translationSessionId_' + clientId);
+                } else {
+                    console.error('Unexpected error checking session:', data.error);
+                    localStorage.removeItem('translationSessionId_' + clientId);
+                }
+            } catch (error) {
+                console.error('Error checking session status:', error);
+                localStorage.removeItem('translationSessionId_' + clientId);
+            }
+        }
+    </script>
+</body>
+</html> 

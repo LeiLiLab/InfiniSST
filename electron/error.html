@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Connection Error</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .container {
+            text-align: center;
+            max-width: 600px;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+        .code {
+            background: rgba(0,0,0,0.2);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            margin: 20px 0;
+        }
+        .button {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚠️ 连接失败</h1>
+        <p>无法连接到InfiniSST API服务器 (localhost:8001)</p>
+        <p>请确保后端服务器正在运行：</p>
+        <div class="code">
+            cd /Users/bytedance/PycharmProjects/InfiniSST<br>
+            python serve/api.py --host 0.0.0.0 --port 8001
+        </div>
+        <p>服务器启动后，请刷新此页面。</p>
+        <button class="button" onclick="window.location.reload()">刷新页面</button>
+        <button class="button" onclick="window.electronAPI && window.electronAPI.quit ? window.electronAPI.quit() : window.close()">退出应用</button>
+    </div>
+</body>
+</html> 

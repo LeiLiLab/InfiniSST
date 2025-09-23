@@ -20,6 +20,11 @@ def add_speech_encoder_args(parser):
         default=None,
     )
     parser.add_argument(
+        "--seamless-path",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
         "--block-size", 
         type=int, 
         default=12, # blocksize=1 means 80ms
@@ -28,11 +33,6 @@ def add_speech_encoder_args(parser):
         "--max-cache-size",
         type=int, 
         default=125, # 125 * 0.08 = 1 second
-    )
-    parser.add_argument(
-        "--xpos",
-        type=int,
-        default=1, # 1 for True, 0 for False
     )
     parser.add_argument(
         "--rope",

@@ -306,7 +306,7 @@ model_configs:
 scheduler:
   max_batch_size: 32
   batch_timeout: 0.1
-  session_timeout: 3600
+  session_timeout: 300
 
 server:
   host: "0.0.0.0"

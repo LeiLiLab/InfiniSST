@@ -4,25 +4,35 @@ This repository contains a demo and the implementation of our paper "InfiniSST: 
 
 ## Online Demo
 
-The link to the online demo is [here](https://infinisst.ngrok.app/).
+The link to the online demo is [here](https://c79b-128-111-28-80.ngrok-free.app/).
 
 ## Installation
 
 ```bash
-conda create -n infinisst -y python=3.9
+conda create -n infinisst -y python=3.10
 conda activate infinisst
 
 # torch and related packages
 pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
-pip install transformers==4.47.0 evaluate jiwer lightning accelerate deepspeed rotary_embedding_torch torchtune sentence-transformers wandb tensorboardX matplotlib soundfile simuleval jupyter jieba unbabel-comet simalign praat-textgrids
+pip install transformers==4.47.0 evaluate jiwer lightning accelerate deepspeed rotary_embedding_torch torchtune sentence-transformers wandb tensorboardX matplotlib soundfile simuleval jupyter jieba unbabel-comet simalign praat-textgrids peft
 pip install flash-attn --no-build-isolation
 
 # fairseq for wav2vec2
 git clone git@github.com:facebookresearch/fairseq.git
-cd fairseq
+mv fairseq fairseq-0.12.2
+cd fairseq-0.12.2
 git checkout 0.12.2-release
 pip install pip==23.3
 pip install -e .
+cd ..
+
+# flashinfer
+git clone git@github.com:siqiouya/flashinfer.git
+cd flashinfer
+# latest v2.5.0 version has numerical instability issue
+git checkout v0.2.0 
+pip install --no-build-isolation --verbose --editable .
+cd ..
 
 # serving
 pip install fastapi uvicorn python-multipart websockets

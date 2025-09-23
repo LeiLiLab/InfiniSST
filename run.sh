@@ -1,141 +1,104 @@
-#!/bin/bash
-#SBATCH --job-name=llama3-8b
-#SBATCH --output=./slurm-out/llama3-8b_de.out
-#SBATCH --nodes=1
-#SBATCH --gres=gpu:6000Ada:8
-#SBATCH --mem=256GB
-#SBATCH --time 2-00:00:00
-#SBATCH --mail-user=xixu@andrew.cmu.edu
-#SBATCH --mail-type=START,END,FAIL
-#SBATCH --partition=general
+#!/usr/bin/env bash
 
-cd train
+# Define the Python interpreter path and environment bin
+source /opt/conda/etc/profile.d/conda.sh
+conda activate infinisst
+# Default to German if no argument is provided
+lang_arg=${1:-"--de"}
+source_file=$2
+target_file=$3
+output_file=$4
 
-source $HOME/sllama/bin/activate
+if [ -z "$lang_arg" ] || [ -z "$source_file" ] || [ -z "$target_file" ] || [ -z "$output_file" ]; then
+    echo "Usage: $0 [--de|--zh] /path/to/source /path/to/target /path/to/output"
+    exit 1
+fi
 
-# mkdir -p /scratch/xixu/
+# Set language-specific configurations based on argument
+if [ "$lang_arg" == "--de" ]; then
+    # German configuration
+    state_dict_path="/app/iwslt2025/en-de_state_dict.bin"
+    lora_path="/app/iwslt2025/en-de_lora.bin"
+    lang_code=de
+    lang=German
+    tokenizer=13a
+    unit=word
+    latency_multiplier=2
+elif [ "$lang_arg" == "--zh" ]; then
+    # Chinese configuration
+    state_dict_path="/app/iwslt2025/en-zh_state_dict.bin"
+    lora_path="/app/iwslt2025/en-zh_lora.bin"
+    lang_code=zh
+    lang=Chinese
+    tokenizer=zh
+    unit=char
+    latency_multiplier=3
+else
+    echo "Invalid argument. Use --de for German or --zh for Chinese."
+    exit 1
+fi
 
-# rm -rf /scratch/xixu/*
+# Common configurations
+lora_rank=32
+llm_path=Qwen/Qwen2.5-7B-Instruct
+w2v2_path=/app/iwslt2025/wav2_vec_vox_960h_pl.pt
+w2v2_type=w2v2
+ctc_finetuned=True
 
-# echo "Copying dataset."
-# /usr/bin/cp -f /data/user_data/yuanjinw/dataset.tar.zst /scratch/xixu/
-# echo "Dataset copied."
+# Agent specific parameters
+audio_normalize=0
+src_segment_size=$(($latency_multiplier * 960))
+max_llm_cache_size=1000
+no_repeat_ngram_lookback=100
+no_repeat_ngram_size=5
+max_new_tokens=$(($latency_multiplier * 10))
+max_latency_multiplier=12
+beam=4
+ms=0
 
-# echo "Extracting dataset."
-# zstd --ultra -1 -d /scratch/xixu/dataset.tar.zst --stdout | tar axf - -C /scratch/xixu/
-# # tar -axf /scratch/siqiouya/dataset.tar.zst -C /scratch/siqiouya/
-# echo "Dataset extracted."
+# Set path to repo
+export PYTHONPATH=/app
 
-# llm_model=meta-llama/Llama-2-7b-hf
-llm_model=meta-llama/Llama-3.1-8B
-ssl_model=/data/user_data/yuanjinw/models/wav2_vec_vox_960h_pl.pt
-# ssl_model=/data/user_data/yuanjinw/models/hubert_large_ll60k_finetune_ls960.pt
-speech_encoder=w2v
-# data_path=/scratch/xixu/dataset/must-c-v1.0/en-es
-# data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-de
-data_path=/compute/babel-6-17/xixu/datasets/must-c-v1.0/en-fr
-source_lang="English"
-target_lang="French"
-name="3.1-8B-s1-${source_lang,,}-${target_lang,,}"
-save_path=/scratch/xixu/runs/$name
-mkdir -p ${save_path}
+source /opt/conda/etc/profile.d/conda.sh
+conda activate infinisst
 
-export PYTHONPATH=/home/yuanjinw/work/sllama
-export WANDB_PROJECT="mustc_1.0_fr"
-export WANDB_ENTITY="streamllama"
-
-export NCCL_P2P_DISABLE=1
-export NCCL_IB_DISABLE=1
-SLURM_GPUS=8
-
-# python correct_path.py
-
-export CUDA_VISIBLE_DEVICE=0,1,2,3,4,5,6,7
-
-
-torchrun --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:29503\
-    stage1.py \
-    --model_name_or_path ${llm_model} \
-    --speech_tower_path ${ssl_model} \
-    --speech_tower_type ${speech_encoder} \
-    --ssl_fintuned True \
-    --data_path ${data_path} \
-    --data_split_train 'train' \
-    --data_split_eval 'dev' \
-    --source_lang "${source_lang}" \
-    --target_lang "${target_lang}" \
-    --freeze_speech_foundation False \
-    --freeze_backbone True \
-    --only_tune_adapter True \
-    --output_dir ${save_path} \
-    --num_train_epochs  6 \
-    --per_device_train_batch_size 8 \
-    --per_device_eval_batch_size 8 \
-    --gradient_accumulation_steps 4 \
-    --evaluation_strategy "steps" \
-    --eval_steps 200 \
-    --save_strategy "steps" \
-    --save_steps 200 \
-    --save_total_limit 4 \
-    --learning_rate 2e-4 \
-    --weight_decay 0. \
-    --warmup_ratio 0.2 \
-    --lr_scheduler_type "cosine" \
-    --logging_steps 5 \
-    --gradient_checkpointing True \
-    --seed 998244353 \
-    --report_to wandb \
-    --run_name $name \
-    --fp16 True \
-    --deepspeed ../configs/deepspeed_config.json \
-
-# stage2 train
-# llm_model=$save_path/checkpoint-6096
-llm_model=/compute/babel-14-13/xixu/runs/${name}/checkpoint-6306
-name="3.2-8B-s2-${source_lang,,}-${target_lang,,}"
-save_path=/scratch/xixu/runs/$name
-
-python ./zero_to_fp32.py ${llm_model} ${llm_model}/pytorch_model.bin
-
-python ./extract_adapter.py \
-    --model_name_or_path ${llm_model} \
-    --extracted_name 'speech_encoder' \
-    --output ${llm_model}/speech_encoder.bin
-
-speech_encoder_path=${llm_model}/speech_encoder.bin
-
-torchrun  --nproc_per_node=$SLURM_GPUS --rdzv-endpoint=0.0.0.0:29503\
-    stage2_large.py \
-    --model_name_or_path ${llm_model} \
-    --speech_tower_path ${speech_encoder_path} \
-    --speech_tower_type ${speech_encoder} \
-    --ssl_fintuned True \
-    --data_path ${data_path} \
-    --data_split_train 'train' \
-    --data_split_eval 'dev' \
-    --source_lang "${source_lang}" \
-    --target_lang "${target_lang}" \
-    --freeze_speech_foundation False \
-    --freeze_backbone False \
-    --only_tune_adapter False \
-    --output_dir ${save_path} \
-    --num_train_epochs 1 \
-    --per_device_train_batch_size 4 \
-    --per_device_eval_batch_size 8 \
-    --gradient_accumulation_steps 4 \
-    --evaluation_strategy "steps" \
-    --eval_steps 200 \
-    --save_strategy "steps" \
-    --save_steps 200 \
-    --save_total_limit 3 \
-    --learning_rate 7e-6 \
-    --weight_decay 0. \
-    --warmup_ratio 0.2 \
-    --lr_scheduler_type "cosine" \
-    --logging_steps 5 \
-    --gradient_checkpointing True \
-    --seed 998244353 \
-    --report_to wandb \
-    --run_name $name \
-    --fp16 True \
-    --deepspeed ../configs/deepspeed_config_stage3.json \
+# Call Python directly with simuleval module to avoid shebang issues
+simuleval  \
+    --agent agents/infinisst.py \
+    --source-segment-size ${src_segment_size} \
+    --latency-multiplier ${latency_multiplier} \
+    --max-latency-multiplier ${max_latency_multiplier} \
+    --source-lang English \
+    --target-lang ${lang} \
+    --min-start-sec ${ms} \
+    --source "${source_file}" \
+    --target "${target_file}" \
+    --output "${output_file}" \
+    --model-type w2v2_qwen25 \
+    --w2v2-path ${w2v2_path} \
+    --w2v2-type ${w2v2_type} \
+    --ctc-finetuned ${ctc_finetuned} \
+    --audio-normalize ${audio_normalize} \
+    \
+    --length-shrink-cfg "[(1024,2,2)] * 2" \
+    --block-size 48 \
+    --max-cache-size 576 \
+    --xpos 0 \
+    \
+    --max-llm-cache-size ${max_llm_cache_size} \
+    --always-cache-system-prompt \
+    \
+    --max-new-tokens ${max_new_tokens} \
+    --beam ${beam} \
+    --no-repeat-ngram-lookback ${no_repeat_ngram_lookback} \
+    --no-repeat-ngram-size ${no_repeat_ngram_size} \
+    --repetition-penalty 1.2 \
+    \
+    --model-name ${llm_path} \
+    --state-dict-path ${state_dict_path} \
+    --lora-path ${lora_path} \
+    --lora-rank ${lora_rank} \
+    \
+    --quality-metrics BLEU \
+    --eval-latency-unit ${unit} \
+    --sacrebleu-tokenizer ${tokenizer} 

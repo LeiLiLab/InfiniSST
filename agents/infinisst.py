@@ -1,23 +1,66 @@
+import os
+import re
 import contextlib
 from time import perf_counter
 
 from typing import Optional
-from simuleval.agents.states import AgentStates
-from simuleval.utils import entrypoint
-from simuleval.data.segments import SpeechSegment
-from simuleval.agents import SpeechToTextAgent
-from simuleval.agents.actions import WriteAction, ReadAction
-from simuleval.agents.states import AgentStates
 from dataclasses import dataclass
+
+# 条件导入simuleval模块
+try:
+    from simuleval.agents.states import AgentStates # type: ignore[attr-defined]
+    from simuleval.utils import entrypoint # type: ignore[attr-defined]
+    from simuleval.data.segments import SpeechSegment
+    from simuleval.agents import SpeechToTextAgent # type: ignore[attr-defined]
+    from simuleval.agents.actions import WriteAction, ReadAction # type: ignore[attr-defined]
+    SIMULEVAL_AVAILABLE = True
+except ImportError:
+    # 如果simuleval不可用，创建占位符类
+    class AgentStates:
+        def __init__(self):
+            self.source = []
+            self.target = []
+            self.source_finished = False
+            self.source_sample_rate = 16000
+        
+        def reset(self):
+            self.source = []
+            self.target = []
+            self.source_finished = False
+    
+    class SpeechToTextAgent:
+        def __init__(self, args):
+            pass
+    
+    class WriteAction:
+        def __init__(self, content="", finished=False):
+            self.content = content
+            self.finished = finished
+    
+    class ReadAction:
+        def __init__(self):
+            pass
+    
+    def entrypoint(cls):
+        """占位符装饰器"""
+        return cls
+    
+    SIMULEVAL_AVAILABLE = False
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 import transformers
+from transformers import AutoProcessor
+
+from peft import LoraConfig, get_peft_model
+
 from tqdm import tqdm
-from model.llm import SpeechLlamaForCausalLM
-from model.patches.patch_speech_encoder import patch_w2v2
-from model.patches.patch_llm import patch_llm
+from model.llama31 import SpeechLlamaForCausalLM
+from model.qwen25 import SpeechQwenForCausalLM
+from model.patches.patch_w2v2 import patch_w2v2
+from model.patches.patch_llama31 import patch_llama31
+from model.patches.patch_qwen25 import patch_qwen25
 from model.patches.patch_hf import patch_hf
 
 from agents.options import (
@@ -25,10 +68,15 @@ from agents.options import (
     add_simuleval_args,
     add_gen_args
 )
-from model.speech_encoder import SpeechEncoderW2V2RoPE
+from model.w2v2 import SpeechEncoderW2V2RoPE
+from model.seamlessm4t_v2_encoder import (
+    SeamlessM4Tv2Config,
+    SeamlessM4Tv2SpeechEncoder
+)
 from train.dataset import (
     DEFAULT_SPEECH_PATCH_TOKEN,
-    DEFAULT_LATENCY_TOKEN
+    DEFAULT_LATENCY_TOKEN,
+    normalize
 )
 
 import logging
@@ -49,17 +97,15 @@ def synchronized_timer(description: str):
 
 @dataclass
 class S2TAgentStates(AgentStates):
-    src_len: int
     speech_cache: None
     past_key_values: None
     target_ids: list
     segment_idx: int
     translations_list: list
-    MAX_SRC_LEN = 1600000
+    MAX_SRC_LEN = 16000 * 30
 
     def reset(self):
         super().reset()
-        self.src_len = 0
         self.speech_cache = None
         self.past_key_values = None
         self.target_ids = []
@@ -83,7 +129,7 @@ class InfiniSST(SpeechToTextAgent):
         
         # gen
         self.beam = args.beam
-        assert self.beam > 1
+        # assert self.beam > 1
         self.no_repeat_ngram_lookback = args.no_repeat_ngram_lookback
         self.no_repeat_ngram_size = args.no_repeat_ngram_size
         self.repetition_penalty = args.repetition_penalty
@@ -108,13 +154,33 @@ class InfiniSST(SpeechToTextAgent):
         # Add DPO sampling flag
         self.dpo_sampling = args.dpo_sampling
         self.output_file = args.output_file if hasattr(args, 'output_file') else 'translations.json'
+
+        self.audio_normalize = args.audio_normalize
         
         # model
         self.load_model(args)
+    
+    @staticmethod
+    def add_args(parser):
+        add_simuleval_args(parser)
+        add_speech_encoder_args(parser)
+        add_gen_args(parser)
+        parser.add_argument("--model-type", type=str, default="w2v2_llama31")
+        parser.add_argument("--model-name", type=str, default="facebook/opt-350m")
+        parser.add_argument("--state-dict-path", type=str, default=None)
+        parser.add_argument("--lora-path", type=str, default=None)
+        parser.add_argument("--lora-rank", type=int, default=8)
+        parser.add_argument("--latency-multiplier", type=int, default=4)
+        parser.add_argument("--max-latency-multiplier", type=int, default=4)
+        parser.add_argument("--max-llm-cache-size", type=int, default=10000)
+        parser.add_argument("--always-cache-system-prompt", action='store_true') # LLM-Inf
+        parser.add_argument("--dpo-sampling", action='store_true', help="Enable storing sampling for DPO")
+        parser.add_argument("--output-file", type=str, default="translations.json", help="Output file for sampling")
+        parser.add_argument("--pseudo-batch-size", type=int, default=1)
+        parser.add_argument("--audio-normalize", type=int, default=0)
 
     def build_states(self):
         return S2TAgentStates(
-            src_len=0,
             speech_cache=None,
             past_key_values=None,
             target_ids=[],
@@ -127,9 +193,8 @@ class InfiniSST(SpeechToTextAgent):
         # self.source_segment_size = 960 * multiplier
         self.max_new_tokens = 10 * multiplier
 
-    def load_model(self, args):
-        patch_w2v2(args.xpos, args.rope)
-        patch_llm()
+    def load_seamless_llama31(self, args):
+        patch_llama31()
         patch_hf()
 
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
@@ -147,9 +212,57 @@ class InfiniSST(SpeechToTextAgent):
                 if any(bad_word in decoded_token for bad_word in bad_words):
                     self.bad_words_ids.append(idx)
 
+        model = SpeechLlamaForCausalLM.from_pretrained(
+            args.model_name,
+            torch_dtype=torch.bfloat16,
+            device_map='cuda',
+        ).eval()
+
+        self.processor = AutoProcessor.from_pretrained(args.seamless_path)
+
+        config = SeamlessM4Tv2Config.from_pretrained(args.seamless_path)
+        config.llm_embedding_dim = model.model.embed_tokens.embedding_dim
+        config.position_embeddings_type = 'rope'
+        config.speech_encoder_chunk_size = args.block_size
+        config.speech_encoder_left_chunk_num = args.max_cache_size // args.block_size
+        speech_encoder = SeamlessM4Tv2SpeechEncoder(config).eval() # type: ignore[attr-defined]
+        speech_encoder.to(dtype=model.dtype, device=model.device)   # type: ignore[attr-defined]
+        model.model.speech_encoder = speech_encoder
+
+        model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.max_latency_multiplier, resize=False)
+
+        logger.info("Loading SLLM weights from {}".format(args.state_dict_path))
+        state_dict = torch.load(args.state_dict_path, map_location='cpu', weights_only=True)
+        model.load_state_dict(state_dict, strict=True)
+    
+        self.model = model
+        self.model.model.inference = True
+        self.llama31 = '3.1' in args.model_name
+
+    def load_w2v2_llama31(self, args):
+        patch_w2v2(args.rope)
+        patch_llama31()
+        patch_hf()
+
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(
+            args.model_name,
+            padding_side="right",
+            use_fast=False,
+        )
+        self.tokenizer.pad_token = "<|finetune_right_pad_id|>"
+
+        self.bad_words_ids = []
+        if self.suppress_non_language:
+            bad_words = ['(', '（', '"', '“']
+            for idx in tqdm(range(len(self.tokenizer)), desc="Obtaining bad words ids"):
+                decoded_token = self.tokenizer.decode(idx, skip_special_tokens=True)
+                if any(bad_word in decoded_token for bad_word in bad_words):
+                    self.bad_words_ids.append(idx)
+
         self.model = SpeechLlamaForCausalLM.from_pretrained(
             args.model_name,
             torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
             device_map='cuda',
         ).eval()
 
@@ -162,7 +275,6 @@ class InfiniSST(SpeechToTextAgent):
             args.max_cache_size,
             self.model.model.embed_tokens.embedding_dim,
             None,
-            bool(args.xpos),
             bool(args.rope)
         ]
         if args.w2v2_type == 'w2v2':
@@ -176,60 +288,137 @@ class InfiniSST(SpeechToTextAgent):
         self.model.model.speech_encoder = speech_encoder
         self.model.preprocess(tokenizer=self.tokenizer, max_multiplier=self.max_latency_multiplier, resize=False)
 
+        logger.info("Loading SLLM weights from {}".format(args.state_dict_path))
         state_dict = torch.load(args.state_dict_path, map_location='cpu', weights_only=True)
-        self.model.load_state_dict(state_dict)
+        self.model.load_state_dict(state_dict, strict=False)
+
+        if args.lora_path:
+            logger.info(f"Loading LORA weights from {args.lora_path}")
+            lora_config = LoraConfig(
+                task_type="CAUSAL_LM",
+                inference_mode=True,
+                r=args.lora_rank,
+                target_modules='all-linear',
+                lora_alpha=16,
+                lora_dropout=0.1,
+            )
+            self.model = get_peft_model(self.model, lora_config, adapter_name='lora_adapter')
+            
+            lora_state_dict = torch.load(args.lora_path, map_location='cpu', weights_only=True)
+            self.model.load_state_dict(lora_state_dict, strict=False)
+            self.model = self.model.merge_and_unload()
+
+        self.model.model.inference = True
+        self.llama31 = '3.1' in args.model_name
+    
+    def load_w2v2_qwen25(self, args):
+        patch_w2v2(args.rope)
+        patch_qwen25()
+        patch_hf()
+
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(
+            args.model_name,
+            padding_side="right",
+            use_fast=False,
+        )
+        self.tokenizer.pad_token = "<|finetune_right_pad_id|>"
+
+        self.bad_words_ids = []
+        if self.suppress_non_language:
+            bad_words = ['(', '（']
+            for idx in tqdm(range(len(self.tokenizer)), desc="Obtaining bad words ids"):
+                decoded_token = self.tokenizer.decode(idx, skip_special_tokens=True)
+                if any(bad_word in decoded_token for bad_word in bad_words):
+                    self.bad_words_ids.append(idx)
+
+        self.model = SpeechQwenForCausalLM.from_pretrained(
+            args.model_name,
+            torch_dtype=torch.bfloat16,
+            attn_implementation="sdpa",
+            device_map='cuda',
+        ).eval()
+
+        speech_encoder_args = [
+            args.w2v2_path,
+            args.ctc_finetuned,
+            args.length_shrink_cfg,
+            
+            args.block_size,
+            args.max_cache_size,
+            self.model.model.embed_tokens.embedding_dim,
+            None,
+            bool(args.rope),
+            False,
+        ]
+        if args.w2v2_type == 'w2v2':
+            speech_encoder = SpeechEncoderW2V2RoPE(*speech_encoder_args)
+        else:
+            raise ValueError(f"Unsupported type: {args.w2v2_type}")
+        speech_encoder.eval()
+        speech_encoder.to(dtype=self.model.dtype, device=self.model.device)
+        self.length_shrink_func = speech_encoder._get_feat_extract_output_lengths
+        
+        self.model.model.speech_encoder = speech_encoder
+        self.model.preprocess(tokenizer=self.tokenizer, resize=False)
+
+        logger.info("Loading SLLM weights from {}".format(args.state_dict_path))
+        state_dict = torch.load(args.state_dict_path, map_location='cpu', weights_only=True)
+        self.model.load_state_dict(state_dict, strict=False)
+
+        if args.lora_path:
+            logger.info(f"Loading LORA weights from {args.lora_path}")
+            lora_config = LoraConfig(
+                task_type="CAUSAL_LM",
+                inference_mode=True,
+                r=args.lora_rank,
+                target_modules='all-linear',
+                lora_alpha=16,
+                lora_dropout=0.1,
+            )
+            self.model = get_peft_model(self.model, lora_config, adapter_name='lora_adapter')
+            
+            lora_state_dict = torch.load(args.lora_path, map_location='cpu', weights_only=True)
+            self.model.load_state_dict(lora_state_dict, strict=False)
+            self.model = self.model.merge_and_unload()
+
         self.model.model.inference = True
 
-        self.llama31 = '3.1' in args.model_name
-
-    @staticmethod
-    def add_args(parser):
-        add_simuleval_args(parser)
-        add_speech_encoder_args(parser)
-        add_gen_args(parser)
-        parser.add_argument("--model-name", type=str, default="facebook/opt-350m")
-        parser.add_argument("--state-dict-path", type=str, default=None)
-        parser.add_argument("--latency-multiplier", type=int, default=4)
-        parser.add_argument("--max-latency-multiplier", type=int, default=4)
-        parser.add_argument("--max-llm-cache-size", type=int, default=10000)
-        parser.add_argument("--always-cache-system-prompt", action='store_true') # LLM-Inf
-        parser.add_argument("--dpo-sampling", action='store_true', help="Enable storing sampling for DPO")
-        parser.add_argument("--output-file", type=str, default="translations.json", help="Output file for sampling")
-        parser.add_argument("--pseudo-batch-size", type=int, default=1)
+    def load_model(self, args):
+        if args.model_type == "w2v2_llama31":
+            self.load_w2v2_llama31(args)
+        elif args.model_type == "seamless_llama31":
+            self.load_seamless_llama31(args)
+        elif args.model_type == 'w2v2_qwen25':
+            self.load_w2v2_qwen25(args)
+        else:
+            raise ValueError(f"Unsupported model type: {args.model_type}")
 
     def _prepare_speech(self, states):
-        sp_seg_frame = int(self.args.block_size // 4 * 0.08 * 16000)
+        sp_seg_frame = int(self.args.block_size * 0.02 * 16000) * self.latency_multiplier
+
+        source = states.source
+        if self.audio_normalize:
+            source = normalize(torch.tensor(states.source).unsqueeze(0))[0].tolist()
         
-        # Only tensorize the new part
-        if len(states.source) > states.MAX_SRC_LEN:
-            states.src_len -= len(states.source) - states.MAX_SRC_LEN
-            states.source = states.source[-states.MAX_SRC_LEN:]
-           
-        source = torch.tensor(states.source[states.src_len:])
-        
+        source = torch.tensor(source, dtype=torch.float)
         # Pad if needed
         if source.size(0) % sp_seg_frame != 0:
             n_pad = sp_seg_frame - source.size(0) % sp_seg_frame
             source = torch.cat([source, torch.zeros(n_pad).to(source)], dim=0)
-            
-        # Add offset only for first chunk
-        if states.src_len == 0:
-            offset = torch.zeros(79 + 320).to(source)
-            source = torch.cat([offset, source], dim=0)
-            
-        states.src_len = len(states.source)
 
         speech_batch = source.unsqueeze(0).to(device=self.model.device, dtype=self.model.dtype)
         return speech_batch
 
     def _prepare_inputs(self, states):
         messages = []
+        sp_seg_token = self.args.block_size // 4 if 'w2v2' in self.args.model_type else self.args.block_size // 8
+        sp_seg_token *= self.latency_multiplier
         if states.speech_cache is None:
             latency_token = DEFAULT_LATENCY_TOKEN.format(self.latency_multiplier)
             messages.append(
                 {
                     "role": "system",
-                    "content": f"Translate the following speech from {self.source_lang} to {self.target_lang} with latency {latency_token}."
+                    "content": f"Translate the following speeches from {self.source_lang} to {self.target_lang} as a simultaneous interpreter."
                 }
             )
             self.system_prompt_size = self.tokenizer.apply_chat_template(
@@ -242,7 +431,7 @@ class InfiniSST(SpeechToTextAgent):
         messages.append(
             {
                 "role": "user",
-                "content": self.args.block_size // 4 * self.latency_multiplier * DEFAULT_SPEECH_PATCH_TOKEN
+                "content": sp_seg_token * DEFAULT_SPEECH_PATCH_TOKEN
             }
         )
         messages.append(
@@ -257,13 +446,21 @@ class InfiniSST(SpeechToTextAgent):
             padding=True, 
             truncation=False, 
             add_special_tokens=False
-        )[:, :-1]
+        )        
+        assert self.args.model_type in ["w2v2_llama31", "w2v2_qwen25"]
+        if self.args.model_type == "w2v2_llama31":
+            input_ids = input_ids[:, :-1]
+        elif self.args.model_type == "w2v2_qwen25":
+            input_ids = input_ids[:, :-2]
         # to remove system prompt and preserve last EOT
         if states.speech_cache is not None:
-            if self.llama31:
-                input_ids = input_ids[:, 25:] 
-            else:
-                input_ids[:, 0] = self.tokenizer.eos_token_id # llama-3-8B-instruct
+            if self.args.model_type == "w2v2_llama31":
+                if self.llama31:
+                    input_ids = input_ids[:, 25:] 
+                else:
+                    input_ids[:, 0] = self.tokenizer.eos_token_id # llama-3-8B-instruct
+            elif self.args.model_type == "w2v2_qwen25":
+                input_ids = input_ids[:, 19:]
         input_ids = input_ids.to(device=self.model.device)
         return input_ids
 
@@ -288,7 +485,10 @@ class InfiniSST(SpeechToTextAgent):
             speech_batch = self._prepare_speech(states)
             input_ids = self._prepare_inputs(states)
 
-            speech_batch = speech_batch.repeat(self.pseudo_batch_size, 1)
+            if self.args.model_type == "seamless_llama31":
+                speech_batch = speech_batch.repeat(self.pseudo_batch_size, 1, 1)
+            else:
+                speech_batch = speech_batch.repeat(self.pseudo_batch_size, 1)
             input_ids = input_ids.repeat(self.pseudo_batch_size, 1)
             if states.speech_cache is not None:
                 for i, (k, v) in enumerate(states.past_key_values):
@@ -364,7 +564,7 @@ class InfiniSST(SpeechToTextAgent):
         
         states.target_ids.extend(output_ids)
         translation = self.tokenizer.decode(output_ids, skip_special_tokens=True).strip()
-        translation = translation.replace('�', '')
+        translation = re.sub(r'[（）()"“”�]', '', translation)
 
         if self.dpo_sampling:
             # Format translation with single quotes and proper UTF-8

@@ -24,3 +24,16 @@ retriever/gigaspeech/data/
 *.pt
 *.zip
 *.wav
+debug*
+debug.ipynb
+*.wav
+fairseq*
+.idea
+node_modules
+env
+.DS_Store
+dist/
+*.err
+*.mp4
+*.json
+*.txt

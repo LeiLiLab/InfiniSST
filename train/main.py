@@ -18,6 +18,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Optional
 
+import torch
 import transformers
 from transformers import set_seed
 
@@ -25,29 +26,55 @@ import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.strategies import DeepSpeedStrategy
+from pytorch_lightning.profilers import AdvancedProfiler, SimpleProfiler, PyTorchProfiler
 
-from model.model import SLlamaLightning
+from model.model import (
+    SLlamaLightning, 
+    SQwen25Lightning, 
+    Qwen2ACLightning, 
+    SeamlessLightning
+)
+
+MODEL_CLASSES = {
+    "w2v2_llama31": SLlamaLightning,
+    "w2v2_qwen25": SQwen25Lightning,
+    "qwen2ac": Qwen2ACLightning,
+    "seamless_llama31": SeamlessLightning
+}
 
 @dataclass
 class SpeechEncoderArguments:
+    # w2v2-llama
     w2v2_path: Optional[str] = field(default=None)
     w2v2_type: Optional[str] = field(default=None)
     w2v2_freeze: bool = field(default=False)
     ctc_finetuned: bool = field(default=False)
     length_shrink_cfg: str = field(default=None)
-    block_size: int = field(default=48)
-    max_cache_size: int = field(default=500)
     xpos: bool = field(default=False)
     rope: bool = field(default=True)
 
+    # qwen2-audio-chat
+    whisper_freeze: bool = field(default=False)
+    adapter_freeze: bool = field(default=False)
+
+    # seamless-m4t-v2 encoder
+    seamless_path: Optional[str] = field(default=None)
+    seamless_freeze: bool = field(default=False)
+
+    # common
+    block_size: int = field(default=48)
+    max_cache_size: int = field(default=500)
+
 @dataclass
 class ModelArguments:
+    model_type: str = field(default="w2v2_llama31")
     llm_path: Optional[str] = field(default="facebook/opt-125m")
     llm_freeze: bool = field(default=False) # freeze LLM except embedding layer
     llm_emb_freeze: bool = field(default=False)
     llm_head_freeze: bool = field(default=False)
     sllm_weight_path: Optional[str] = field(default=None)
     use_flash_attn: bool = field(default=False)
+    lora_rank: Optional[int] = field(default=-1)
 
 @dataclass
 class DataArguments:
@@ -62,6 +89,10 @@ class DataArguments:
     data_split_eval: str = field(
         default=None,
         metadata={"help": "Path to the training data."}
+    )
+    audio_normalize: bool = field(
+        default=False,
+        metadata={"help": "Normalize audio"}
     )
     source_lang: str = field(
         default="English",
@@ -78,6 +109,10 @@ class DataArguments:
     trajectory_perturb: list[float] = field(
         default_factory=lambda: [1.0, 0.0, 0.0],
         metadata={"help": "Perturbation for trajectory"}
+    )
+    trajectory_step_size: int = field(
+        default=1,
+        metadata={"help": "Step size for trajectory"}
     )
     trajectory_max_multiplier: int = field(
         default=1,
@@ -113,14 +148,19 @@ class TrainingArguments:
     n_device: int = field(default=1)
     deepspeed_stage: int = field(default=2)
     deepspeed_offload: bool = field(default=False)
+    deepspeed_bucket_size: int = field(default=int(2e8))
+    
     precision: str = field(default="bf16-mixed")
     max_epochs: int = field(default=1)
     grad_acc_steps: int = field(default=1)
     clip_norm: float = field(default=1.)
     save_dir: str = field(default=None)
+    save_step: int = field(default=1000)
     log_step: int = field(default=1)
     eval_step: int = field(default=1)
     debug_mode: bool = field(default=False)
+
+    profile: str = field(default=None, metadata={"help": "Profile to use"})
 
 def safe_save_model_for_hf_trainer(trainer: transformers.Trainer,
                                    output_dir: str):
@@ -140,10 +180,13 @@ def train():
         (SpeechEncoderArguments, ModelArguments, DataArguments, TrainingArguments))
     speech_args, model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
+    torch.set_float32_matmul_precision('high')
+
     # Set seed before initializing model.
     set_seed(training_args.seed) 
-  
-    model_lightning = SLlamaLightning(
+
+    model_class = MODEL_CLASSES[model_args.model_type]  
+    model_lightning = model_class(
         speech_args=speech_args,
         model_args=model_args,
         data_args=data_args,
@@ -155,7 +198,8 @@ def train():
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=training_args.save_dir,
-        save_on_train_epoch_end=True,
+        # save_on_train_epoch_end=True,
+        every_n_train_steps=training_args.save_step,
         save_last=True,
     )
     lr_monitor = LearningRateMonitor(
@@ -171,11 +215,28 @@ def train():
         stage=training_args.deepspeed_stage,
         offload_optimizer=training_args.deepspeed_offload,
         offload_parameters=training_args.deepspeed_offload,
+        allgather_bucket_size=training_args.deepspeed_bucket_size,
+        reduce_bucket_size=training_args.deepspeed_bucket_size,
     )
     # strategy = FSDPStrategy(
     #     sharding_strategy=training_args.sharding,
     #     state_dict_type="sharded"
     # )
+
+    profiler = None
+    if training_args.profile == "advanced":
+        profiler = AdvancedProfiler(
+            filename="profile"
+        )
+    elif training_args.profile == "simple":
+        profiler = SimpleProfiler(
+            filename="profile"
+        )
+    elif training_args.profile == "pytorch":
+        profiler = PyTorchProfiler(
+            filename="profile"
+        )
+
     trainer = L.Trainer(
         accelerator='gpu',
         devices=training_args.n_device,
@@ -193,6 +254,7 @@ def train():
         callbacks=[lr_monitor, checkpoint_callback],
         fast_dev_run=training_args.debug_mode,
         # enable_checkpointing=False,
+        profiler=profiler
     )
 
     # start training

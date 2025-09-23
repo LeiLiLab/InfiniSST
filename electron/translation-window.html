@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InfiniSST Translation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--background-color, rgba(16, 18, 22, 0.95));
+            color: var(--text-color, #ffffff);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            position: relative;
+            --font-size: 14px;
+            -webkit-app-region: no-drag; /* 默认不可拖拽 */
+        }
+
+        /* 拖拽区域 - 扩大拖拽区域，提高优先级 */
+        .drag-area {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            right: 5px;
+            bottom: 5px;
+            -webkit-app-region: drag;
+            z-index: 100; /* 提高z-index，确保拖拽优先级最高 */
+            pointer-events: auto; /* 允许拖拽事件 */
+            background: transparent;
+        }
+
+        /* 调整大小的手柄 - 保持在最边缘 */
+        .resize-handle {
+            position: absolute;
+            background: transparent;
+            z-index: 1000; /* 最高优先级，但低于拖拽区域 */
+            -webkit-app-region: no-drag;
+            transition: background-color 0.2s ease;
+        }
+
+        /* 边缘调整大小手柄 - 保持3px边缘 */
+        .resize-handle.top {
+            top: 0;
+            left: 3px;
+            right: 3px;
+            height: 3px;
+            cursor: ns-resize;
+        }
+
+        .resize-handle.bottom {
+            bottom: 0;
+            left: 3px;
+            right: 3px;
+            height: 3px;
+            cursor: ns-resize;
+        }
+
+        .resize-handle.left {
+            left: 0;
+            top: 3px;
+            bottom: 3px;
+            width: 3px;
+            cursor: ew-resize;
+        }
+
+        .resize-handle.right {
+            right: 0;
+            top: 3px;
+            bottom: 3px;
+            width: 3px;
+            cursor: ew-resize;
+        }
+
+        /* 角落调整大小手柄 - 保持3x3px */
+        .resize-handle.top-left {
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 3px;
+            cursor: nw-resize;
+        }
+
+        .resize-handle.top-right {
+            top: 0;
+            right: 0;
+            width: 3px;
+            height: 3px;
+            cursor: ne-resize;
+        }
+
+        .resize-handle.bottom-left {
+            bottom: 0;
+            left: 0;
+            width: 3px;
+            height: 3px;
+            cursor: sw-resize;
+        }
+
+        .resize-handle.bottom-right {
+            bottom: 0;
+            right: 0;
+            width: 3px;
+            height: 3px;
+            cursor: nw-resize;
+        }
+
+        /* 悬停时显示调整大小手柄 */
+        .resize-handle:hover {
+            background: rgba(79, 172, 254, 0.3);
+        }
+
+        /* 内容区域 - 在拖拽区域内侧，专门用于文本选择 */
+        .content {
+            flex: 1;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            -webkit-app-region: no-drag; /* 内容区域不可拖拽，只能选择文本 */
+            position: relative;
+            z-index: 50; /* 确保内容在拖拽区域之上，但低于调整大小手柄 */
+            margin: 8px; /* 为拖拽区域留出空间 */
+            background: transparent; /* 确保没有额外背景 */
+            pointer-events: auto; /* 允许文本选择 */
+        }
+
+        .translation-output {
+            flex: 1;
+            background: transparent; /* 确保背景透明 */
+            border: none;
+            padding: 16px;
+            font-size: var(--font-size);
+            line-height: 1.6;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            overflow-x: hidden;
+            color: var(--text-color, #ffffff);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+            word-wrap: break-word;
+            hyphens: auto;
+            -webkit-app-region: no-drag; /* 翻译输出不可拖拽，允许文本选择 */
+            user-select: text; /* 明确允许文本选择 */
+            -webkit-user-select: text;
+            /* 移除任何可能的阴影或边框，避免重影 */
+            box-shadow: none;
+            outline: none;
+            /* 确保没有额外的层叠上下文 */
+            position: relative;
+            z-index: 1;
+        }
+
+        .translation-output:empty::before {
+            content: "Translation appears here...";
+            color: rgba(255, 255, 255, 0.5);
+            font-style: italic;
+        }
+
+        /* 自定义滚动条 */
+        .translation-output::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .translation-output::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+
+        .translation-output::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .translation-output::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* 主题样式变量 */
+        body.dark-text {
+            --text-color: #000000;
+        }
+
+        body.light-text {
+            --text-color: #ffffff;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 拖拽区域 -->
+    <div class="drag-area"></div>
+    
+    <!-- 调整大小手柄 -->
+    <div class="resize-handle top" data-direction="top"></div>
+    <div class="resize-handle bottom" data-direction="bottom"></div>
+    <div class="resize-handle left" data-direction="left"></div>
+    <div class="resize-handle right" data-direction="right"></div>
+    <div class="resize-handle top-left" data-direction="top-left"></div>
+    <div class="resize-handle top-right" data-direction="top-right"></div>
+    <div class="resize-handle bottom-left" data-direction="bottom-left"></div>
+    <div class="resize-handle bottom-right" data-direction="bottom-right"></div>
+    
+    <!-- 翻译内容 -->
+    <div class="content">
+        <div class="translation-output" id="translationOutput"></div>
+    </div>
+
+    <script>
+    // DOM 元素
+    const translationOutput = document.getElementById('translationOutput');
+    const resizeHandles = document.querySelectorAll('.resize-handle');
+
+    // 调整大小功能
+    let isResizing = false;
+    let resizeDirection = null;
+    let startX = 0;
+    let startY = 0;
+    let startWidth = 0;
+    let startHeight = 0;
+    let startPosX = 0;
+    let startPosY = 0;
+
+    // 添加调整大小的事件监听器
+    resizeHandles.forEach(handle => {
+        handle.addEventListener('mousedown', startResize);
+    });
+
+    function startResize(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        isResizing = true;
+        resizeDirection = e.target.dataset.direction;
+        startX = e.screenX; // 使用screenX/screenY获取更准确的位置
+        startY = e.screenY;
+        
+        // 获取当前窗口尺寸和位置
+        if (window.electronAPI && window.electronAPI.getWindowBounds) {
+            window.electronAPI.getWindowBounds().then(bounds => {
+                startWidth = bounds.width;
+                startHeight = bounds.height;
+                startPosX = bounds.x;
+                startPosY = bounds.y;
+            });
+        } else {
+            // 备用方案
+            startWidth = window.outerWidth || document.body.offsetWidth;
+            startHeight = window.outerHeight || document.body.offsetHeight;
+            startPosX = window.screenX || 0;
+            startPosY = window.screenY || 0;
+        }
+        
+        document.addEventListener('mousemove', handleResize);
+        document.addEventListener('mouseup', stopResize);
+        document.body.style.userSelect = 'none';
+        document.body.style.pointerEvents = 'none'; // 防止其他元素干扰
+        e.target.style.pointerEvents = 'auto'; // 保持当前手柄可用
+    }
+
+    function handleResize(e) {
+        if (!isResizing) return;
+        
+        const deltaX = e.screenX - startX;
+        const deltaY = e.screenY - startY;
+        
+        let newWidth = startWidth;
+        let newHeight = startHeight;
+        let newX = startPosX;
+        let newY = startPosY;
+        
+        // 根据调整方向计算新的尺寸和位置
+        switch (resizeDirection) {
+            case 'right':
+                newWidth = Math.max(300, startWidth + deltaX);
+                break;
+            case 'left':
+                newWidth = Math.max(300, startWidth - deltaX);
+                newX = startPosX + deltaX;
+                if (newWidth === 300) newX = startPosX + startWidth - 300;
+                break;
+            case 'bottom':
+                newHeight = Math.max(120, startHeight + deltaY);
+                break;
+            case 'top':
+                newHeight = Math.max(120, startHeight - deltaY);
+                newY = startPosY + deltaY;
+                if (newHeight === 120) newY = startPosY + startHeight - 120;
+                break;
+            case 'top-left':
+                newWidth = Math.max(300, startWidth - deltaX);
+                newHeight = Math.max(120, startHeight - deltaY);
+                newX = startPosX + deltaX;
+                newY = startPosY + deltaY;
+                if (newWidth === 300) newX = startPosX + startWidth - 300;
+                if (newHeight === 120) newY = startPosY + startHeight - 120;
+                break;
+            case 'top-right':
+                newWidth = Math.max(300, startWidth + deltaX);
+                newHeight = Math.max(120, startHeight - deltaY);
+                newY = startPosY + deltaY;
+                if (newHeight === 120) newY = startPosY + startHeight - 120;
+                break;
+            case 'bottom-left':
+                newWidth = Math.max(300, startWidth - deltaX);
+                newHeight = Math.max(120, startHeight + deltaY);
+                newX = startPosX + deltaX;
+                if (newWidth === 300) newX = startPosX + startWidth - 300;
+                break;
+            case 'bottom-right':
+                newWidth = Math.max(300, startWidth + deltaX);
+                newHeight = Math.max(120, startHeight + deltaY);
+                break;
+        }
+        
+        // 通知主进程调整窗口大小和位置
+        if (window.electronAPI && window.electronAPI.setWindowBounds) {
+            window.electronAPI.setWindowBounds({
+                x: Math.round(newX),
+                y: Math.round(newY),
+                width: Math.round(newWidth),
+                height: Math.round(newHeight)
+            });
+        }
+    }
+
+    function stopResize() {
+        isResizing = false;
+        resizeDirection = null;
+        document.removeEventListener('mousemove', handleResize);
+        document.removeEventListener('mouseup', stopResize);
+        document.body.style.userSelect = '';
+        document.body.style.pointerEvents = '';
+        
+        // 恢复所有手柄的pointer-events
+        resizeHandles.forEach(handle => {
+            handle.style.pointerEvents = '';
+        });
+    }
+
+    // 检查 electronAPI 是否可用
+    if (typeof window !== 'undefined' && window.electronAPI) {
+        // 监听翻译更新
+        window.electronAPI.onTranslationUpdate((event, translationData) => {
+           if (translationData && translationData.text) {
+               translationOutput.textContent = translationData.text;
+               // 自动滚动到底部
+               translationOutput.scrollTop = translationOutput.scrollHeight;
+           }
+       });
+
+       // 监听样式设置更新
+       window.electronAPI.onTranslationStyleUpdate && window.electronAPI.onTranslationStyleUpdate((event, styleData) => {
+           if (styleData) {
+               // 更新背景透明度
+               if (styleData.backgroundOpacity !== undefined) {
+                   const opacity = styleData.backgroundOpacity / 100;
+                   document.body.style.setProperty('--background-color', `rgba(16, 18, 22, ${opacity})`);
+               }
+               
+               // 更新字体大小
+               if (styleData.fontSize) {
+                   document.body.style.setProperty('--font-size', styleData.fontSize + 'px');
+               }
+               
+               // 更新文字颜色
+               if (styleData.textColor) {
+                   document.body.style.setProperty('--text-color', styleData.textColor);
+                   document.body.className = styleData.textColor === '#000000' ? 'dark-text' : 'light-text';
+               }
+           }
+       });
+
+       // 监听重置事件
+       window.electronAPI.onResetTranslation((event) => {
+           translationOutput.textContent = '';
+       });
+    } else {
+        console.warn('electronAPI not available in translation window');
+    }
+
+    // 防止窗口内容被选中时影响拖拽
+    document.addEventListener('selectstart', (e) => {
+        if (isResizing) {
+            e.preventDefault();
+        }
+    });
+
+    // 防止右键菜单
+    document.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+    });
+    </script>
+</body>
+</html> 
