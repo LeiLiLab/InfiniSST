@@ -20,8 +20,8 @@ enable_full_eval=${5:-false}
 enable_hard_neg=${6:-true}
 full_eval_every_n_epochs=${7:-1}
 test_samples_path=${8:-"data/samples/xl/term_level_chunks_500000_1000000.json"}  # 默认测试数据集路径
-best_model_path=${9:-"data/clap_sonar_term_level_single_best.pt"}  # 默认best model路径
-gpu_ids=${10:-"5"}  # GPU编号，默认为空使用所有可用GPU
+best_model_path=${9:-"data/full_dataset_sonar_term_level_best.pt"}  # 默认best model路径
+gpu_ids=${10:-""}  # GPU编号，默认为空使用所有可用GPU
 
 # 训练数据集路径
 TRAIN_TSV="/mnt/data/siqiouyang/datasets/gigaspeech/manifests/train_xl.tsv"
@@ -108,7 +108,7 @@ else
         
         if [[ "$need_generation" == "true" ]]; then
             echo "[INFO] Generating term-level chunks for full dataset..." | tee -a "$LOG_FILE"
-            mfa_job=$(sbatch handle_MFA_term_level_chunks.sh ${text_field}_preprocessed_samples /mnt/gemini/data1/jiaxuanluo/term_chunks | awk '{print $4}')
+            mfa_job=$(sbatch handle_MFA_term_level_chunks.sh ${text_field}_preprocessed_samples /mnt/gemini/data1/jiaxuanluo/term_chunks_cleaned | awk '{print $4}')
             echo "term_level_chunks_generation: $mfa_job" | tee -a "$LOG_FILE"
             dependency_job_step1=$mfa_job
         else
@@ -211,6 +211,8 @@ if [[ "$enable_full_eval" == "true" ]]; then
 fi
 
 # 创建适配term-level数据格式的训练脚本
+# --batch_size=512 \
+#    --lr=5e-5 \
 # 构建Python命令
 python_cmd="python3 SONAR_term_level_train_glossary.py \
     --train_samples_path=${final_samples} \
@@ -224,10 +226,7 @@ python_cmd="python3 SONAR_term_level_train_glossary.py \
     --audio_term_loss_ratio=${audio_term_loss_ratio} \
     --glossary_path=data/terms/glossary_filtered.json \
     --unfreeze_layers=10 \
-    --use_no_term_loss \
-    --no_term_margin=0.15 \
-    --lambda_no_term=0.5 \
-    --no_term_top_m=100"
+    --filter_no_term"
 
 # 如果指定了GPU，则添加GPU参数
 if [[ -n "$gpu_ids" ]]; then
@@ -245,14 +244,23 @@ train_job=$(sbatch \
     --nodes=1 \
     --ntasks=1 \
     --cpus-per-task=16 \
-    --mem=64GB \
+    --mem=32GB \
+    --gres=gpu:1 \
     --output=logs/${job_name}_%j.out \
     --error=logs/${job_name}_%j.err \
     --wrap="#!/bin/bash
 cd /home/jiaxuanluo/InfiniSST/retriever/gigaspeech
 . ~/miniconda3/etc/profile.d/conda.sh
 conda activate infinisst
+# 设置CUDA环境变量
+export CUDA_HOME=/usr/local/cuda
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64:\$LD_LIBRARY_PATH
+export PATH=/usr/local/cuda/bin:\$PATH
+# 显示GPU信息用于调试
+nvidia-smi
+echo \"CUDA_VISIBLE_DEVICES: \$CUDA_VISIBLE_DEVICES\"
 $python_cmd" | awk '{print $4}')
+#--gres=gpu:1 \
 
 echo "sonar_term_level_train: $train_job" | tee -a "$LOG_FILE"
 dependency_job_step3=$train_job
@@ -318,7 +326,7 @@ echo "Key features:" | tee -a "$LOG_FILE"
 echo "  - Each term gets its own audio chunk (no aggregation)" | tee -a "$LOG_FILE"
 echo "  - Perfect MFA alignment for each term" | tee -a "$LOG_FILE"
 echo "  - Specialized training for term-level retrieval" | tee -a "$LOG_FILE"
-echo "  - Rejection capability for no-term samples (Max-Sim Margin Loss)" | tee -a "$LOG_FILE"
+echo "  - Optional rejection capability for no-term samples (disabled by default)" | tee -a "$LOG_FILE"
 echo "  - Baseline evaluation without noise interference" | tee -a "$LOG_FILE"
 echo "  - Intelligent step skipping when files already exist" | tee -a "$LOG_FILE"
 echo "  - Automatic dependency management" | tee -a "$LOG_FILE"

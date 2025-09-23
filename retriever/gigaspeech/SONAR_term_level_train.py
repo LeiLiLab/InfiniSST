@@ -3,7 +3,9 @@ from torch.utils.data import DataLoader, Dataset
 import numpy as np
 import json
 from tqdm import tqdm
-import argparse, os, sys
+import argparse
+import os
+import sys
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import faiss
 from new_retrieve import Retriever
@@ -873,16 +875,47 @@ def main():
 
     # === 模型初始化 ===
     device = torch.device("cuda")
-    speech_encoder = SpeechToEmbeddingModelPipeline(
-        encoder="sonar_speech_encoder_eng", device=device
-    )
+    
+    # 初始化语音编码器，处理兼容性问题
+    try:
+        speech_encoder = SpeechToEmbeddingModelPipeline(
+            encoder="sonar_speech_encoder_eng", device=device
+        )
+        print(f"[INFO] Speech encoder initialized successfully")
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize speech encoder with device: {e}")
+        print(f"[INFO] Trying alternative initialization...")
+        # 尝试不传递device参数
+        speech_encoder = SpeechToEmbeddingModelPipeline(
+            encoder="sonar_speech_encoder_eng"
+        )
+        # 手动移动到设备
+        if hasattr(speech_encoder, 'model'):
+            speech_encoder.model = speech_encoder.model.to(device)
+        print(f"[INFO] Speech encoder initialized with alternative method")
 
-    text_encoder = TextToEmbeddingModelPipeline(
-        encoder="text_sonar_basic_encoder",
-        tokenizer="text_sonar_basic_encoder",
-        device=device,
-        dtype=torch.float32,
-    )
+    # 初始化文本编码器，处理兼容性问题
+    try:
+        text_encoder = TextToEmbeddingModelPipeline(
+            encoder="text_sonar_basic_encoder",
+            tokenizer="text_sonar_basic_encoder",
+            device=device,
+            dtype=torch.float32,
+        )
+        print(f"[INFO] Text encoder initialized successfully")
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize text encoder with device: {e}")
+        print(f"[INFO] Trying alternative initialization...")
+        # 尝试不传递device参数
+        text_encoder = TextToEmbeddingModelPipeline(
+            encoder="text_sonar_basic_encoder",
+            tokenizer="text_sonar_basic_encoder",
+            dtype=torch.float32,
+        )
+        # 手动移动到设备
+        if hasattr(text_encoder, 'model'):
+            text_encoder.model = text_encoder.model.to(device)
+        print(f"[INFO] Text encoder initialized with alternative method")
 
     model = ContrastiveSpeechTextModel(
         speech_encoder, text_encoder, 

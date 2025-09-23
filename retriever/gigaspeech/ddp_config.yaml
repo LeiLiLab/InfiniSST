@@ -1,0 +1,52 @@
+# DDP训练配置文件
+# 使用方法: python3 train_with_config.py --config ddp_config.yaml
+
+# 数据路径
+data:
+  train_samples_path: "data/xl_cleaned_term_level_chunks_merged.json"
+  test_samples_path: "data/samples/test_cleaned/term_preprocessed_samples_test.json"
+  glossary_path: "data/terms/glossary_merged.json"
+
+# 训练参数
+training:
+  epochs: 20
+  batch_size: 4096  # 8个GPU的总batch size
+  lr: 5e-5
+  patience: 3
+  unfreeze_layers: 10
+  
+  # 损失权重
+  audio_text_loss_ratio: 0.3
+  audio_term_loss_ratio: 0.7
+  
+  # 数据过滤
+  filter_no_term: true
+  enable_no_term: false
+  
+# 模型保存
+model:
+  save_path: "data/clap_sonar_term_level_full_ddp.pt"
+  best_model_path: "data/full_dataset_sonar_term_level_best.pt"
+
+# GPU配置
+gpu:
+  gpu_ids: "0,1,2,3,4,5,6,7"  # 使用8个GPU
+  
+# 高级训练选项（可选）
+advanced:
+  # Hard negative mining
+  enable_hard_neg: false
+  hard_neg_source: "used"  # "used" or "glossary"
+  hard_neg_k: 10
+  hard_neg_weight: 0.2
+  hard_neg_margin: 0.1
+  
+  # No-term拒答能力
+  use_no_term_loss: false
+  no_term_margin: 0.15
+  lambda_no_term: 0.5
+  
+# 日志配置
+logging:
+  log_file: "sonar_train_ddp_full.log"
+  log_level: "INFO"

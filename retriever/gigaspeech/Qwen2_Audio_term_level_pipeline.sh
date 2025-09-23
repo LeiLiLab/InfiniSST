@@ -218,16 +218,19 @@ python_cmd="python3 Qwen2_Audio_term_level_train.py \
     --train_samples_path=${final_samples} \
     --test_samples_path=${test_samples_path} \
     --epochs=20 \
-    --batch_size=256 \
-    --lr=5e-5 \
+    --batch_size=32 \
+    --lr=1e-4 \
     --save_path=${model_save_path} \
     --best_model_path=${best_model_path} \
     --audio_text_loss_ratio=${audio_text_loss_ratio} \
     --audio_term_loss_ratio=${audio_term_loss_ratio} \
     --glossary_path=data/terms/glossary_filtered.json \
-    --unfreeze_layers=0 \
     --filter_no_term \
-    --model_name=Qwen/Qwen2-Audio-7B-Instruct"
+    --force_single_gpu \
+    --model_name=Qwen/Qwen2-Audio-7B-Instruct \
+    --lora_r=16 \
+    --lora_alpha=32 \
+    --lora_dropout=0.1"
 
 # 如果指定了GPU，则添加GPU参数
 if [[ -n "$gpu_ids" ]]; then
@@ -246,7 +249,7 @@ train_job=$(sbatch \
     --ntasks=1 \
     --cpus-per-task=16 \
     --mem=64GB \
-    --gres=gpu:2 \
+    --gres=gpu:1 \
     --output=logs/${job_name}_%j.out \
     --error=logs/${job_name}_%j.err \
     --wrap="#!/bin/bash

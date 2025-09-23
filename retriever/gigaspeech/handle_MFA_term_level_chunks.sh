@@ -39,13 +39,13 @@ start_idx=$((SLURM_ARRAY_TASK_ID * 500000))
 
 if [ $SLURM_ARRAY_TASK_ID -eq 16 ]; then
     # 最后一个分片：8000000_end
-    input_file="data/samples/xl/${file_pattern}_${start_idx}_end.json"
-    output_file="data/samples/xl/term_level_chunks_${start_idx}_end.json"
+    input_file="data/samples/xl_cleaned/${file_pattern}_${start_idx}_end.json"
+    output_file="data/samples/xl_cleaned/term_level_chunks_${start_idx}_end.json"
 else
     # 其他分片：0_500000, 500000_1000000, ..., 7500000_8000000
     end_idx=$((start_idx + 500000))
-    input_file="data/samples/xl/${file_pattern}_${start_idx}_${end_idx}.json"
-    output_file="data/samples/xl/term_level_chunks_${start_idx}_${end_idx}.json"
+    input_file="data/samples/xl_cleaned/${file_pattern}_${start_idx}_${end_idx}.json"
+    output_file="data/samples/xl_cleaned/term_level_chunks_${start_idx}_${end_idx}.json"
 fi
 
 echo "===== Task $SLURM_ARRAY_TASK_ID ====="

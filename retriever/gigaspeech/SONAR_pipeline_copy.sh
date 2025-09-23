@@ -1,131 +1,275 @@
 #!/bin/bash
 
-# SONAR训练流水线
-# 参数: $1 = n (chunk数量), $2 = text_field (可选，默认为term), $3 = single_slice (可选，用于快速验证)
+# SONAR Term-Level训练流水线
+# 为每个ground truth term生成单独的chunk进行训练
+# 参数: $1 = text_field (可选，默认为term), $2 = single_slice (可选，用于快速验证)
+#       $3 = audio_text_loss_ratio (可选，默认0.3), $4 = audio_term_loss_ratio (可选，默认0.7)
+#       $5 = enable_full_eval (可选，true|false，默认false)
+#       $6 = enable_hard_neg (可选，true|false，默认true)
+#       $7 = full_eval_every_n_epochs (可选，整数，默认1)
+#       $8 = test_samples_path (可选，默认为data/samples/xl/term_level_chunks_500000_1000000.json)
+#       $9 = best_model_path (可选，默认data/clap_sonar_full_n2_best.pt)
+#       $10 = gpu_ids (可选，指定GPU编号，如"0,1"或"2"，默认为空使用所有可用GPU)
 
 # 设置参数
-n=${1:-3}  # 默认n=3
-text_field=${2:-term}  # 默认使用term字段
-single_slice=${3:-false}  # 默认使用完整数据集
-
-
-# === 3. Handle MFA n-chunk samples ===
-echo "[INFO] Step 3: Handling MFA ${n}-chunk samples..." | tee -a "$LOG_FILE"
-
-if [[ "$single_slice" == "true" ]]; then
-    # 单分片MFA处理
-    if [[ "$text_field" == "term" ]]; then
-        input_samples="data/samples/xl/term_preprocessed_samples_0_500000.json"
-        output_samples="data/samples/xl/mfa_${n}chunks_samples_single_0_500000.json"
-    else
-        input_samples="data/samples/xl/preprocessed_samples_0_500000.json"
-        output_samples="data/samples/xl/mfa_${n}chunks_samples_single_0_500000.json"
-    fi
-    
-    mfa_job=$(sbatch \
-        --job-name=train_mfa_single_n${n} \
-        --partition=taurus \
-        --mem=32GB \
-        --cpus-per-task=4 \
-        --ntasks=1 \
-        --output=logs/train_mfa_single_n${n}_%j.out \
-        --error=logs/train_mfa_single_n${n}_%j.err \
-        --wrap="#!/bin/bash
-cd /home/jiaxuanluo/InfiniSST/retriever/gigaspeech
-. ~/miniconda3/etc/profile.d/conda.sh
-conda activate infinisst
-python3 handle_MFA_n_chunk_samples.py --input_json=${input_samples} --output_json=${output_samples} --n=${n} --chunk_len=0.96 --textgrid_dir=/mnt/data/siqiouyang/datasets/gigaspeech/textgrids" | awk '{print $4}')
-    
-    echo "train_mfa_single: $mfa_job" | tee -a "$LOG_FILE"
-else
-    # 完整数据集MFA处理
-    mfa_job=$(sbatch handle_MFA_n_chunk_samples.sh ${n} 0.96 ${text_field}_preprocessed_samples | awk '{print $4}')
-    echo "train_mfa_chunks: $mfa_job" | tee -a "$LOG_FILE"
-fi
-
-# $mfa_job = 3
+text_field=${1:-term}  # 默认使用term字段
+single_slice=${2:-false}  # 默认使用完整数据集
+audio_text_loss_ratio=${3:-0.3}  # 默认使用0.3
+audio_term_loss_ratio=${4:-0.7}  # 默认使用0.7
+enable_full_eval=${5:-false}
+enable_hard_neg=${6:-false}
+full_eval_every_n_epochs=${7:-1}
+test_samples_path=${8:-"data/samples/test_cleaned/term_preprocessed_samples_test.json"}  # 默认测试数据集路径
+best_model_path=${9:-"data/full_dataset_sonar_term_level_best.pt"}  # 默认best model路径
+gpu_ids=${10:-""}  # GPU编号，默认为空使用所有可用GPU
 
 # 训练数据集路径
 TRAIN_TSV="/mnt/data/siqiouyang/datasets/gigaspeech/manifests/train_xl.tsv"
 
 # 创建日志文件
-LOG_FILE="logs/sonar_pipeline_n${n}_$(date +%Y%m%d_%H%M%S).log"
+LOG_FILE="logs/sonar_term_level_pipeline_$(date +%Y%m%d_%H%M%S).log"
 mkdir -p logs
 
-# === 4. Merge samples (如果不是单分片模式) ===
-if [[ "$single_slice" != "true" ]]; then
-    echo "[INFO] Step 4: Merging MFA processed samples..." | tee -a "$LOG_FILE"
+echo "=== SONAR Term-Level Pipeline Started ===" | tee -a "$LOG_FILE"
+echo "Start time: $(date)" | tee -a "$LOG_FILE"
+echo "Parameters:" | tee -a "$LOG_FILE"
+echo "  - text_field: ${text_field}" | tee -a "$LOG_FILE"
+echo "  - single_slice: ${single_slice}" | tee -a "$LOG_FILE"
+echo "  - audio_text_loss_ratio: ${audio_text_loss_ratio}" | tee -a "$LOG_FILE"
+echo "  - audio_term_loss_ratio: ${audio_term_loss_ratio}" | tee -a "$LOG_FILE"
+echo "  - test_samples_path: ${test_samples_path}" | tee -a "$LOG_FILE"
+echo "  - enable_hard_neg: ${enable_hard_neg}" | tee -a "$LOG_FILE"
+echo "  - enable_full_eval: ${enable_full_eval}" | tee -a "$LOG_FILE"
+echo "  - full_eval_every_n_epochs: ${full_eval_every_n_epochs}" | tee -a "$LOG_FILE"
+echo "  - best_model_path: ${best_model_path}" | tee -a "$LOG_FILE"
+echo "  - gpu_ids: ${gpu_ids:-'auto (all available)'}" | tee -a "$LOG_FILE"
+echo "" | tee -a "$LOG_FILE"
+
+# === 1. Handle MFA term-level chunks ===
+echo "[INFO] Step 1: Handling MFA term-level chunks..." | tee -a "$LOG_FILE"
+
+if [[ "$single_slice" == "true" ]]; then
+    # 单分片term-level处理
+    if [[ "$text_field" == "term" ]]; then
+        input_samples="data/samples/xl/term_preprocessed_samples_0_500000.json"
+        output_samples="data/samples/xl/term_level_chunks_0_500000.json"
+    else
+        input_samples="data/samples/xl/preprocessed_samples_0_500000.json"
+        output_samples="data/samples/xl/term_level_chunks_single_0_500000.json"
+    fi
     
-    merge_job=$(sbatch \
-        --dependency=afterok:$mfa_job \
-        --job-name=merge_mfa_n${n} \
-        --partition=taurus \
-        --nodes=1 \
-        --ntasks=1 \
-        --cpus-per-task=16 \
-        --mem=96GB \
-        --output=logs/merge_mfa_n${n}_%j.out \
-        --error=logs/merge_mfa_n${n}_%j.err \
-        --wrap="#!/bin/bash
+    if [[ ! -f "$output_samples" ]]; then
+        echo "[INFO] Processing single slice term-level chunks..." | tee -a "$LOG_FILE"
+        
+        mfa_job=$(sbatch \
+            --job-name=term_level_single \
+            --partition=taurus \
+            --mem=32GB \
+            --cpus-per-task=4 \
+            --ntasks=1 \
+            --output=logs/term_level_single_%j.out \
+            --error=logs/term_level_single_%j.err \
+            --wrap="#!/bin/bash
+cd /home/jiaxuanluo/InfiniSST/retriever/gigaspeech
+. ~/miniconda3/etc/profile.d/conda.sh
+conda activate infinisst
+python3 handle_MFA_term_level_chunks.py \
+    --input_json=${input_samples} \
+    --output_json=${output_samples} \
+    --textgrid_dir=/mnt/data/siqiouyang/datasets/gigaspeech/textgrids \
+    --output_audio_dir=/mnt/gemini/data1/jiaxuanluo/term_chunks_cleaned" | awk '{print $4}')
+        
+        echo "term_level_single: $mfa_job" | tee -a "$LOG_FILE"
+        dependency_job_step1=$mfa_job
+    else
+        echo "[INFO] Using existing single slice term-level chunks: $output_samples" | tee -a "$LOG_FILE"
+        dependency_job_step1=""
+    fi
+else
+    # 完整数据集term-level处理
+    final_merged="data/xl_cleaned_term_level_chunks_merged.json"
+    
+    if [[ ! -f "$final_merged" ]]; then
+        # 检查是否需要生成term-level chunks
+        need_generation=false
+        for i in {0..16}; do
+            start_idx=$((i * 500000))
+            if [ $i -eq 16 ]; then
+                chunk_file="data/samples/xl_cleaned/term_level_chunks_${start_idx}_end.json"
+            else
+                end_idx=$((start_idx + 500000))
+                chunk_file="data/samples/xl_cleaned/term_level_chunks_${start_idx}_${end_idx}.json"
+            fi
+            if [[ ! -f "$chunk_file" ]]; then
+                need_generation=true
+                break
+            fi
+        done
+        
+        if [[ "$need_generation" == "true" ]]; then
+            echo "[INFO] Generating term-level chunks for full dataset..." | tee -a "$LOG_FILE"
+            mfa_job=$(sbatch handle_MFA_term_level_chunks.sh ${text_field}_preprocessed_samples /mnt/gemini/data1/jiaxuanluo/term_chunks_cleaned | awk '{print $4}')
+            echo "term_level_chunks_generation: $mfa_job" | tee -a "$LOG_FILE"
+            dependency_job_step1=$mfa_job
+        else
+            echo "[INFO] Term-level chunks exist, skipping generation..." | tee -a "$LOG_FILE"
+            dependency_job_step1=""
+        fi
+    else
+        echo "[INFO] Using existing merged term-level chunks: $final_merged" | tee -a "$LOG_FILE"
+        dependency_job_step1=""
+    fi
+fi
+
+# === 2. Merge term-level samples (如果不是单分片模式) ===
+if [[ "$single_slice" != "true" ]]; then
+    final_samples="data/xl_cleaned_term_level_chunks_merged.json"
+    
+    if [[ ! -f "$final_samples" ]]; then
+        echo "[INFO] Step 2: Merging term-level processed samples..." | tee -a "$LOG_FILE"
+        
+        # 设置依赖关系
+        if [[ -n "$dependency_job_step1" ]]; then
+            dependency_option="--dependency=afterok:$dependency_job_step1"
+        else
+            dependency_option=""
+        fi
+        
+        merge_job=$(sbatch \
+            $dependency_option \
+            --job-name=merge_term_level \
+            --partition=taurus \
+            --nodes=1 \
+            --ntasks=1 \
+            --cpus-per-task=16 \
+            --mem=96GB \
+            --output=logs/merge_term_level_%j.out \
+            --error=logs/merge_term_level_%j.err \
+            --wrap="#!/bin/bash
 cd /home/jiaxuanluo/InfiniSST/retriever/gigaspeech
 . ~/miniconda3/etc/profile.d/conda.sh
 conda activate infinisst
 python3 -c \"
 import json, glob
-files = sorted(glob.glob('data/samples/xl/mfa_${n}chunks_samples_*.json'))
+files = sorted(glob.glob('data/samples/xl_cleaned/term_level_chunks_*.json'))
 merged = []
 for f in files:
     with open(f, encoding='utf-8') as j:
         merged.extend(json.load(j))
-print(f'Merged total {len(merged)} MFA samples with n=${n}')
-with open('data/xl_mfa_${n}chunks_samples_merged.json', 'w', encoding='utf-8') as f:
+print(f'Merged total {len(merged)} term-level samples')
+with open('data/xl_cleaned_term_level_chunks_merged.json', 'w', encoding='utf-8') as f:
     json.dump(merged, f, indent=2, ensure_ascii=False)
 \"" | awk '{print $4}')
-    
-    echo "merge_mfa_samples: $merge_job" | tee -a "$LOG_FILE"
-    final_samples="data/xl_mfa_${n}chunks_samples_merged.json"
-    dependency_job=$merge_job
+        
+        echo "merge_term_level_samples: $merge_job" | tee -a "$LOG_FILE"
+        dependency_job=$merge_job
+    else
+        echo "[INFO] Step 2: Using existing merged term-level samples: $final_samples" | tee -a "$LOG_FILE"
+        dependency_job=$dependency_job_step1
+    fi
 else
     # 单分片模式直接使用单个文件
     final_samples=$output_samples
-    dependency_job=$mfa_job
+    dependency_job=$dependency_job_step1
 fi
 
-# === 5. Train SONAR model ===
-echo "[INFO] Step 5: Training SONAR model..." | tee -a "$LOG_FILE"
+# === 3. Train SONAR model for term-level chunks ===
+echo "[INFO] Step 3: Training SONAR model for term-level chunks..." | tee -a "$LOG_FILE"
+
+# 退出
+exit 0
 
 # 根据模式设置模型保存路径
 if [[ "$single_slice" == "true" ]]; then
-    model_save_path="data/clap_sonar_single_n${n}.pt"
-    job_name="sonar_train_single_n${n}"
+    model_save_path="data/clap_sonar_term_level_single.pt"
+    job_name="sonar_train_term_level_single"
 else
-    model_save_path="data/clap_sonar_full_n${n}.pt"
-    job_name="sonar_train_full_n${n}"
+    model_save_path="data/clap_sonar_term_level_full.pt"
+    job_name="sonar_train_term_level_full"
 fi
 
+echo "[INFO] Training SONAR model: $model_save_path" | tee -a "$LOG_FILE"
+
+# 设置依赖关系
+if [[ -n "$dependency_job" ]]; then
+    dependency_option="--dependency=afterok:$dependency_job"
+else
+    dependency_option=""
+fi
+
+# 依据开关构建可选训练/评估参数
+extra_flags=""
+if [[ "$enable_hard_neg" == "true" ]]; then
+  extra_flags+=" --enable_hard_neg"
+  extra_flags+=" --hard_neg_source glossary"
+  extra_flags+=" --hard_neg_index_path data/glossary_emb.ivfpq.faiss"
+  extra_flags+=" --hard_neg_term2idx_path data/glossary_term2idx.json"
+  extra_flags+=" --hard_neg_metric ip"
+  extra_flags+=" --hard_neg_nprobe 16"
+  extra_flags+=" --hard_neg_candidates 100"
+  extra_flags+=" --hard_neg_k 10"
+fi
+if [[ "$enable_full_eval" == "true" ]]; then
+  extra_flags+=" --enable_full_eval --full_eval_every_n_epochs=${full_eval_every_n_epochs}"
+fi
+
+# 创建适配term-level数据格式的训练脚本
+# --batch_size=512 \
+#    --lr=5e-5 \
+# 构建Python命令
+python_cmd="python3 SONAR_term_level_train_glossary.py \
+    --train_samples_path=${final_samples} \
+    --test_samples_path=${test_samples_path} \
+    --epochs=20 \
+    --batch_size=512 \
+    --lr=5e-5 \
+    --save_path=${model_save_path} \
+    --best_model_path=${best_model_path} \
+    --audio_text_loss_ratio=${audio_text_loss_ratio} \
+    --audio_term_loss_ratio=${audio_term_loss_ratio} \
+    --glossary_path=data/terms/glossary_filtered.json \
+    --unfreeze_layers=10 \
+    --filter_no_term"
+
+# 如果指定了GPU，则添加GPU参数
+if [[ -n "$gpu_ids" ]]; then
+    python_cmd+=" --gpu_ids=${gpu_ids}"
+fi
+
+# 添加其他额外参数
+python_cmd+=" ${extra_flags}"
+
+# 执行命令并获取job ID
 train_job=$(sbatch \
-    --dependency=afterok:$dependency_job \
+    $dependency_option \
     --job-name=$job_name \
     --partition=taurus \
     --nodes=1 \
     --ntasks=1 \
     --cpus-per-task=16 \
-    --gres=gpu:2 \
-    --mem=64GB \
+    --mem=32GB \
+    --gres=gpu:1 \
     --output=logs/${job_name}_%j.out \
     --error=logs/${job_name}_%j.err \
     --wrap="#!/bin/bash
 cd /home/jiaxuanluo/InfiniSST/retriever/gigaspeech
 . ~/miniconda3/etc/profile.d/conda.sh
 conda activate infinisst
-python3 SONAR_train.py --train_samples_path=${final_samples} --epochs=20 --batch_size=512 --save_path=${model_save_path}" | awk '{print $4}')
+# 设置CUDA环境变量
+export CUDA_HOME=/usr/local/cuda
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64:\$LD_LIBRARY_PATH
+export PATH=/usr/local/cuda/bin:\$PATH
+# 显示GPU信息用于调试
+nvidia-smi
+echo \"CUDA_VISIBLE_DEVICES: \$CUDA_VISIBLE_DEVICES\"
+$python_cmd" | awk '{print $4}')
+#--gres=gpu:1 \
 
-echo "sonar_train: $train_job" | tee -a "$LOG_FILE"
-
+echo "sonar_term_level_train: $train_job" | tee -a "$LOG_FILE"
+dependency_job_step3=$train_job
 # === 总结 ===
 echo "" | tee -a "$LOG_FILE"
-echo "=== SONAR Pipeline Summary ===" | tee -a "$LOG_FILE"
-echo "n (chunk count): ${n}" | tee -a "$LOG_FILE"
+echo "=== SONAR Term-Level Pipeline Summary ===" | tee -a "$LOG_FILE"
 echo "text_field: ${text_field}" | tee -a "$LOG_FILE"
 echo "single_slice: ${single_slice}" | tee -a "$LOG_FILE"
 echo "Input TSV: ${TRAIN_TSV}" | tee -a "$LOG_FILE"
@@ -136,16 +280,34 @@ echo "" | tee -a "$LOG_FILE"
 
 echo "Job IDs:" | tee -a "$LOG_FILE"
 if [[ "$single_slice" == "true" ]]; then
-    echo "  - NER extraction (single): $ner_job" | tee -a "$LOG_FILE"
-    echo "  - Preprocessing (single): $preprocess_job" | tee -a "$LOG_FILE"
-    echo "  - MFA chunks (single): $mfa_job" | tee -a "$LOG_FILE"
-    echo "  - Training (single): $train_job" | tee -a "$LOG_FILE"
+    if [[ -n "$dependency_job_step1" ]]; then
+        echo "  - Term-level chunks (single): $dependency_job_step1" | tee -a "$LOG_FILE"
+    else
+        echo "  - Term-level chunks (single): Skipped (existing file)" | tee -a "$LOG_FILE"
+    fi
+    if [[ -n "$dependency_job_step3" && "$dependency_job_step3" != "$dependency_job_step1" ]]; then
+        echo "  - Training (single): $dependency_job_step3" | tee -a "$LOG_FILE"
+    else
+        echo "  - Training (single): Skipped (existing model)" | tee -a "$LOG_FILE"
+    fi
+    echo "  - Evaluation: $eval_job" | tee -a "$LOG_FILE"
 else
-    echo "  - NER extraction (full): $ner_job" | tee -a "$LOG_FILE"
-    echo "  - Preprocessing (full): $preprocess_job" | tee -a "$LOG_FILE"
-    echo "  - MFA chunks (full): $mfa_job" | tee -a "$LOG_FILE"
-    echo "  - Merge samples: $merge_job" | tee -a "$LOG_FILE" 
-    echo "  - Training (full): $train_job" | tee -a "$LOG_FILE"
+    if [[ -n "$dependency_job_step1" ]]; then
+        echo "  - Term-level chunks (full): $dependency_job_step1" | tee -a "$LOG_FILE"
+    else
+        echo "  - Term-level chunks (full): Skipped (existing files)" | tee -a "$LOG_FILE"
+    fi
+    if [[ -n "$merge_job" ]]; then
+        echo "  - Merge samples: $merge_job" | tee -a "$LOG_FILE"
+    else
+        echo "  - Merge samples: Skipped (existing merged file)" | tee -a "$LOG_FILE"
+    fi
+    if [[ -n "$dependency_job_step3" && "$dependency_job_step3" != "$dependency_job" ]]; then
+        echo "  - Training (full): $dependency_job_step3" | tee -a "$LOG_FILE"
+    else
+        echo "  - Training (full): Skipped (existing model)" | tee -a "$LOG_FILE"
+    fi
+    echo "  - Evaluation: $eval_job" | tee -a "$LOG_FILE"
 fi
 
 echo "" | tee -a "$LOG_FILE"
@@ -155,16 +317,9 @@ echo "  tail -f ${LOG_FILE}" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
 if [[ "$single_slice" == "true" ]]; then
-    echo "✅ SONAR single-slice pipeline submitted successfully!" | tee -a "$LOG_FILE"
+    echo "✅ SONAR term-level single-slice pipeline submitted successfully!" | tee -a "$LOG_FILE"
     echo "📝 Quick validation mode: using only first 500K samples" | tee -a "$LOG_FILE"
 else
-    echo "✅ SONAR full pipeline submitted successfully!" | tee -a "$LOG_FILE"
+    echo "✅ SONAR term-level full pipeline submitted successfully!" | tee -a "$LOG_FILE"
     echo "📝 Full dataset mode: processing all samples" | tee -a "$LOG_FILE"
 fi
-
-echo "" | tee -a "$LOG_FILE"
-echo "Usage examples:" | tee -a "$LOG_FILE"
-echo "  # Full pipeline with n=3 chunks" | tee -a "$LOG_FILE"
-echo "  bash SONAR_pipeline.sh 3 term" | tee -a "$LOG_FILE"
-echo "  # Single slice quick validation with n=5 chunks" | tee -a "$LOG_FILE"
-echo "  bash SONAR_pipeline.sh 5 term true" | tee -a "$LOG_FILE"
