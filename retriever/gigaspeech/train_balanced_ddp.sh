@@ -1,15 +1,25 @@
 #!/bin/bash
 
-# Qwen2-Audio DDP修复版训练脚本 - 解决CUDA环境问题
-# 使用方法: ./qwen2_audio_train_ddp_fixed.sh
+# DDP训练脚本 - 使用平衡测试集
+# 使用方法: ./train_balanced_ddp.sh
 
-echo "=== Qwen2-Audio DDP Fixed Training Script ==="
+echo "=== DDP Training with Balanced Test Set ==="
 
 # ===== CUDA环境设置 =====
 export CUDA_HOME=/usr/local/cuda
 export PATH=/usr/local/cuda/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 export CUDA_DEVICE_ORDER=PCI_BUS_ID
+
+# ===== fairseq2缓存设置 =====
+export FAIRSEQ2_CACHE_DIR=/mnt/data2/jiaxuanluo/.cache/fairseq2
+export HF_HOME=/mnt/data2/jiaxuanluo/.cache/huggingface
+export TRANSFORMERS_CACHE=/mnt/data2/jiaxuanluo/.cache/huggingface/transformers
+
+# 确保缓存目录存在
+mkdir -p $FAIRSEQ2_CACHE_DIR
+mkdir -p $HF_HOME
+mkdir -p $TRANSFORMERS_CACHE
 
 # ===== NCCL配置优化 =====
 export NCCL_DEBUG=WARN  # 降低日志噪音
@@ -23,52 +33,80 @@ export NCCL_TIMEOUT=1800  # 保持长超时时间
 export OMP_NUM_THREADS=4
 export TORCH_CUDNN_V8_API_ENABLED=1
 
+# ===== 检查平衡数据集是否存在 =====
+BALANCED_TRAIN_PATH="data/balanced_train_set.json"
+BALANCED_TEST_PATH="data/balanced_test_set.json"
+
+if [ ! -f "$BALANCED_TRAIN_PATH" ] || [ ! -f "$BALANCED_TEST_PATH" ]; then
+    echo "ERROR: Balanced datasets not found!"
+    echo "Expected files:"
+    echo "  - $BALANCED_TRAIN_PATH"
+    echo "  - $BALANCED_TEST_PATH"
+    echo ""
+    echo "Please run the extraction script first:"
+    echo "  ./run_extract_test_set.sh"
+    echo ""
+    exit 1
+fi
+
 # ===== 训练参数 =====
-TRAIN_SAMPLES_PATH="data/xl_cleaned_term_level_chunks_merged.json"
-TEST_SAMPLES_PATH=""
+TRAIN_SAMPLES_PATH="$BALANCED_TRAIN_PATH"
+TEST_SAMPLES_PATH="$BALANCED_TEST_PATH"
 EPOCHS=20
-BATCH_SIZE=128  # Qwen2-Audio 7B需要较小的batch size
-LR=1e-4
-SAVE_PATH="data/qwen2_audio_term_level_full_ddp_fixed.pt"
-BEST_MODEL_PATH="data/qwen2_audio_term_level_best.pt"
+BATCH_SIZE=2048
+LR=5e-5
+SAVE_PATH="data/clap_sonar_balanced_ddp.pt"
+BEST_MODEL_PATH="data/full_dataset_sonar_term_level_best.pt"  # 可选：从之前的模型继续训练
 AUDIO_TEXT_LOSS_RATIO=0.3
 AUDIO_TERM_LOSS_RATIO=0.7
 GLOSSARY_PATH="data/terms/glossary_merged.json"
-MODEL_NAME="Qwen/Qwen2-Audio-7B-Instruct"
-GPU_IDS="4,5,6,7"
-
-# LoRA参数
-LORA_R=16
-LORA_ALPHA=32
-LORA_DROPOUT=0.1
-
-# Hard negative mining参数
-ENABLE_HARD_NEG=true
-HARD_NEG_SOURCE="used"  # 使用训练数据中的术语作为hard negative源
-HARD_NEG_K=10
-HARD_NEG_WEIGHT=0.2
-HARD_NEG_MARGIN=0.1
-HARD_NEG_CANDIDATES=100
-
-# No-term相关参数
-ENABLE_NO_TERM=false
-FILTER_NO_TERM=true
-USE_NO_TERM_LOSS=false
-NO_TERM_MARGIN=0.15
-LAMBDA_NO_TERM=0.5
-NO_TERM_TOP_M=100
+UNFREEZE_LAYERS=10
+GPU_IDS="0,1,2,3,4"
 
 # 日志文件
-LOG_FILE="qwen2_audio_train_ddp_fixed_$(date +%Y%m%d_%H%M%S).log"
+LOG_FILE="sonar_balanced_train_ddp_$(date +%Y%m%d_%H%M%S).log"
 
+echo "=== 数据集信息 ==="
+echo "Training set: $TRAIN_SAMPLES_PATH"
+echo "Test set: $TEST_SAMPLES_PATH"
+
+# 显示数据集统计
+if command -v python3 &> /dev/null; then
+    echo "Dataset statistics:"
+    python3 -c "
+import json
+try:
+    with open('$TRAIN_SAMPLES_PATH') as f:
+        train_data = json.load(f)
+    print(f'  Training samples: {len(train_data)}')
+    
+    with open('$TEST_SAMPLES_PATH') as f:
+        test_data = json.load(f)
+    print(f'  Test samples: {len(test_data)}')
+    
+    # 显示术语信息
+    terms_info_path = '$TEST_SAMPLES_PATH'.replace('.json', '_terms_info.json')
+    try:
+        with open(terms_info_path) as f:
+            terms_info = json.load(f)
+            stats = terms_info['stats']
+            print(f'  Test unseen terms: {stats[\"unseen_terms_count\"]} ({stats[\"unseen_ratio\"]:.1%})')
+            print(f'  Test seen terms: {stats[\"seen_terms_count\"]}')
+    except:
+        print('  Terms info not available')
+        
+except Exception as e:
+    print(f'  Error reading dataset info: {e}')
+"
+fi
+
+echo ""
 echo "=== 环境检查 ==="
 echo "CUDA_HOME: $CUDA_HOME"
 echo "CUDA version: $(/usr/local/cuda/bin/nvcc --version | grep release)"
 echo "GPU IDs: $GPU_IDS"
 echo "Total Batch Size: $BATCH_SIZE"
-echo "Per-GPU Batch Size: $((BATCH_SIZE / 8))"
-echo "Model: $MODEL_NAME"
-echo "LoRA Config: r=$LORA_R, alpha=$LORA_ALPHA, dropout=$LORA_DROPOUT"
+echo "Per-GPU Batch Size: $((BATCH_SIZE / 5))"
 
 # 激活conda环境
 source /home/jiaxuanluo/miniconda3/etc/profile.d/conda.sh
@@ -91,9 +129,6 @@ print('GPU count:', torch.cuda.device_count())
 if torch.cuda.is_available():
     for i in range(min(8, torch.cuda.device_count())):
         print(f'GPU {i}: {torch.cuda.get_device_name(i)}')
-        props = torch.cuda.get_device_properties(i)
-        print(f'  Memory: {props.total_memory / 1024**3:.1f} GB')
-        print(f'  Compute Capability: {props.major}.{props.minor}')
 else:
     print('ERROR: CUDA not available!')
     exit(1)
@@ -109,10 +144,13 @@ echo "=== GPU状态 ==="
 nvidia-smi --query-gpu=index,name,memory.total,memory.used,utilization.gpu --format=csv,noheader,nounits
 
 echo ""
-echo "=== 启动Qwen2-Audio DDP训练 ==="
+echo "=== 启动DDP训练（平衡数据集）==="
+echo "开始时间: $(date)"
+echo "日志文件: $LOG_FILE"
+echo ""
 
-# 构建训练命令
-TRAIN_CMD="python3 Qwen2_Audio_term_level_train_ddp.py \
+# 启动训练 - 使用独立的测试集
+python3 SONAR_term_level_train_glossary_ddp.py \
     --train_samples_path=$TRAIN_SAMPLES_PATH \
     --test_samples_path=$TEST_SAMPLES_PATH \
     --epochs=$EPOCHS \
@@ -123,43 +161,10 @@ TRAIN_CMD="python3 Qwen2_Audio_term_level_train_ddp.py \
     --audio_text_loss_ratio=$AUDIO_TEXT_LOSS_RATIO \
     --audio_term_loss_ratio=$AUDIO_TERM_LOSS_RATIO \
     --glossary_path=$GLOSSARY_PATH \
-    --model_name=$MODEL_NAME \
-    --lora_r=$LORA_R \
-    --lora_alpha=$LORA_ALPHA \
-    --lora_dropout=$LORA_DROPOUT \
-    --gpu_ids=$GPU_IDS"
-
-# 添加hard negative mining参数
-if [ "$ENABLE_HARD_NEG" = "true" ]; then
-    TRAIN_CMD+=" --enable_hard_neg"
-    TRAIN_CMD+=" --hard_neg_source=$HARD_NEG_SOURCE"
-    TRAIN_CMD+=" --hard_neg_k=$HARD_NEG_K"
-    TRAIN_CMD+=" --hard_neg_weight=$HARD_NEG_WEIGHT"
-    TRAIN_CMD+=" --hard_neg_margin=$HARD_NEG_MARGIN"
-    TRAIN_CMD+=" --hard_neg_candidates=$HARD_NEG_CANDIDATES"
-fi
-
-# 添加no-term参数
-if [ "$ENABLE_NO_TERM" = "true" ]; then
-    TRAIN_CMD+=" --enable_no_term"
-fi
-
-if [ "$FILTER_NO_TERM" = "true" ]; then
-    TRAIN_CMD+=" --filter_no_term"
-fi
-
-if [ "$USE_NO_TERM_LOSS" = "true" ]; then
-    TRAIN_CMD+=" --use_no_term_loss"
-    TRAIN_CMD+=" --no_term_margin=$NO_TERM_MARGIN"
-    TRAIN_CMD+=" --lambda_no_term=$LAMBDA_NO_TERM"
-    TRAIN_CMD+=" --no_term_top_m=$NO_TERM_TOP_M"
-fi
-
-echo "执行命令: $TRAIN_CMD"
-echo ""
-
-# 启动训练
-eval "$TRAIN_CMD" 2>&1 | tee $LOG_FILE
+    --unfreeze_layers=$UNFREEZE_LAYERS \
+    --filter_no_term \
+    --gpu_ids=$GPU_IDS \
+    2>&1 | tee $LOG_FILE &
 
 # 获取进程ID
 TRAIN_PID=$!
@@ -194,6 +199,7 @@ done
 
 echo ""
 echo "=== 训练完成 ==="
+echo "结束时间: $(date)"
 echo "日志文件: $LOG_FILE"
 
 # 显示最终结果
@@ -201,9 +207,19 @@ if [ -f "$LOG_FILE" ]; then
     echo ""
     echo "最终结果:"
     grep -E "Best Recall@10|Training completed|ERROR|Exception" "$LOG_FILE" | tail -n 5
+    
+    echo ""
+    echo "=== 时间统计 ==="
+    echo "初始化时间:"
+    grep "Initialization completed" "$LOG_FILE" | tail -n 1
+    echo "训练时间统计:"
+    grep "Epoch.*completed in" "$LOG_FILE" | tail -n 3
+    echo "总训练时间:"
+    grep "Training completed in" "$LOG_FILE" | tail -n 1
+    
+    echo ""
+    echo "=== Unseen Terms Recall ==="
+    echo "Seen/Unseen recall statistics:"
+    grep -E "Seen Recall@|Unseen Recall@|Unseen Term Percentage" "$LOG_FILE" | tail -n 6
 fi
 
-# 显示模型文件
-echo ""
-echo "生成的模型文件:"
-ls -la data/qwen2_audio_term_level*.pt 2>/dev/null || echo "未找到模型文件"

@@ -11,6 +11,16 @@ export PATH=/usr/local/cuda/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 export CUDA_DEVICE_ORDER=PCI_BUS_ID
 
+# ===== fairseq2缓存设置 =====
+export FAIRSEQ2_CACHE_DIR=/mnt/data2/jiaxuanluo/.cache/fairseq2
+export HF_HOME=/mnt/data2/jiaxuanluo/.cache/huggingface
+export TRANSFORMERS_CACHE=/mnt/data2/jiaxuanluo/.cache/huggingface/transformers
+
+# 确保缓存目录存在
+mkdir -p $FAIRSEQ2_CACHE_DIR
+mkdir -p $HF_HOME
+mkdir -p $TRANSFORMERS_CACHE
+
 # ===== NCCL配置优化 =====
 export NCCL_DEBUG=WARN  # 降低日志噪音
 export NCCL_IB_DISABLE=1  # 禁用InfiniBand
@@ -24,10 +34,12 @@ export OMP_NUM_THREADS=4
 export TORCH_CUDNN_V8_API_ENABLED=1
 
 # ===== 训练参数 =====
+# TRAIN_SAMPLES_PATH="data/samples/xl_cleaned/term_level_chunks_0_500000.json"
 TRAIN_SAMPLES_PATH="data/xl_cleaned_term_level_chunks_merged.json"
-TEST_SAMPLES_PATH=""  # 空字符串，不传递test_samples_path参数
+#TEST_SAMPLES_PATH="data/samples/xl_cleaned/term_level_chunks_500000_1000000.json"  # 空字符串，不传递test_samples_path参数
+TEST_SAMPLES_PATH=""
 EPOCHS=20
-BATCH_SIZE=4096  # 开始用更大batch size测试 (每GPU 512)
+BATCH_SIZE=2051
 LR=5e-5
 SAVE_PATH="data/clap_sonar_term_level_full_ddp_fixed.pt"
 BEST_MODEL_PATH="data/full_dataset_sonar_term_level_best.pt"
@@ -35,7 +47,9 @@ AUDIO_TEXT_LOSS_RATIO=0.3
 AUDIO_TERM_LOSS_RATIO=0.7
 GLOSSARY_PATH="data/terms/glossary_merged.json"
 UNFREEZE_LAYERS=10
-GPU_IDS="0,1,2,3,4,5,6,7"
+GPU_IDS="0,1,2,3,4"
+MIN_UNSEEN_RATIO=0.20  # 最小unseen terms比例
+FORCE_UNSEEN_RATIO=true  # 强制调整术语分布
 
 # 日志文件
 LOG_FILE="sonar_train_ddp_fixed_$(date +%Y%m%d_%H%M%S).log"
@@ -104,6 +118,8 @@ if [ -n "$TEST_SAMPLES_PATH" ] && [ "$TEST_SAMPLES_PATH" != "" ]; then
         --unfreeze_layers=$UNFREEZE_LAYERS \
         --filter_no_term \
         --gpu_ids=$GPU_IDS \
+        --min_unseen_ratio=$MIN_UNSEEN_RATIO \
+        --force_unseen_ratio \
         2>&1 | tee $LOG_FILE
 else
     # 使用train_ratio分割数据集
@@ -120,6 +136,8 @@ else
         --unfreeze_layers=$UNFREEZE_LAYERS \
         --filter_no_term \
         --gpu_ids=$GPU_IDS \
+        --min_unseen_ratio=$MIN_UNSEEN_RATIO \
+        --force_unseen_ratio \
         2>&1 | tee $LOG_FILE
 fi
 

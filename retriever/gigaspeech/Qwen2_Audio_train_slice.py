@@ -79,7 +79,7 @@ class Qwen2AudioSpeechEncoder:
                     # Process each audio file individually to avoid batch dimension issues
                     inputs = self.processor(
                         text="<|audio_bos|><|AUDIO|><|audio_eos|>",
-                        audios=audio,  # Single audio, not wrapped in list
+                        audio=audio,  # Single audio, not wrapped in list
                         sampling_rate=16000,
                         return_tensors="pt",
                         padding=True,

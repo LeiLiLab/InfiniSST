@@ -907,10 +907,10 @@ def setup_ddp(rank, world_size, args):
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '12355'
     
-    # 设置NCCL环境变量
-    os.environ['NCCL_DEBUG'] = 'INFO'
+    # 设置NCCL环境变量 - 更保守的设置
+    os.environ['NCCL_DEBUG'] = 'WARN'  # 减少调试信息
     os.environ['NCCL_IB_DISABLE'] = '1'
-    os.environ['NCCL_P2P_DISABLE'] = '1'  # 先禁用P2P避免通信问题
+    os.environ['NCCL_P2P_DISABLE'] = '1'
     os.environ['NCCL_SOCKET_IFNAME'] = 'lo'
     
     # 增加超时时间
@@ -968,7 +968,6 @@ def train_ddp(rank, world_size, args):
 
     model = ContrastiveQwen2AudioModel(
         speech_encoder, text_encoder, 
-        hidden_dim=4096,  # Qwen2-Audio typical hidden size
         proj_dim=512,
         lora_r=args.lora_r,
         lora_alpha=args.lora_alpha,
@@ -1362,7 +1361,7 @@ def main():
                        help="Path to term-level chunk samples")
     parser.add_argument('--test_samples_path', type=str, default=None,
                        help="Path to separate test samples. If not provided, will use train_ratio to split training data")
-    parser.add_argument('--train_ratio', type=float, default=0.99,
+    parser.add_argument('--train_ratio', type=float, default=0.998,
                        help="Ratio of samples to use for training (default: 0.99, only used when test_samples_path is not provided)")
     parser.add_argument('--glossary_path', type=str, default="data/terms/glossary_filtered.json")
     parser.add_argument('--save_path', type=str, default="data/qwen2_audio_term_level.pt")

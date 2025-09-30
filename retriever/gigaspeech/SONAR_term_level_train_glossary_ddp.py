@@ -1089,9 +1089,10 @@ def setup_ddp(rank, world_size, args):
     try:
         dist.init_process_group("nccl", rank=rank, world_size=world_size, timeout=timeout)
         if rank == 0:
-            print(f"[INFO] Process group initialized successfully with timeout: {timeout}")
+            print(f"[INFO] Process group initialized successfully with port {os.environ['MASTER_PORT']}, timeout: {timeout}")
     except Exception as e:
-        print(f"[ERROR] Failed to initialize process group: {e}")
+        if rank == 0:
+            print(f"[ERROR] Failed to initialize process group on port {os.environ['MASTER_PORT']}: {e}")
         raise
     
     # 设置当前进程的GPU
@@ -1107,6 +1108,83 @@ def setup_ddp(rank, world_size, args):
 def cleanup_ddp():
     """清理DDP环境"""
     dist.destroy_process_group()
+
+
+def warmup_model_download(rank, world_size):
+    """Rank0 预热下载模型权重，避免多进程并发写缓存冲突"""
+    if rank == 0:
+        print(f"[INFO] [{time.strftime('%H:%M:%S')}] Rank 0 warming up model download...")
+        warmup_start = time.time()
+        
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # 使用CPU预热下载，避免GPU内存占用
+                print(f"[INFO] [{time.strftime('%H:%M:%S')}] Downloading speech encoder (attempt {attempt+1}/{max_retries})...")
+                
+                # 设置环境变量避免并发写入冲突
+                import os
+                os.environ['FAIRSEQ2_CACHE_DIR'] = '/mnt/data2/jiaxuanluo/.cache/fairseq2'
+                # 为预热阶段设置专用缓存目录
+                warmup_cache_dir = f'/mnt/data2/jiaxuanluo/.cache/fairseq2_warmup'
+                os.makedirs(warmup_cache_dir, exist_ok=True)
+                os.environ['FAIRSEQ2_CACHE_DIR'] = warmup_cache_dir
+                
+                speech_encoder_warmup = SpeechToEmbeddingModelPipeline(
+                    encoder="sonar_speech_encoder_eng", device="cpu"
+                )
+                print(f"[INFO] [{time.strftime('%H:%M:%S')}] Speech encoder downloaded successfully")
+                
+                print(f"[INFO] [{time.strftime('%H:%M:%S')}] Downloading text encoder...")
+                text_encoder_warmup = TextToEmbeddingModelPipeline(
+                    encoder="text_sonar_basic_encoder",
+                    tokenizer="text_sonar_basic_encoder",
+                    device="cpu",
+                    dtype=torch.float32,
+                )
+                print(f"[INFO] [{time.strftime('%H:%M:%S')}] Text encoder downloaded successfully")
+                
+                # 清理预热模型以释放内存
+                del speech_encoder_warmup, text_encoder_warmup
+                torch.cuda.empty_cache()
+                
+                # 恢复正常缓存目录
+                os.environ['FAIRSEQ2_CACHE_DIR'] = '/mnt/data2/jiaxuanluo/.cache/fairseq2'
+                
+                warmup_time = time.time() - warmup_start
+                print(f"[INFO] [{time.strftime('%H:%M:%S')}] Model warmup completed in {warmup_time:.2f}s")
+                break
+                
+            except Exception as e:
+                print(f"[WARN] [{time.strftime('%H:%M:%S')}] Model warmup attempt {attempt+1} failed: {e}")
+                
+                if attempt < max_retries - 1:
+                    # 清理可能损坏的缓存
+                    import glob, shutil
+                    # 检查两种可能的缓存路径结构
+                    cache_patterns = [
+                        '/mnt/data2/jiaxuanluo/.cache/fairseq2/assets/*',
+                        '/mnt/data2/jiaxuanluo/.cache/fairseq2/*'
+                    ]
+                    for pattern in cache_patterns:
+                        for cache_dir in glob.glob(pattern):
+                            if os.path.isdir(cache_dir) and not cache_dir.endswith('/assets'):
+                                # 检查是否包含临时文件
+                                temp_files = glob.glob(os.path.join(cache_dir, 'tmp*'))
+                                if temp_files:
+                                    print(f"[INFO] [{time.strftime('%H:%M:%S')}] Cleaning corrupted cache: {cache_dir}")
+                                    shutil.rmtree(cache_dir, ignore_errors=True)
+                    
+                    print(f"[INFO] [{time.strftime('%H:%M:%S')}] Retrying in 5 seconds...")
+                    time.sleep(5)
+                else:
+                    print(f"[WARN] [{time.strftime('%H:%M:%S')}] All warmup attempts failed. Will proceed with normal initialization")
+    
+    # 等待rank0完成下载
+    dist.barrier()
+    
+    if rank != 0:
+        print(f"[INFO] [{time.strftime('%H:%M:%S')}] Rank {rank} proceeding after warmup barrier")
 
 
 def train_ddp(rank, world_size, args):
@@ -1127,65 +1205,147 @@ def train_ddp(rank, world_size, args):
         print(f"[INFO] [{time.strftime('%H:%M:%S')}] DDP setup completed in {setup_time:.2f}s")
         print(f"[INFO] [{time.strftime('%H:%M:%S')}] Device: {device}")
     
+    # === Rank0 预热模型下载 ===
+    warmup_model_download(rank, world_size)
+    
+    # === 为每个进程设置独立缓存目录 ===
+    import os
+    process_cache_dir = f'/mnt/data2/jiaxuanluo/.cache/fairseq2_rank{rank}'
+    os.makedirs(process_cache_dir, exist_ok=True)
+    os.environ['FAIRSEQ2_CACHE_DIR'] = process_cache_dir
+    
+    if rank == 0:
+        print(f"[INFO] [{time.strftime('%H:%M:%S')}] Set process-specific cache dir: {process_cache_dir}")
+    
     # === 模型初始化 ===
     if rank == 0:
         print(f"[INFO] [{time.strftime('%H:%M:%S')}] Starting model initialization...")
     
     model_init_start = time.time()
-    try:
-        speech_start = time.time()
-        speech_encoder = SpeechToEmbeddingModelPipeline(
-            encoder="sonar_speech_encoder_eng", device=device
-        )
-        speech_time = time.time() - speech_start
-        if rank == 0:
-            print(f"[INFO] [{time.strftime('%H:%M:%S')}] Speech encoder initialized successfully in {speech_time:.2f}s")
-    except Exception as e:
-        if rank == 0:
-            print(f"[ERROR] [{time.strftime('%H:%M:%S')}] Failed to initialize speech encoder with device: {e}")
-            print(f"[INFO] [{time.strftime('%H:%M:%S')}] Trying alternative initialization...")
-        speech_start = time.time()
-        speech_encoder = SpeechToEmbeddingModelPipeline(
-            encoder="sonar_speech_encoder_eng"
-        )
-        if hasattr(speech_encoder, 'model'):
-            speech_encoder.model = speech_encoder.model.to(device)
-            for module in speech_encoder.model.modules():
-                if hasattr(module, 'to'):
-                    module.to(device)
-        speech_time = time.time() - speech_start
-        if rank == 0:
-            print(f"[INFO] [{time.strftime('%H:%M:%S')}] Speech encoder initialized with alternative method in {speech_time:.2f}s")
+    
+    # 语音编码器初始化，带重试机制
+    speech_encoder = None
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            speech_start = time.time()
+            if rank == 0:
+                print(f"[INFO] [{time.strftime('%H:%M:%S')}] Initializing speech encoder (attempt {attempt+1}/{max_retries})...")
+            
+            speech_encoder = SpeechToEmbeddingModelPipeline(
+                encoder="sonar_speech_encoder_eng", device=device
+            )
+            speech_time = time.time() - speech_start
+            if rank == 0:
+                print(f"[INFO] [{time.strftime('%H:%M:%S')}] Speech encoder initialized successfully in {speech_time:.2f}s")
+            break
+            
+        except Exception as e:
+            if rank == 0:
+                print(f"[ERROR] [{time.strftime('%H:%M:%S')}] Speech encoder attempt {attempt+1} failed: {e}")
+            
+            if attempt < max_retries - 1:
+                # 清理可能损坏的缓存
+                if rank == 0:
+                    import glob, shutil
+                    # 检查两种可能的缓存路径结构
+                    cache_patterns = [
+                        '/mnt/data2/jiaxuanluo/.cache/fairseq2/assets/*',
+                        '/mnt/data2/jiaxuanluo/.cache/fairseq2/*'
+                    ]
+                    for pattern in cache_patterns:
+                        for cache_dir in glob.glob(pattern):
+                            if os.path.isdir(cache_dir) and not cache_dir.endswith('/assets'):
+                                temp_files = glob.glob(os.path.join(cache_dir, 'tmp*'))
+                                if temp_files:
+                                    print(f"[INFO] [{time.strftime('%H:%M:%S')}] Cleaning corrupted cache: {cache_dir}")
+                                    shutil.rmtree(cache_dir, ignore_errors=True)
+                
+                # 等待一段时间再重试
+                if rank == 0:
+                    print(f"[INFO] [{time.strftime('%H:%M:%S')}] Retrying in 10 seconds...")
+                time.sleep(10)
+            else:
+                # 最后尝试CPU初始化然后移动到GPU
+                if rank == 0:
+                    print(f"[INFO] [{time.strftime('%H:%M:%S')}] Trying CPU initialization as fallback...")
+                speech_start = time.time()
+                speech_encoder = SpeechToEmbeddingModelPipeline(
+                    encoder="sonar_speech_encoder_eng"
+                )
+                if hasattr(speech_encoder, 'model'):
+                    speech_encoder.model = speech_encoder.model.to(device)
+                    for module in speech_encoder.model.modules():
+                        if hasattr(module, 'to'):
+                            module.to(device)
+                speech_time = time.time() - speech_start
+                if rank == 0:
+                    print(f"[INFO] [{time.strftime('%H:%M:%S')}] Speech encoder initialized with CPU fallback in {speech_time:.2f}s")
+                break
 
-    try:
-        text_start = time.time()
-        text_encoder = TextToEmbeddingModelPipeline(
-            encoder="text_sonar_basic_encoder",
-            tokenizer="text_sonar_basic_encoder",
-            device=device,
-            dtype=torch.float32,
-        )
-        text_time = time.time() - text_start
-        if rank == 0:
-            print(f"[INFO] [{time.strftime('%H:%M:%S')}] Text encoder initialized successfully in {text_time:.2f}s")
-    except Exception as e:
-        if rank == 0:
-            print(f"[ERROR] [{time.strftime('%H:%M:%S')}] Failed to initialize text encoder with device: {e}")
-            print(f"[INFO] [{time.strftime('%H:%M:%S')}] Trying alternative initialization...")
-        text_start = time.time()
-        text_encoder = TextToEmbeddingModelPipeline(
-            encoder="text_sonar_basic_encoder",
-            tokenizer="text_sonar_basic_encoder",
-            dtype=torch.float32,
-        )
-        if hasattr(text_encoder, 'model'):
-            text_encoder.model = text_encoder.model.to(device)
-            for module in text_encoder.model.modules():
-                if hasattr(module, 'to'):
-                    module.to(device)
-        text_time = time.time() - text_start
-        if rank == 0:
-            print(f"[INFO] [{time.strftime('%H:%M:%S')}] Text encoder initialized with alternative method in {text_time:.2f}s")
+    # 文本编码器初始化，带重试机制
+    text_encoder = None
+    for attempt in range(max_retries):
+        try:
+            text_start = time.time()
+            if rank == 0:
+                print(f"[INFO] [{time.strftime('%H:%M:%S')}] Initializing text encoder (attempt {attempt+1}/{max_retries})...")
+            
+            text_encoder = TextToEmbeddingModelPipeline(
+                encoder="text_sonar_basic_encoder",
+                tokenizer="text_sonar_basic_encoder",
+                device=device,
+                dtype=torch.float32,
+            )
+            text_time = time.time() - text_start
+            if rank == 0:
+                print(f"[INFO] [{time.strftime('%H:%M:%S')}] Text encoder initialized successfully in {text_time:.2f}s")
+            break
+            
+        except Exception as e:
+            if rank == 0:
+                print(f"[ERROR] [{time.strftime('%H:%M:%S')}] Text encoder attempt {attempt+1} failed: {e}")
+            
+            if attempt < max_retries - 1:
+                # 清理可能损坏的缓存
+                if rank == 0:
+                    import glob, shutil
+                    # 检查两种可能的缓存路径结构
+                    cache_patterns = [
+                        '/mnt/data2/jiaxuanluo/.cache/fairseq2/assets/*',
+                        '/mnt/data2/jiaxuanluo/.cache/fairseq2/*'
+                    ]
+                    for pattern in cache_patterns:
+                        for cache_dir in glob.glob(pattern):
+                            if os.path.isdir(cache_dir) and not cache_dir.endswith('/assets'):
+                                temp_files = glob.glob(os.path.join(cache_dir, 'tmp*'))
+                                if temp_files:
+                                    print(f"[INFO] [{time.strftime('%H:%M:%S')}] Cleaning corrupted cache: {cache_dir}")
+                                    shutil.rmtree(cache_dir, ignore_errors=True)
+                
+                # 等待一段时间再重试
+                if rank == 0:
+                    print(f"[INFO] [{time.strftime('%H:%M:%S')}] Retrying in 10 seconds...")
+                time.sleep(10)
+            else:
+                # 最后尝试CPU初始化然后移动到GPU
+                if rank == 0:
+                    print(f"[INFO] [{time.strftime('%H:%M:%S')}] Trying CPU initialization as fallback...")
+                text_start = time.time()
+                text_encoder = TextToEmbeddingModelPipeline(
+                    encoder="text_sonar_basic_encoder",
+                    tokenizer="text_sonar_basic_encoder",
+                    dtype=torch.float32,
+                )
+                if hasattr(text_encoder, 'model'):
+                    text_encoder.model = text_encoder.model.to(device)
+                    for module in text_encoder.model.modules():
+                        if hasattr(module, 'to'):
+                            module.to(device)
+                text_time = time.time() - text_start
+                if rank == 0:
+                    print(f"[INFO] [{time.strftime('%H:%M:%S')}] Text encoder initialized with CPU fallback in {text_time:.2f}s")
+                break
 
     # 创建对比模型
     contrastive_start = time.time()
@@ -1198,21 +1358,45 @@ def train_ddp(rank, world_size, args):
         print(f"[INFO] [{time.strftime('%H:%M:%S')}] Contrastive model created in {contrastive_time:.2f}s")
     
     # 加载预训练权重
+    best_recall_from_checkpoint = 0.0  # 从checkpoint中读取的best_recall
     if args.best_model_path and os.path.exists(args.best_model_path):
         if rank == 0:
             print(f"[INFO] [{time.strftime('%H:%M:%S')}] Loading pre-trained weights from {args.best_model_path}...")
         load_start = time.time()
         try:
-            state_dict = torch.load(args.best_model_path, map_location=device)
+            checkpoint = torch.load(args.best_model_path, map_location=device)
+            
+            # 检查是否是完整的checkpoint（包含优化器状态等）还是只有state_dict
+            if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+                # 完整checkpoint格式
+                state_dict = checkpoint['model_state_dict']
+                if rank == 0:
+                    print(f"[INFO] [{time.strftime('%H:%M:%S')}] Found complete checkpoint with keys: {list(checkpoint.keys())}")
+                    if 'epoch' in checkpoint:
+                        print(f"[INFO] [{time.strftime('%H:%M:%S')}] Checkpoint from epoch: {checkpoint['epoch']}")
+                    if 'best_recall' in checkpoint:
+                        best_recall_from_checkpoint = checkpoint['best_recall']
+                        print(f"[INFO] [{time.strftime('%H:%M:%S')}] Checkpoint best recall: {best_recall_from_checkpoint:.2%}")
+            else:
+                # 只有state_dict的格式
+                state_dict = checkpoint
+                if rank == 0:
+                    print(f"[INFO] [{time.strftime('%H:%M:%S')}] Found state_dict checkpoint")
+            
+            # 处理DDP前缀
             if list(state_dict.keys())[0].startswith('module.'):
                 new_state_dict = {}
                 for k, v in state_dict.items():
                     new_state_dict[k[7:]] = v
                 state_dict = new_state_dict
+                if rank == 0:
+                    print(f"[INFO] [{time.strftime('%H:%M:%S')}] Removed 'module.' prefix from state_dict keys")
+            
             model.load_state_dict(state_dict)
             load_time = time.time() - load_start
             if rank == 0:
                 print(f"[INFO] [{time.strftime('%H:%M:%S')}] Successfully loaded weights in {load_time:.2f}s")
+                
         except Exception as e:
             load_time = time.time() - load_start
             if rank == 0:
@@ -1268,8 +1452,22 @@ def train_ddp(rank, world_size, args):
         train_dataset = TermLevelDataset(args.train_samples_path, split="train", train_ratio=1.0, enable_no_term=args.enable_no_term, filter_no_term=args.filter_no_term)
         test_dataset = TermLevelDataset(None, split="test", train_ratio=args.train_ratio, test_path=args.test_samples_path, enable_no_term=args.enable_no_term, filter_no_term=args.filter_no_term)
     else:
-        train_dataset = TermLevelDataset(args.train_samples_path, split="train", train_ratio=args.train_ratio, enable_no_term=args.enable_no_term, filter_no_term=args.filter_no_term)
-        test_dataset = TermLevelDataset(args.train_samples_path, split="test", train_ratio=args.train_ratio, enable_no_term=args.enable_no_term, filter_no_term=args.filter_no_term)
+        # 如果启用测试集重构，需要更大的测试集来筛选样本
+        effective_train_ratio = args.train_ratio
+        if args.rebuild_test_set:
+            # 动态调整train_ratio以确保有足够的测试样本
+            min_test_ratio = max(0.05, args.target_test_size * 2 / 50000)  # 假设大约5万样本，至少5%测试集
+            if (1.0 - args.train_ratio) < min_test_ratio:
+                effective_train_ratio = 1.0 - min_test_ratio
+                if rank == 0:
+                    print(f"[INFO] [{time.strftime('%H:%M:%S')}] Adjusting train_ratio from {args.train_ratio:.3f} to {effective_train_ratio:.3f} for test set rebuilding")
+                    print(f"[INFO] [{time.strftime('%H:%M:%S')}] This ensures at least {min_test_ratio:.1%} of data for test set to achieve target unseen ratio")
+            else:
+                if rank == 0:
+                    print(f"[INFO] [{time.strftime('%H:%M:%S')}] Current train_ratio {args.train_ratio:.3f} provides sufficient test samples")
+        
+        train_dataset = TermLevelDataset(args.train_samples_path, split="train", train_ratio=effective_train_ratio, enable_no_term=args.enable_no_term, filter_no_term=args.filter_no_term)
+        test_dataset = TermLevelDataset(args.train_samples_path, split="test", train_ratio=effective_train_ratio, enable_no_term=args.enable_no_term, filter_no_term=args.filter_no_term)
     
     dataset_time = time.time() - dataset_start
     if rank == 0:
@@ -1310,6 +1508,139 @@ def train_ddp(rank, world_size, args):
     
     used_terms_train = extract_all_used_terms(train_dataset)
     used_terms_test = extract_all_used_terms(test_dataset)
+    
+    # 计算unseen terms比例
+    train_terms_set = set(t.lower() for t in used_terms_train)
+    test_terms_set = set(t.lower() for t in used_terms_test)
+    unseen_terms = test_terms_set - train_terms_set
+    total_test_terms = len(test_terms_set)
+    unseen_ratio = len(unseen_terms) / total_test_terms if total_test_terms > 0 else 0.0
+    
+    if rank == 0:
+        print(f"[INFO] [{time.strftime('%H:%M:%S')}] Initial unseen terms ratio: {unseen_ratio:.2%} ({len(unseen_terms)}/{total_test_terms})")
+    
+    # 根据配置选择不同的unseen术语比例控制策略
+    if args.rebuild_test_set and rank == 0:
+        # 新策略：重构测试集以确保unseen术语比例
+        if rank == 0:
+            print(f"[INFO] [{time.strftime('%H:%M:%S')}] Rebuilding test set to ensure {args.target_unseen_ratio:.0%} unseen terms ratio...")
+        
+        # 按术语类型分类测试样本
+        seen_samples = []    # 包含seen术语的样本
+        unseen_samples = []  # 包含unseen术语的样本
+        mixed_samples = []   # 同时包含seen和unseen术语的样本
+        
+        for i, sample in enumerate(test_dataset.samples):
+            ground_truth_terms = sample.get('term_chunk_audio_ground_truth_terms', [])
+            sample_terms = set(t.lower() for t in ground_truth_terms if isinstance(t, str))
+            
+            sample_seen_terms = sample_terms & train_terms_set
+            sample_unseen_terms = sample_terms - train_terms_set
+            
+            if sample_unseen_terms and sample_seen_terms:
+                mixed_samples.append((i, sample, sample_seen_terms, sample_unseen_terms))
+            elif sample_unseen_terms:
+                unseen_samples.append((i, sample, set(), sample_unseen_terms))
+            elif sample_seen_terms:
+                seen_samples.append((i, sample, sample_seen_terms, set()))
+        
+        if rank == 0:
+            print(f"[DEBUG] [{time.strftime('%H:%M:%S')}] Sample classification: seen={len(seen_samples)}, unseen={len(unseen_samples)}, mixed={len(mixed_samples)}")
+        
+        # 检查是否有足够的unseen样本
+        total_unseen_contributing = len(unseen_samples) + len(mixed_samples)
+        if total_unseen_contributing < int(args.target_test_size * args.target_unseen_ratio * 0.5):  # 至少要有目标的50%
+            if rank == 0:
+                print(f"[WARN] [{time.strftime('%H:%M:%S')}] Insufficient unseen samples ({total_unseen_contributing}) to achieve target ratio. Consider adjusting train_ratio.")
+                print(f"[WARN] [{time.strftime('%H:%M:%S')}] Current test set size: {len(test_dataset)}, unseen-contributing samples: {total_unseen_contributing}")
+                print(f"[WARN] [{time.strftime('%H:%M:%S')}] Proceeding with available samples...")
+        
+        # 优先选择包含unseen术语的样本
+        selected_samples = []
+        import random
+        random.seed(42)  # 确保可复现
+        
+        # 1. 优先选择mixed样本（它们贡献unseen术语）
+        random.shuffle(mixed_samples)
+        for idx, sample, seen_terms, unseen_terms in mixed_samples:
+            if len(selected_samples) < args.target_test_size:
+                selected_samples.append(sample)
+        
+        # 2. 添加pure unseen样本
+        random.shuffle(unseen_samples)
+        for idx, sample, seen_terms, unseen_terms in unseen_samples:
+            if len(selected_samples) < args.target_test_size:
+                selected_samples.append(sample)
+        
+        # 3. 用seen样本填充剩余位置
+        random.shuffle(seen_samples)
+        for idx, sample, seen_terms, unseen_terms in seen_samples:
+            if len(selected_samples) < args.target_test_size:
+                selected_samples.append(sample)
+        
+        # 如果样本不足目标数量，使用所有可用样本
+        final_test_size = min(args.target_test_size, len(selected_samples))
+        test_dataset.samples = selected_samples[:final_test_size]
+        
+        # 重新计算术语统计
+        used_terms_test_new = extract_all_used_terms(test_dataset)
+        test_terms_set_new = set(t.lower() for t in used_terms_test_new)
+        unseen_terms_new = test_terms_set_new - train_terms_set
+        final_unseen_ratio = len(unseen_terms_new) / len(test_terms_set_new) if len(test_terms_set_new) > 0 else 0.0
+        
+        if rank == 0:
+            print(f"[INFO] [{time.strftime('%H:%M:%S')}] Rebuilt test set: {len(test_dataset)} samples (target: {args.target_test_size})")
+            print(f"[INFO] [{time.strftime('%H:%M:%S')}] New test terms: {len(test_terms_set_new)} (unseen: {len(unseen_terms_new)}, ratio: {final_unseen_ratio:.2%})")
+        
+        if final_unseen_ratio < args.target_unseen_ratio * 0.8 and rank == 0:  # 如果达不到目标的80%
+            print(f"[WARN] [{time.strftime('%H:%M:%S')}] Final unseen ratio ({final_unseen_ratio:.2%}) is significantly lower than target ({args.target_unseen_ratio:.2%})")
+            print(f"[WARN] [{time.strftime('%H:%M:%S')}] Consider using a smaller train_ratio to get more test samples")
+        
+        # 更新变量
+        used_terms_test = used_terms_test_new
+        test_terms_set = test_terms_set_new
+        unseen_terms = unseen_terms_new
+        unseen_ratio = final_unseen_ratio
+        total_test_terms = len(test_terms_set_new)
+        
+    elif (unseen_ratio < args.min_unseen_ratio or args.force_unseen_ratio) and total_test_terms > 0:
+        # 旧策略：从训练集中移除术语（保持向后兼容）
+        if rank == 0:
+            print(f"[INFO] [{time.strftime('%H:%M:%S')}] Using legacy strategy: removing terms from training set")
+            print(f"[INFO] [{time.strftime('%H:%M:%S')}] Unseen ratio {unseen_ratio:.2%} < {args.min_unseen_ratio:.1%}, adjusting term distribution...")
+        
+        # 从训练集中移除一些术语，使它们变成unseen
+        all_terms = list(train_terms_set | test_terms_set)
+        target_unseen_count = max(int(total_test_terms * args.min_unseen_ratio), len(unseen_terms))
+        
+        # 从训练集中随机选择一些术语作为"unseen"
+        import random
+        random.seed(42)  # 确保可复现
+        train_only_terms = train_terms_set - test_terms_set
+        if len(train_only_terms) > 0:
+            # 从只在训练集中出现的术语中选择一部分作为unseen
+            terms_to_make_unseen = random.sample(
+                list(train_only_terms), 
+                min(len(train_only_terms), target_unseen_count - len(unseen_terms))
+            )
+            
+            # 更新术语集合
+            used_terms_train = [t for t in used_terms_train if t.lower() not in terms_to_make_unseen]
+            used_terms_test = used_terms_test + terms_to_make_unseen
+            
+            # 重新计算比例
+            train_terms_set = set(t.lower() for t in used_terms_train)
+            test_terms_set = set(t.lower() for t in used_terms_test)
+            unseen_terms = test_terms_set - train_terms_set
+            unseen_ratio = len(unseen_terms) / len(test_terms_set) if len(test_terms_set) > 0 else 0.0
+            
+            if rank == 0:
+                print(f"[INFO] [{time.strftime('%H:%M:%S')}] Adjusted unseen terms ratio: {unseen_ratio:.2%} ({len(unseen_terms)}/{len(test_terms_set)})")
+                print(f"[INFO] [{time.strftime('%H:%M:%S')}] Moved {len(terms_to_make_unseen)} terms from train to test")
+    else:
+        if rank == 0:
+            print(f"[INFO] [{time.strftime('%H:%M:%S')}] Using original test set without modifications ({len(test_dataset)} samples)")
+    
     used_terms = list(set(t.lower() for t in (used_terms_train + used_terms_test)))
     
     terms_time = time.time() - terms_start
@@ -1318,6 +1649,7 @@ def train_ddp(rank, world_size, args):
         print(f"[INFO] [{time.strftime('%H:%M:%S')}] Found {len(used_terms)} unique terms")
         print(f"[INFO] [{time.strftime('%H:%M:%S')}] Training-only terms: {len(used_terms_train)}")
         print(f"[INFO] [{time.strftime('%H:%M:%S')}] Test-only terms: {len(used_terms_test)}")
+        print(f"[INFO] [{time.strftime('%H:%M:%S')}] Final unseen terms ratio: {unseen_ratio:.2%} ({len(unseen_terms)} unseen terms)")
     
     # === 初始化retriever用于评估（仅主进程） ===
     retriever = None
@@ -1424,8 +1756,12 @@ def train_ddp(rank, world_size, args):
             print(f"[INFO] [{time.strftime('%H:%M:%S')}] GPU Memory: {gpu_allocated:.2f}GB allocated, {gpu_cached:.2f}GB cached, {gpu_memory:.2f}GB total")
         print(f"[INFO] [{time.strftime('%H:%M:%S')}] Starting training loop...")
 
-    best_recall = 0.0
+    # 使用从checkpoint中读取的best_recall，如果没有则使用0.0
+    best_recall = best_recall_from_checkpoint
     no_improve_epochs = 0
+    
+    if rank == 0:
+        print(f"[INFO] [{time.strftime('%H:%M:%S')}] Starting training with best_recall: {best_recall:.2%}")
     
     # === 训练循环 ===
     for epoch in range(args.epochs):
@@ -1577,20 +1913,44 @@ def train_ddp(rank, world_size, args):
             if current_recall > best_recall:
                 best_recall = current_recall
                 no_improve_epochs = 0
-                # 保存最佳模型
+                # 保存最佳模型（包含best_recall信息）
                 best_model_path = args.save_path.replace('.pt', '_best.pt')
-                torch.save(model.state_dict(), best_model_path)
+                best_checkpoint = {
+                    'model_state_dict': model.state_dict(),
+                    'best_recall': best_recall,
+                    'epoch': epoch + 1,
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'scheduler_state_dict': scheduler.state_dict()
+                }
+                torch.save(best_checkpoint, best_model_path)
                 print(f"[INFO] New best model saved to {best_model_path} (Recall@10: {best_recall:.2%})")
+                # 有改进，不需要早停
+                early_stop_flag = torch.tensor(0, device=device)
             else:
                 no_improve_epochs += 1
                 print(f"[INFO] No improvement for {no_improve_epochs} epochs (best: {best_recall:.2%})")
                 
                 if no_improve_epochs >= args.patience:
                     print(f"[EARLY STOPPING] No improvement in {args.patience} epochs. Best Recall@10: {best_recall:.2%}")
-                    break
+                    # 设置早停标志，通知所有进程
+                    early_stop_flag = torch.tensor(1, device=device)
+                else:
+                    early_stop_flag = torch.tensor(0, device=device)
+        else:
+            # 非主进程，不需要早停
+            early_stop_flag = torch.tensor(0, device=device)
+        
+        # 广播早停标志到所有进程
+        dist.broadcast(early_stop_flag, src=0)
         
         # 同步所有进程，确保主进程完成评估后再继续
         dist.barrier()
+        
+        # 检查是否早停
+        if early_stop_flag.item() == 1:
+            if rank == 0:
+                print(f"[INFO] [{time.strftime('%H:%M:%S')}] Early stopping triggered, exiting training loop")
+            break
         
         # 计算epoch总时间
         epoch_time = time.time() - epoch_start
@@ -1601,7 +1961,15 @@ def train_ddp(rank, world_size, args):
     if rank == 0:
         print(f"[INFO] [{time.strftime('%H:%M:%S')}] Saving final model...")
         final_save_start = time.time()
-        torch.save(model.state_dict(), args.save_path)
+        # 保存完整的checkpoint，包含best_recall信息
+        final_checkpoint = {
+            'model_state_dict': model.state_dict(),
+            'best_recall': best_recall,
+            'epoch': args.epochs,
+            'optimizer_state_dict': optimizer.state_dict(),
+            'scheduler_state_dict': scheduler.state_dict()
+        }
+        torch.save(final_checkpoint, args.save_path)
         final_save_time = time.time() - final_save_start
         total_training_time = time.time() - start_time
         print(f"[INFO] [{time.strftime('%H:%M:%S')}] Final model saved to {args.save_path} in {final_save_time:.2f}s")
@@ -1615,7 +1983,7 @@ def main():
     parser.add_argument('--epochs', type=int, default=20)
     parser.add_argument('--batch_size', type=int, default=512)
     parser.add_argument('--lr', type=float, default=5e-5)  
-    parser.add_argument('--patience', type=int, default=2)  
+    parser.add_argument('--patience', type=int, default=3)  
     parser.add_argument('--unfreeze_layers', type=int, default=10, 
                        help="Number of last layers to unfreeze in both encoders (default: 10)")
     parser.add_argument('--train_samples_path', type=str, 
@@ -1673,6 +2041,18 @@ def main():
     # GPU设备选择
     parser.add_argument('--gpu_ids', type=str, default=None,
                         help="GPU IDs to use (e.g., '0,1,2,3,4,5,6,7' or '2'). If not specified, use all available GPUs.")
+    
+    # Unseen terms比例控制
+    parser.add_argument('--min_unseen_ratio', type=float, default=0.20,
+                        help="Minimum ratio of unseen terms in test set (default: 0.20)")
+    parser.add_argument('--force_unseen_ratio', action='store_true',
+                        help="Force adjustment of term distribution to meet min_unseen_ratio")
+    parser.add_argument('--rebuild_test_set', action='store_true', 
+                        help='Rebuild test set to ensure unseen terms ratio instead of removing terms from training')
+    parser.add_argument('--target_test_size', type=int, default=1000, 
+                        help='Target size for rebuilt test set')
+    parser.add_argument('--target_unseen_ratio', type=float, default=0.20, 
+                        help='Target ratio of unseen terms in rebuilt test set')
 
     args = parser.parse_args()
 
