@@ -418,9 +418,9 @@ def train_ddp_modal(
     # 添加基本参数（使用本地化后的路径）
     cmd.extend([
         "--train_samples_path", train_samples_path,
-        "--save_path", "/data/qwen2_audio_term_level_modal.pt",
+        "--save_path", "/data/qwen2_audio_term_level_modal_v2.pt",
         "--glossary_path", glossary_path,
-        "--best_model_path", "/data/qwen2_audio_term_level_best_modal.pt"
+        "--best_model_path", "/data/qwen2_audio_term_level_modal.pt"
     ])
     
     # 只有当test_samples_path不为空时才添加
@@ -639,7 +639,7 @@ def main(skip_upload: bool = False, upload_large_files_only: bool = False, eval_
             "lora_dropout": 0.1,
             "audio_text_loss_ratio": 0.3,
             "audio_term_loss_ratio": 0.7,
-            "patience": 2,
+            "patience": 4,
             "gradient_accumulation_steps": 8,  # 降低累积步数，增大单次计算强度
         }
         

@@ -16,7 +16,8 @@ from fairseq.models.speech_to_text import (
     lengths_to_padding_mask,
 )
 
-from model.flashinfer.wav2vec2_asr import Wav2VecEncoder as Wav2VecEncoderFlash
+# Lazy import for flashinfer to avoid errors when not available
+# from model.flashinfer.wav2vec2_asr import Wav2VecEncoder as Wav2VecEncoderFlash
 from fairseq.models.wav2vec import Wav2VecEncoder
 
 class ConvFeatureExtractionModel(nn.Module):
@@ -154,8 +155,14 @@ class SpeechEncoderW2V2RoPE(L.LightningModule):
             n_layer = cfg.encoder_layers     
 
             if flash:
-                print("Using flashinfer Wav2VecEncoder")
-                model = Wav2VecEncoderFlash(state['cfg']['model'], None)
+                try:
+                    from model.flashinfer.wav2vec2_asr import Wav2VecEncoder as Wav2VecEncoderFlash
+                    print("Using flashinfer Wav2VecEncoder")
+                    model = Wav2VecEncoderFlash(state['cfg']['model'], None)
+                except ImportError as e:
+                    print(f"Warning: flashinfer not available ({e}), falling back to fairseq Wav2VecEncoder")
+                    print("Using fairseq Wav2VecEncoder")
+                    model = Wav2VecEncoder(state['cfg']['model'], None)
             else:
                 print("Using fairseq Wav2VecEncoder")
                 model = Wav2VecEncoder(state['cfg']['model'], None)

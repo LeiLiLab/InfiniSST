@@ -39,6 +39,13 @@ image = (
         "hydra-core==1.0.7",
         "setuptools<70",
         "wheel",
+        # fairseq 依赖
+        "bitarray",
+        "cython",
+        "regex",
+        "sacrebleu",
+        "tensorboardX",
+        "cffi",
     ])
     # 仅安装 fairseq 本体，阻止自动解依赖
     .pip_install([
@@ -66,13 +73,23 @@ image = (
         "protobuf==6.31.1",
         "einops==0.8.1",
         "ray==2.48.0",
-        # "flashinfer==0.2.0",        # 你环境里也有
-        "torcheval==0.0.7",         # 你环境里也有
-        "torchdata==0.11.0",        # 你环境里也有
+        "jieba==0.42.1",            # 中文分词库
+        "torcheval==0.0.7",
+        "torchdata==0.11.0",
     ])
     # Flash Attention（版本与 torch/cu124 匹配；失败不阻断构建）
     .run_commands([
         "pip install --no-build-isolation --no-cache-dir 'flash-attn==2.7.4.post1' || true"
+    ])
+    # FlashInfer（从预编译 wheel 安装，失败不阻断构建）
+    .run_commands([
+        "pip install flashinfer -i https://flashinfer.ai/whl/cu124/torch2.5/ || true"
+    ])
+    # 创建假的 nvcc 脚本，让 DeepSpeed 检查能够通过
+    .run_commands([
+        "mkdir -p /usr/local/cuda/bin",
+        "printf '#!/bin/bash\\necho \"Cuda compilation tools, release 12.4, V12.4.131\"\\n' > /usr/local/cuda/bin/nvcc",
+        "chmod +x /usr/local/cuda/bin/nvcc"
     ])
     .env({
         "HF_HUB_ENABLE_HF_TRANSFER": "1",
@@ -80,6 +97,11 @@ image = (
         # 提升 pip 稳定性
         "PIP_DEFAULT_TIMEOUT": "120",
         "PIP_RETRIES": "8",
+        # ★★★ 关键：禁止 DeepSpeed 构建/检查 CUDA 扩展
+        "DS_BUILD_OPS": "0",
+        "DEEPSPEED_DISABLE_BUILDING": "1",
+        "DS_SKIP_CUDA_CHECK": "1",
+        "CUDA_HOME": "/usr/local/cuda",
     })
 )
 # 定义存储卷用于数据和模型
@@ -89,60 +111,34 @@ output_volume = modal.Volume.from_name("infinisst-outputs", create_if_missing=Tr
 hf_cache_vol = modal.Volume.from_name("huggingface-cache", create_if_missing=True)
 
 
-# === clone 代码（支持私仓 + 稀疏拉取）===
-import subprocess, os
-
-repo = os.environ.get("INFINISST_REPO", "https://github.com/YourOrg/InfiniSST.git")
-ref  = os.environ.get("INFINISST_REF", "main")  # 分支名或commit SHA
-code_dir = "/root/InfiniSST"
-
-if not os.path.exists(code_dir):
-    print(f"[INFO] Cloning {repo} @ {ref} ...")
-    # 如需私仓：在 Modal 的 secrets 里配置 GITHUB_TOKEN，然后换成：
-    # repo = f"https://{os.environ['GITHUB_TOKEN']}@github.com/YourOrg/InfiniSST.git"
-
-    # 稀疏拉取：只要 train/ 和 core/（按需改）
-    subprocess.run(["git", "init", code_dir], check=True)
-    subprocess.run(["git", "-C", code_dir, "remote", "add", "origin", repo], check=True)
-    subprocess.run(["git", "-C", code_dir, "config", "core.sparseCheckout", "true"], check=True)
-    with open(os.path.join(code_dir, ".git", "info", "sparse-checkout"), "w") as f:
-        f.write("\n".join([
-            "train/",
-            "scripts/",    # 如需要
-            "infinisst/",  # 如需要
-            # "README.md",  # 按需
-        ]) + "\n")
-    subprocess.run(["git", "-C", code_dir, "fetch", "--depth", "1", "origin", ref], check=True)
-    subprocess.run(["git", "-C", code_dir, "checkout", "FETCH_HEAD"], check=True)
-else:
-    print("[INFO] Code dir already exists, skip clone")
-
-from huggingface_hub import snapshot_download
-import os
+code_volume = modal.Volume.from_name("infinisst-code", create_if_missing=True)
 
 @app.function(
     image=image,
-    volumes={"/root/.cache/huggingface": hf_cache_vol},
+    volumes={"/root/InfiniSST": code_volume},
     timeout=600,
 )
-def list_hf_cache():
-    import os
-    base = "/root/.cache/huggingface/hub"
-    print(f"[INFO] Listing cached models under: {base}")
-    if not os.path.exists(base):
-        return "[MISSING] huggingface cache directory not found"
-    
-    found = []
-    for name in os.listdir(base):
-        if "Qwen2.5-7B-Instruct" in name or "Qwen" in name:
-            found.append(name)
-    if found:
-        print("[FOUND] matching entries:", found)
+def prepare_code():
+    import os, subprocess
+    code_dir = "/root/InfiniSST"
+    repo = "https://github.com/LeiLiLab/InfiniSST.git"
+    branch = "jiaxuan/NE1.0"
+
+    if not os.listdir(code_dir):   # 空的才拉取
+        subprocess.run(
+            ["git", "clone", "--depth", "1", "--branch", branch, repo, code_dir],
+            check=True
+        )
+        print("[OK] Code cloned")
     else:
-        print("[INFO] No Qwen models cached")
-    
-    # 返回前 10 个目录名，方便调试
-    return os.listdir(base)[:10]
+        print("[INFO] Code already exists in volume")
+
+    # 保存写入
+    from modal import Volume
+    code_volume.commit()
+
+from huggingface_hub import snapshot_download
+import os
 
 @app.function(
     image=image,
@@ -196,18 +192,36 @@ def check_volume_structure():
             print(f"[MISSING] {path}")
     return "Volume check completed"
 
+code_volume = modal.Volume.from_name("infinisst-code", create_if_missing=True)
+
+
+# 环境变量
+os.environ["PYTHONPATH"] = "/root/InfiniSST"
+os.environ["HF_HOME"] = "/root/.cache/huggingface"
+os.environ["TRANSFORMERS_CACHE"] = "/root/.cache/huggingface"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["WANDB_MODE"] = "disabled"
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
+
+# ★★★ 关键：禁止 DeepSpeed 构建/检查 CUDA 扩展
+os.environ["DS_BUILD_OPS"] = "0"
+os.environ["DEEPSPEED_DISABLE_BUILDING"] = "1"
+os.environ["DS_SKIP_CUDA_CHECK"] = "1"
+os.environ.setdefault("CUDA_HOME", "/usr/local/cuda")  # 给个占位路径，避免 MissingCUDAException
+
 @app.function(
     image=image,
-    gpu="H100:2",  # 与 n_device 默认保持一致
+    gpu="H100:2",
     volumes={
         "/data": data_volume,
         "/models": model_volume,
         "/output": output_volume,
         "/root/.cache/huggingface": hf_cache_vol,
+        "/root/InfiniSST": code_volume,   # ★★★ 新增：挂载代码卷
     },
-    timeout=86400,        # 240小时
-    memory=512*1024,       # 512GB
-    cpu=64,                # 64 vCPU
+    timeout=86400,
+    memory=512*1024,
+    cpu=64,
     secrets=[modal.Secret.from_name("huggingface-token")],
 )
 def train_infinisst(
@@ -286,6 +300,11 @@ def train_infinisst(
     os.environ["WANDB_MODE"] = "disabled"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"  # <= 新增：训练期强制离线
 
+    # ★★★ 关键：禁止 DeepSpeed 构建/检查 CUDA 扩展
+    os.environ["DS_BUILD_OPS"] = "0"
+    os.environ["DEEPSPEED_DISABLE_BUILDING"] = "1"
+    os.environ["DS_SKIP_CUDA_CHECK"] = "1"
+    os.environ.setdefault("CUDA_HOME", "/usr/local/cuda")  # 给个占位路径，避免 MissingCUDAException
 
     # 如遇到多机或链路问题可禁用 P2P/IB；同机多卡时可尝试开启以提升性能
     os.environ.setdefault("NCCL_P2P_DISABLE", "1")
