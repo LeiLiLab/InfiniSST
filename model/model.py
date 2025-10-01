@@ -14,7 +14,14 @@ from transformers.optimization import (
 from transformers.models.seamless_m4t_v2.configuration_seamless_m4t_v2 import SeamlessM4Tv2Config
 
 import lightning as L
-from deepspeed.ops.adam import FusedAdam, DeepSpeedCPUAdam
+# Optional DeepSpeed import - fallback to standard Adam if not available
+try:
+    from deepspeed.ops.adam import FusedAdam, DeepSpeedCPUAdam
+    DEEPSPEED_AVAILABLE = True
+except ImportError:
+    DEEPSPEED_AVAILABLE = False
+    FusedAdam = None
+    DeepSpeedCPUAdam = None
 
 from peft import LoraConfig, get_peft_model
 

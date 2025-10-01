@@ -51,13 +51,13 @@ image = (
     .pip_install([
         "fairseq==0.12.2"
     ], extra_options="--no-deps")
-    # 其余训练依赖（对齐你给的环境列表）
+    # 其余训练依赖（使用普通 Adam 优化器，无需 DeepSpeed）
     .pip_install([
         "transformers==4.47.0",
         "accelerate==1.7.0",
         "lightning==2.5.1.post0",
         "pytorch-lightning==2.5.1.post0",
-        "deepspeed==0.17.0",
+        # DeepSpeed removed - using standard Adam optimizer instead
         "peft==0.15.2",
         "soundfile==0.13.1",
         "librosa==0.11.0",
@@ -85,23 +85,12 @@ image = (
     .run_commands([
         "pip install flashinfer -i https://flashinfer.ai/whl/cu124/torch2.5/ || true"
     ])
-    # 创建假的 nvcc 脚本，让 DeepSpeed 检查能够通过
-    .run_commands([
-        "mkdir -p /usr/local/cuda/bin",
-        "printf '#!/bin/bash\\necho \"Cuda compilation tools, release 12.4, V12.4.131\"\\n' > /usr/local/cuda/bin/nvcc",
-        "chmod +x /usr/local/cuda/bin/nvcc"
-    ])
     .env({
         "HF_HUB_ENABLE_HF_TRANSFER": "1",
         "TOKENIZERS_PARALLELISM": "false",
         # 提升 pip 稳定性
         "PIP_DEFAULT_TIMEOUT": "120",
         "PIP_RETRIES": "8",
-        # ★★★ 关键：禁止 DeepSpeed 构建/检查 CUDA 扩展
-        "DS_BUILD_OPS": "0",
-        "DEEPSPEED_DISABLE_BUILDING": "1",
-        "DS_SKIP_CUDA_CHECK": "1",
-        "CUDA_HOME": "/usr/local/cuda",
     })
 )
 # 定义存储卷用于数据和模型
@@ -119,16 +108,24 @@ code_volume = modal.Volume.from_name("infinisst-code", create_if_missing=True)
     timeout=600,
 )
 def prepare_code(force_refresh=True):
-    import os, subprocess, shutil
+    import os, subprocess, shutil, glob
     code_dir = "/root/InfiniSST"
     repo = "https://github.com/LeiLiLab/InfiniSST.git"
     branch = "jiaxuan/NE1.0"
 
-    # 如果需要强制刷新，先删除现有代码
+    # 如果需要强制刷新，删除目录内的所有内容（而不是删除目录本身）
     if force_refresh and os.path.exists(code_dir) and os.listdir(code_dir):
         print(f"[INFO] Force refresh enabled, removing existing code in {code_dir}")
-        shutil.rmtree(code_dir)
-        os.makedirs(code_dir, exist_ok=True)
+        # 删除目录内的所有文件和文件夹
+        for item in glob.glob(f"{code_dir}/*") + glob.glob(f"{code_dir}/.*"):
+            if os.path.basename(item) not in ['.', '..']:  # 跳过 . 和 ..
+                try:
+                    if os.path.islink(item) or os.path.isfile(item):
+                        os.unlink(item)
+                    elif os.path.isdir(item):
+                        shutil.rmtree(item)
+                except Exception as e:
+                    print(f"[WARN] Failed to remove {item}: {e}")
         print("[OK] Old code removed")
 
     if not os.listdir(code_dir):   # 空的才拉取
@@ -208,7 +205,7 @@ def check_volume_structure():
 code_volume = modal.Volume.from_name("infinisst-code", create_if_missing=True)
 
 
-# 环境变量
+# 环境变量（全局，用于脚本执行）
 os.environ["PYTHONPATH"] = "/root/InfiniSST"
 os.environ["HF_HOME"] = "/root/.cache/huggingface"
 os.environ["TRANSFORMERS_CACHE"] = "/root/.cache/huggingface"
@@ -216,15 +213,9 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["WANDB_MODE"] = "disabled"
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 
-# ★★★ 关键：禁止 DeepSpeed 构建/检查 CUDA 扩展
-os.environ["DS_BUILD_OPS"] = "0"
-os.environ["DEEPSPEED_DISABLE_BUILDING"] = "1"
-os.environ["DS_SKIP_CUDA_CHECK"] = "1"
-os.environ.setdefault("CUDA_HOME", "/usr/local/cuda")  # 给个占位路径，避免 MissingCUDAException
-
 @app.function(
     image=image,
-    gpu="H100:2",
+    gpu="H100:8",
     volumes={
         "/data": data_volume,
         "/models": model_volume,
@@ -275,18 +266,17 @@ def train_infinisst(
     # Training hyperparameters
     seed: int = 998244353,
     stage: int = 1,
-    train_bsz: int = 1800,
-    eval_bsz: int = 1800,
-    bsz_sent: int = 2,
+    train_bsz: int = 7200,            # H100x8: 4x from 1800 (L40S baseline)
+    eval_bsz: int = 7200,             # H100x8: 4x from 1800 (L40S baseline)
+    bsz_sent: int = 4,                # H100x8: doubled for better batching
     learning_rate: float = 2e-4,
     warmup_steps: int = 1000,
 
     # Training control
     run_name: str = "stage1_M=12_ls-cv-vp_norm0_qwen_rope_modal",
-    n_device: int = 2,                # ★ 与 gpu="H100:2" 对齐，避免 DDP/DeepSpeed 认卡数不一致
-    deepspeed_stage: int = 1,
+    n_device: int = 8,                # ★ 与 gpu="H100:8" 对齐
     max_epochs: int = 1,
-    grad_acc_steps: int = 4,
+    grad_acc_steps: int = 1,          # H100x8: minimal grad_acc for 8 GPUs
     clip_norm: float = 1.0,
     save_step: int = 2000,
     log_step: int = 100,
@@ -311,17 +301,9 @@ def train_infinisst(
     os.environ["TRANSFORMERS_CACHE"] = "/root/.cache/huggingface"
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     os.environ["WANDB_MODE"] = "disabled"
-    os.environ["TRANSFORMERS_OFFLINE"] = "1"  # <= 新增：训练期强制离线
-
-    # ★★★ 关键：禁止 DeepSpeed 构建/检查 CUDA 扩展
-    os.environ["DS_BUILD_OPS"] = "0"
-    os.environ["DEEPSPEED_DISABLE_BUILDING"] = "1"
-    os.environ["DS_SKIP_CUDA_CHECK"] = "1"
-    os.environ.setdefault("CUDA_HOME", "/usr/local/cuda")  # 给个占位路径，避免 MissingCUDAException
-
-    # 如遇到多机或链路问题可禁用 P2P/IB；同机多卡时可尝试开启以提升性能
-    os.environ.setdefault("NCCL_P2P_DISABLE", "1")
-    os.environ.setdefault("NCCL_IB_DISABLE", "1")
+    os.environ["TRANSFORMERS_OFFLINE"] = "1"  # 训练期强制离线
+    
+    # H100 上 NCCL P2P/IB 性能良好，不需要禁用
     os.environ.setdefault("TORCH_DISTRIBUTED_DEBUG", "INFO")
     os.environ.setdefault("NCCL_DEBUG", "INFO")
 
@@ -408,7 +390,6 @@ def train_infinisst(
         "--run_name", run_name,
 
         "--n_device", str(n_device),
-        "--deepspeed_stage", str(deepspeed_stage),
         "--max_epochs", str(max_epochs),
         "--grad_acc_steps", str(grad_acc_steps),
         "--clip_norm", str(clip_norm),
@@ -492,7 +473,7 @@ def main(
         print("[INFO] Skipping training as requested")
         return
     
-    # 刷新代码到最新版本
+    # 刷新代码到最新版本 only updated when needed
     print("[INFO] Refreshing codebase from GitHub...")
     prepare_code.remote(force_refresh=True)
     print("[INFO] Codebase refreshed successfully")
@@ -500,7 +481,7 @@ def main(
     print("[INFO] Starting InfiniSST Stage 1 Training on Modal...")
     result = train_infinisst.remote(
         run_name="stage1_M=12_ls-cv-vp_norm0_qwen_rope_modal",
-        n_device=2,                    # ★ 与上方 gpu=H100:2 一致
+        n_device=8,                    # ★ 与上方 gpu=H100:8 一致
         use_local_copy=use_local_copy,
         resume_training=resume_training,
     )
