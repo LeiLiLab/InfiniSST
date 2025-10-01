@@ -118,11 +118,18 @@ code_volume = modal.Volume.from_name("infinisst-code", create_if_missing=True)
     volumes={"/root/InfiniSST": code_volume},
     timeout=600,
 )
-def prepare_code():
-    import os, subprocess
+def prepare_code(force_refresh=True):
+    import os, subprocess, shutil
     code_dir = "/root/InfiniSST"
     repo = "https://github.com/LeiLiLab/InfiniSST.git"
     branch = "jiaxuan/NE1.0"
+
+    # 如果需要强制刷新，先删除现有代码
+    if force_refresh and os.path.exists(code_dir) and os.listdir(code_dir):
+        print(f"[INFO] Force refresh enabled, removing existing code in {code_dir}")
+        shutil.rmtree(code_dir)
+        os.makedirs(code_dir, exist_ok=True)
+        print("[OK] Old code removed")
 
     if not os.listdir(code_dir):   # 空的才拉取
         subprocess.run(
@@ -131,7 +138,13 @@ def prepare_code():
         )
         print("[OK] Code cloned")
     else:
-        print("[INFO] Code already exists in volume")
+        print("[INFO] Code already exists in volume, pulling latest changes")
+        # 如果代码已存在，执行 git pull 更新
+        try:
+            subprocess.run(["git", "-C", code_dir, "pull", "origin", branch], check=True)
+            print("[OK] Code updated")
+        except subprocess.CalledProcessError as e:
+            print(f"[WARN] Failed to pull updates: {e}, using existing code")
 
     # 保存写入
     from modal import Volume
@@ -478,6 +491,12 @@ def main(
     if skip_training:
         print("[INFO] Skipping training as requested")
         return
+    
+    # 刷新代码到最新版本
+    print("[INFO] Refreshing codebase from GitHub...")
+    prepare_code.remote(force_refresh=True)
+    print("[INFO] Codebase refreshed successfully")
+    
     print("[INFO] Starting InfiniSST Stage 1 Training on Modal...")
     result = train_infinisst.remote(
         run_name="stage1_M=12_ls-cv-vp_norm0_qwen_rope_modal",
