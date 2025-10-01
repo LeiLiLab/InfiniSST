@@ -1474,10 +1474,10 @@ class ContrastiveQwen2AudioModel(nn.Module):
             # 如果是1D张量，添加batch维度
             speech_embeddings = speech_embeddings.unsqueeze(0)
         
-        # 确保最终形状正确
-        if self.training and not getattr(self, "_logged_speech_shape", False):
-            print(f"[DEBUG] Final speech_embeddings shape: {speech_embeddings.shape}")
-            self._logged_speech_shape = True
+        # # 确保最终形状正确
+        # if self.training and not getattr(self, "_logged_speech_shape", False):
+        #     print(f"[DEBUG] Final speech_embeddings shape: {speech_embeddings.shape}")
+        #     self._logged_speech_shape = True
         
         return F.normalize(self.proj_speech(speech_embeddings), dim=-1)
     
