@@ -20,7 +20,8 @@ image = (
     modal.Image.debian_slim(python_version="3.10")
     .apt_install([
         "git", "wget", "curl", "ffmpeg", "libsndfile1",
-        "build-essential", "rsync", "ninja-build"
+        "build-essential", "rsync", "ninja-build",
+        "pigz", "zstd"
     ])
     # 安装 PyTorch (CUDA 12.4)
     .run_commands(["pip install 'pip<24.1'"])
@@ -76,6 +77,12 @@ image = (
         "jieba==0.42.1",            # 中文分词库
         "torcheval==0.0.7",
         "torchdata==0.11.0",
+        # Additional dependencies for model modules
+        "rotary-embedding-torch==0.8.6",  # For Qwen2AC model
+        "torchmetrics==0.10.3",           # For evaluation metrics
+        "editdistance==0.8.1",            # For WER calculation
+        "jiwer==3.1.0",                   # For speech metrics
+        "praat-textgrids==1.4.0",         # For forced alignment
     ])
     # Flash Attention（版本与 torch/cu124 匹配；失败不阻断构建）
     .run_commands([
@@ -174,6 +181,180 @@ def warmup_hf_cache(model_id="Qwen/Qwen2.5-7B-Instruct", revision="main"):
 
 @app.function(
     image=image,
+    volumes={"/data": data_volume},
+    timeout=3600*4,  # 4 hours for extraction
+)
+def extract_gigaspeech_audio_archives():
+    """只递归解压 GigaSpeech/audio 下的压缩文件"""
+    import os
+    import tarfile
+    import glob
+    from pathlib import Path
+
+    data_dir = "/data/gigaspeech/audio"
+    print(f"[INFO] Searching for compressed archives in {data_dir}...")
+
+    # 只找 audio 子目录下的 .tar.gz / .tgz
+    archive_patterns = [
+        f"{data_dir}/**/*.tar.gz",
+        f"{data_dir}/**/*.tgz",
+    ]
+
+    archives = []
+    for pattern in archive_patterns:
+        archives.extend(glob.glob(pattern, recursive=True))
+
+    if not archives:
+        print("[INFO] No archives found under audio/, nothing to extract")
+        return "No archives to extract"
+
+    archives = sorted(archives)
+    print(f"[INFO] Found {len(archives)} audio archive(s) to extract")
+    print(f"[INFO] Sample: {[Path(p).name for p in archives[:3]]}")
+
+    for archive_path in archives:
+        archive_path = Path(archive_path)
+        extract_dir = archive_path.parent
+
+        # 标记文件避免重复解压
+        marker_file = archive_path.with_suffix('.extracted')
+        if marker_file.exists():
+            print(f"[SKIP] Already extracted: {archive_path.name}")
+            continue
+
+        print(f"[INFO] Extracting: {archive_path.name} -> {extract_dir}")
+
+        try:
+            with tarfile.open(archive_path, 'r:gz') as tar:
+                members = tar.getmembers()
+                total_members = len(members)
+                extracted_count = 0
+                skipped_existing = 0
+                print(f"       Total files in archive: {total_members}")
+
+                root_resolved = extract_dir.resolve()
+                for i, member in enumerate(members):
+                    member_target = (extract_dir / member.name).resolve()
+                    try:
+                        member_target.relative_to(root_resolved)
+                    except ValueError:
+                        print(f"       [WARN] Skipping unsafe path: {member.name}")
+                        continue
+
+                    if member_target.exists():
+                        skipped_existing += 1
+                        if skipped_existing % 1000 == 0:
+                            print(f"       Skipped {skipped_existing} existing files...")
+                        continue
+
+                    if member.isdir():
+                        member_target.mkdir(parents=True, exist_ok=True)
+                    else:
+                        member_target.parent.mkdir(parents=True, exist_ok=True)
+                        tar.extract(member, path=extract_dir)
+
+                    extracted_count += 1
+                    if (i + 1) % 1000 == 0:
+                        print(f"       Processed {i + 1}/{total_members} files...")
+
+                print(f"[OK] {archive_path.name}: extracted {extracted_count}, skipped {skipped_existing}")
+
+            marker_file.touch()
+            print(f"[OK] Created marker: {marker_file.name}")
+
+        except Exception as e:
+            print(f"[ERROR] Failed to extract {archive_path.name}: {e}")
+            continue
+
+    data_volume.commit()
+    print("[INFO] All audio archives extracted and committed to volume")
+
+    return f"Extracted {len(archives)} audio archive(s)"
+
+
+@app.function(
+    image=image,
+    volumes={"/data": data_volume},
+    timeout=3600*6,  # audio解压更久
+)
+def extract_audio_archives_to_workspace(
+    data_root: str = "/data/gigaspeech/audio",
+    workspace_root: str = "/workspace/gigaspeech/audio",
+    max_workers: int = 8,
+):
+    """
+    只并行解压 audio 目录下的压缩包到本地 NVMe（/workspace），不碰其它目录（如 textgrids）。
+    支持：*.tar.zst|*.tzst|*.tar.gz|*.tgz；使用 .extracted 标记断点续解。
+    """
+    import os
+    import concurrent.futures
+    import subprocess
+    from pathlib import Path
+    import glob
+
+    os.makedirs(workspace_root, exist_ok=True)
+
+    # 搜索 audio 子目录下的压缩包
+    patterns = [
+        f"{data_root}/**/*.tar.zst",
+        f"{data_root}/**/*.tzst",
+        f"{data_root}/**/*.tar.gz",
+        f"{data_root}/**/*.tgz",
+    ]
+    archives = []
+    for p in patterns:
+        archives.extend(glob.glob(p, recursive=True))
+
+    if not archives:
+        print("[INFO] No audio archives found under", data_root)
+        return "No audio archives found"
+
+    print(f"[INFO] Found {len(archives)} audio archive(s)")
+
+    def extract_one(src_path: str):
+        src = Path(src_path)
+        # 计算输出子目录：保持与 data_root 下的相对层级一致
+        rel = src.parent.relative_to(data_root)
+        out_dir = Path(workspace_root) / rel
+        out_dir.mkdir(parents=True, exist_ok=True)
+        marker = out_dir / (src.name + ".extracted")
+
+        if marker.exists():
+            return f"[SKIP] {src.name}"
+
+        try:
+            if src.suffixes[-2:] == [".tar", ".zst"] or src.suffix == ".tzst":
+                # Zstandard 压缩：tar -I zstd -xf
+                cmd = [
+                    "bash", "-lc",
+                    f"set -euo pipefail; mkdir -p '{out_dir}'; tar -I zstd -xf '{src}' -C '{out_dir}'"
+                ]
+            else:
+                # gzip 压缩：tar -I pigz -xf（pigz 多线程）或直接 -xzf
+                # 优先用 pigz，多线程更快
+                cmd = [
+                    "bash", "-lc",
+                    f"set -euo pipefail; mkdir -p '{out_dir}'; (tar -I pigz -xf '{src}' -C '{out_dir}') || (tar -xzf '{src}' -C '{out_dir}')"
+                ]
+
+            subprocess.run(cmd, check=True)
+            marker.touch()
+            return f"[OK] {src.name}"
+        except subprocess.CalledProcessError as e:
+            return f"[ERR] {src.name}: {e}"
+
+    results = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
+        for res in ex.map(extract_one, archives):
+            print(res)
+            results.append(res)
+
+    # 不修改 Volume（只写入 /workspace）
+    print("[INFO] Audio archives extraction to /workspace completed")
+    return "\n".join(results)
+
+@app.function(
+    image=image,
     volumes={
         "/data": data_volume,
         "/models": model_volume,
@@ -255,7 +436,7 @@ def train_infinisst(
     llm_freeze: bool = True,
     llm_emb_freeze: bool = True,
     llm_head_freeze: bool = True,
-    use_flash_attn: bool = True,
+    use_flash_attn: bool = False,
 
     # Training settings
     trajectory: int = 9,
@@ -286,7 +467,8 @@ def train_infinisst(
     output_dir: str = "/output/en-zh",
 
     # Options
-    use_local_copy: bool = True,
+    use_local_copy: bool = False,  # 默认禁用rsync拷贝
+    extract_audio_to_workspace: bool = True,  # 默认：训练容器内将audio解压到NVMe并使用
     resume_training: bool = False,
 ):
     import subprocess, os, sys, time, torch, shutil
@@ -302,31 +484,90 @@ def train_infinisst(
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     os.environ["WANDB_MODE"] = "disabled"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"  # 训练期强制离线
+    os.environ["AUDIO_PREFIX_REWRITE"] = "/mnt/taurus/data/siqiouyang/datasets/gigaspeech:/workspace/gigaspeech;/data/gigaspeech:/workspace/gigaspeech"
     
     # H100 上 NCCL P2P/IB 性能良好，不需要禁用
     os.environ.setdefault("TORCH_DISTRIBUTED_DEBUG", "INFO")
     os.environ.setdefault("NCCL_DEBUG", "INFO")
 
-    # 本地化数据（NVMe）
-    if use_local_copy:
-        print("[INFO] Localizing data from Volume to local NVMe...")
-        local_root = "/workspace"
-        os.makedirs(local_root, exist_ok=True)
-        start_time = time.time()
-        local_data_path = f"{local_root}/gigaspeech"
-        if os.path.exists(data_path) and not os.path.exists(local_data_path):
-            print(f"[INFO] Copying dataset from {data_path} to {local_data_path}")
+    # 训练容器内：仅解压 audio 到本地NVMe，并优先使用本地路径
+    if extract_audio_to_workspace:
+        print("[INFO] Extracting audio archives to local NVMe (/workspace)...")
+        import glob
+        from pathlib import Path
+        import concurrent.futures
+
+        audio_src_root = f"{data_path}/audio"
+        audio_dst_root = "/workspace/gigaspeech/audio"
+        os.makedirs(audio_dst_root, exist_ok=True)
+
+        patterns = [
+            f"{audio_src_root}/**/*.tar.zst",
+            f"{audio_src_root}/**/*.tzst",
+            f"{audio_src_root}/**/*.tar.gz",
+            f"{audio_src_root}/**/*.tgz",
+        ]
+        archives = []
+        for p in patterns:
+            archives.extend(glob.glob(p, recursive=True))
+
+        def extract_one(src_path: str) -> str:
+            src = Path(src_path)
+            rel = src.parent.relative_to(audio_src_root)
+            out_dir = Path(audio_dst_root) / rel
+            out_dir.mkdir(parents=True, exist_ok=True)
+            marker = out_dir / (src.name + ".extracted")
+            if marker.exists():
+                return f"[SKIP] {src.name}"
             try:
-                subprocess.run(
-                    ["rsync", "-a", "--info=progress2", f"{data_path}/", f"{local_data_path}/"],
-                    check=True
-                )
-                data_path = local_data_path
-                print(f"[OK] Dataset copied successfully")
+                if src.suffixes[-2:] == [".tar", ".zst"] or src.suffix == ".tzst":
+                    cmd = [
+                        "bash", "-lc",
+                        f"set -euo pipefail; tar -I zstd -xf '{src}' -C '{out_dir}'"
+                    ]
+                else:
+                    cmd = [
+                        "bash", "-lc",
+                        f"set -euo pipefail; (tar -I pigz -xf '{src}' -C '{out_dir}') || (tar -xzf '{src}' -C '{out_dir}')"
+                    ]
+                subprocess.run(cmd, check=True)
+                marker.touch()
+                return f"[OK] {src.name}"
             except subprocess.CalledProcessError as e:
-                print(f"[WARN] Failed to copy dataset: {e}, using original path")
-        copy_time = time.time() - start_time
-        print(f"[INFO] Data localization completed in {copy_time:.1f}s")
+                return f"[ERR] {src.name}: {e}"
+
+        if archives:
+            print(f"[INFO] Found {len(archives)} audio archive(s) to extract")
+            with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
+                for res in ex.map(extract_one, archives):
+                    print(res)
+        else:
+            print("[INFO] No audio archives found; assuming already extracted")
+
+        # 将 data_path 改为 /workspace/gigaspeech，并确保所需 TSV 存在于该根目录
+        ws_root = "/workspace/gigaspeech"
+        data_path = ws_root
+        print(f"[INFO] Using workspace data path: {data_path}")
+
+        def _ensure_tsv(split_name: str):
+            if not split_name:
+                return
+            src = f"/data/gigaspeech/{split_name}.tsv"
+            dst = f"{ws_root}/{split_name}.tsv"
+            try:
+                if os.path.exists(src) and not os.path.exists(dst):
+                    try:
+                        os.symlink(src, dst)
+                        print(f"[OK] Symlinked TSV -> {dst} -> {src}")
+                    except Exception:
+                        import shutil
+                        shutil.copy2(src, dst)
+                        print(f"[OK] Copied TSV -> {dst}")
+            except Exception as e:
+                print(f"[WARN] Failed to materialize TSV {split_name}: {e}")
+
+        _ensure_tsv(data_split_train)
+        _ensure_tsv(data_split_eval)
 
     save_path = f"{output_dir}/runs/{run_name}"
     if not resume_training and os.path.exists(save_path):
@@ -460,15 +701,30 @@ def upload_codebase(local_codebase_path: str = "/home/jiaxuanluo/InfiniSST"):
 @app.local_entrypoint()
 def main(
     check_volume: bool = False,
+    extract_archives: bool = False,
+    extract_audio_to_workspace: bool = False,
     skip_training: bool = False,
     resume_training: bool = False,
-    use_local_copy: bool = True,
+    use_local_copy: bool = False,
 ):
     if check_volume:
         print("[INFO] Checking volume structure...")
         result = check_volume_structure.remote()
         print(f"[INFO] {result}")
         return
+    
+    if extract_archives:
+        print("[INFO] Extracting GigaSpeech archives...")
+        result = extract_gigaspeech_audio_archives.remote()
+        print(f"[INFO] {result}")
+        return
+
+    if extract_audio_to_workspace:
+        print("[INFO] Extracting audio archives to /workspace...")
+        result = extract_audio_archives_to_workspace.remote()
+        print(f"[INFO] {result}")
+        return
+    
     if skip_training:
         print("[INFO] Skipping training as requested")
         return
@@ -492,11 +748,15 @@ def main(
 if __name__ == "__main__":
     import sys
     check_volume = "--check-volume" in sys.argv
+    extract_archives = "--extract-archives" in sys.argv
+    extract_audio_to_workspace = "--extract-audio-to-workspace" in sys.argv
     skip_training = "--skip-training" in sys.argv
     resume_training = "--resume" in sys.argv
-    use_local_copy = "--no-local-copy" not in sys.argv
+    use_local_copy = "--use-local-copy" in sys.argv  # 改为默认不本地化，需要时加 --use-local-copy
     main(
         check_volume=check_volume,
+        extract_archives=extract_archives,
+        extract_audio_to_workspace=extract_audio_to_workspace,
         skip_training=skip_training,
         resume_training=resume_training,
         use_local_copy=use_local_copy,

@@ -255,7 +255,7 @@ def upload_data(data_files: dict, force_upload: bool = False):
 @app.function(
     image=image,
     min_containers=1,
-    gpu="H200:8",
+    gpu="H200:4",
     volumes={"/data": volume, "/root/.cache/huggingface": hf_cache_vol},
     timeout=86400,  # 24小时超时
     memory=512*1024,  # 512GB内存
@@ -270,6 +270,7 @@ def train_ddp_modal(
       glossary_path: str = "",
       mmap_shard_dir: str = "",
       use_mount_directly: bool = False,
+      use_aut: bool = False,
       **training_args
   ):
     """
@@ -362,7 +363,8 @@ def train_ddp_modal(
     print(f"[INFO] Available GPUs: {list(range(torch.cuda.device_count()))}")
     
     # 使用上传到存储卷的训练脚本
-    script_path = "/data/train_ddp_simplified.py"
+    # 根据 use_aut 选择对应脚本
+    script_path = "/data/Qwen3_AuT_term_level_train_ddp.py" if use_aut else "/data/train_ddp_simplified.py"
     
     # 检查训练脚本是否存在
     if not os.path.exists(script_path):
@@ -375,7 +377,9 @@ def train_ddp_modal(
     dependency_files = [
         "/data/Qwen2_Audio_train.py",
         "/data/train_ddp_simplified.py",
-        "/data/mmap_audio_reader.py"
+        "/data/mmap_audio_reader.py",
+        "/data/Qwen3_AuT_speech_encoder.py",
+        "/data/Qwen3_AuT_term_level_train_ddp.py",
     ]
     
     # 检查依赖文件是否存在
@@ -418,9 +422,9 @@ def train_ddp_modal(
     # 添加基本参数（使用本地化后的路径）
     cmd.extend([
         "--train_samples_path", train_samples_path,
-        "--save_path", "/data/qwen2_audio_term_level_modal_v2.pt",
+        "--save_path", ("/data/qwen3_aut_term_level_modal.pt" if use_aut else "/data/qwen2_audio_term_level_modal_v2.pt"),
         "--glossary_path", glossary_path,
-        "--best_model_path", "/data/qwen2_audio_term_level_modal.pt"
+        "--best_model_path", ("/data/qwen3_aut_term_level_modal_best.pt" if use_aut else "/data/qwen2_audio_term_level_modal.pt")
     ])
     
     # 只有当test_samples_path不为空时才添加
@@ -548,6 +552,8 @@ def main(skip_upload: bool = False, upload_large_files_only: bool = False, eval_
             "Qwen2_Audio_train.py": "/home/jiaxuanluo/InfiniSST/retriever/gigaspeech/modal/Qwen2_Audio_train.py",
             "train_ddp_simplified.py": "/home/jiaxuanluo/InfiniSST/retriever/gigaspeech/modal/Qwen2_Audio_term_level_train_ddp_simplified.py",
             "mmap_audio_reader.py": "/home/jiaxuanluo/InfiniSST/retriever/gigaspeech/modal/mmap_audio_reader.py",
+            "Qwen3_AuT_speech_encoder.py": "/home/jiaxuanluo/InfiniSST/retriever/gigaspeech/modal/Qwen3_AuT_speech_encoder.py",
+            "Qwen3_AuT_term_level_train_ddp.py": "/home/jiaxuanluo/InfiniSST/retriever/gigaspeech/modal/Qwen3_AuT_term_level_train_ddp.py",
         }
         
         # 加载本地数据文件

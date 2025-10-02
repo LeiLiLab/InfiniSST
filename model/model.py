@@ -245,16 +245,18 @@ class SLlamaLightning(L.LightningModule):
         except Exception:
             n_batches = -1
         logger.info("[DL] Train sampler ready: %s batches (%.2fs)", n_batches, time.time() - t1)
-        # 更高吞吐的 DataLoader 设置
-        num_workers = 16
+        # 更高吞吐的 DataLoader 设置（可通过环境变量调整）
+        import os
+        num_workers = int(os.environ.get("DL_NUM_WORKERS", "24"))
+        prefetch = int(os.environ.get("DL_PREFETCH", "6"))
         train_dataloader = DataLoader(
             train_dataset, 
             batch_sampler=train_sampler, 
             collate_fn=data_collator,
             num_workers=num_workers,
-            persistent_workers=True,
+            persistent_workers=(num_workers > 0),
             pin_memory=True,
-            prefetch_factor=2
+            prefetch_factor=prefetch if num_workers > 0 else None
         )
         return train_dataloader
     
@@ -300,15 +302,17 @@ class SLlamaLightning(L.LightningModule):
         except Exception:
             n_batches = -1
         logger.info("[DL] Eval sampler ready: %s batches (%.2fs)", n_batches, time.time() - t1)
-        num_workers = 8
+        import os
+        num_workers = int(os.environ.get("DL_NUM_WORKERS", "16"))
+        prefetch = int(os.environ.get("DL_PREFETCH", "4"))
         eval_dataloader = DataLoader(
             eval_dataset, 
             batch_sampler=eval_sampler, 
             collate_fn=data_collator,
             num_workers=num_workers,
-            persistent_workers=True,
+            persistent_workers=(num_workers > 0),
             pin_memory=True,
-            prefetch_factor=2
+            prefetch_factor=prefetch if num_workers > 0 else None
         )
         return eval_dataloader
 
@@ -378,7 +382,11 @@ class SLlamaLightning(L.LightningModule):
         }
     
     def forward(self, batch):
-        logger.info("device: {}, batch size: {}, multiplier: {}".format(self.device, batch['input_ids'].size(), batch['multiplier']))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(
+                "device: %s, batch size: %s, multiplier: %s",
+                self.device, batch['input_ids'].size(), batch.get('multiplier', 'n/a')
+            )
         output = self.model(
             **batch,
             return_dict=True
@@ -420,10 +428,9 @@ class SQwen25Lightning(SLlamaLightning):
             "use_flash_attn (requested={}, effective={})".format(requested_flash, effective_flash)
         )
         attn_impl = "flash_attention_2" if effective_flash else "sdpa"
-        dtype = torch.bfloat16 if effective_flash else None
         model = SpeechQwenForCausalLM.from_pretrained(
             self.model_args.llm_path,
-            torch_dtype=dtype,
+            torch_dtype=torch.bfloat16,
             attn_implementation=attn_impl
         )
         model.config.use_cache = False
