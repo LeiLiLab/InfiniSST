@@ -196,9 +196,13 @@ class SLlamaLightning(L.LightningModule):
         self.model = model
     
     def train_dataloader(self):
+        import time
+        t0 = time.time()
+        logger.info("[DL] Building train dataset from %s (%s.tsv)", self.data_args.data_path, self.data_args.data_split_train)
         train_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
             self.data_args.data_path, self.data_args.data_split_train
         )
+        logger.info("[DL] Train dataset ready: %d samples (%.2fs)", len(train_dataset), time.time() - t0)
         collator_cls = collator_classes[self.data_args.trajectory]
 
         logger.info("collator class: {}".format(collator_cls))
@@ -224,6 +228,7 @@ class SLlamaLightning(L.LightningModule):
 
         logger.info("train_bsz: {}, bsz_sent: {}".format(self.training_args.train_bsz, self.training_args.bsz_sent))
 
+        t1 = time.time()
         train_sampler = SpeechSampler(
             train_dataset, 
             shuffle=True, 
@@ -234,18 +239,33 @@ class SLlamaLightning(L.LightningModule):
             filter=True,
             tokenizer=self.fast_tokenizer,
         )
+        # SpeechSampler 会打印 skipped; 这里补充批次数
+        try:
+            n_batches = len(train_sampler.batch_indices)
+        except Exception:
+            n_batches = -1
+        logger.info("[DL] Train sampler ready: %s batches (%.2fs)", n_batches, time.time() - t1)
+        # 更高吞吐的 DataLoader 设置
+        num_workers = 16
         train_dataloader = DataLoader(
             train_dataset, 
             batch_sampler=train_sampler, 
             collate_fn=data_collator,
-            num_workers=4
+            num_workers=num_workers,
+            persistent_workers=True,
+            pin_memory=True,
+            prefetch_factor=2
         )
         return train_dataloader
     
     def val_dataloader(self):
+        import time
+        t0 = time.time()
+        logger.info("[DL] Building eval dataset from %s (%s.tsv)", self.data_args.data_path, self.data_args.data_split_eval)
         eval_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
-        self.data_args.data_path, self.data_args.data_split_eval
+            self.data_args.data_path, self.data_args.data_split_eval
         )
+        logger.info("[DL] Eval dataset ready: %d samples (%.2fs)", len(eval_dataset), time.time() - t0)
         collator_cls = collator_classes[self.data_args.trajectory]
         data_collator = collator_cls(
             self.tokenizer, 
@@ -264,6 +284,7 @@ class SLlamaLightning(L.LightningModule):
         # if self.data_args.trajectory >= 1:
         #     data_collator.validate(eval_dataset)
 
+        t1 = time.time()
         eval_sampler = SpeechSampler(
             eval_dataset, 
             shuffle=False, 
@@ -274,11 +295,20 @@ class SLlamaLightning(L.LightningModule):
             filter=True,
             tokenizer=self.fast_tokenizer,
         )
+        try:
+            n_batches = len(eval_sampler.batch_indices)
+        except Exception:
+            n_batches = -1
+        logger.info("[DL] Eval sampler ready: %s batches (%.2fs)", n_batches, time.time() - t1)
+        num_workers = 8
         eval_dataloader = DataLoader(
             eval_dataset, 
             batch_sampler=eval_sampler, 
             collate_fn=data_collator,
-            num_workers=4
+            num_workers=num_workers,
+            persistent_workers=True,
+            pin_memory=True,
+            prefetch_factor=2
         )
         return eval_dataloader
 
