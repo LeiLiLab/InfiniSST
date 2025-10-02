@@ -417,7 +417,7 @@ class SQwen25Lightning(SLlamaLightning):
             except Exception as e:
                 effective_flash = False
                 logger.warning(
-                    "FlashAttention2 requested but unavailable ({}). Falling back to SDPA.", str(e)
+                    "FlashAttention2 requested but unavailable (%s). Falling back to SDPA.", str(e)
                 )
 
         logger.info(
