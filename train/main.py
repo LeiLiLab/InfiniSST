@@ -25,7 +25,7 @@ from transformers import set_seed
 import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor
 from lightning.pytorch.loggers import WandbLogger
-from lightning.pytorch.strategies import DeepSpeedStrategy
+from lightning.pytorch.strategies import DDPStrategy
 from pytorch_lightning.profilers import AdvancedProfiler, SimpleProfiler, PyTorchProfiler
 
 from model.model import (
@@ -211,13 +211,8 @@ def train():
         # log_model="all"
     )
 
-    strategy = DeepSpeedStrategy(
-        stage=training_args.deepspeed_stage,
-        offload_optimizer=training_args.deepspeed_offload,
-        offload_parameters=training_args.deepspeed_offload,
-        allgather_bucket_size=training_args.deepspeed_bucket_size,
-        reduce_bucket_size=training_args.deepspeed_bucket_size,
-    )
+    # Use standard DDP strategy (no DeepSpeed)
+    strategy = DDPStrategy(find_unused_parameters=False)
     # strategy = FSDPStrategy(
     #     sharding_strategy=training_args.sharding,
     #     state_dict_type="sharded"
