@@ -212,7 +212,9 @@ def train():
     )
 
     # Use standard DDP strategy (no DeepSpeed)
-    strategy = DDPStrategy(find_unused_parameters=False)
+    # Some parameters (e.g., frozen heads/encoders) may not participate in loss every step.
+    # Enable find_unused_parameters to avoid reducer errors.
+    strategy = DDPStrategy(find_unused_parameters=True)
     # strategy = FSDPStrategy(
     #     sharding_strategy=training_args.sharding,
     #     state_dict_type="sharded"
