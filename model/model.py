@@ -434,7 +434,6 @@ class SQwen25Lightning(SLlamaLightning):
         model.config.use_cache = False
         # Speed/memory knobs
         try:
-            import torch
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.backends.cudnn.allow_tf32 = True
         except Exception:
@@ -446,7 +445,7 @@ class SQwen25Lightning(SLlamaLightning):
             pass
         # Optional compile for speed: set TORCH_COMPILE=1 [mode: reduce-overhead|max-autotune]
         try:
-            import os, torch
+            import os
             if os.environ.get("TORCH_COMPILE", "0") == "1":
                 mode = os.environ.get("TORCH_COMPILE_MODE", "reduce-overhead")
                 model = torch.compile(model, mode=mode)
