@@ -34,8 +34,6 @@ from train.dataset import (
     DataCollatorForTrajectoryInstructDataset,
     DataCollatorForTrajectoryInstructMultiLatencyDataset,
     DataCollatorForTrajectoryInstructMultiLatencyQwenDataset,
-    DataCollatorForOfflineQwen2ACDataset,
-    DataCollatorForTrajectoryInstructMultiLatencyQwen2ACDataset,
     DataCollatorForOfflineSeamlessDataset,
     DataCollatorForTrajectoryInstructMultiLatencySeamlessDataset
 )
@@ -61,11 +59,9 @@ collator_classes = {
     2: DataCollatorForTrajectoryDataset,
     3: DataCollatorForTrajectoryInstructDataset,
     4: DataCollatorForTrajectoryInstructMultiLatencyDataset,
-    5: DataCollatorForOfflineQwen2ACDataset,
-    6: DataCollatorForTrajectoryInstructMultiLatencyQwen2ACDataset,
-    7: DataCollatorForOfflineSeamlessDataset,
-    8: DataCollatorForTrajectoryInstructMultiLatencySeamlessDataset,
-    9: DataCollatorForTrajectoryInstructMultiLatencyQwenDataset,
+    5: DataCollatorForOfflineSeamlessDataset,
+    6: DataCollatorForTrajectoryInstructMultiLatencySeamlessDataset,
+    7: DataCollatorForTrajectoryInstructMultiLatencyQwenDataset,
 }
 
 class SLlamaLightning(L.LightningModule):
