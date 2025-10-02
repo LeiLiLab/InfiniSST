@@ -62,6 +62,8 @@ collator_classes = {
     5: DataCollatorForOfflineSeamlessDataset,
     6: DataCollatorForTrajectoryInstructMultiLatencySeamlessDataset,
     7: DataCollatorForTrajectoryInstructMultiLatencyQwenDataset,
+    8: DataCollatorForTrajectoryInstructMultiLatencyQwenDataset,
+    9: DataCollatorForTrajectoryInstructMultiLatencyQwenDataset,
 }
 
 class SLlamaLightning(L.LightningModule):
@@ -199,7 +201,7 @@ class SLlamaLightning(L.LightningModule):
             self.data_args.data_path, self.data_args.data_split_train
         )
         logger.info("[DL] Train dataset ready: %d samples (%.2fs)", len(train_dataset), time.time() - t0)
-        collator_cls = collator_classes[self.data_args.trajectory]
+        collator_cls = collator_classes.get(self.data_args.trajectory, DataCollatorForTrajectoryInstructMultiLatencyQwenDataset)
 
         logger.info("collator class: {}".format(collator_cls))
 
@@ -264,7 +266,7 @@ class SLlamaLightning(L.LightningModule):
             self.data_args.data_path, self.data_args.data_split_eval
         )
         logger.info("[DL] Eval dataset ready: %d samples (%.2fs)", len(eval_dataset), time.time() - t0)
-        collator_cls = collator_classes[self.data_args.trajectory]
+        collator_cls = collator_classes.get(self.data_args.trajectory, DataCollatorForTrajectoryInstructMultiLatencyQwenDataset)
         data_collator = collator_cls(
             self.tokenizer, 
             self.length_shrink_func,
@@ -717,7 +719,7 @@ class SeamlessLightning(SLlamaLightning):
         train_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
             self.data_args.data_path, self.data_args.data_split_train
         )
-        collator_cls = collator_classes[self.data_args.trajectory]
+        collator_cls = collator_classes.get(self.data_args.trajectory, DataCollatorForTrajectoryInstructMultiLatencyQwenDataset)
 
         logger.info("collator class: {}".format(collator_cls))
 
@@ -757,7 +759,7 @@ class SeamlessLightning(SLlamaLightning):
         eval_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
             self.data_args.data_path, self.data_args.data_split_eval
         )
-        collator_cls = collator_classes[self.data_args.trajectory]
+        collator_cls = collator_classes.get(self.data_args.trajectory, DataCollatorForTrajectoryInstructMultiLatencyQwenDataset)
         data_collator = collator_cls(
             self.tokenizer, 
             self.processor,
