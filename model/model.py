@@ -374,11 +374,27 @@ class SQwen25Lightning(SLlamaLightning):
         patch_qwen25()
         patch_hf()
 
-        logger.info("use_flash_attn: {}".format(self.model_args.use_flash_attn))
+        # Determine whether to use FlashAttention2. If requested but not installed, fallback to SDPA.
+        requested_flash = bool(self.model_args.use_flash_attn)
+        effective_flash = requested_flash
+        if requested_flash:
+            try:
+                import flash_attn  # noqa: F401
+            except Exception as e:
+                effective_flash = False
+                logger.warning(
+                    "FlashAttention2 requested but unavailable ({}). Falling back to SDPA.", str(e)
+                )
+
+        logger.info(
+            "use_flash_attn (requested={}, effective={})".format(requested_flash, effective_flash)
+        )
+        attn_impl = "flash_attention_2" if effective_flash else "sdpa"
+        dtype = torch.bfloat16 if effective_flash else None
         model = SpeechQwenForCausalLM.from_pretrained(
             self.model_args.llm_path,
-            torch_dtype=torch.bfloat16,
-            attn_implementation="flash_attention_2"
+            torch_dtype=dtype,
+            attn_implementation=attn_impl
         )
         model.config.use_cache = False
 
