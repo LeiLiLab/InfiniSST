@@ -436,7 +436,7 @@ def train_infinisst(
     llm_freeze: bool = True,
     llm_emb_freeze: bool = True,
     llm_head_freeze: bool = True,
-    use_flash_attn: bool = False,
+    use_flash_attn: bool = True,
 
     # Training settings
     trajectory: int = 9,
@@ -468,7 +468,7 @@ def train_infinisst(
 
     # Options
     use_local_copy: bool = False,  # 默认禁用rsync拷贝
-    extract_audio_to_workspace: bool = True,  # 默认：训练容器内将audio解压到NVMe并使用
+    extract_audio_to_workspace: bool = False,  # 快速测试：跳过解压，直接用Volume挂载
     resume_training: bool = False,
 ):
     import subprocess, os, sys, time, torch, shutil
@@ -484,7 +484,11 @@ def train_infinisst(
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     os.environ["WANDB_MODE"] = "disabled"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"  # 训练期强制离线
-    os.environ["AUDIO_PREFIX_REWRITE"] = "/mnt/taurus/data/siqiouyang/datasets/gigaspeech:/workspace/gigaspeech;/data/gigaspeech:/workspace/gigaspeech"
+    # 路径重写：根据是否解压到workspace决定
+    if extract_audio_to_workspace:
+        os.environ["AUDIO_PREFIX_REWRITE"] = "/mnt/taurus/data/siqiouyang/datasets/gigaspeech:/workspace/gigaspeech;/data/gigaspeech:/workspace/gigaspeech"
+    else:
+        os.environ["AUDIO_PREFIX_REWRITE"] = "/mnt/taurus/data/siqiouyang/datasets/gigaspeech:/data/gigaspeech"
     
     # H100 上 NCCL P2P/IB 性能良好，不需要禁用
     os.environ.setdefault("TORCH_DISTRIBUTED_DEBUG", "INFO")

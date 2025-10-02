@@ -244,7 +244,6 @@ class SLlamaLightning(L.LightningModule):
             n_batches = -1
         logger.info("[DL] Train sampler ready: %s batches (%.2fs)", n_batches, time.time() - t1)
         # 更高吞吐的 DataLoader 设置（可通过环境变量调整）
-        import os
         num_workers = int(os.environ.get("DL_NUM_WORKERS", "24"))
         prefetch = int(os.environ.get("DL_PREFETCH", "6"))
         train_dataloader = DataLoader(
@@ -300,7 +299,6 @@ class SLlamaLightning(L.LightningModule):
         except Exception:
             n_batches = -1
         logger.info("[DL] Eval sampler ready: %s batches (%.2fs)", n_batches, time.time() - t1)
-        import os
         num_workers = int(os.environ.get("DL_NUM_WORKERS", "16"))
         prefetch = int(os.environ.get("DL_PREFETCH", "4"))
         eval_dataloader = DataLoader(
@@ -445,7 +443,6 @@ class SQwen25Lightning(SLlamaLightning):
             pass
         # Optional compile for speed: set TORCH_COMPILE=1 [mode: reduce-overhead|max-autotune]
         try:
-            import os
             if os.environ.get("TORCH_COMPILE", "0") == "1":
                 mode = os.environ.get("TORCH_COMPILE_MODE", "reduce-overhead")
                 model = torch.compile(model, mode=mode)
