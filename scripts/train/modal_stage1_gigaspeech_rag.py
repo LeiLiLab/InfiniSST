@@ -396,7 +396,7 @@ os.environ["TRANSFORMERS_OFFLINE"] = "1"
 
 @app.function(
     image=image,
-    gpu="H100:8",
+    gpu="H200:8",
     volumes={
         "/data": data_volume,
         "/models": model_volume,
@@ -405,7 +405,7 @@ os.environ["TRANSFORMERS_OFFLINE"] = "1"
         "/root/InfiniSST": code_volume,   # ★★★ 新增：挂载代码卷
     },
     timeout=86400,
-    memory=512*1024,
+    memory=1024*1024,
     cpu=64,
     secrets=[modal.Secret.from_name("huggingface-token")],
 )
@@ -447,9 +447,9 @@ def train_infinisst(
     # Training hyperparameters
     seed: int = 998244353,
     stage: int = 1,
-    train_bsz: int = 7200,            # H100x8: 4x from 1800 (L40S baseline)
+    train_bsz: int = 9600,            # H100x8: 4x from 1800 (L40S baseline)
     eval_bsz: int = 7200,             # H100x8: 4x from 1800 (L40S baseline)
-    bsz_sent: int = 4,                # H100x8: doubled for better batching
+    bsz_sent: int = 6,                # H100x8: doubled for better batching
     learning_rate: float = 2e-4,
     warmup_steps: int = 1000,
 

@@ -62,6 +62,55 @@ DEFAULT_LATENCY_TOKEN = "<latency_{}>"
 
 logger = logging.getLogger(__name__)
 
+# ---- OPUS I/O metrics (env configurable) ----
+import os as _os
+import time as _time
+
+_OPUS_LOG_EVERY = int(_os.environ.get("OPUS_LOG_EVERY", "1000"))
+_OPUS_SLOW_MS = float(_os.environ.get("OPUS_SLOW_MS", "80"))
+_OPUS_STATS = {
+    "reads": 0,
+    "cache_hit": 0,
+    "cache_miss": 0,
+    "sf": 0,
+    "ta_resample": 0,
+    "ff": 0,
+    "read_ms_sum": 0.0,
+    "resample_ms_sum": 0.0,
+}
+
+def _opus_stats_update(kind: str = None, dt_ms: float = None, cache_hit: bool = None, resample_ms: float = 0.0):
+    try:
+        if cache_hit is not None:
+            if cache_hit:
+                _OPUS_STATS["cache_hit"] += 1
+            else:
+                _OPUS_STATS["cache_miss"] += 1
+        if kind:
+            if kind == "sf":
+                _OPUS_STATS["sf"] += 1
+            elif kind == "ta_resample":
+                _OPUS_STATS["ta_resample"] += 1
+            elif kind == "ff":
+                _OPUS_STATS["ff"] += 1
+        if dt_ms is not None:
+            _OPUS_STATS["read_ms_sum"] += float(dt_ms)
+        if resample_ms:
+            _OPUS_STATS["resample_ms_sum"] += float(resample_ms)
+        _OPUS_STATS["reads"] += 1
+
+        r = _OPUS_STATS["reads"]
+        if r % _OPUS_LOG_EVERY == 0 and logger.isEnabledFor(logging.INFO):
+            hit = 100.0 * (_OPUS_STATS["cache_hit"]) / max(1, (_OPUS_STATS["cache_hit"] + _OPUS_STATS["cache_miss"]))
+            avg_ms = _OPUS_STATS["read_ms_sum"] / max(1, r)
+            avg_resamp = _OPUS_STATS["resample_ms_sum"] / max(1, _OPUS_STATS["ta_resample"]) if _OPUS_STATS["ta_resample"] else 0.0
+            logger.info(
+                "[OPUS] reads=%d hit=%.1f%% avg_read=%.2fms sf=%d ta_resample=%d(avg %.2fms) ff=%d",
+                r, hit, avg_ms, _OPUS_STATS["sf"], _OPUS_STATS["ta_resample"], avg_resamp, _OPUS_STATS["ff"],
+            )
+    except Exception:
+        pass
+
 _SF_HANDLE_CACHE: Dict[str, sf.SoundFile] = {}
 _SF_HANDLE_ORDER: List[str] = []
 _SF_CACHE_LOCK = threading.Lock()
@@ -82,6 +131,7 @@ def _get_sf_handle(path: str, cache_capacity: int = 128) -> sf.SoundFile:
     with _SF_CACHE_LOCK:
         h = _SF_HANDLE_CACHE.get(path)
         if h is not None:
+            _opus_stats_update(cache_hit=True)
             return h
         f = sf.SoundFile(path, 'r')
         _SF_HANDLE_CACHE[path] = f
@@ -92,6 +142,7 @@ def _get_sf_handle(path: str, cache_capacity: int = 128) -> sf.SoundFile:
                 _SF_HANDLE_CACHE.pop(old).close()
             except Exception:
                 pass
+        _opus_stats_update(cache_hit=False)
         return f
 
 def get_features_or_waveform(
@@ -119,6 +170,7 @@ def get_features_or_waveform(
     cache_cap = int(os.environ.get("OPUS_HANDLE_CACHE", "128"))
     f = _get_sf_handle(_path, cache_capacity=cache_cap)
     sr = f.samplerate
+    t0 = _time.perf_counter()
     if len(slice_ptr) == 0:
         f.seek(0)
         data = f.read(dtype="float32", always_2d=False)
@@ -128,14 +180,25 @@ def get_features_or_waveform(
         data = f.read(frames=frames, dtype="float32", always_2d=False)
     else:
         raise ValueError(f"Invalid path: {_path}")
+    read_ms = (_time.perf_counter() - t0) * 1000.0
+    resample_ms = 0.0
     # Optional resample to 16k if需要
     if sr != 16000:
+        t1 = _time.perf_counter()
         wav, _sr = torchaudio.load(_path, frame_offset=int(slice_ptr[0]) if len(slice_ptr)==2 else 0,
                                    num_frames=int(slice_ptr[1]) if len(slice_ptr)==2 else -1)
         if _sr != 16000:
             wav = torchaudio.functional.resample(wav, _sr, 16000)
+        resample_ms = (_time.perf_counter() - t1) * 1000.0
+        _opus_stats_update(kind="ta_resample", dt_ms=read_ms, resample_ms=resample_ms)
+        if read_ms + resample_ms > _OPUS_SLOW_MS and logger.isEnabledFor(logging.INFO):
+            logger.info("[OPUS] slow read+resample %.1fms path=%s slice=%s", read_ms + resample_ms, _path, slice_ptr)
         return wav.squeeze(0).numpy().astype(np.float32), 16000
-    return data.astype(np.float32), sr
+    else:
+        _opus_stats_update(kind="sf", dt_ms=read_ms)
+        if read_ms > _OPUS_SLOW_MS and logger.isEnabledFor(logging.INFO):
+            logger.info("[OPUS] slow read %.1fms path=%s slice=%s", read_ms, _path, slice_ptr)
+        return data.astype(np.float32), sr
 
 
 def normalize(wav, alpha=0.001, eps=1e-8):
@@ -1418,7 +1481,7 @@ class DataCollatorForTrajectoryInstructMultiLatencyQwenDataset(DataCollatorForTr
 
             for j in range(len(user_pos) - 1):
                 if samples[i].trajectory[j][1]:
-                    label_mask[i, assist_pos[j][0] + 2 : user_pos[j + 1][0] - 2] = True
+                    label_mask[i, assist_pos[j][0] + 2 : user_pos[j + 1][0] - 1] = True
             label_mask[i, assist_pos[-1][0] + 2:] = True
         targets[~label_mask] = IGNORE_INDEX
 
@@ -1434,155 +1497,6 @@ class DataCollatorForTrajectoryInstructMultiLatencyQwenDataset(DataCollatorForTr
         )
 
         return batch    
-
-class DataCollatorForTrajectoryInstructMultiLatencyQwen2ACDataset:
-    def __init__(self, 
-            processor, source_lang, target_lang, 
-            block_size=48, max_multiplier=1, prob_aug=0., **kwargs
-        ):
-
-        self.processor = processor
-        self.source_lang = source_lang
-        self.target_lang = target_lang
-        self.speech_segment_size = block_size // 2
-
-        assert max_multiplier >= 1 and prob_aug >= 0 and prob_aug <= 1
-        self.max_multiplier = max_multiplier
-        self.prob_aug = prob_aug
-
-    def __call__(self, samples: List[SpeechToTextDatasetItem]) -> Dict[str, torch.Tensor]:
-        multiplier = np.random.randint(1, self.max_multiplier + 1)
-
-        # pad to multiple
-        sp_seg_frame = int(self.speech_segment_size * 0.04 * 16000) * multiplier
-        offset = torch.zeros(159 + 160).to(samples[0].source)
-        for x in samples:
-            if x.source.shape[0] % sp_seg_frame != 0:
-                n_pad = sp_seg_frame - x.source.shape[0] % sp_seg_frame
-                x.source = torch.cat([x.source, torch.zeros(n_pad).to(x.source)], dim=0)
-            x.source = torch.cat([offset, x.source], dim=0)
-            
-        audios = [x.source.numpy() for x in samples]
-        n_frames = torch.tensor([x.source.size(0) for x in samples], dtype=torch.long)
-
-        for x in samples:
-            if type(x.trajectory[0]) == str:
-                x.trajectory = [[seg, True] for seg in x.trajectory]
-        
-        for x in samples:
-            traj = x.trajectory
-            new_traj = []
-            for i in range(0, len(traj), multiplier):
-                partial_translation = ''.join(
-                    traj[j][0] for j in range(i, min(i + multiplier, len(traj)))
-                )
-                new_traj.append([partial_translation, True])
-            x.trajectory = new_traj
-
-        if np.random.rand() < self.prob_aug: # only zh
-            for x in samples:
-                traj = x.trajectory
-
-                # shift
-                shift_traj = []
-                for i in range(len(traj)):
-                    seg = traj[len(traj) - i - 1][0]
-                    if seg == "" or np.random.rand() < 0.5 or i == 0:
-                        shift_traj.append([seg, True])
-                        continue
-                    words = list(jieba.cut(seg))
-                    shift_idx = np.random.randint(len(words))
-                    shift_traj[-1][0] = ''.join(words[shift_idx:]) + shift_traj[-1][0]
-                    shift_traj.append([''.join(words[:shift_idx]), False])
-
-                shift_traj = shift_traj[::-1]
-
-                # merge
-                merge_traj = copy.deepcopy(shift_traj)
-                for i in range(len(merge_traj) - 1):
-                    seg, _ = merge_traj[i]
-                    if seg == "" or np.random.rand() < 0.5:
-                        continue
-                    
-                    merge_traj[i] = ["", False]
-                    merge_traj[i + 1][0] = seg + merge_traj[i + 1][0]
-                
-                x.trajectory = merge_traj
-
-        prompts = []
-        instruction = f"Translate the following speech from {self.source_lang} to {self.target_lang}."
-        for i, x in enumerate(samples):
-            messages = [{
-                "role": "system",
-                "content": instruction
-            }]
-            for j, (text, _) in enumerate(x.trajectory):
-                messages.append(
-                    {
-                        "role": "user",
-                        "content": "<|audio_bos|><|AUDIO|><|audio_eos|>"
-                    }
-                )
-                messages.append(
-                    {
-                        "role": "assistant",
-                        "content": text
-                    }
-                )
-            prompts.append(messages)
-
-        texts = self.processor.apply_chat_template(
-            prompts,
-            return_tensors='pt',
-            padding=True, 
-            truncation=False, 
-            add_special_tokens=False
-        )
-
-        inputs = self.processor(
-            text=texts, 
-            audios=audios, 
-            sampling_rate=self.processor.feature_extractor.sampling_rate, 
-            return_tensors="pt", 
-            padding="longest",
-            max_length=n_frames.max(),
-        )
-
-        input_ids = inputs["input_ids"]
-        attention_mask = (input_ids != self.processor.tokenizer.pad_token_id).long()
-
-        # Create targets and handle padding properly
-        targets = input_ids.clone()
-        targets[attention_mask == 0] = IGNORE_INDEX
-        user_id = self.processor.tokenizer.convert_tokens_to_ids('user')
-        assist_id = self.processor.tokenizer.convert_tokens_to_ids('assistant')
-        start_header_id = self.processor.tokenizer.convert_tokens_to_ids('<|im_start|>')
-        label_mask = torch.zeros_like(targets, dtype=torch.bool)
-        for i in range(len(samples)):
-            user_pos = (targets[i] == user_id).nonzero()
-            assist_pos = (targets[i] == assist_id).nonzero()
-
-            user_pos = [
-                pos for pos in user_pos if targets[i, pos[0] - 1] == start_header_id
-            ]
-            assist_pos = [
-                pos for pos in assist_pos if targets[i, pos[0] - 1] == start_header_id
-            ]
-
-            assert len(user_pos) == len(assist_pos)
-
-            for j in range(len(user_pos) - 1):
-                if samples[i].trajectory[j][1]:
-                    label_mask[i, assist_pos[j][0] + 2 : user_pos[j + 1][0] - 1] = True
-            label_mask[i, assist_pos[-1][0] + 2:] = True
-        targets[~label_mask] = IGNORE_INDEX
-
-        inputs["labels"] = targets
-        inputs["src_lengths"] = n_frames
-        inputs["multiplier"] = multiplier
-
-        return inputs
-    
 
 class DataCollatorForTrajectoryInstructMultiLatencySeamlessDataset:
     def __init__(self, 

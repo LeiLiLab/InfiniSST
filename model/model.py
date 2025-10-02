@@ -434,6 +434,26 @@ class SQwen25Lightning(SLlamaLightning):
             attn_implementation=attn_impl
         )
         model.config.use_cache = False
+        # Speed/memory knobs
+        try:
+            import torch
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+        except Exception:
+            pass
+        # Reduce activations with checkpointing
+        try:
+            model.gradient_checkpointing_enable()
+        except Exception:
+            pass
+        # Optional compile for speed: set TORCH_COMPILE=1 [mode: reduce-overhead|max-autotune]
+        try:
+            import os, torch
+            if os.environ.get("TORCH_COMPILE", "0") == "1":
+                mode = os.environ.get("TORCH_COMPILE_MODE", "reduce-overhead")
+                model = torch.compile(model, mode=mode)
+        except Exception:
+            pass
 
         if self.model_args.llm_freeze:
             model.model.requires_grad_(False)
