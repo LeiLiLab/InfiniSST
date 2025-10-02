@@ -84,9 +84,15 @@ image = (
         "jiwer==3.1.0",                   # For speech metrics
         "praat-textgrids==1.4.0",         # For forced alignment
     ])
-    # Flash Attention（版本与 torch/cu124 匹配；失败不阻断构建）
+    # Flash Attention（优先使用预编译 wheel，失败不阻断构建）
     .run_commands([
-        "pip install --no-build-isolation --no-cache-dir 'flash-attn==2.7.4.post1' || true"
+        # 尝试多个预编译源，按优先级降级
+        "(pip install flash-attn --no-build-isolation "
+        "--index-url https://flashattn.ai/whl/cu124/torch2.5/ 2>/dev/null) || "
+        "(pip install flash-attn --no-build-isolation "
+        "--index-url https://flashattn.ai/whl/cu121/torch2.5/ 2>/dev/null) || "
+        "(pip install flash-attn --no-build-isolation 2>/dev/null) || "
+        "echo '[WARN] flash-attn install failed, will use SDPA at runtime'"
     ])
     # FlashInfer（从预编译 wheel 安装，失败不阻断构建）
     .run_commands([
@@ -393,6 +399,9 @@ os.environ["TRANSFORMERS_CACHE"] = "/root/.cache/huggingface"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["WANDB_MODE"] = "disabled"
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
+os.environ["DL_NUM_WORKERS"] = "32"
+os.environ["DL_PREFETCH"] = "8"
+os.environ["OPUS_HANDLE_CACHE"] = "512"
 
 @app.function(
     image=image,
@@ -436,7 +445,7 @@ def train_infinisst(
     llm_freeze: bool = True,
     llm_emb_freeze: bool = True,
     llm_head_freeze: bool = True,
-    use_flash_attn: bool = True,
+    use_flash_attn: bool = True,  # 尝试使用 FlashAttention2，失败自动回退 SDPA
 
     # Training settings
     trajectory: int = 9,
@@ -447,17 +456,17 @@ def train_infinisst(
     # Training hyperparameters
     seed: int = 998244353,
     stage: int = 1,
-    train_bsz: int = 9600,            # H100x8: 4x from 1800 (L40S baseline)
-    eval_bsz: int = 7200,             # H100x8: 4x from 1800 (L40S baseline)
-    bsz_sent: int = 6,                # H100x8: doubled for better batching
+    train_bsz: int = 16000,           # H200x8: 增大到16k tokens/batch（显存仅53%）
+    eval_bsz: int = 12000,            # H200x8: 对应增大
+    bsz_sent: int = 8,                # H200x8: 增加句子数（减少padding）
     learning_rate: float = 2e-4,
     warmup_steps: int = 1000,
 
     # Training control
     run_name: str = "stage1_M=12_ls-cv-vp_norm0_qwen_rope_modal",
-    n_device: int = 8,                # ★ 与 gpu="H100:8" 对齐
+    n_device: int = 8,                # ★ 与 gpu="H200:8" 对齐
     max_epochs: int = 1,
-    grad_acc_steps: int = 1,          # H100x8: minimal grad_acc for 8 GPUs
+    grad_acc_steps: int = 2,          # H200x8: 增加grad acc，有效batch size翻倍
     clip_norm: float = 1.0,
     save_step: int = 2000,
     log_step: int = 100,
@@ -468,7 +477,7 @@ def train_infinisst(
 
     # Options
     use_local_copy: bool = False,  # 默认禁用rsync拷贝
-    extract_audio_to_workspace: bool = False,  # 快速测试：跳过解压，直接用Volume挂载
+    extract_audio_to_workspace: bool = True,  # 启用：解压到NVMe加速I/O（一次性15-20min）
     resume_training: bool = False,
 ):
     import subprocess, os, sys, time, torch, shutil

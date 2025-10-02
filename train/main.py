@@ -248,7 +248,7 @@ def train():
         log_every_n_steps=training_args.log_step,
         val_check_interval=training_args.eval_step,
         num_sanity_val_steps=0,  # Skip sanity check
-        limit_val_batches=0,     # Skip all validation for fast testing
+        limit_val_batches=0,     # 每次验证跑2个batch来监控质量
         logger=wandb_logger,
         callbacks=[lr_monitor, checkpoint_callback],
         fast_dev_run=training_args.debug_mode,
