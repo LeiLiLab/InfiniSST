@@ -245,6 +245,8 @@ def train():
         default_root_dir=training_args.save_dir,
         log_every_n_steps=training_args.log_step,
         val_check_interval=training_args.eval_step,
+        num_sanity_val_steps=0,
+        limit_val_batches=1,
         logger=wandb_logger,
         callbacks=[lr_monitor, checkpoint_callback],
         fast_dev_run=training_args.debug_mode,
