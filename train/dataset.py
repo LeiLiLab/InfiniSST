@@ -24,6 +24,9 @@ import transformers
 import numpy as np
 import torch
 import torchaudio
+import atexit
+import threading
+import soundfile as sf
 from torch.utils.data import DistributedSampler
 from fairseq.data import (
     ConcatDataset,
@@ -59,19 +62,80 @@ DEFAULT_LATENCY_TOKEN = "<latency_{}>"
 
 logger = logging.getLogger(__name__)
 
+_SF_HANDLE_CACHE: Dict[str, sf.SoundFile] = {}
+_SF_HANDLE_ORDER: List[str] = []
+_SF_CACHE_LOCK = threading.Lock()
+
+def _close_all_sf_handles():
+    with _SF_CACHE_LOCK:
+        for p, h in list(_SF_HANDLE_CACHE.items()):
+            try:
+                h.close()
+            except Exception:
+                pass
+        _SF_HANDLE_CACHE.clear()
+        _SF_HANDLE_ORDER.clear()
+
+atexit.register(_close_all_sf_handles)
+
+def _get_sf_handle(path: str, cache_capacity: int = 128) -> sf.SoundFile:
+    with _SF_CACHE_LOCK:
+        h = _SF_HANDLE_CACHE.get(path)
+        if h is not None:
+            return h
+        f = sf.SoundFile(path, 'r')
+        _SF_HANDLE_CACHE[path] = f
+        _SF_HANDLE_ORDER.append(path)
+        if len(_SF_HANDLE_ORDER) > cache_capacity:
+            old = _SF_HANDLE_ORDER.pop(0)
+            try:
+                _SF_HANDLE_CACHE.pop(old).close()
+            except Exception:
+                pass
+        return f
+
 def get_features_or_waveform(
         path: str,
 ):
-    import soundfile as sf
+    import os
+    import numpy as np
+    # Prefix rewrite to map local absolute roots to modal workspace
+    # AUDIO_PREFIX_REWRITE="old1:new1;old2:new2"
+    rewrite = os.environ.get("AUDIO_PREFIX_REWRITE")
+    if rewrite:
+        try:
+            for pair in rewrite.split(";"):
+                if not pair or ":" not in pair:
+                    continue
+                old, new = pair.split(":", 1)
+                if old and path.startswith(old):
+                    path = new + path[len(old):]
+                    break
+        except Exception:
+            pass
+
     _path, slice_ptr = parse_path(path)
+    # Prefer persistent soundfile handle for fast random access on opus
+    cache_cap = int(os.environ.get("OPUS_HANDLE_CACHE", "128"))
+    f = _get_sf_handle(_path, cache_capacity=cache_cap)
+    sr = f.samplerate
     if len(slice_ptr) == 0:
-        waveform, sample_rate = sf.read(_path, dtype="float32",)
+        f.seek(0)
+        data = f.read(dtype="float32", always_2d=False)
     elif len(slice_ptr) == 2:
-        waveform, sample_rate = sf.read(_path, dtype="float32",
-                                start=int(slice_ptr[0]), frames=int(slice_ptr[1]))
+        start, frames = int(slice_ptr[0]), int(slice_ptr[1])
+        f.seek(start)
+        data = f.read(frames=frames, dtype="float32", always_2d=False)
     else:
         raise ValueError(f"Invalid path: {_path}")
-    return waveform, sample_rate
+    # Optional resample to 16k if需要
+    if sr != 16000:
+        wav, _sr = torchaudio.load(_path, frame_offset=int(slice_ptr[0]) if len(slice_ptr)==2 else 0,
+                                   num_frames=int(slice_ptr[1]) if len(slice_ptr)==2 else -1)
+        if _sr != 16000:
+            wav = torchaudio.functional.resample(wav, _sr, 16000)
+        return wav.squeeze(0).numpy().astype(np.float32), 16000
+    return data.astype(np.float32), sr
 
 
 def normalize(wav, alpha=0.001, eps=1e-8):
@@ -178,14 +242,27 @@ class PromptSpeechToTextDataset(SpeechToTextDataset):
     def __getitem__(
         self, index: int
     ) -> Tuple[int, torch.Tensor, Optional[torch.Tensor]]:
-        while True:
+        # Robust read with bounded retries; avoid infinite loop on decode failure
+        last_err = None
+        for _ in range(3):
             try:
-                source, sr = get_features_or_waveform(
-                    self.audio_paths[index],
-                )
-                break  # Exit the loop if successful
+                source, sr = get_features_or_waveform(self.audio_paths[index])
+                break
             except Exception as e:
-                time.sleep(random.uniform(0, 1))  # Sleep for a random time <= 1 second
+                last_err = e
+                time.sleep(random.uniform(0, 0.25))
+        else:
+            # Final fallback: return silence of expected length to prevent stalling
+            n_frames = None
+            try:
+                n_frames = int(self.n_frames[index]) if self.n_frames is not None else 0
+            except Exception:
+                n_frames = 0
+            if n_frames and n_frames > 0:
+                source = np.zeros(n_frames, dtype=np.float32)
+                sr = 16000
+            else:
+                raise last_err if last_err else RuntimeError("Audio decode failed")
 
         source = torch.from_numpy(source).float()
         # with torch.no_grad():
