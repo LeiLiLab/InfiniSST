@@ -10,12 +10,13 @@ from pathlib import Path
 app = modal.App("infinisst-stage1-gigaspeech-rag")
 
 # === 关键修改点 ===
-# 1) Torch 切到 cu124 对应的官方索引 (与 H100 + 你当前环境一致)
+# 1) Torch 切到 cu124 对应的官方索引 (与 H100/H200 + 你当前环境一致)
 # 2) 预先固定 omegaconf/hydra/PyYAML，避免 fairseq 触发坏元数据版本
 # 3) fairseq==0.12.2 用 --no-deps 安装，阻止它回拉 omegaconf 2.0.5
 # 4) 其余依赖按你当前环境版本对齐
-# 5) 默认 n_device=2，和 gpu="H100:2" 保持一致
-# 6) PIP 重试/超时更健壮
+# 5) 使用 DDPStrategy 替代 DeepSpeed (与 master 分支同步)
+# 6) 默认 n_device=8，和 gpu="H200:8" 保持一致
+# 7) PIP 重试/超时更健壮
 image = (
     modal.Image.debian_slim(python_version="3.10")
     .apt_install([
@@ -52,13 +53,13 @@ image = (
     .pip_install([
         "fairseq==0.12.2"
     ], extra_options="--no-deps")
-    # 其余训练依赖（使用普通 Adam 优化器，无需 DeepSpeed）
+    # 其余训练依赖（使用 DDPStrategy，无需 DeepSpeed）
     .pip_install([
         "transformers==4.47.0",
         "accelerate==1.7.0",
         "lightning==2.5.1.post0",
         "pytorch-lightning==2.5.1.post0",
-        # DeepSpeed removed - using standard Adam optimizer instead
+        # Using DDPStrategy instead of DeepSpeed
         "peft==0.15.2",
         "soundfile==0.13.1",
         "librosa==0.11.0",
@@ -696,23 +697,8 @@ def train_infinisst(
         print(f"[ERROR] Training execution failed: {e}")
         raise
 
-    # DeepSpeed ckpt 转换（可选，按你的脚本结构保留）
-    print("[INFO] Converting DeepSpeed checkpoint to standard format...")
-    try:
-        zero_to_fp32_script = "/root/InfiniSST/train/zero_to_fp32.py"
-        if os.path.exists(zero_to_fp32_script):
-            last_ckpt = f"{save_path}/last.ckpt"
-            output_bin = f"{save_path}/last.ckpt/pytorch_model.bin"
-            subprocess.run(["python", zero_to_fp32_script, last_ckpt, output_bin], check=True)
-            print(f"[OK] Checkpoint converted to: {output_bin}")
-            prune_script = "/root/InfiniSST/train/prune_bin.py"
-            if os.path.exists(prune_script):
-                subprocess.run(["python", prune_script, output_bin], check=True)
-                print(f"[OK] Model pruned")
-        else:
-            print(f"[WARN] Conversion script not found: {zero_to_fp32_script}")
-    except Exception as e:
-        print(f"[WARN] Failed to convert checkpoint: {e}")
+    # DDP 不需要 DeepSpeed checkpoint 转换，Lightning 直接保存标准格式
+    print("[INFO] Training completed. Checkpoint saved in Lightning format.")
 
     # 提交输出到Volume
     output_volume.commit()

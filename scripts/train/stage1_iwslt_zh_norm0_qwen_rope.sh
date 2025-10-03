@@ -91,7 +91,6 @@ srun python train/main.py \
     --run_name $name \
     \
     --n_device ${SLURM_GPUS} \
-    --deepspeed_stage 1 \
     --max_epochs 1 \
     --grad_acc_steps 4 \
     --clip_norm 1.0 \
@@ -100,5 +99,16 @@ srun python train/main.py \
     --log_step 100 \
     --eval_step 1000
 
-python train/zero_to_fp32.py ${save_path}/last.ckpt ${save_path}/last.ckpt/pytorch_model.bin
-python train/prune_bin.py ${save_path}/last.ckpt/pytorch_model.bin
+# Using DDPStrategy (no DeepSpeed), checkpoint is saved in Lightning format directly
+# Extract model weights from Lightning checkpoint
+if [ -f "${save_path}/last.ckpt/checkpoint" ]; then
+    python -c "
+import torch
+ckpt = torch.load('${save_path}/last.ckpt/checkpoint', map_location='cpu')
+torch.save(ckpt['state_dict'], '${save_path}/last.ckpt/pytorch_model.bin')
+print('[INFO] Extracted model weights from Lightning checkpoint')
+"
+    echo "[INFO] Checkpoint saved to ${save_path}/last.ckpt/pytorch_model.bin"
+else
+    echo "[WARN] No checkpoint found at ${save_path}/last.ckpt/checkpoint"
+fi
