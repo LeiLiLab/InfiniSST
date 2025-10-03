@@ -320,6 +320,15 @@ def train():
 
     if resume_ckpt is not None:
         logging.info(f"[RESUME] Resuming training from checkpoint: {resume_ckpt}")
+        # 加载 checkpoint 查看训练进度信息
+        import torch
+        try:
+            ckpt = torch.load(resume_ckpt, map_location='cpu')
+            current_epoch = ckpt.get('epoch', 'Unknown')
+            global_step = ckpt.get('global_step', 'Unknown')
+            logging.info(f"[RESUME] Checkpoint info - Epoch: {current_epoch}, Global Step: {global_step}")
+        except Exception as e:
+            logging.warning(f"[RESUME] Could not load checkpoint info: {e}")
         trainer.fit(model_lightning, ckpt_path=resume_ckpt)
     else:
         logging.info(f"[RESUME] No checkpoint found. Starting fresh training in {training_args.save_dir}")

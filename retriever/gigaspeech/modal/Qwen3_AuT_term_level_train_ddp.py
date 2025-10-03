@@ -20,7 +20,8 @@ from Qwen3_AuT_speech_encoder import Qwen3AuTSpeechEncoder
 from Qwen2_Audio_train import Qwen2AudioTextEncoder, SimpleRetriever, encode_texts_in_batches
 
 # Reuse dataset and evaluation utilities from the simplified Qwen2 script
-from Qwen2_Audio_term_level_train_ddp_simplified import (
+# NOTE: On Modal volume this file is uploaded as 'train_ddp_simplified.py'
+from train_ddp_simplified import (
     TermLevelDatasetMMap,
     TermLevelDataset,
     evaluate_topk_recall,
