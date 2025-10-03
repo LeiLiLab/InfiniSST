@@ -104,11 +104,37 @@ class SLlamaLightning(L.LightningModule):
             return
 
         logger.info("use_flash_attn: {}".format(self.model_args.use_flash_attn))
+        
+        # Detect FlashAttention availability
+        flash_attn_available = False
+        try:
+            import flash_attn
+            flash_attn_available = True
+            logger.info(f"[FLASH-ATTN] FlashAttention is available (version: {flash_attn.__version__})")
+        except ImportError:
+            logger.warning("[FLASH-ATTN] FlashAttention not installed, will use SDPA")
+        
+        # Determine attention implementation
+        if self.model_args.use_flash_attn and flash_attn_available:
+            attn_impl = "flash_attention_2"
+            logger.info("[FLASH-ATTN] Using FlashAttention 2 for model")
+        elif self.model_args.use_flash_attn and not flash_attn_available:
+            attn_impl = "sdpa"
+            logger.warning("[FLASH-ATTN] FlashAttention requested but not available, falling back to SDPA")
+        else:
+            attn_impl = "sdpa"
+            logger.info("[FLASH-ATTN] Using SDPA (Scaled Dot Product Attention)")
+        
         model = SpeechLlamaForCausalLM.from_pretrained(
             self.model_args.llm_path,
             torch_dtype=torch.bfloat16 if self.model_args.use_flash_attn else None,
-            attn_implementation="flash_attention_2" if self.model_args.use_flash_attn else 'sdpa'
+            attn_implementation=attn_impl
         )
+        
+        # Log the actual attention implementation being used
+        actual_attn = getattr(model.config, '_attn_implementation', 'unknown')
+        logger.info(f"[FLASH-ATTN] Model initialized with attention implementation: {actual_attn}")
+        
         model.config.use_cache = False
         model.rdrop = self.training_args.rdrop
         model.text_weight = self.training_args.text_weight

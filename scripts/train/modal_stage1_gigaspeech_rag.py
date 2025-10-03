@@ -10,26 +10,23 @@ from pathlib import Path
 app = modal.App("infinisst-stage1-gigaspeech-rag")
 
 # === 关键修改点 ===
-# 1) Torch 切到 cu124 对应的官方索引 (与 H100/H200 + 你当前环境一致)
+# 1) 使用 Modal 官方 PyTorch 镜像（包含 CUDA/cuDNN/nvcc，支持 FlashAttention 编译）
 # 2) 预先固定 omegaconf/hydra/PyYAML，避免 fairseq 触发坏元数据版本
 # 3) fairseq==0.12.2 用 --no-deps 安装，阻止它回拉 omegaconf 2.0.5
 # 4) 其余依赖按你当前环境版本对齐
 # 5) 使用 DDPStrategy 替代 DeepSpeed (与 master 分支同步)
 # 6) 默认 n_device=8，和 gpu="H200:8" 保持一致
-# 7) PIP 重试/超时更健壮
+# 7) FlashAttention 直接用 pip 安装（Modal 官方镜像包含编译工具）
 image = (
-    modal.Image.debian_slim(python_version="3.10")
+    # 使用 Modal 官方 PyTorch 镜像（包含 CUDA 12.4 + cuDNN + 编译工具）
+    modal.Image.from_registry(
+        "nvcr.io/nvidia/pytorch:24.09-py3",  # PyTorch 2.5.0 + CUDA 12.6 + cuDNN 9
+        add_python="3.10"
+    )
     .apt_install([
         "git", "wget", "curl", "ffmpeg", "libsndfile1",
-        "build-essential", "rsync", "ninja-build",
-        "pigz", "zstd"
+        "rsync", "pigz", "zstd"
     ])
-    # 安装 PyTorch (CUDA 12.4)
-    .run_commands(["pip install 'pip<24.1'"])
-    .pip_install(
-        ["torch==2.5.1+cu124", "torchvision==0.20.1+cu124", "torchaudio==2.5.1+cu124"],
-        extra_options="--index-url https://download.pytorch.org/whl/cu124"
-    )
     .pip_install(
         ["huggingface_hub>=0.24.0"],
         extra_options="--retries 8 --timeout 120 --no-cache-dir"
@@ -85,19 +82,15 @@ image = (
         "jiwer==3.1.0",                   # For speech metrics
         "praat-textgrids==1.4.0",         # For forced alignment
     ])
-    # Flash Attention（优先使用预编译 wheel，失败不阻断构建）
+    # FlashAttention - 使用官方 PyTorch 镜像，包含 nvcc，可以直接编译
+    .pip_install(
+        ["flash-attn==2.7.2.post1"],  # 兼容 PyTorch 2.5.0
+        extra_options="--no-build-isolation"  # 加速编译
+    )
+    # FlashInfer（可选，从预编译 wheel 安装）
     .run_commands([
-        # 尝试多个预编译源，按优先级降级
-        "(pip install flash-attn --no-build-isolation "
-        "--index-url https://flashattn.ai/whl/cu124/torch2.5/ 2>/dev/null) || "
-        "(pip install flash-attn --no-build-isolation "
-        "--index-url https://flashattn.ai/whl/cu121/torch2.5/ 2>/dev/null) || "
-        "(pip install flash-attn --no-build-isolation 2>/dev/null) || "
-        "echo '[WARN] flash-attn install failed, will use SDPA at runtime'"
-    ])
-    # FlashInfer（从预编译 wheel 安装，失败不阻断构建）
-    .run_commands([
-        "pip install flashinfer -i https://flashinfer.ai/whl/cu124/torch2.5/ || true"
+        "pip install flashinfer -i https://flashinfer.ai/whl/cu126/torch2.5/ || "
+        "echo '[INFO] FlashInfer not installed (optional)'"
     ])
     .env({
         "HF_HUB_ENABLE_HF_TRANSFER": "1",
