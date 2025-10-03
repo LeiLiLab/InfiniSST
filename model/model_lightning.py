@@ -190,6 +190,31 @@ class SLlamaLightning(L.LightningModule):
     
         self.model = model
     
+    def on_load_checkpoint(self, checkpoint):
+        """
+        Called by Lightning when loading a checkpoint for resume training.
+        Verify that FlashAttention configuration is properly applied even when resuming.
+        """
+        logger.info("[FLASH-ATTN] ========== Resume Training - Loading Checkpoint ==========")
+        logger.info(f"[FLASH-ATTN] Checkpoint epoch: {checkpoint.get('epoch', 'N/A')}, "
+                   f"global_step: {checkpoint.get('global_step', 'N/A')}")
+        
+        # Verify FlashAttention config after checkpoint is loaded
+        if self.model is not None:
+            actual_attn = getattr(self.model.config, '_attn_implementation', 'unknown')
+            requested_attn = "flash_attention_2" if self.model_args.use_flash_attn else "sdpa"
+            logger.info(f"[FLASH-ATTN] Requested attention: {requested_attn}")
+            logger.info(f"[FLASH-ATTN] Actual model attention: {actual_attn}")
+            
+            # Warn if there's a mismatch
+            if self.model_args.use_flash_attn and actual_attn != "flash_attention_2":
+                logger.warning(f"[FLASH-ATTN] ⚠️  Mismatch detected! Requested FlashAttention but model uses {actual_attn}")
+                logger.warning(f"[FLASH-ATTN] This may happen if FlashAttention is not available or failed to initialize")
+            else:
+                logger.info(f"[FLASH-ATTN] ✓ Attention implementation matches request")
+        
+        logger.info("[FLASH-ATTN] ========================================================")
+    
     def train_dataloader(self):
         train_dataset = PromptSpeechToTextDatasetCreator.from_tsv(
             self.data_args.data_path, self.data_args.data_split_train
