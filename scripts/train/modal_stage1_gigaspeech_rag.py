@@ -774,7 +774,8 @@ if __name__ == "__main__":
     extract_archives = "--extract-archives" in sys.argv
     extract_audio_to_workspace = "--extract-audio-to-workspace" in sys.argv
     skip_training = "--skip-training" in sys.argv
-    resume_training = "--resume-training" in sys.argv
+    # 默认启用 resume_training，除非明确指定 --no-resume-training
+    resume_training = "--no-resume-training" not in sys.argv
     use_local_copy = "--use-local-copy" in sys.argv  # 改为默认不本地化，需要时加 --use-local-copy
     main(
         check_volume=check_volume,

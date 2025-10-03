@@ -266,36 +266,63 @@ def train():
 
     # start training with robust auto-resume
     def _find_resume_ckpt(save_dir: str) -> str | None:
+        logging.info(f"[RESUME] Searching for checkpoint in: {save_dir}")
         try:
-            # Prefer Lightning's last.ckpt directory (v2.x) -> contains a file named 'checkpoint'
+            if not os.path.exists(save_dir):
+                logging.info(f"[RESUME] Directory does not exist: {save_dir}")
+                return None
+                
+            # List all items in save_dir for debugging
+            items = os.listdir(save_dir) if os.path.isdir(save_dir) else []
+            logging.info(f"[RESUME] Found {len(items)} items in save_dir: {items[:10]}")  # Show first 10
+            
+            # Option 1: Lightning 2.x format - directory with 'checkpoint' file
             last_dir = os.path.join(save_dir, 'last.ckpt')
             candidate = os.path.join(last_dir, 'checkpoint')
             if os.path.isdir(last_dir) and os.path.exists(candidate):
+                logging.info(f"[RESUME] Found Lightning 2.x checkpoint: {candidate}")
                 return candidate
-
-            # Fallback: pick the freshest "epoch=*" or "step=*" directory having a 'checkpoint' file
+            
+            # Option 2: last.ckpt is a file directly (Lightning 1.x or manual save)
+            last_file = os.path.join(save_dir, 'last.ckpt')
+            if os.path.isfile(last_file):
+                logging.info(f"[RESUME] Found checkpoint file: {last_file}")
+                return last_file
+            
+            # Option 3: Pick the freshest "epoch=*" or "step=*" directory
             subdirs = [
                 os.path.join(save_dir, d)
                 for d in os.listdir(save_dir)
                 if (d.startswith('epoch=') or d.startswith('step='))
             ]
-            subdirs = [d for d in subdirs if os.path.isdir(d) and os.path.exists(os.path.join(d, 'checkpoint'))]
-            if subdirs:
-                subdirs.sort(key=lambda p: os.path.getmtime(p), reverse=True)
-                return os.path.join(subdirs[0], 'checkpoint')
-        except Exception:
-            pass
+            # Check both directory with 'checkpoint' file and direct .ckpt files
+            valid_subdirs = []
+            for d in subdirs:
+                ckpt_file = os.path.join(d, 'checkpoint')
+                if os.path.isdir(d) and os.path.exists(ckpt_file):
+                    valid_subdirs.append(ckpt_file)
+                elif os.path.isfile(d):
+                    valid_subdirs.append(d)
+            
+            if valid_subdirs:
+                valid_subdirs.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+                logging.info(f"[RESUME] Found {len(valid_subdirs)} epoch/step checkpoints, using: {valid_subdirs[0]}")
+                return valid_subdirs[0]
+                
+            logging.info(f"[RESUME] No checkpoint found in {save_dir}")
+        except Exception as e:
+            logging.error(f"[RESUME] Error searching for checkpoint: {e}", exc_info=True)
         return None
 
     resume_ckpt = None
-    if os.path.isdir(training_args.save_dir) and os.listdir(training_args.save_dir):
+    if os.path.exists(training_args.save_dir):
         resume_ckpt = _find_resume_ckpt(training_args.save_dir)
 
     if resume_ckpt is not None:
-        logging.info("Resuming training from checkpoint: %s", resume_ckpt)
+        logging.info(f"[RESUME] Resuming training from checkpoint: {resume_ckpt}")
         trainer.fit(model_lightning, ckpt_path=resume_ckpt)
     else:
-        logging.info("No checkpoint found. Starting fresh training in %s", training_args.save_dir)
+        logging.info(f"[RESUME] No checkpoint found. Starting fresh training in {training_args.save_dir}")
         trainer.fit(model_lightning)
 
     # trainer.save_checkpoint(training_args.save_dir, weights_only=True)
