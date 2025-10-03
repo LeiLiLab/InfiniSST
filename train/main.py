@@ -15,6 +15,7 @@
 #    limitations under the License.
 
 import os
+import logging
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -27,6 +28,8 @@ from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.strategies import DDPStrategy
 from pytorch_lightning.profilers import AdvancedProfiler, SimpleProfiler, PyTorchProfiler
+import logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 from model.model import (
     SLlamaLightning, 
@@ -41,6 +44,9 @@ MODEL_CLASSES = {
     "qwen2ac": Qwen2ACLightning,
     "seamless_llama31": SeamlessLightning
 }
+
+# Configure root logger so module loggers (e.g., model.model) emit INFO lines to stdout
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 @dataclass
 class SpeechEncoderArguments:
@@ -256,11 +262,38 @@ def train():
         profiler=profiler
     )
 
-    # start training
-    if os.path.exists(training_args.save_dir) and len(os.listdir(training_args.save_dir)) >= 1:
-        ckpt_path = os.path.join(training_args.save_dir, 'last.ckpt', 'checkpoint')
-        trainer.fit(model_lightning, ckpt_path=ckpt_path)
+    # start training with robust auto-resume
+    def _find_resume_ckpt(save_dir: str) -> str | None:
+        try:
+            # Prefer Lightning's last.ckpt directory (v2.x) -> contains a file named 'checkpoint'
+            last_dir = os.path.join(save_dir, 'last.ckpt')
+            candidate = os.path.join(last_dir, 'checkpoint')
+            if os.path.isdir(last_dir) and os.path.exists(candidate):
+                return candidate
+
+            # Fallback: pick the freshest "epoch=*" or "step=*" directory having a 'checkpoint' file
+            subdirs = [
+                os.path.join(save_dir, d)
+                for d in os.listdir(save_dir)
+                if (d.startswith('epoch=') or d.startswith('step='))
+            ]
+            subdirs = [d for d in subdirs if os.path.isdir(d) and os.path.exists(os.path.join(d, 'checkpoint'))]
+            if subdirs:
+                subdirs.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+                return os.path.join(subdirs[0], 'checkpoint')
+        except Exception:
+            pass
+        return None
+
+    resume_ckpt = None
+    if os.path.isdir(training_args.save_dir) and os.listdir(training_args.save_dir):
+        resume_ckpt = _find_resume_ckpt(training_args.save_dir)
+
+    if resume_ckpt is not None:
+        logging.info("Resuming training from checkpoint: %s", resume_ckpt)
+        trainer.fit(model_lightning, ckpt_path=resume_ckpt)
     else:
+        logging.info("No checkpoint found. Starting fresh training in %s", training_args.save_dir)
         trainer.fit(model_lightning)
 
     # trainer.save_checkpoint(training_args.save_dir, weights_only=True)

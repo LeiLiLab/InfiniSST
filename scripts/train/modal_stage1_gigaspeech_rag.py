@@ -456,17 +456,17 @@ def train_infinisst(
     # Training hyperparameters
     seed: int = 998244353,
     stage: int = 1,
-    train_bsz: int = 16000,           # H200x8: 增大到16k tokens/batch（显存仅53%）
-    eval_bsz: int = 12000,            # H200x8: 对应增大
-    bsz_sent: int = 8,                # H200x8: 增加句子数（减少padding）
+    train_bsz: int = 7200,
+    eval_bsz: int = 7200,
+    bsz_sent: int = 16,
     learning_rate: float = 2e-4,
     warmup_steps: int = 1000,
 
     # Training control
     run_name: str = "stage1_M=12_ls-cv-vp_norm0_qwen_rope_modal",
-    n_device: int = 8,                # ★ 与 gpu="H200:8" 对齐
+    n_device: int = 8,
     max_epochs: int = 1,
-    grad_acc_steps: int = 2,          # H200x8: 增加grad acc，有效batch size翻倍
+    grad_acc_steps: int = 1,
     clip_norm: float = 1.0,
     save_step: int = 2000,
     log_step: int = 100,
@@ -478,7 +478,7 @@ def train_infinisst(
     # Options
     use_local_copy: bool = False,  # 默认禁用rsync拷贝
     extract_audio_to_workspace: bool = True,  # 启用：解压到NVMe加速I/O（一次性15-20min）
-    resume_training: bool = False,
+    resume_training: bool = True,
 ):
     import subprocess, os, sys, time, torch, shutil
 
@@ -583,12 +583,34 @@ def train_infinisst(
         _ensure_tsv(data_split_eval)
 
     save_path = f"{output_dir}/runs/{run_name}"
+    # When resume_training=True (default), never delete existing outputs
     if not resume_training and os.path.exists(save_path):
         print(f"[INFO] Cleaning existing output directory: {save_path}")
         shutil.rmtree(save_path)
     os.makedirs(save_path, exist_ok=True)
     os.makedirs(output_dir, exist_ok=True)
     print(f"[INFO] Output will be saved to: {save_path}")
+
+    # If resuming, surface the most recent checkpoint path for visibility
+    if resume_training:
+        last_ckpt_dir = f"{save_path}/last.ckpt"
+        last_ckpt_file = f"{last_ckpt_dir}/checkpoint"
+        if os.path.exists(last_ckpt_file):
+            print(f"[INFO] Will try to resume from: {last_ckpt_file}")
+        else:
+            # Also report the newest epoch/step directory if present
+            try:
+                subdirs = [
+                    os.path.join(save_path, d)
+                    for d in os.listdir(save_path)
+                    if (d.startswith('epoch=') or d.startswith('step='))
+                ]
+                subdirs = [d for d in subdirs if os.path.isdir(d) and os.path.exists(os.path.join(d, 'checkpoint'))]
+                if subdirs:
+                    subdirs.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+                    print(f"[INFO] Latest checkpoint candidate: {os.path.join(subdirs[0], 'checkpoint')}")
+            except Exception:
+                pass
 
     train_script = "/root/InfiniSST/train/main.py"
     if not os.path.exists(train_script):
