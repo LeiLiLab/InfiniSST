@@ -414,10 +414,12 @@ os.environ["OPUS_HANDLE_CACHE"] = "512"
         "/root/.cache/huggingface": hf_cache_vol,
         "/root/InfiniSST": code_volume,   # ★★★ 新增：挂载代码卷
     },
-    timeout=86400,
+    timeout=86400,  # 24小时
     memory=1024*1024,
     cpu=64,
     secrets=[modal.Secret.from_name("huggingface-token")],
+    # 注意：如果需要更长的训练时间，可以将 timeout 改为 86400*2 (48小时) 或更长
+    # 但这会增加成本。建议使用更频繁的 checkpoint 保存 + resume 策略
 )
 def train_infinisst(
     # Model paths
@@ -478,7 +480,7 @@ def train_infinisst(
 
     # Options
     use_local_copy: bool = False,  # 默认禁用rsync拷贝
-    extract_audio_to_workspace: bool = True,  # 启用：解压到NVMe加速I/O（一次性15-20min）
+    extract_audio_to_workspace: bool = False,  # 启用：解压到NVMe加速I/O（一次性15-20min）
     resume_training: bool = True,
 ):
     import subprocess, os, sys, time, torch, shutil
@@ -725,7 +727,7 @@ def main(
     extract_archives: bool = False,
     extract_audio_to_workspace: bool = False,
     skip_training: bool = False,
-    resume_training: bool = False,
+    resume_training: bool = True,
     use_local_copy: bool = False,
 ):
     if check_volume:
@@ -772,7 +774,7 @@ if __name__ == "__main__":
     extract_archives = "--extract-archives" in sys.argv
     extract_audio_to_workspace = "--extract-audio-to-workspace" in sys.argv
     skip_training = "--skip-training" in sys.argv
-    resume_training = "--resume" in sys.argv
+    resume_training = "--resume-training" in sys.argv
     use_local_copy = "--use-local-copy" in sys.argv  # 改为默认不本地化，需要时加 --use-local-copy
     main(
         check_volume=check_volume,

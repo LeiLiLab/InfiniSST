@@ -204,9 +204,10 @@ def train():
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=training_args.save_dir,
-        # save_on_train_epoch_end=True,
+        save_on_train_epoch_end=True,  # 每个 epoch 结束保存
         every_n_train_steps=training_args.save_step,
         save_last=True,
+        every_n_epochs=None,  # 由 save_on_train_epoch_end 控制
     )
     lr_monitor = LearningRateMonitor(
         logging_interval='step'
@@ -247,6 +248,7 @@ def train():
         precision=training_args.precision,
         max_steps=-1,
         max_epochs=training_args.max_epochs,
+        max_time="23:30:00",  # 23.5小时后自动停止并保存，留30分钟缓冲避免超时
         accumulate_grad_batches=training_args.grad_acc_steps,
         gradient_clip_val=training_args.clip_norm,
         use_distributed_sampler=False,
