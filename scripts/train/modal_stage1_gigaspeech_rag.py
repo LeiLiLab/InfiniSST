@@ -10,23 +10,27 @@ from pathlib import Path
 app = modal.App("infinisst-stage1-gigaspeech-rag")
 
 # === 关键修改点 ===
-# 1) 使用 Modal 官方 PyTorch 镜像（包含 CUDA/cuDNN/nvcc，支持 FlashAttention 编译）
+# 1) 使用 debian_slim + 手动安装 PyTorch（更稳定，编译工具完整）
 # 2) 预先固定 omegaconf/hydra/PyYAML，避免 fairseq 触发坏元数据版本
 # 3) fairseq==0.12.2 用 --no-deps 安装，阻止它回拉 omegaconf 2.0.5
 # 4) 其余依赖按你当前环境版本对齐
 # 5) 使用 DDPStrategy 替代 DeepSpeed (与 master 分支同步)
 # 6) 默认 n_device=8，和 gpu="H200:8" 保持一致
-# 7) FlashAttention 直接用 pip 安装（Modal 官方镜像包含编译工具）
+# 7) FlashAttention 尝试预编译版本（失败则用 SDPA）
 image = (
-    # 使用 Modal 官方 PyTorch 镜像（包含 CUDA 12.4 + cuDNN + 编译工具）
-    modal.Image.from_registry(
-        "nvcr.io/nvidia/pytorch:24.09-py3",  # PyTorch 2.5.0 + CUDA 12.6 + cuDNN 9
-        add_python="3.10"
-    )
+    modal.Image.debian_slim(python_version="3.10")
     .apt_install([
         "git", "wget", "curl", "ffmpeg", "libsndfile1",
-        "rsync", "pigz", "zstd"
+        "build-essential", "g++", "clang",  # C++ 编译器
+        "rsync", "ninja-build",
+        "pigz", "zstd"
     ])
+    # 安装 PyTorch (CUDA 12.4)
+    .run_commands(["pip install 'pip<24.1'"])
+    .pip_install(
+        ["torch==2.5.1+cu124", "torchvision==0.20.1+cu124", "torchaudio==2.5.1+cu124"],
+        extra_options="--index-url https://download.pytorch.org/whl/cu124"
+    )
     .pip_install(
         ["huggingface_hub>=0.24.0"],
         extra_options="--retries 8 --timeout 120 --no-cache-dir"
@@ -82,15 +86,16 @@ image = (
         "jiwer==3.1.0",                   # For speech metrics
         "praat-textgrids==1.4.0",         # For forced alignment
     ])
-    # FlashAttention - 使用官方 PyTorch 镜像，包含 nvcc，可以直接编译
-    .pip_install(
-        ["flash-attn==2.7.2.post1"],  # 兼容 PyTorch 2.5.0
-        extra_options="--no-build-isolation"  # 加速编译
-    )
-    # FlashInfer（可选，从预编译 wheel 安装）
+    # FlashAttention - 尝试预编译版本，失败则跳过（训练会自动回退到 SDPA）
     .run_commands([
-        "pip install flashinfer -i https://flashinfer.ai/whl/cu126/torch2.5/ || "
-        "echo '[INFO] FlashInfer not installed (optional)'"
+        "echo '[INFO] Attempting to install FlashAttention...'",
+        # 尝试多个预编译源
+        "(pip install flash-attn --no-build-isolation "
+        "--index-url https://flashinfer.ai/whl/cu124/torch2.5/ 2>/dev/null && "
+        "echo '[SUCCESS] FlashAttention installed from flashinfer.ai') || "
+        "(pip install flash-attn --no-build-isolation 2>/dev/null && "
+        "echo '[SUCCESS] FlashAttention installed from PyPI') || "
+        "echo '[INFO] FlashAttention not installed - will use SDPA (Scaled Dot Product Attention) during training'"
     ])
     .env({
         "HF_HUB_ENABLE_HF_TRANSFER": "1",
