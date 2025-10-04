@@ -321,7 +321,6 @@ def train():
     if resume_ckpt is not None:
         logging.info(f"[RESUME] Resuming training from checkpoint: {resume_ckpt}")
         # 加载 checkpoint 查看训练进度信息
-        import torch
         try:
             ckpt = torch.load(resume_ckpt, map_location='cpu')
             current_epoch = ckpt.get('epoch', 'Unknown')
