@@ -360,6 +360,76 @@ def extract_audio_archives_to_workspace(
 
 @app.function(
     image=image,
+    volumes={"/output": output_volume},
+    timeout=600,
+)
+def check_latest_checkpoint(run_name: str = "stage1_M=12_ls-cv-vp_norm0_qwen_rope_modal"):
+    """检查最新的 checkpoint 信息"""
+    import os
+    import subprocess
+    from pathlib import Path
+    
+    save_path = f"/output/en-zh/runs/{run_name}"
+    print(f"\n[CHECK] Checking checkpoint in: {save_path}")
+    
+    if not os.path.exists(save_path):
+        print(f"[CHECK] Directory does not exist!")
+        return {"status": "not_found"}
+    
+    # 列出所有内容
+    items = sorted(os.listdir(save_path))
+    print(f"[CHECK] Found {len(items)} items:")
+    for item in items[:20]:  # 显示前20个
+        item_path = os.path.join(save_path, item)
+        if os.path.isdir(item_path):
+            size = subprocess.run(
+                ["du", "-sh", item_path], 
+                capture_output=True, 
+                text=True
+            ).stdout.split()[0]
+            print(f"  [DIR]  {item:50s} {size}")
+        else:
+            size_mb = os.path.getsize(item_path) / (1024**2)
+            print(f"  [FILE] {item:50s} {size_mb:.2f} MB")
+    
+    # 检查 last.ckpt
+    last_ckpt = os.path.join(save_path, "last.ckpt")
+    if os.path.exists(last_ckpt):
+        print(f"\n[CHECK] last.ckpt exists: {os.path.isdir(last_ckpt)}")
+        if os.path.isdir(last_ckpt):
+            ckpt_items = os.listdir(last_ckpt)
+            print(f"[CHECK] Contents of last.ckpt/: {ckpt_items}")
+            checkpoint_file = os.path.join(last_ckpt, "checkpoint")
+            if os.path.exists(checkpoint_file):
+                size_mb = os.path.getsize(checkpoint_file) / (1024**2)
+                print(f"[CHECK] ✓ Checkpoint file exists: {size_mb:.2f} MB")
+                
+                # 尝试读取 checkpoint 信息
+                try:
+                    import torch
+                    ckpt = torch.load(checkpoint_file, map_location='cpu', weights_only=False)
+                    print(f"[CHECK] Checkpoint info:")
+                    print(f"  - Epoch: {ckpt.get('epoch', 'N/A')}")
+                    print(f"  - Global step: {ckpt.get('global_step', 'N/A')}")
+                    print(f"  - Keys: {list(ckpt.keys())}")
+                    return {
+                        "status": "found",
+                        "epoch": ckpt.get('epoch'),
+                        "global_step": ckpt.get('global_step'),
+                        "size_mb": size_mb
+                    }
+                except Exception as e:
+                    print(f"[CHECK] Failed to load checkpoint: {e}")
+                    return {"status": "corrupt", "error": str(e)}
+            else:
+                print(f"[CHECK] ✗ Checkpoint file not found in last.ckpt/")
+                return {"status": "incomplete"}
+    else:
+        print(f"\n[CHECK] last.ckpt not found")
+        return {"status": "not_found"}
+
+@app.function(
+    image=image,
     volumes={
         "/data": data_volume,
         "/models": model_volume,
@@ -459,7 +529,7 @@ def train_infinisst(
     stage: int = 1,
     train_bsz: int = 7200,
     eval_bsz: int = 7200,
-    bsz_sent: int = 16,
+    bsz_sent: int = 8,
     learning_rate: float = 2e-4,
     warmup_steps: int = 1000,
 
@@ -722,12 +792,19 @@ def upload_codebase(local_codebase_path: str = "/home/jiaxuanluo/InfiniSST"):
 @app.local_entrypoint()
 def main(
     check_volume: bool = False,
+    check_checkpoint: bool = False,
     extract_archives: bool = False,
     extract_audio_to_workspace: bool = False,
     skip_training: bool = False,
     resume_training: bool = True,
     use_local_copy: bool = False,
 ):
+    if check_checkpoint:
+        print("[INFO] Checking latest checkpoint...")
+        result = check_latest_checkpoint.remote()
+        print(f"\n[INFO] Result: {result}")
+        return
+    
     if check_volume:
         print("[INFO] Checking volume structure...")
         result = check_volume_structure.remote()
@@ -769,6 +846,7 @@ def main(
 if __name__ == "__main__":
     import sys
     check_volume = "--check-volume" in sys.argv
+    check_checkpoint = "--check-checkpoint" in sys.argv
     extract_archives = "--extract-archives" in sys.argv
     extract_audio_to_workspace = "--extract-audio-to-workspace" in sys.argv
     skip_training = "--skip-training" in sys.argv
@@ -777,6 +855,7 @@ if __name__ == "__main__":
     use_local_copy = "--use-local-copy" in sys.argv  # 改为默认不本地化，需要时加 --use-local-copy
     main(
         check_volume=check_volume,
+        check_checkpoint=check_checkpoint,
         extract_archives=extract_archives,
         extract_audio_to_workspace=extract_audio_to_workspace,
         skip_training=skip_training,
