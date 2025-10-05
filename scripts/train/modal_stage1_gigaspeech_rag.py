@@ -394,38 +394,68 @@ def check_latest_checkpoint(run_name: str = "stage1_M=12_ls-cv-vp_norm0_qwen_rop
     
     # 检查 last.ckpt
     last_ckpt = os.path.join(save_path, "last.ckpt")
+    checkpoint_file = None
+    
     if os.path.exists(last_ckpt):
-        print(f"\n[CHECK] last.ckpt exists: {os.path.isdir(last_ckpt)}")
         if os.path.isdir(last_ckpt):
+            # Lightning 2.x 格式：目录
+            print(f"\n[CHECK] last.ckpt is a directory (Lightning 2.x format)")
             ckpt_items = os.listdir(last_ckpt)
-            print(f"[CHECK] Contents of last.ckpt/: {ckpt_items}")
+            print(f"[CHECK] Contents: {ckpt_items}")
             checkpoint_file = os.path.join(last_ckpt, "checkpoint")
-            if os.path.exists(checkpoint_file):
-                size_mb = os.path.getsize(checkpoint_file) / (1024**2)
-                print(f"[CHECK] ✓ Checkpoint file exists: {size_mb:.2f} MB")
+        elif os.path.isfile(last_ckpt):
+            # Lightning 1.x 格式：直接是文件
+            print(f"\n[CHECK] last.ckpt is a file (Lightning 1.x format)")
+            checkpoint_file = last_ckpt
+        
+        if checkpoint_file and os.path.exists(checkpoint_file):
+            size_mb = os.path.getsize(checkpoint_file) / (1024**2)
+            print(f"[CHECK] ✓ Checkpoint file: {size_mb:.2f} MB")
+            
+            # 尝试读取 checkpoint 信息
+            try:
+                import torch
+                print(f"[CHECK] Loading checkpoint (this may take a minute)...")
+                ckpt = torch.load(checkpoint_file, map_location='cpu', weights_only=False)
                 
-                # 尝试读取 checkpoint 信息
-                try:
-                    import torch
-                    ckpt = torch.load(checkpoint_file, map_location='cpu', weights_only=False)
-                    print(f"[CHECK] Checkpoint info:")
-                    print(f"  - Epoch: {ckpt.get('epoch', 'N/A')}")
-                    print(f"  - Global step: {ckpt.get('global_step', 'N/A')}")
-                    print(f"  - Keys: {list(ckpt.keys())}")
-                    return {
-                        "status": "found",
-                        "epoch": ckpt.get('epoch'),
-                        "global_step": ckpt.get('global_step'),
-                        "size_mb": size_mb
-                    }
-                except Exception as e:
-                    print(f"[CHECK] Failed to load checkpoint: {e}")
-                    return {"status": "corrupt", "error": str(e)}
-            else:
-                print(f"[CHECK] ✗ Checkpoint file not found in last.ckpt/")
-                return {"status": "incomplete"}
+                epoch = ckpt.get('epoch', 'N/A')
+                global_step = ckpt.get('global_step', 'N/A')
+                
+                print(f"\n[CHECK] ==================== Checkpoint Info ====================")
+                print(f"[CHECK] Epoch: {epoch}")
+                print(f"[CHECK] Global step: {global_step}")
+                
+                # 计算进度
+                total_steps = 148024  # 1 epoch 的总步数
+                if isinstance(global_step, int):
+                    progress = (global_step / total_steps) * 100
+                    remaining = total_steps - global_step
+                    print(f"[CHECK] Progress: {progress:.1f}% ({global_step}/{total_steps})")
+                    print(f"[CHECK] Remaining: {remaining} steps to complete epoch 0")
+                    
+                    if global_step >= total_steps:
+                        print(f"[CHECK] ✅ Training COMPLETED! Epoch 0 is done.")
+                    else:
+                        print(f"[CHECK] ⏳ Training IN PROGRESS. Need to continue.")
+                
+                print(f"[CHECK] Available keys: {list(ckpt.keys())[:10]}")
+                print(f"[CHECK] ===========================================================\n")
+                
+                return {
+                    "status": "found",
+                    "epoch": epoch,
+                    "global_step": global_step,
+                    "size_mb": size_mb,
+                    "progress_pct": progress if isinstance(global_step, int) else None
+                }
+            except Exception as e:
+                print(f"[CHECK] ✗ Failed to load checkpoint: {e}")
+                return {"status": "corrupt", "error": str(e)}
+        else:
+            print(f"[CHECK] ✗ Checkpoint file not found")
+            return {"status": "incomplete"}
     else:
-        print(f"\n[CHECK] last.ckpt not found")
+        print(f"\n[CHECK] ✗ last.ckpt not found")
         return {"status": "not_found"}
 
 @app.function(
