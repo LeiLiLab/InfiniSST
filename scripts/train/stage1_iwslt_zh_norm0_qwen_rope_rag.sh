@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=8
 #SBATCH --cpus-per-task=6
 #SBATCH --mem=392GB
-#SBATCH --gres=gpu:5
+#SBATCH --gres=gpu:4
 #SBATCH --partition=taurus
 ##SBATCH --array=1-5
 #SBATCH --mail-type=ALL
@@ -50,16 +49,19 @@ run_root="${model_export_dir}/runs"
 
 source_lang="English"
 target_lang=${lang} # e.g. German
-name="stage1_M=12_ls-cv-vp_norm0_qwen_rope"
+name="stage1_M=12_ls-cv-vp_norm0_qwen_rope_vv2"
 save_path=${run_root}/${name}
 #rm -rf ${save_path} # comment this line if you want to resume training
 mkdir -p ${save_path}
 mkdir -p ${model_export_dir}
 
-export PYTHONPATH=$PYTHONPATH:$PWD
+export PYTHONPATH=${PYTHONPATH:-}:$PWD
 export TOKENIZERS_PARALLELISM=false
-export WANDB_PROJECT="iwslt25_${lang_code}"
-export WANDB_ENTITY="streamllama"
+export WANDB_PROJECT="infinisst"
+export WANDB_ENTITY="luojiaxuan1215-johns-hopkins-university"
+
+# Specify which GPUs to use (single task with 2 GPUs)
+export CUDA_VISIBLE_DEVICES=1,3
 
 # disable P2P and InfiniBand for L40S 8-GPU nodes
 # if your node supports P2P and InfiniBand, you need to remove these two lines
@@ -78,10 +80,10 @@ elif [ -n "${SLURM_GPUS:-}" ]; then
         NUM_GPUS=$(echo "${SLURM_GPUS}" | awk -F',' '{print NF}')
     fi
 else
-    NUM_GPUS=5
+    NUM_GPUS=2
 fi
 
-srun python train/main.py \
+python train/main.py \
     \
     --model_type w2v2_qwen25 \
     \
@@ -99,8 +101,8 @@ srun python train/main.py \
     --use_flash_attn True \
     \
     --data_path ${data_path} \
-    --data_split_train train_${lang_code}_mfa_ls-cv-vp \
-    --data_split_eval dev_${lang_code}_mfa_ls-cv-vp \
+    --data_split_train 'train_xl_case_ft-qwen2.5-32b-instruct_marked_mfa_punc_asr' \
+    --data_split_eval 'dev_case_ft-qwen2.5-32b-instruct_marked_mfa_punc' \
     --source_lang "${source_lang}" \
     --target_lang "${target_lang}" \
     --trajectory 9 \

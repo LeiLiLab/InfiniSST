@@ -13,7 +13,9 @@ app = modal.App("qwen2-audio-term-level-training")
 # 定义容器镜像，包含所有必要的依赖
 image = (
     modal.Image.debian_slim(python_version="3.10")
-    .apt_install(["git","wget","curl","ffmpeg","libsndfile1","build-essential","rsync"])
+    .apt_install([
+        "git","wget","curl","ffmpeg","libsndfile1","build-essential","rsync",
+    ])
     # ✅ 明确安装 GPU 版 Torch (cu118)
     .pip_install(
         ["torch==2.3.1","torchvision==0.18.1","torchaudio==2.3.1"],
@@ -21,7 +23,6 @@ image = (
     )
     # 安装支持Qwen2-Audio的transformers版本
     .pip_install([
-        "transformers>=4.45.0",  # 需要更新版本支持Qwen2-Audio
         "accelerate==0.33.0",
         "datasets",
         "peft==0.11.1",
@@ -35,10 +36,16 @@ image = (
         "hf-transfer",
         "wandb==0.16.0"
     ])
+    # Install transformers from GitHub main branch for latest Qwen3-Omni support
+    .run_commands([
+        "pip install --no-cache-dir git+https://github.com/huggingface/transformers.git"
+    ])
     # ✅ 在 Modal 镜像里可用的 FAISS GPU 版本
     .pip_install(["faiss-gpu==1.7.2"])
-    # （可选）Flash-Attn 如有编译/ABI 问题先注释
-    .run_commands(["pip install --no-build-isolation --no-cache-dir 'flash-attn==2.3.6' || true"])
+    # ⚠️  Flash Attention 2 在 Modal 上需要 CUDA 开发工具，难以安装
+    # 代码已有 fallback 机制：会自动使用 eager attention (Qwen3_AuT_speech_encoder.py:168-180)
+    # 性能影响：eager attention 比 flash-attn 慢 2-3x，但功能完全正常
+    # 如需启用，请使用包含 CUDA 开发环境的自定义镜像
     .env({"HF_HUB_ENABLE_HF_TRANSFER": "1"})
 )
 
@@ -255,7 +262,7 @@ def upload_data(data_files: dict, force_upload: bool = False):
 @app.function(
     image=image,
     min_containers=1,
-    gpu="H200:4",
+    gpu="H200:2",
     volumes={"/data": volume, "/root/.cache/huggingface": hf_cache_vol},
     timeout=86400,  # 24小时超时
     memory=512*1024,  # 512GB内存
@@ -522,7 +529,7 @@ def train_ddp_modal(
 
 # 本地入口点
 @app.local_entrypoint()
-def main(skip_upload: bool = False, upload_large_files_only: bool = False, eval_only: bool = False, use_mount_directly: bool = False):
+def main(skip_upload: bool = False, upload_large_files_only: bool = False, eval_only: bool = False, use_mount_directly: bool = False, use_aut: bool = False):
     """
     本地入口点 - 上传数据并启动训练或评估
     
@@ -628,6 +635,7 @@ def main(skip_upload: bool = False, upload_large_files_only: bool = False, eval_
             glossary_path="glossary_merged.json",
             mmap_shard_dir="/data/mmap_shards",  # 指向 Modal 中的 mmap 分片目录
             use_mount_directly=use_mount_directly,
+            use_aut=use_aut,
             **eval_args
         )
         
@@ -655,6 +663,7 @@ def main(skip_upload: bool = False, upload_large_files_only: bool = False, eval_
             glossary_path="glossary_merged.json",
             mmap_shard_dir="/data/mmap_shards",  # 指向 Modal 中的 mmap 分片目录
             use_mount_directly=use_mount_directly,
+            use_aut=use_aut,
             **training_args
         )
         
@@ -669,6 +678,7 @@ if __name__ == "__main__":
     upload_large_files_only = "--upload-large-files-only" in sys.argv
     eval_only = "--eval-only" in sys.argv
     use_mount_directly = "--use-mount-directly" in sys.argv
+    use_aut = "--use-aut" in sys.argv
     
     # 检查参数冲突
     if upload_large_files_only and skip_upload:
@@ -679,4 +689,4 @@ if __name__ == "__main__":
         print("[ERROR] Cannot use both --eval-only and --upload-large-files-only")
         sys.exit(1)
     
-    main(skip_upload=skip_upload, upload_large_files_only=upload_large_files_only, eval_only=eval_only, use_mount_directly=use_mount_directly)
+    main(skip_upload=skip_upload, upload_large_files_only=upload_large_files_only, eval_only=eval_only, use_mount_directly=use_mount_directly, use_aut=use_aut)

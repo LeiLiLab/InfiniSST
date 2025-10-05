@@ -498,9 +498,9 @@ os.environ["TRANSFORMERS_CACHE"] = "/root/.cache/huggingface"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 # WANDB_MODE 在训练函数中根据参数动态设置
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
-os.environ["DL_NUM_WORKERS"] = "32"
-os.environ["DL_PREFETCH"] = "8"
-os.environ["OPUS_HANDLE_CACHE"] = "512"
+os.environ["DL_NUM_WORKERS"] = "16"
+os.environ["DL_PREFETCH"] = "4"
+os.environ["OPUS_HANDLE_CACHE"] = "256"
 
 @app.function(
     image=image,
@@ -567,7 +567,7 @@ def train_infinisst(
     warmup_steps: int = 1000,
 
     # Training control
-    run_name: str = "stage1_M=12_ls-cv-vp_norm0_qwen_rope_modal",
+    run_name: str = "stage1_M=12_ls-cv-vp_norm0_qwen_rope_modal_v2",
     n_device: int = 8,
     max_epochs: int = 1,
     grad_acc_steps: int = 1,
@@ -580,9 +580,9 @@ def train_infinisst(
     output_dir: str = "/output/en-zh",
 
     # WandB settings
-    wandb_enabled: bool = False,  # 暂时禁用 WandB（需要验证 API key 和 entity）
+    wandb_enabled: bool = True,  # 暂时禁用 WandB（需要验证 API key 和 entity）
     wandb_project: str = "infinisst",
-    wandb_entity: str = "luojiaxuan1215",  # 你的 WandB 用户名或团队名
+    wandb_entity: str = "luojiaxuan1215-johns-hopkins-university",  # ⚠️ 请从 wandb.ai/settings 确认准确的用户名
 
     # Options
     use_local_copy: bool = False,  # 默认禁用rsync拷贝
@@ -607,11 +607,16 @@ def train_infinisst(
         os.environ["WANDB_ENTITY"] = wandb_entity
         # WANDB_API_KEY 从 Modal secret 自动注入
         
+        # 减少 WandB 内存占用
+        os.environ["WANDB_CONSOLE"] = "off"  # 减少日志缓存
+        os.environ["WANDB_DISABLE_CODE"] = "true"  # 不保存代码快照
+        
         # 验证 API key 是否存在
         wandb_key = os.environ.get("WANDB_API_KEY")
         if wandb_key:
             print(f"[INFO] WandB enabled - Project: {wandb_project}, Entity: {wandb_entity}")
             print(f"[INFO] WANDB_API_KEY found (length: {len(wandb_key)})")
+            print(f"[INFO] WandB memory optimization: console logging disabled")
         else:
             print(f"[WARN] WandB enabled but WANDB_API_KEY not found in environment!")
             print(f"[WARN] Disabling WandB to prevent training failure")
@@ -892,7 +897,6 @@ def main(
     
     print("[INFO] Starting InfiniSST Stage 1 Training on Modal...")
     result = train_infinisst.remote(
-        run_name="stage1_M=12_ls-cv-vp_norm0_qwen_rope_modal",
         n_device=8,                    # ★ 与上方 gpu=H100:8 一致
         use_local_copy=use_local_copy,
         resume_training=resume_training,

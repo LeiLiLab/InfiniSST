@@ -327,12 +327,20 @@ def main():
     p.add_argument('--audio_text_loss_ratio', type=float, default=0.3)
     p.add_argument('--audio_term_loss_ratio', type=float, default=0.7)
     p.add_argument('--mmap_shard_dir', type=str, default=None)
-    p.add_argument('--aut_model_name', type=str, default="Qwen/Qwen3-Omni-Audio")
+    p.add_argument('--aut_model_name', type=str, default="Qwen/Qwen3-Omni-30B-A3B-Instruct")
     p.add_argument('--text_model_name', type=str, default="Qwen/Qwen2-Audio-7B-Instruct")
     p.add_argument('--enable_speech_lora', action='store_true')
     p.add_argument('--lora_r', type=int, default=8)
     p.add_argument('--lora_alpha', type=int, default=16)
     p.add_argument('--lora_dropout', type=float, default=0.0)
+    
+    # Compatibility args from Qwen2 Modal script (ignored but accepted for compatibility)
+    p.add_argument('--glossary_path', type=str, default=None, help='(Ignored: for Modal compatibility)')
+    p.add_argument('--best_model_path', type=str, default=None, help='(Ignored: uses save_path with _best suffix)')
+    p.add_argument('--model_name', type=str, default=None, help='(Ignored: use --text_model_name instead)')
+    p.add_argument('--patience', type=int, default=4, help='(Not implemented yet)')
+    p.add_argument('--gradient_accumulation_steps', type=int, default=1, help='(Not implemented yet)')
+    
     args = p.parse_args()
 
     world_size = int(os.environ.get('WORLD_SIZE', torch.cuda.device_count()))

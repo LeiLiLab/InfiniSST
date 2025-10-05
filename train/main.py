@@ -248,7 +248,7 @@ def train():
         precision=training_args.precision,
         max_steps=-1,
         max_epochs=training_args.max_epochs,
-        max_time="00:23:30:00",  # 格式: DD:HH:MM:SS，23.5小时后自动停止并保存，留30分钟缓冲避免超时
+        max_time="00:23:00:00",  # ⚠️ 重要：23小时后自动停止避免OOM，留1小时缓冲
         accumulate_grad_batches=training_args.grad_acc_steps,
         gradient_clip_val=training_args.clip_norm,
         use_distributed_sampler=False,
