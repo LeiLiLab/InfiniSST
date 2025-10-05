@@ -496,7 +496,7 @@ os.environ["PYTHONPATH"] = "/root/InfiniSST"
 os.environ["HF_HOME"] = "/root/.cache/huggingface"
 os.environ["TRANSFORMERS_CACHE"] = "/root/.cache/huggingface"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-os.environ["WANDB_MODE"] = "disabled"
+# WANDB_MODE 在训练函数中根据参数动态设置
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 os.environ["DL_NUM_WORKERS"] = "32"
 os.environ["DL_PREFETCH"] = "8"
@@ -515,7 +515,10 @@ os.environ["OPUS_HANDLE_CACHE"] = "512"
     timeout=86400,  # 24小时
     memory=1024*1024,
     cpu=64,
-    secrets=[modal.Secret.from_name("huggingface-token")],
+    secrets=[
+        modal.Secret.from_name("huggingface-token"),
+        modal.Secret.from_name("wandb-secret"),  # WandB API key
+    ],
     # 注意：如果需要更长的训练时间，可以将 timeout 改为 86400*2 (48小时) 或更长
     # 但这会增加成本。建议使用更频繁的 checkpoint 保存 + resume 策略
 )
@@ -576,6 +579,11 @@ def train_infinisst(
     # Output settings
     output_dir: str = "/output/en-zh",
 
+    # WandB settings
+    wandb_enabled: bool = False,  # 暂时禁用 WandB（需要验证 API key 和 entity）
+    wandb_project: str = "infinisst",
+    wandb_entity: str = "luojiaxuan1215",  # 你的 WandB 用户名或团队名
+
     # Options
     use_local_copy: bool = False,  # 默认禁用rsync拷贝
     extract_audio_to_workspace: bool = False,  # 启用：解压到NVMe加速I/O（一次性15-20min）
@@ -592,7 +600,27 @@ def train_infinisst(
     os.environ["HF_HOME"] = "/root/.cache/huggingface"
     os.environ["TRANSFORMERS_CACHE"] = "/root/.cache/huggingface"
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
-    os.environ["WANDB_MODE"] = "disabled"
+    
+    # WandB 配置
+    if wandb_enabled:
+        os.environ["WANDB_PROJECT"] = wandb_project
+        os.environ["WANDB_ENTITY"] = wandb_entity
+        # WANDB_API_KEY 从 Modal secret 自动注入
+        
+        # 验证 API key 是否存在
+        wandb_key = os.environ.get("WANDB_API_KEY")
+        if wandb_key:
+            print(f"[INFO] WandB enabled - Project: {wandb_project}, Entity: {wandb_entity}")
+            print(f"[INFO] WANDB_API_KEY found (length: {len(wandb_key)})")
+        else:
+            print(f"[WARN] WandB enabled but WANDB_API_KEY not found in environment!")
+            print(f"[WARN] Disabling WandB to prevent training failure")
+            os.environ["WANDB_MODE"] = "disabled"
+            wandb_enabled = False
+    else:
+        os.environ["WANDB_MODE"] = "disabled"
+        print(f"[INFO] WandB disabled")
+    
     os.environ["TRANSFORMERS_OFFLINE"] = "1"  # 训练期强制离线
     # 路径重写：根据是否解压到workspace决定
     if extract_audio_to_workspace:
