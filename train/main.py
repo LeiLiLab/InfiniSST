@@ -17,6 +17,7 @@
 import os
 from dataclasses import dataclass, field
 from typing import Optional
+from datetime import timedelta
 
 import torch
 import transformers
@@ -217,6 +218,7 @@ def train():
         offload_parameters=training_args.deepspeed_offload,
         allgather_bucket_size=training_args.deepspeed_bucket_size,
         reduce_bucket_size=training_args.deepspeed_bucket_size,
+        timeout=timedelta(hours=0.5),  # 增加NCCL超时到0.5小时
     )
     # strategy = FSDPStrategy(
     #     sharding_strategy=training_args.sharding,
