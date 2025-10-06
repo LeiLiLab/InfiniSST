@@ -42,6 +42,7 @@ class Qwen3AuTSpeechEncoder:
             raise RuntimeError("transformers is required to load AuT model")
 
         print(f"[INFO] Loading AuT model: {model_name}")
+        print("[DEBUG] Qwen3_AuT_speech_encoder.py version: 2025-10-06a")
         
         # ============ Diagnostic Section: Check Environment ============
         print("\n" + "="*80)
@@ -298,24 +299,44 @@ class Qwen3AuTSpeechEncoder:
             fam = inputs.get("feature_attention_mask") or inputs.get("attention_mask")
             if feats is None and "input_values" in inputs:
                 feats = inputs["input_values"]
+            try:
+                if isinstance(feats, torch.Tensor):
+                    print(f"[DEBUG] raw feats shape from processor: {tuple(feats.shape)}")
+            except Exception:
+                pass
             if self.aut_module is not None and feats is not None:
                 call_kwargs = {}
-                # Always pass features by name
-                if "input_features" in self.aut_forward_params:
-                    call_kwargs["input_features"] = feats
-                else:
-                    call_kwargs["input_features"] = feats
-                # Ensure dtype/device and shape match conv2d expectations
+                # Ensure dtype/device
                 try:
                     model_dtype = next(self.model.parameters()).dtype
                 except Exception:
                     model_dtype = torch.float16
-                feats_norm = self._normalize_input_features(call_kwargs["input_features"])  # -> [B*,1,mel,T]
+                
+                # Normalize to 4D first, then squeeze to 3D for AuT
+                # AuT内部会自己做unsqueeze，所以我们传3D [B, mel, T]
+                feats_norm = self._normalize_input_features(feats)  # -> [B,1,mel,T]
+                
+                # Squeeze to 3D [B, mel, T] for AuT (it will unsqueeze internally)
+                if feats_norm.dim() == 4 and feats_norm.shape[1] == 1:
+                    feats_norm = feats_norm.squeeze(1)  # [B,1,128,T] -> [B,128,T]
+                elif feats_norm.dim() > 3:
+                    # 如果还有多余维度，强制压缩
+                    while feats_norm.dim() > 3:
+                        if feats_norm.shape[-1] == 1:
+                            feats_norm = feats_norm.squeeze(-1)
+                        elif feats_norm.shape[1] == 1:
+                            feats_norm = feats_norm.squeeze(1)
+                        else:
+                            break
+                
                 feats_norm = feats_norm.to(device=self.device, dtype=model_dtype)
                 call_kwargs["input_features"] = feats_norm
+                
+                print(f"[DEBUG] AuT input_features shape (3D expected): {tuple(feats_norm.shape)}, dtype: {feats_norm.dtype}")
+                
                 # Build feature lengths aligned with normalized features batch
                 batch_n = feats_norm.shape[0]
-                time_dim = feats_norm.shape[-1]
+                time_dim = feats_norm.shape[-1]  # Last dim is time for 3D [B,mel,T]
                 if fam is not None and fam.dim() >= 2:
                     # Reduce fam to [B*] if possible; otherwise fallback to time_dim
                     fam_r = fam
@@ -447,26 +468,48 @@ class Qwen3AuTSpeechEncoder:
         if feats is None:
             return feats
         x = feats
-        # Remove trivial trailing dim if present: [B, C, H, W, 1] -> [B, C, H, W]
-        if x.dim() == 5 and x.shape[-1] == 1:
-            x = x.squeeze(-1)
-        # If 3D [B, 128, T] -> add channel dim
-        if x.dim() == 3 and x.shape[1] in (80, 96, 128):
-            x = x.unsqueeze(1)
-        # If 4D but channel dim not present, try to reshape to [B, 1, 128, T]
+        mel_candidates = (80, 96, 128)
+        # Squeeze excessive singleton dims until <=4D
+        while x.dim() > 4:
+            if x.shape[-1] == 1:
+                x = x.squeeze(-1)
+                continue
+            if x.shape[-2] == 1:
+                x = x.squeeze(-2)
+                continue
+            # If last two dims are not singleton, merge them into a single time dim
+            new_last = x.shape[-2] * x.shape[-1]
+            x = x.reshape(*x.shape[:-2], new_last)
+        # Handle 3D cases
+        if x.dim() == 3:
+            b, d1, d2 = x.shape
+            # [B, 128, T]
+            if d1 in mel_candidates:
+                x = x.unsqueeze(1)  # [B,1,128,T]
+            # [B, T, 128]
+            elif d2 in mel_candidates:
+                x = x.permute(0, 2, 1).unsqueeze(1)  # [B,1,128,T]
+            return x
+        # Handle 4D cases
         if x.dim() == 4:
             b, a, c, d = x.shape
-            # Accept [B, 1, 128, T] as-is
-            if a == 1 and c in (80, 96, 128):
+            # Already [B,1,mel,T]
+            if a == 1 and c in mel_candidates:
                 return x
-            # Accept [B, 128, T, 1] -> permute to [B, 1, 128, T]
-            if a in (80, 96, 128) and d == 1:
-                x = x.permute(0, 3, 1, 2)  # [B,1,128,T]
-                return x
-            # Fallback: if looks like [B, 1, T, 128] -> [B,1,128,T]
-            if a == 1 and d in (80, 96, 128):
-                x = x.permute(0, 1, 3, 2)
-                return x
+            # [B,mel,T,1] -> [B,1,mel,T]
+            if a in mel_candidates and d == 1:
+                return x.permute(0, 3, 1, 2)
+            # [B,1,T,mel] -> [B,1,mel,T]
+            if a == 1 and d in mel_candidates:
+                return x.permute(0, 1, 3, 2)
+            # [B,T,mel,1] -> [B,1,mel,T]
+            if a not in (1,) and c in mel_candidates and d == 1:
+                return x.permute(0, 3, 2, 1)
+            # As a robust fallback, try to locate mel dim among c/d and place as [B,1,mel,other]
+            if c in mel_candidates:
+                return x[:, :1, :, :]
+            if d in mel_candidates:
+                return x.permute(0, 1, 3, 2)[:, :1, :, :]
         return x
 
     @staticmethod
