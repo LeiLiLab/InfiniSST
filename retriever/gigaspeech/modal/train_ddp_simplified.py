@@ -105,7 +105,7 @@ def validate_audio_batch(audio_paths, verbose=False):
 class TermLevelDatasetMMap(Dataset):
     """基于 mmap 的 Term-Level 数据集"""
     
-    def __init__(self, path, mmap_shard_dir, split="train", train_ratio=0.99, test_path=None):
+    def __init__(self, path, mmap_shard_dir, split="train", train_ratio=0.99, test_path=None, hard_neg_jsonl=None):
         # 加载 JSON 元数据
         if split == "test" and test_path is not None:
             if dist.get_rank() == 0:
@@ -119,6 +119,22 @@ class TermLevelDatasetMMap(Dataset):
             with open(path, "r") as f:
                 all_samples = json.load(f)
             use_split_logic = True
+        
+        # 加载 hard negatives 映射
+        self.hn_map = {}
+        if hard_neg_jsonl and os.path.exists(hard_neg_jsonl):
+            if dist.get_rank() == 0:
+                print(f"[INFO] Loading hard negatives from: {hard_neg_jsonl}")
+            with open(hard_neg_jsonl, "r") as f:
+                for line in f:
+                    rec = json.loads(line)
+                    self.hn_map[rec["audio_key"]] = rec.get("hard_negs", [])
+            if dist.get_rank() == 0:
+                print(f"[INFO] Loaded hard negatives for {len(self.hn_map)} samples")
+        else:
+            if dist.get_rank() == 0 and hard_neg_jsonl:
+                print(f"[WARN] Hard negative file not found: {hard_neg_jsonl}")
+                print(f"[INFO] Training without hard negatives")
         
         # 初始化 mmap 音频数据库
         if dist.get_rank() == 0:
@@ -216,7 +232,10 @@ class TermLevelDatasetMMap(Dataset):
                     print(f"[DEBUG] Ground truth terms: {ground_truth_terms}")
             audio_tensor = torch.zeros(16000, dtype=torch.float32)  # 1秒的静音
         
-        return ground_truth_terms, audio_tensor, chunk_text
+        # 获取 hard negatives
+        hard_negs = self.hn_map.get(audio_key, [])
+        
+        return ground_truth_terms, audio_tensor, chunk_text, hard_negs
 
     def __len__(self):
         return len(self.samples)
@@ -230,7 +249,7 @@ class TermLevelDatasetMMap(Dataset):
 class TermLevelDataset(Dataset):
     """简化的Term-Level数据集（原版本，用于向后兼容）"""
     
-    def __init__(self, path, split="train", train_ratio=0.99, test_path=None):
+    def __init__(self, path, split="train", train_ratio=0.99, test_path=None, hard_neg_jsonl=None):
         if split == "test" and test_path is not None:
             # 使用独立的测试数据集
             if dist.get_rank() == 0:
@@ -244,6 +263,23 @@ class TermLevelDataset(Dataset):
             with open(path, "r") as f:
                 all_samples = json.load(f)
             use_split_logic = True
+        
+        # 加载 hard negatives 映射（使用文件路径作为key）
+        self.hn_map = {}
+        if hard_neg_jsonl and os.path.exists(hard_neg_jsonl):
+            if dist.get_rank() == 0:
+                print(f"[INFO] Loading hard negatives from: {hard_neg_jsonl}")
+            with open(hard_neg_jsonl, "r") as f:
+                for line in f:
+                    rec = json.loads(line)
+                    # 文件路径模式：audio_key 可能是路径
+                    self.hn_map[rec["audio_key"]] = rec.get("hard_negs", [])
+            if dist.get_rank() == 0:
+                print(f"[INFO] Loaded hard negatives for {len(self.hn_map)} samples")
+        else:
+            if dist.get_rank() == 0 and hard_neg_jsonl:
+                print(f"[WARN] Hard negative file not found: {hard_neg_jsonl}")
+                print(f"[INFO] Training without hard negatives")
         
         # 过滤有效样本
         valid_samples = []
@@ -310,21 +346,24 @@ class TermLevelDataset(Dataset):
         chunk_text = sample["term_chunk_text"]
         ground_truth_terms = sample.get('term_chunk_audio_ground_truth_terms', [])
         
-        return ground_truth_terms, audio_path, chunk_text
+        # 获取 hard negatives（使用音频路径作为key）
+        hard_negs = self.hn_map.get(audio_path, [])
+        
+        return ground_truth_terms, audio_path, chunk_text, hard_negs
 
     def __len__(self):
         return len(self.samples)
 
 
-def train_step(model, batch, device, args, temperature=0.07):
-    """简化的训练步骤"""
+def train_step(model, batch, device, args, temperature=0.07, global_random_terms=None):
+    """简化的训练步骤 - 支持 hard negatives"""
     raw_model = model.module if isinstance(model, DDP) else model
 
     if len(batch) < 2:
         return None  # 返回None表示无效batch
 
-    # 解包数据
-    ground_truth_terms_list, audio_paths, chunk_texts = zip(*batch)
+    # 解包数据（包含 hard negatives）
+    ground_truth_terms_list, audio_paths, chunk_texts, hard_neg_terms_list = zip(*batch)
     
     # 小写处理
     ground_truth_terms_list = [[t.lower() for t in terms if isinstance(t, str)] for terms in ground_truth_terms_list]
@@ -435,8 +474,94 @@ def train_step(model, batch, device, args, temperature=0.07):
                 print(f"[DEBUG] all_gt_terms count: {len(all_gt_terms)}")
                 print(f"[DEBUG] audio_term_pairs count: {len(audio_term_pairs)}")
 
+    # Hard Negative 对比损失（如果提供了 hard negatives）
+    hard_neg_loss = torch.tensor(0.0, device=device)
+    if hasattr(args, 'hard_neg_loss_ratio') and args.hard_neg_loss_ratio > 0 and global_random_terms is not None:
+        # 检查是否有任何样本有 hard negatives
+        has_hn = any(len(hn) > 0 for hn in hard_neg_terms_list)
+        
+        if has_hn:
+            try:
+                # 为每个样本构造候选词列表：正例 + hard neg + 少量随机 neg
+                candidate_terms_list = []
+                pos_label_indices = []  # 每个样本的正例位置（简化为第一个正例）
+                max_hn = getattr(args, 'max_hn_per_sample', 15)
+                rand_neg = getattr(args, 'rand_neg_per_sample', 5)
+                
+                import random
+                for i, (gts, hns) in enumerate(zip(ground_truth_terms_list, hard_neg_terms_list)):
+                    # 正例（去重）
+                    gts = list(dict.fromkeys([t for t in gts if t]))
+                    if not gts:  # 如果没有正例，跳过
+                        candidate_terms_list.append([])
+                        pos_label_indices.append(-1)
+                        continue
+                    
+                    # 采样 hard negatives
+                    chosen_hn = hns[:max_hn] if len(hns) >= max_hn else hns
+                    
+                    # 采样随机 negatives（从全局术语库中）
+                    chosen_rn = []
+                    if rand_neg > 0 and len(global_random_terms) > 0:
+                        # 确保不选到 ground truth 或 hard negatives
+                        gt_hn_set = set(gts + chosen_hn)
+                        available_randoms = [t for t in global_random_terms if t not in gt_hn_set]
+                        if available_randoms:
+                            chosen_rn = random.sample(available_randoms, min(rand_neg, len(available_randoms)))
+                    
+                    # 拼接候选：正例放前面（便于标签为0的单正例CE）
+                    candidates = list(dict.fromkeys(gts + chosen_hn + chosen_rn))
+                    candidate_terms_list.append(candidates)
+                    pos_label_indices.append(0)  # 第一个正例
+                
+                # 过滤掉无效样本
+                valid_indices = [i for i, cands in enumerate(candidate_terms_list) if len(cands) > 1]
+                
+                if len(valid_indices) > 0:
+                    # 一次性编码所有候选文本（去重后编码，再映射回）
+                    flat_terms = []
+                    offsets = []
+                    for i in valid_indices:
+                        offsets.append(len(flat_terms))
+                        flat_terms.extend(candidate_terms_list[i])
+                    
+                    # 编码候选术语（不需要梯度）
+                    with torch.no_grad():
+                        term_emb_all = raw_model.encode_text(flat_terms)
+                        term_emb_all = term_emb_all.detach()
+                    
+                    # 计算每个有效样本的 logits
+                    logits_list = []
+                    labels_list = []
+                    for idx, i in enumerate(valid_indices):
+                        start = offsets[idx]
+                        end = offsets[idx] + len(candidate_terms_list[i])
+                        term_emb = term_emb_all[start:end]  # [Ci, 512]
+                        
+                        # [1,512] x [512,Ci] -> [1,Ci]
+                        logit = (audio_emb[i:i+1] @ term_emb.T) / temperature
+                        logits_list.append(logit)
+                        labels_list.append(torch.tensor([pos_label_indices[i]], device=device, dtype=torch.long))
+                    
+                    # 拼成批次计算 CE
+                    if logits_list:
+                        # 由于每个样本的候选数不同，需要逐个计算loss然后平均
+                        losses = []
+                        for logit, label in zip(logits_list, labels_list):
+                            loss_i = F.cross_entropy(logit, label)
+                            losses.append(loss_i)
+                        hard_neg_loss = torch.stack(losses).mean()
+                
+            except Exception as e:
+                if dist.get_rank() == 0:
+                    print(f"[ERROR] Hard negative loss computation failed: {e}")
+                    import traceback
+                    traceback.print_exc()
+    
     # 组合损失
-    total_loss = args.audio_text_loss_ratio * contrastive_loss + args.audio_term_loss_ratio * audio_term_loss
+    total_loss = (args.audio_text_loss_ratio * contrastive_loss + 
+                  args.audio_term_loss_ratio * audio_term_loss +
+                  getattr(args, 'hard_neg_loss_ratio', 0.0) * hard_neg_loss)
     
     if torch.isnan(total_loss) or torch.isinf(total_loss):
         return None  # 返回None表示损失计算异常
@@ -733,7 +858,7 @@ def check_lora_training_status(model, step, rank):
 
 
 def eval_only(rank, world_size, args):
-    """仅评估模式：测试原始模型的recall效果"""
+    """仅评估模式：加载训练好的模型，使用全部glossary作为索引进行评估"""
     setup_ddp(rank, world_size)
     device = torch.device(f"cuda:{rank}")
     
@@ -741,7 +866,7 @@ def eval_only(rank, world_size, args):
         print(f"[INFO] Starting evaluation-only mode with {world_size} GPUs")
         print(f"[INFO] Will evaluate on maximum {args.eval_max_samples} samples")
     
-    # 初始化模型（原始模型，不加载任何预训练权重）
+    # 初始化模型
     speech_encoder = Qwen2AudioSpeechEncoder(model_name=args.model_name, device=device)
     text_encoder = Qwen2AudioTextEncoder(
         model_name=args.model_name, 
@@ -756,6 +881,37 @@ def eval_only(rank, world_size, args):
         lora_alpha=args.lora_alpha,
         lora_dropout=args.lora_dropout
     ).to(device)
+    
+    # 加载预训练权重（在DDP包装之前）
+    eval_model_path = getattr(args, 'eval_model_path', None)
+    if eval_model_path and os.path.exists(eval_model_path):
+        if rank == 0:
+            print(f"[INFO] Loading trained model weights from: {eval_model_path}")
+        try:
+            checkpoint = torch.load(eval_model_path, map_location=device)
+            if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+                state_dict = checkpoint['model_state_dict']
+            else:
+                state_dict = checkpoint
+            
+            # 处理DDP前缀
+            if list(state_dict.keys())[0].startswith('module.'):
+                new_state_dict = {}
+                for k, v in state_dict.items():
+                    new_state_dict[k[7:]] = v
+                state_dict = new_state_dict
+            
+            model.load_state_dict(state_dict, strict=False)
+            if rank == 0:
+                print("[INFO] ✅ Model weights loaded successfully")
+        except Exception as e:
+            if rank == 0:
+                print(f"[ERROR] ❌ Failed to load model weights: {e}")
+                print(f"[WARN] Will evaluate with randomly initialized model instead")
+    else:
+        if rank == 0:
+            print(f"[WARN] No trained model path provided or file not found: {eval_model_path}")
+            print(f"[WARN] Will evaluate with randomly initialized model")
     
     # 包装为DDP（即使只是评估也需要，保持一致性）
     model = DDP(model, device_ids=[rank], find_unused_parameters=False)
@@ -786,49 +942,79 @@ def eval_only(rank, world_size, args):
     
     # 设置评估用的retriever（仅主进程）
     if rank == 0:
-        # 从测试数据集提取术语
-        used_terms = extract_all_used_terms(test_dataset)
-        used_terms = list(set(t.lower() for t in used_terms))
+        # 从glossary_cleaned.json加载全部术语作为索引
+        if args.glossary_path and os.path.exists(args.glossary_path):
+            print(f"[INFO] Loading full glossary from: {args.glossary_path}")
+            from Qwen2_Audio_train import load_glossary_terms
+            all_glossary_terms = load_glossary_terms(args.glossary_path)
+            all_glossary_terms = list(set(t.lower() for t in all_glossary_terms if t and len(t.strip()) >= 3))
+            print(f"[INFO] Loaded {len(all_glossary_terms)} unique terms from glossary")
+        else:
+            print(f"[WARN] Glossary path not provided or not found: {args.glossary_path}")
+            print(f"[INFO] Falling back to extracting terms from test dataset")
+            all_glossary_terms = extract_all_used_terms(test_dataset)
+            all_glossary_terms = list(set(t.lower() for t in all_glossary_terms))
+            print(f"[INFO] Extracted {len(all_glossary_terms)} unique terms from test dataset")
         
-        print(f"[INFO] Extracted {len(used_terms)} unique terms from test dataset")
-        if len(used_terms) == 0:
-            print("[ERROR] No terms found in test dataset! This should not happen.")
+        if len(all_glossary_terms) == 0:
+            print("[ERROR] No terms found! This should not happen.")
             cleanup_ddp()
             return
+        
+        # 从测试数据集提取ground truth术语（用于分析覆盖率）
+        test_gt_terms = extract_all_used_terms(test_dataset)
+        test_gt_terms = set(t.lower() for t in test_gt_terms)
+        
+        # 统计测试集术语在glossary中的覆盖情况
+        glossary_set = set(all_glossary_terms)
+        covered_terms = test_gt_terms & glossary_set
+        uncovered_terms = test_gt_terms - glossary_set
+        
+        print(f"[INFO] Test dataset contains {len(test_gt_terms)} unique ground truth terms")
+        print(f"[INFO] Glossary covers {len(covered_terms)}/{len(test_gt_terms)} ({len(covered_terms)/len(test_gt_terms)*100:.1f}%) of test terms")
+        if uncovered_terms:
+            print(f"[WARN] {len(uncovered_terms)} test terms not in glossary (will be impossible to retrieve)")
+            if len(uncovered_terms) <= 10:
+                print(f"[WARN] Uncovered terms: {list(uncovered_terms)}")
         
         retriever = SimpleRetriever(enable_fusion=True, device=device)
         retriever.model = model.module
         retriever.index = faiss.IndexFlatL2(512)
-        retriever.term_list = [{'term': t} for t in used_terms]
+        retriever.term_list = [{'term': t} for t in all_glossary_terms]
         
-        print(f"[INFO] Setup complete. Test: {len(test_dataset)}, Terms: {len(used_terms)}")
+        print(f"[INFO] Setup complete. Test: {len(test_dataset)}, Index Terms: {len(all_glossary_terms)}")
         
         # 进行评估
-        print(f"[INFO] Starting evaluation on original model...")
+        print(f"[INFO] Starting evaluation with full glossary index...")
         model.eval()
         
         recall_results = evaluate_topk_recall(
             model, retriever, test_dataset, device, 
-            top_ks=(1, 5, 10, 20), max_eval=args.eval_max_samples,
-            train_terms_set=None  # eval_only模式下没有训练集，无法区分seen/unseen
+            top_ks=(1, 5, 10), max_eval=args.eval_max_samples,
+            train_terms_set=None  # eval_only模式下不区分seen/unseen
         )
         
-        print(f"\n[RESULTS] Original Model Evaluation Results:")
-        print(f"[RESULTS] Dataset: {len(test_dataset)} total samples")
-        print(f"[RESULTS] Terms: {len(used_terms)} unique terms")
+        print(f"\n[RESULTS] ========== EVALUATION RESULTS ==========")
+        print(f"[RESULTS] Model: {eval_model_path if eval_model_path else 'Random Initialization'}")
+        print(f"[RESULTS] Test Dataset: {len(test_dataset)} total samples")
+        print(f"[RESULTS] Index Size: {len(all_glossary_terms)} terms (full glossary)")
+        print(f"[RESULTS] Test GT Terms: {len(test_gt_terms)} unique terms")
+        print(f"[RESULTS] Coverage: {len(covered_terms)}/{len(test_gt_terms)} ({len(covered_terms)/len(test_gt_terms)*100:.1f}%)")
         print(f"[RESULTS] Evaluated on: {min(args.eval_max_samples, len(test_dataset))} samples")
+        print(f"[RESULTS] " + "="*48)
         
         # 处理新的返回格式
         overall_results = recall_results.get('overall', recall_results)
         
-        for top_k in [1, 5, 10, 20]:
+        for top_k in [1, 5, 10, 20, 50, 100]:
             if overall_results.get(top_k) and len(overall_results[top_k]) > 0:
                 avg_recall = sum(overall_results[top_k]) / len(overall_results[top_k])
-                print(f"[RESULTS] Recall@{top_k}: {avg_recall:.2%} ({len(overall_results[top_k])} samples)")
+                print(f"[RESULTS] Recall@{top_k:3d}: {avg_recall:.2%} ({len(overall_results[top_k])} samples)")
             else:
-                print(f"[RESULTS] Recall@{top_k}: No valid results")
+                print(f"[RESULTS] Recall@{top_k:3d}: No valid results")
         
-        print(f"\n[INFO] Evaluation completed. Original model baseline established.")
+        print(f"[RESULTS] " + "="*48)
+        print(f"\n[INFO] ✅ Evaluation completed!")
     
     cleanup_ddp()
 
@@ -931,6 +1117,7 @@ def train_ddp(rank, world_size, args):
     
     # 加载数据集
     mmap_shard_dir = getattr(args, 'mmap_shard_dir', None)
+    hard_neg_jsonl = getattr(args, 'hard_neg_jsonl', None)
     
     if mmap_shard_dir and os.path.exists(mmap_shard_dir):
         # 使用 mmap 数据集
@@ -938,8 +1125,8 @@ def train_ddp(rank, world_size, args):
             print(f"[INFO] Using mmap dataset from: {mmap_shard_dir}")
         
         if args.test_samples_path:
-            train_dataset = TermLevelDatasetMMap(args.train_samples_path, mmap_shard_dir, split="train", train_ratio=1.0)
-            test_dataset = TermLevelDatasetMMap(None, mmap_shard_dir, split="test", test_path=args.test_samples_path)
+            train_dataset = TermLevelDatasetMMap(args.train_samples_path, mmap_shard_dir, split="train", train_ratio=1.0, hard_neg_jsonl=hard_neg_jsonl)
+            test_dataset = TermLevelDatasetMMap(None, mmap_shard_dir, split="test", test_path=args.test_samples_path, hard_neg_jsonl=None)
         else:
             # 如果启用测试集重构，需要更大的测试集来筛选样本
             effective_train_ratio = args.train_ratio
@@ -954,16 +1141,16 @@ def train_ddp(rank, world_size, args):
                 else:
                     print(f"[INFO] Current train_ratio {args.train_ratio:.3f} provides sufficient test samples")
             
-            train_dataset = TermLevelDatasetMMap(args.train_samples_path, mmap_shard_dir, split="train", train_ratio=effective_train_ratio)
-            test_dataset = TermLevelDatasetMMap(args.train_samples_path, mmap_shard_dir, split="test", train_ratio=effective_train_ratio)
+            train_dataset = TermLevelDatasetMMap(args.train_samples_path, mmap_shard_dir, split="train", train_ratio=effective_train_ratio, hard_neg_jsonl=hard_neg_jsonl)
+            test_dataset = TermLevelDatasetMMap(args.train_samples_path, mmap_shard_dir, split="test", train_ratio=effective_train_ratio, hard_neg_jsonl=None)
     else:
         # 使用传统数据集
         if rank == 0:
             print("[INFO] Using traditional dataset (file-based audio loading)")
         
         if args.test_samples_path:
-            train_dataset = TermLevelDataset(args.train_samples_path, split="train", train_ratio=1.0)
-            test_dataset = TermLevelDataset(None, split="test", test_path=args.test_samples_path)
+            train_dataset = TermLevelDataset(args.train_samples_path, split="train", train_ratio=1.0, hard_neg_jsonl=hard_neg_jsonl)
+            test_dataset = TermLevelDataset(None, split="test", test_path=args.test_samples_path, hard_neg_jsonl=None)
         else:
             # 如果启用测试集重构，需要更大的测试集来筛选样本
             effective_train_ratio = args.train_ratio
@@ -977,8 +1164,8 @@ def train_ddp(rank, world_size, args):
                 else:
                     print(f"[INFO] Current train_ratio {args.train_ratio:.3f} provides sufficient test samples")
             
-            train_dataset = TermLevelDataset(args.train_samples_path, split="train", train_ratio=effective_train_ratio)
-            test_dataset = TermLevelDataset(args.train_samples_path, split="test", train_ratio=effective_train_ratio)
+            train_dataset = TermLevelDataset(args.train_samples_path, split="train", train_ratio=effective_train_ratio, hard_neg_jsonl=hard_neg_jsonl)
+            test_dataset = TermLevelDataset(args.train_samples_path, split="test", train_ratio=effective_train_ratio, hard_neg_jsonl=None)
     
     # 数据加载器
     train_sampler = DistributedSampler(train_dataset, num_replicas=world_size, rank=rank, shuffle=True)
@@ -1093,6 +1280,9 @@ def train_ddp(rank, world_size, args):
         else:
             print(f"[INFO] Test set rebuilding disabled, using original test set ({len(test_dataset)} samples)")
     
+    # 准备全局随机术语库（用于 hard negative 训练中的随机负例采样）
+    global_random_terms = list(train_terms_set) if rank == 0 else []
+    
     # 设置评估用的retriever（仅主进程）
     retriever = None
     if rank == 0:
@@ -1182,7 +1372,7 @@ def train_ddp(rank, world_size, args):
             loss = None
             with torch.cuda.amp.autocast():
                 try:
-                    loss = train_step(model, batch, device, args)
+                    loss = train_step(model, batch, device, args, global_random_terms=global_random_terms)
                     valid_batches += 1
                 except Exception as e:
                     failed_batches += 1
@@ -1301,9 +1491,16 @@ def main():
     parser.add_argument('--test_mode', action='store_true', help='Run in test mode (minimal setup for debugging)')
     parser.add_argument('--eval_only', action='store_true', help='Only run evaluation on the original model without training')
     parser.add_argument('--eval_max_samples', type=int, default=1000, help='Maximum number of samples to evaluate (for eval_only mode)')
+    parser.add_argument('--eval_model_path', type=str, default=None, help='Path to trained model for evaluation (for eval_only mode)')
     parser.add_argument('--rebuild_test_set', action='store_true', help='Rebuild test set to ensure 20% unseen terms ratio')
     parser.add_argument('--target_test_size', type=int, default=1000, help='Target size for rebuilt test set')
     parser.add_argument('--target_unseen_ratio', type=float, default=0.20, help='Target ratio of unseen terms in test set')
+    
+    # Hard Negative Mining 参数
+    parser.add_argument('--hard_neg_jsonl', type=str, default=None, help='Path to hard negatives JSONL file')
+    parser.add_argument('--max_hn_per_sample', type=int, default=15, help='Maximum hard negatives per sample')
+    parser.add_argument('--rand_neg_per_sample', type=int, default=5, help='Random negatives per sample (for diversity)')
+    parser.add_argument('--hard_neg_loss_ratio', type=float, default=0.5, help='Weight for hard negative loss')
     
     args = parser.parse_args()
     
@@ -1313,6 +1510,27 @@ def main():
     if world_size == 0:
         print("[ERROR] No CUDA devices available!")
         return 1
+    
+    # 检查是否为评估模式
+    if args.eval_only:
+        print(f"[INFO] Starting evaluation mode with {world_size} GPUs")
+        print(f"[INFO] Model path: {args.eval_model_path if args.eval_model_path else 'Random Initialization'}")
+        print(f"[INFO] Glossary path: {args.glossary_path}")
+        print(f"[INFO] Max evaluation samples: {args.eval_max_samples}")
+        
+        # 使用torchrun启动时，LOCAL_RANK会自动设置
+        if 'LOCAL_RANK' in os.environ:
+            # torchrun模式
+            rank = int(os.environ['LOCAL_RANK'])
+            eval_only(rank, world_size, args)
+        else:
+            # 手动多进程模式
+            mp.set_start_method('spawn', force=True)
+            mp.spawn(eval_only, args=(world_size, args), nprocs=world_size, join=True)
+        
+        print("[INFO] Evaluation completed")
+        return 0
+    
     # 训练模式
     # 自动调整batch size以防止OOM
     if args.max_batch_per_gpu:

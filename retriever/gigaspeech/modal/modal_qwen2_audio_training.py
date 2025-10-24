@@ -197,7 +197,7 @@ def upload_data(data_files: dict, force_upload: bool = False):
         if not force_upload and os.path.exists(full_path):
             try:
                 # 对于词汇表等静态文件，直接跳过检查
-                if target_path in ['glossary_merged.json', 'glossary_filtered.json']:
+                if target_path in ['glossary_cleaned.json', 'glossary_filtered.json']:
                     skipped_files.append(target_path)
                     print(f"[SKIP] Static file skipped: {target_path}")
                     continue
@@ -262,7 +262,7 @@ def upload_data(data_files: dict, force_upload: bool = False):
 @app.function(
     image=image,
     min_containers=1,
-    gpu="H200:2",
+    gpu="H200:4",
     volumes={"/data": volume, "/root/.cache/huggingface": hf_cache_vol},
     timeout=86400,  # 24小时超时
     memory=512*1024,  # 512GB内存
@@ -551,7 +551,7 @@ def main(skip_upload: bool = False, upload_large_files_only: bool = False, eval_
             "balanced_train_set.json": "/home/jiaxuanluo/InfiniSST/retriever/gigaspeech/data/balanced_train_set.json",
             "balanced_test_set.json": "/home/jiaxuanluo/InfiniSST/retriever/gigaspeech/data/balanced_test_set.json",
             # 词汇表
-            "glossary_merged.json": "/home/jiaxuanluo/InfiniSST/retriever/gigaspeech/data/terms/glossary_merged.json",
+            "glossary_cleaned.json": "/home/jiaxuanluo/InfiniSST/retriever/gigaspeech/data/terms/glossary_cleaned.json",
         }
         
         # 定义依赖的Python文件
@@ -627,12 +627,13 @@ def main(skip_upload: bool = False, upload_large_files_only: bool = False, eval_
             "lora_dropout": 0.1,
             "eval_only": True,
             "eval_max_samples": 1000,  # 评估1000个样本
+            "eval_model_path": "/data/qwen2_audio_term_level_modal_v2_best.pt",  # 加载训练好的模型
         }
         
         result = train_ddp_modal.remote(
             train_samples_path="balanced_train_set.json",
             test_samples_path="balanced_test_set.json",
-            glossary_path="glossary_merged.json",
+            glossary_path="glossary_cleaned.json",
             mmap_shard_dir="/data/mmap_shards",  # 指向 Modal 中的 mmap 分片目录
             use_mount_directly=use_mount_directly,
             use_aut=use_aut,
@@ -660,7 +661,7 @@ def main(skip_upload: bool = False, upload_large_files_only: bool = False, eval_
         result = train_ddp_modal.remote(
             train_samples_path="balanced_train_set.json",
             test_samples_path="balanced_test_set.json",
-            glossary_path="glossary_merged.json",
+            glossary_path="glossary_cleaned.json",
             mmap_shard_dir="/data/mmap_shards",  # 指向 Modal 中的 mmap 分片目录
             use_mount_directly=use_mount_directly,
             use_aut=use_aut,

@@ -196,8 +196,7 @@ class Qwen3AuTSpeechEncoder:
         if max_mem_str and device_map_env:
             try:
                 n = torch.cuda.device_count()
-                # Use integer device IDs, not "cuda:X" strings (accelerate requirement)
-                max_memory = {i: max_mem_str for i in range(n)}
+                max_memory = {f"cuda:{i}": max_mem_str for i in range(n)}
                 # Allow some CPU spill if requested
                 if offload_dir:
                     max_memory["cpu"] = os.environ.get("AUT_MAX_CPU_MEMORY", "120GiB")
