@@ -9,15 +9,18 @@ The link to the online demo is [here](https://c79b-128-111-28-80.ngrok-free.app/
 ## Installation
 
 ```bash
-conda create -n infinisst -y python=3.10
-conda activate infinisst
+conda create -n infinisst-omni -y python=3.10
+conda activate infinisst-omni
 pip install uv
 
 # torch and related packages
 uv pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
-uv pip install transformers==4.47.0 evaluate jiwer lightning accelerate deepspeed rotary_embedding_torch torchtune sentence-transformers wandb tensorboardX matplotlib soundfile simuleval jupyter jieba unbabel-comet simalign praat-textgrids peft
+uv pip install transformers==4.57.1 accelerate qwen-omni-utils jupyter
 uv pip install flash-attn --no-build-isolation
 uv pip install pyarrow==20.0.0
+
+pip install transformers==4.47.0 evaluate jiwer lightning accelerate deepspeed rotary_embedding_torch torchtune sentence-transformers wandb tensorboardX matplotlib soundfile simuleval jupyter jieba unbabel-comet simalign praat-textgrids peft
+pip install flash-attn --no-build-isolation
 
 # fairseq for wav2vec2
 git clone git@github.com:facebookresearch/fairseq.git
