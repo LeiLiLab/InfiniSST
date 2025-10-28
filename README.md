@@ -9,27 +9,29 @@ The link to the online demo is [here](https://c79b-128-111-28-80.ngrok-free.app/
 ## Installation
 
 ```bash
-conda create -n infinisst-omni -y python=3.10
+conda create -n infinisst-omni -y python=3.12
 conda activate infinisst-omni
 pip install uv
 
 # torch and related packages
-uv pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
+uv pip install torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu129
 uv pip install transformers==4.57.1 accelerate qwen-omni-utils jupyter
 uv pip install flash-attn --no-build-isolation
 uv pip install pyarrow==20.0.0
 
+uv pip install evaluate jiwer lightning accelerate deepspeed torchtune sentence-transformers wandb tensorboardX matplotlib soundfile simuleval jieba unbabel-comet simalign praat-textgrids peft
+
 pip install transformers==4.47.0 evaluate jiwer lightning accelerate deepspeed rotary_embedding_torch torchtune sentence-transformers wandb tensorboardX matplotlib soundfile simuleval jupyter jieba unbabel-comet simalign praat-textgrids peft
 pip install flash-attn --no-build-isolation
 
-# fairseq for wav2vec2
-git clone git@github.com:facebookresearch/fairseq.git
-mv fairseq fairseq-0.12.2
-cd fairseq-0.12.2
-git checkout 0.12.2-release
-uv pip install pip==23.3
-uv pip install -e .
-cd ..
+# no need for fairseq for wav2vec2 anymore
+# git clone git@github.com:facebookresearch/fairseq.git
+# mv fairseq fairseq-0.12.2
+# cd fairseq-0.12.2
+# git checkout 0.12.2-release
+# uv pip install pip==23.3
+# uv pip install -e .
+# cd ..
 
 # flashinfer
 git clone git@github.com:flashinfer-ai/flashinfer.git
