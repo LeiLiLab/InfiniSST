@@ -7,8 +7,8 @@
 #SBATCH --mem=392GB
 #SBATCH --gres=gpu:L40S:8
 ##SBATCH --nodelist=babel-3-17
-#SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,9,13],babel-11-25,babel-12-[21,29],babel-13-[1,13,21,29],babel-14-25
-#SBATCH --partition=preempt
+##SBATCH --exclude=babel-3-[5,9,13,17],babel-4-[5,9,29],babel-6-29,babel-7-[1,5,9],babel-8-[5,9,13],babel-10-[5,9,13],babel-11-25,babel-12-[21,29],babel-13-[1,13,21,29],babel-14-25
+#SBATCH --partition=general
 #SBATCH --time=2-00:00:00
 ##SBATCH --dependency=afterok:job_id
 ##SBATCH --array=1-7
@@ -20,22 +20,22 @@
 
 source /home/siqiouya/miniconda3/bin/activate infinisst
 
-llm_path=/compute/babel-4-1/siqiouya/qwen2.5-7b-instruct
+llm_path=/data/user_data/siqiouya/ckpts/pretrained/llm/Qwen2.5-7B-Instruct
 
-w2v2_path=/data/user_data/siqiouya/runs/pretrained/wav2_vec_vox_960h_pl.pt
+w2v2_path=/data/user_data/siqiouya/ckpts/pretrained/asu/wav2vec_vox_960h_pl.pt
 w2v2_type=w2v2
 ctc_finetuned=True
 
-ROOT=/compute/babel-14-5/siqiouya/gigaspeech/manifests
+ROOT=/data/group_data/li_lab/siqiouya/datasets/gigaspeech
 lang_code=zh
 lang=Chinese
 data_path=$ROOT
 
-save_dir=/compute/babel-5-23/siqiouya/runs/gigaspeech/en-${lang_code}/
+save_dir=/data/user_data/siqiouya/ckpts/infinisst/gigaspeech/Qwen2.5-7B-Instruct/en-${lang_code}/
 
 source_lang="English"
 target_lang=${lang} # e.g. German
-name="stage1_M=12_norm0_qwen_rope"
+name="stage1_M=12_norm0_qwen2.5-7b-instruct_rope"
 save_path=${save_dir}/${name}
 rm -rf ${save_path} # comment this line if you want to resume training
 mkdir -p ${save_path}
@@ -73,7 +73,7 @@ srun python train/main.py \
     \
     --data_path ${data_path} \
     --data_split_train train_xl_case_${lang_code}-qwen2.5-32b-instruct_marked_mfa_punc_asr \
-    --data_split_eval dev_case_${lang_code}-qwen2.5-32b-instruct_marked_mfa_punc_asr \
+    --data_split_eval dev_case_${lang_code}-qwen2.5-32b-instruct_marked_mfa_punc \
     --source_lang "${source_lang}" \
     --target_lang "${target_lang}" \
     --trajectory 9 \

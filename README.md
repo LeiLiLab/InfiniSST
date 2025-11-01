@@ -17,6 +17,7 @@ pip install uv
 uv pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
 uv pip install transformers==4.47.0 evaluate jiwer lightning accelerate deepspeed rotary_embedding_torch torchtune sentence-transformers wandb tensorboardX matplotlib soundfile simuleval jupyter jieba unbabel-comet simalign praat-textgrids peft
 uv pip install flash-attn --no-build-isolation
+uv pip install pyarrow==20.0.0
 
 # fairseq for wav2vec2
 git clone git@github.com:facebookresearch/fairseq.git
@@ -28,7 +29,7 @@ uv pip install -e .
 cd ..
 
 # flashinfer
-git clone git@github.com:siqiouya/flashinfer.git
+git clone git@github.com:flashinfer-ai/flashinfer.git
 cd flashinfer
 # latest v2.5.0 version has numerical instability issue
 git checkout v0.2.0 
