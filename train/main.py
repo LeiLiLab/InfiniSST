@@ -18,6 +18,7 @@ import os
 import logging
 from dataclasses import dataclass, field
 from typing import Optional
+from datetime import timedelta
 
 import torch
 import transformers
@@ -79,6 +80,7 @@ class ModelArguments:
     llm_emb_freeze: bool = field(default=False)
     llm_head_freeze: bool = field(default=False)
     sllm_weight_path: Optional[str] = field(default=None)
+    lora_path: Optional[str] = field(default=None)
     use_flash_attn: bool = field(default=False)
     lora_rank: Optional[int] = field(default=-1)
 
@@ -218,10 +220,14 @@ def train():
         # log_model="all"
     )
 
-    # Use standard DDP strategy (no DeepSpeed)
-    # Some parameters (e.g., frozen heads/encoders) may not participate in loss every step.
-    # Enable find_unused_parameters to avoid reducer errors.
-    strategy = DDPStrategy(find_unused_parameters=True)
+    strategy = DeepSpeedStrategy(
+        stage=training_args.deepspeed_stage,
+        offload_optimizer=training_args.deepspeed_offload,
+        offload_parameters=training_args.deepspeed_offload,
+        allgather_bucket_size=training_args.deepspeed_bucket_size,
+        reduce_bucket_size=training_args.deepspeed_bucket_size,
+        timeout=timedelta(hours=0.5),  # 增加NCCL超时到0.5小时
+    )
     # strategy = FSDPStrategy(
     #     sharding_strategy=training_args.sharding,
     #     state_dict_type="sharded"
@@ -264,74 +270,8 @@ def train():
         profiler=profiler
     )
 
-    # start training with robust auto-resume
-    def _find_resume_ckpt(save_dir: str) -> str | None:
-        logging.info(f"[RESUME] Searching for checkpoint in: {save_dir}")
-        try:
-            if not os.path.exists(save_dir):
-                logging.info(f"[RESUME] Directory does not exist: {save_dir}")
-                return None
-                
-            # List all items in save_dir for debugging
-            items = os.listdir(save_dir) if os.path.isdir(save_dir) else []
-            logging.info(f"[RESUME] Found {len(items)} items in save_dir: {items[:10]}")  # Show first 10
-            
-            # Option 1: Lightning 2.x format - directory with 'checkpoint' file
-            last_dir = os.path.join(save_dir, 'last.ckpt')
-            candidate = os.path.join(last_dir, 'checkpoint')
-            if os.path.isdir(last_dir) and os.path.exists(candidate):
-                logging.info(f"[RESUME] Found Lightning 2.x checkpoint: {candidate}")
-                return candidate
-            
-            # Option 2: last.ckpt is a file directly (Lightning 1.x or manual save)
-            last_file = os.path.join(save_dir, 'last.ckpt')
-            if os.path.isfile(last_file):
-                logging.info(f"[RESUME] Found checkpoint file: {last_file}")
-                return last_file
-            
-            # Option 3: Pick the freshest "epoch=*" or "step=*" directory
-            subdirs = [
-                os.path.join(save_dir, d)
-                for d in os.listdir(save_dir)
-                if (d.startswith('epoch=') or d.startswith('step='))
-            ]
-            # Check both directory with 'checkpoint' file and direct .ckpt files
-            valid_subdirs = []
-            for d in subdirs:
-                ckpt_file = os.path.join(d, 'checkpoint')
-                if os.path.isdir(d) and os.path.exists(ckpt_file):
-                    valid_subdirs.append(ckpt_file)
-                elif os.path.isfile(d):
-                    valid_subdirs.append(d)
-            
-            if valid_subdirs:
-                valid_subdirs.sort(key=lambda p: os.path.getmtime(p), reverse=True)
-                logging.info(f"[RESUME] Found {len(valid_subdirs)} epoch/step checkpoints, using: {valid_subdirs[0]}")
-                return valid_subdirs[0]
-                
-            logging.info(f"[RESUME] No checkpoint found in {save_dir}")
-        except Exception as e:
-            logging.error(f"[RESUME] Error searching for checkpoint: {e}", exc_info=True)
-        return None
-
-    resume_ckpt = None
-    if os.path.exists(training_args.save_dir):
-        resume_ckpt = _find_resume_ckpt(training_args.save_dir)
-
-    if resume_ckpt is not None:
-        logging.info(f"[RESUME] Resuming training from checkpoint: {resume_ckpt}")
-        # 加载 checkpoint 查看训练进度信息
-        try:
-            ckpt = torch.load(resume_ckpt, map_location='cpu')
-            current_epoch = ckpt.get('epoch', 'Unknown')
-            global_step = ckpt.get('global_step', 'Unknown')
-            logging.info(f"[RESUME] Checkpoint info - Epoch: {current_epoch}, Global Step: {global_step}")
-        except Exception as e:
-            logging.warning(f"[RESUME] Could not load checkpoint info: {e}")
-        trainer.fit(model_lightning, ckpt_path=resume_ckpt)
-    else:
-        logging.info(f"[RESUME] No checkpoint found. Starting fresh training in {training_args.save_dir}")
-        trainer.fit(model_lightning)
+    # start training
+    trainer.fit(model_lightning)
 
     # trainer.save_checkpoint(training_args.save_dir, weights_only=True)
 

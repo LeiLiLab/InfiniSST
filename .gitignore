@@ -37,3 +37,5 @@ dist/
 *.mp4
 *.json
 *.txt
+*.err
+*.out

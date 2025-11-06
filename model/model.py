@@ -449,14 +449,6 @@ class SQwen25Lightning(SLlamaLightning):
         except Exception:
             pass
 
-        if self.model_args.llm_freeze:
-            model.model.requires_grad_(False)
-            model.model.embed_tokens.requires_grad_(True)
-        if self.model_args.llm_emb_freeze:
-            model.model.embed_tokens.requires_grad_(False)
-        if self.model_args.llm_head_freeze:
-            model.lm_head.requires_grad_(False)
-
         # load speech encoder
         speech_encoder_args = [
             self.speech_args.w2v2_path,
@@ -476,9 +468,6 @@ class SQwen25Lightning(SLlamaLightning):
 
         speech_encoder.to(dtype=model.dtype, device=model.device)
         model.model.speech_encoder = speech_encoder
-
-        if self.speech_args.w2v2_freeze:
-            model.model.speech_encoder.requires_grad_(False)
 
         model.preprocess(tokenizer=self.tokenizer)
 
@@ -500,7 +489,28 @@ class SQwen25Lightning(SLlamaLightning):
                 lora_dropout=0.1,
             )
             model = get_peft_model(model, lora_config, adapter_name='lora_adapter')
-            model.print_trainable_parameters()
+
+            if self.model_args.lora_path is not None:
+                logger.info(f"Loading LORA weights from {self.model_args.lora_path}")
+                lora_state_dict = torch.load(self.model_args.lora_path, map_location='cpu', weights_only=True)
+                model.load_state_dict(lora_state_dict, strict=False)
+                if self.model_args.llm_freeze:
+                    model = model.merge_and_unload()
+                    model.model.speech_encoder.requires_grad_(not self.speech_args.w2v2_freeze)
+                else:
+                    model.print_trainable_parameters()
+            else:
+                model.print_trainable_parameters()
+
+        if self.model_args.lora_rank <= 0: 
+            if self.model_args.llm_freeze:
+                model.model.requires_grad_(False)
+                model.model.embed_tokens.requires_grad_(True)
+                model.model.speech_encoder.requires_grad_(not self.speech_args.w2v2_freeze)
+            if self.model_args.llm_emb_freeze:
+                model.model.embed_tokens.requires_grad_(False)
+            if self.model_args.llm_head_freeze:
+                model.lm_head.requires_grad_(False)
     
         self.model = model
 
