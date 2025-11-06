@@ -4,12 +4,22 @@
 #SBATCH --output=/mnt/taurus/home/jiaxuanluo/InfiniSST/retriever/gigaspeech/modal/hn_train_%j.out
 #SBATCH --error=/mnt/taurus/home/jiaxuanluo/InfiniSST/retriever/gigaspeech/modal/hn_train_%j.err
 #SBATCH --partition=aries
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:6
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=256GB
 # ===================================================================
 # Hard Negative Mining + 训练完整流程
 # 专门提升 Recall@5/10 成功率
+# 
+# 挖矿模式配置 (HN_MODE):
+#   - "overwrite": 覆盖已存在的HN文件（会先备份）
+#   - "skip": 跳过已存在的HN文件
+#   - "update": 在已有基础上增量更新（推荐，合并新旧HN）
+# 
+# 多GPU并行挖矿:
+#   - 使用 MINE_NUM_GPUS 控制挖矿时的GPU数量
+#   - 使用 MINE_BATCH_SIZE 控制每个GPU的batch size
+#   - 显著加速HN挖掘过程
 # ===================================================================
 
 set -e  # 遇到错误立即退出
@@ -65,10 +75,11 @@ LORA_DROPOUT=0.1
 
 # 挖矿配置
 TOPK=200              # 检索的候选数
-MINE_BATCH_SIZE=128   # 挖矿时的batch size
+MINE_BATCH_SIZE=128    # 挖矿时每个GPU的batch size
+MINE_NUM_GPUS=6       # 挖矿时使用的GPU数量
 
 # 训练配置
-NUM_GPUS=2            # 使用的GPU数量
+NUM_GPUS=6            # 训练时使用的GPU数量
 BATCH_SIZE=256        # 总batch size
 GRAD_ACCUM=8          # 梯度累积步数
 EPOCHS=15             # 训练轮数
@@ -80,6 +91,9 @@ RAND_NEG=5            # 每个样本使用的随机负例数量
 HN_LOSS_RATIO=0.5     # Hard negative loss权重
 AUDIO_TEXT_RATIO=0.2  # 音频-文本对比损失权重
 AUDIO_TERM_RATIO=0.3  # 音频-术语对比损失权重
+
+# 挖矿行为配置
+HN_MODE="update"      # 挖矿模式: "overwrite"=覆盖, "skip"=跳过, "update"=更新已有文件
 
 cd "$WORK_DIR"
 
@@ -126,12 +140,17 @@ echo "=========================================="
 
 if [ -f "$HN_TRAIN" ]; then
     echo "⚠️  发现已存在的训练集HN文件: $HN_TRAIN"
-    read -p "是否覆盖? (y/n) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "跳过训练集挖矿"
-    else
-        $PY mine_hard_negatives.py \
+    echo "当前挖矿模式: $HN_MODE"
+    
+    if [ "$HN_MODE" == "skip" ]; then
+        echo "⏭️  跳过训练集挖矿（skip模式）"
+    elif [ "$HN_MODE" == "update" ]; then
+        echo "🔄 更新模式: 在现有基础上增量更新"
+        # 备份原文件
+        cp "$HN_TRAIN" "${HN_TRAIN}.backup_$(date +%Y%m%d_%H%M%S)"
+        echo "✅ 已备份原文件"
+        
+        $PY mine_hard_negatives_multi_gpu.py \
             --samples_path "$TRAIN_SAMPLES" \
             --mmap_dir "$MMAP_DIR" \
             --faiss_index_pkl "$FAISS_INDEX" \
@@ -141,11 +160,33 @@ if [ -f "$HN_TRAIN" ]; then
             --lora_alpha "$LORA_ALPHA" \
             --out_path "$HN_TRAIN" \
             --topk "$TOPK" \
-            --batch_size "$MINE_BATCH_SIZE"
+            --batch_size "$MINE_BATCH_SIZE" \
+            --num_gpus "$MINE_NUM_GPUS" \
+            --update_existing
+        echo "✅ 训练集HN更新完成"
+    else
+        echo "🔄 覆盖模式: 重新生成所有hard negatives"
+        # 备份原文件
+        cp "$HN_TRAIN" "${HN_TRAIN}.backup_$(date +%Y%m%d_%H%M%S)"
+        echo "✅ 已备份原文件"
+        
+        $PY mine_hard_negatives_multi_gpu.py \
+            --samples_path "$TRAIN_SAMPLES" \
+            --mmap_dir "$MMAP_DIR" \
+            --faiss_index_pkl "$FAISS_INDEX" \
+            --model_path "$BEST_MODEL" \
+            --model_name "$MODEL_NAME" \
+            --lora_r "$LORA_R" \
+            --lora_alpha "$LORA_ALPHA" \
+            --out_path "$HN_TRAIN" \
+            --topk "$TOPK" \
+            --batch_size "$MINE_BATCH_SIZE" \
+            --num_gpus "$MINE_NUM_GPUS"
         echo "✅ 训练集HN挖矿完成"
     fi
 else
-    $PY mine_hard_negatives.py \
+    echo "📝 首次生成训练集HN文件"
+    $PY mine_hard_negatives_multi_gpu.py \
         --samples_path "$TRAIN_SAMPLES" \
         --mmap_dir "$MMAP_DIR" \
         --faiss_index_pkl "$FAISS_INDEX" \
@@ -155,7 +196,8 @@ else
         --lora_alpha "$LORA_ALPHA" \
         --out_path "$HN_TRAIN" \
         --topk "$TOPK" \
-        --batch_size "$MINE_BATCH_SIZE"
+        --batch_size "$MINE_BATCH_SIZE" \
+        --num_gpus "$MINE_NUM_GPUS"
     echo "✅ 训练集HN挖矿完成"
 fi
 
@@ -166,21 +208,57 @@ echo "=========================================="
 echo "步骤 2/4: 挖掘测试集 Hard Negatives (可选)"
 echo "=========================================="
 
-read -p "是否挖掘测试集HN以供分析? (y/n) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    $PY mine_hard_negatives.py \
-        --samples_path "$TEST_SAMPLES" \
-        --mmap_dir "$MMAP_DIR" \
-        --faiss_index_pkl "$FAISS_INDEX" \
-        --model_path "$BEST_MODEL" \
-        --model_name "$MODEL_NAME" \
-        --lora_r "$LORA_R" \
-        --lora_alpha "$LORA_ALPHA" \
-        --out_path "$HN_TEST" \
-        --topk "$TOPK" \
-        --batch_size "$MINE_BATCH_SIZE"
-    echo "✅ 测试集HN挖矿完成"
+# 检查是否在SLURM作业中运行
+if [ -n "$SLURM_JOB_ID" ]; then
+    # SLURM作业中，根据HN_MODE自动决定
+    MINE_TEST_HN=true
+    echo "检测到SLURM作业环境，自动处理测试集HN"
+else
+    # 交互式环境，询问用户
+    read -p "是否挖掘测试集HN以供分析? (y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        MINE_TEST_HN=true
+    else
+        MINE_TEST_HN=false
+    fi
+fi
+
+if [ "$MINE_TEST_HN" = true ]; then
+    if [ -f "$HN_TEST" ] && [ "$HN_MODE" == "skip" ]; then
+        echo "⏭️  跳过测试集挖矿（skip模式）"
+    elif [ -f "$HN_TEST" ] && [ "$HN_MODE" == "update" ]; then
+        echo "🔄 更新测试集HN"
+        cp "$HN_TEST" "${HN_TEST}.backup_$(date +%Y%m%d_%H%M%S)"
+        $PY mine_hard_negatives_multi_gpu.py \
+            --samples_path "$TEST_SAMPLES" \
+            --mmap_dir "$MMAP_DIR" \
+            --faiss_index_pkl "$FAISS_INDEX" \
+            --model_path "$BEST_MODEL" \
+            --model_name "$MODEL_NAME" \
+            --lora_r "$LORA_R" \
+            --lora_alpha "$LORA_ALPHA" \
+            --out_path "$HN_TEST" \
+            --topk "$TOPK" \
+            --batch_size "$MINE_BATCH_SIZE" \
+            --num_gpus "$MINE_NUM_GPUS" \
+            --update_existing
+        echo "✅ 测试集HN更新完成"
+    else
+        $PY mine_hard_negatives_multi_gpu.py \
+            --samples_path "$TEST_SAMPLES" \
+            --mmap_dir "$MMAP_DIR" \
+            --faiss_index_pkl "$FAISS_INDEX" \
+            --model_path "$BEST_MODEL" \
+            --model_name "$MODEL_NAME" \
+            --lora_r "$LORA_R" \
+            --lora_alpha "$LORA_ALPHA" \
+            --out_path "$HN_TEST" \
+            --topk "$TOPK" \
+            --batch_size "$MINE_BATCH_SIZE" \
+            --num_gpus "$MINE_NUM_GPUS"
+        echo "✅ 测试集HN挖矿完成"
+    fi
 else
     echo "⏭️  跳过测试集HN挖矿"
 fi
@@ -192,7 +270,7 @@ echo "=========================================="
 echo "步骤 3/4: 使用 Hard Negatives 训练"
 echo "=========================================="
 echo "配置摘要:"
-echo "  - GPUs: $NUM_GPUS"
+echo "  - 训练GPUs: $NUM_GPUS"
 echo "  - Batch Size: $BATCH_SIZE (per GPU: $((BATCH_SIZE / NUM_GPUS)))"
 echo "  - Gradient Accumulation: $GRAD_ACCUM"
 echo "  - Effective Batch: $((BATCH_SIZE * GRAD_ACCUM))"
@@ -201,6 +279,8 @@ echo "  - Epochs: $EPOCHS"
 echo "  - Max HN per sample: $MAX_HN"
 echo "  - Random Neg per sample: $RAND_NEG"
 echo "  - Loss Weights: Text=$AUDIO_TEXT_RATIO, Term=$AUDIO_TERM_RATIO, HN=$HN_LOSS_RATIO"
+echo ""
+echo "注: HN挖矿使用了 $MINE_NUM_GPUS 个GPU，每个GPU batch size为 $MINE_BATCH_SIZE"
 echo ""
 
 # 设置CUDA环境变量
