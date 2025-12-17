@@ -29,8 +29,8 @@ logger = logging.getLogger("buzz_fill")
 os.environ.setdefault("VLLM_USE_V1", "0")
 
 
-DEFAULT_INPUT = "/mnt/gemini/data1/jiaxuanluo/siqi_train_wordlings_filled_gt_v2.jsonl"
-DEFAULT_OUTPUT = "/mnt/gemini/data1/jiaxuanluo/siqi_train_wordlings_filled_gt_v2_buzz.jsonl"
+DEFAULT_INPUT = "/mnt/gemini/data1/jiaxuanluo/siqi_train_wordlings_filled_gt_v3.jsonl"
+DEFAULT_OUTPUT = "/mnt/gemini/data1/jiaxuanluo/siqi_train_wordlings_filled_gt_v3_buzz.jsonl"
 DEFAULT_MODEL_PATH = "/mnt/gemini/data2/jiaxuanluo/Qwen3-Omni-30B-A3B-Instruct"
 
 
@@ -93,21 +93,39 @@ def parse_term_map(content: str) -> Tuple[Dict[str, str], str]:
     if marker not in content:
         return {}, content
     prefix, rest = content.split(marker, 1)
-    rest = rest.strip()
     tm = {}
+    
+    # Try JSON format first for backward compatibility
+    rest_stripped = rest.strip()
     try:
-        tm = json.loads(rest)
+        tm = json.loads(rest_stripped)
         if not isinstance(tm, dict):
             tm = {}
+        return tm, prefix
     except Exception:
-        m = re.search(r"\{.*\}", rest)
+        m = re.search(r"\{.*\}", rest_stripped)
         if m:
             try:
                 tm = json.loads(m.group(0))
                 if not isinstance(tm, dict):
                     tm = {}
+                return tm, prefix
             except Exception:
-                tm = {}
+                pass
+    
+    # Parse key=value format
+    # Split by newlines and parse each line as key=value
+    for line in rest.split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+        if '=' in line:
+            parts = line.split('=', 1)
+            if len(parts) == 2:
+                key = parts[0].strip()
+                val = parts[1].strip()
+                if key and val:
+                    tm[key] = val
     return tm, prefix
 
 
@@ -299,7 +317,10 @@ def process_line(
                 zh = clean_tm[rng.choice(keys)]
                 if b not in clean_tm:
                     clean_tm[b] = zh
-        new_content = f"{prefix}term_map: {json.dumps(clean_tm, ensure_ascii=False)}"
+        # Format as key=value pairs, one per line
+        term_map_lines = [f"{k}={v}" for k, v in clean_tm.items()]
+        term_map_str = "\n".join(term_map_lines)
+        new_content = f"{prefix}term_map:\n{term_map_str}"
         new_msgs.append({**msg, "content": new_content})
     obj["messages"] = new_msgs
     return obj

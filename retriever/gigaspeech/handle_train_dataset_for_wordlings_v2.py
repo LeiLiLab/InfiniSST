@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fill wordlings for a subset of the siqi train set, using local Qwen3 via vLLM.
+Fill term_map for a subset of the siqi train set, using local Qwen3 via vLLM.
 
 Steps:
 - Randomly sample 50% (configurable) of the input jsonl lines, with optional limit.
@@ -14,7 +14,7 @@ Steps:
 - Compute multiple_number = ceil(len(zh_tokens) / clip_count); Chinese tokens are
   chunked by this size to form clips. Distribute terms + buzz to the corresponding
   clip, capped at 5 per clip, preserving order (terms first, then buzz).
-- Inject per-clip wordlings into the matched user messages only.
+- Inject per-clip term_map into user messages containing <audio> tags in key=value format.
 """
 
 import argparse
@@ -30,20 +30,20 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
 
-DEFAULT_INPUT = "/mnt/gemini/data1/jiaxuanluo/siqi_train_wordlings.jsonl"
-DEFAULT_OUTPUT = "/mnt/gemini/data1/jiaxuanluo/siqi_train_wordlings_filled_v2_test.jsonl"
+DEFAULT_INPUT = "/mnt/gemini/data1/jiaxuanluo/siqi_train_term_map.jsonl"
+DEFAULT_OUTPUT = "/mnt/gemini/data1/jiaxuanluo/siqi_train_term_map_filled_v2_test.jsonl"
 DEFAULT_TSV = (
     "/mnt/taurus/data/siqiouyang/datasets/gigaspeech/"
     "train_xl_case_ft-qwen2.5-32b-instruct_marked_mfa_punc_asr.tsv"
 )
 DEFAULT_MODEL_PATH = "/mnt/gemini/data2/jiaxuanluo/Qwen3-Omni-30B-A3B-Instruct"
 
-logger = logging.getLogger("fill_wordlings")
+logger = logging.getLogger("fill_term_map")
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Fill wordlings using local Qwen3 (vLLM) based on English ASR and Chinese translations."
+        description="Fill term_map using local Qwen3 (vLLM) based on English ASR and Chinese translations."
     )
     parser.add_argument("--input", default=DEFAULT_INPUT, help="Source jsonl path.")
     parser.add_argument("--output", default=DEFAULT_OUTPUT, help="Destination jsonl path.")
@@ -428,7 +428,7 @@ def process_batch(
                 content = (out.outputs[0].text or "").strip()
                 logger.info("LLM raw output (truncated, idx=%s): %s", idx, _truncate_log(content))
                 parsed = _parse_model_json(content)
-                terms, buzz = build_wordling_lists(parsed)
+                terms, buzz = build_term_map_lists(parsed)
                 if args.no_buzz:
                     buzz = []
                 if len(terms) < 2:
@@ -436,9 +436,9 @@ def process_batch(
 
                 num_clips = count_clip_slots(rec.get("messages", []), pdata["audios"])
                 multiple_number, token_groups = compute_clip_groups(pdata["asr_entry"].get("zh_tokens", []), num_clips)
-                per_clip = distribute_wordlings_by_clip(terms, buzz, num_clips=num_clips, max_per_clip=5)
+                per_clip = distribute_term_map_by_clip(terms, buzz, num_clips=num_clips, max_per_clip=5)
 
-                new_rec = {**rec, "messages": inject_wordlings_by_clip(rec.get("messages", []), per_clip)}
+                new_rec = {**rec, "messages": inject_term_map_by_clip(rec.get("messages", []), per_clip)}
                 result[idx] = new_rec
             except Exception as exc:
                 logger.warning("LLM batch failed for idx=%s utt_id=%s: %s", idx, pdata["utt_id"], exc)
@@ -447,7 +447,7 @@ def process_batch(
     return result
 
 
-def build_wordling_lists(payload: Dict) -> Tuple[List[Tuple[str, str]], List[Tuple[str, str]]]:
+def build_term_map_lists(payload: Dict) -> Tuple[List[Tuple[str, str]], List[Tuple[str, str]]]:
     terms: List[Tuple[str, str]] = []
     buzz: List[Tuple[str, str]] = []
     for item in payload.get("terms", []):
@@ -463,15 +463,15 @@ def build_wordling_lists(payload: Dict) -> Tuple[List[Tuple[str, str]], List[Tup
     return terms, buzz
 
 
-def distribute_wordlings_by_clip(
+def distribute_term_map_by_clip(
     terms: List[Tuple[str, str]],
     buzz: List[Tuple[str, str]],
     num_clips: int,
     max_per_clip: int = 5,
 ) -> List[Dict[str, str]]:
-    clip_wordlings: List[Dict[str, str]] = []
+    clip_term_maps: List[Dict[str, str]] = []
     if num_clips <= 0:
-        return clip_wordlings
+        return clip_term_maps
     term_chunk = max(1, math.ceil(len(terms) / num_clips)) if terms else 0
     buzz_chunk = max(1, math.ceil(len(buzz) / num_clips)) if buzz else 0
     for i in range(num_clips):
@@ -481,13 +481,13 @@ def distribute_wordlings_by_clip(
         if buzz_chunk:
             per_clip.extend(buzz[i * buzz_chunk : (i + 1) * buzz_chunk])
         per_clip = per_clip[:max_per_clip]
-        clip_wordlings.append({en: zh for en, zh in per_clip})
-    return clip_wordlings
+        clip_term_maps.append({en: zh for en, zh in per_clip})
+    return clip_term_maps
 
 
 def count_clip_slots(messages: List[Dict], audios: List[str]) -> int:
     msg_slots = sum(
-        1 for m in messages if m.get("role") == "user" and "wordlings:" in m.get("content", "")
+        1 for m in messages if m.get("role") == "user" and "<audio>" in m.get("content", "")
     )
     return msg_slots if msg_slots > 0 else len(audios)
 
@@ -504,14 +504,19 @@ def compute_clip_groups(zh_tokens: List[str], clip_count: int) -> Tuple[int, Lis
     return multiple_number, groups
 
 
-def inject_wordlings_by_clip(messages: List[Dict], per_clip_wordlings: List[Dict[str, str]]) -> List[Dict]:
+def inject_term_map_by_clip(messages: List[Dict], per_clip_term_maps: List[Dict[str, str]]) -> List[Dict]:
     new_messages: List[Dict] = []
     clip_idx = 0
     for msg in messages:
-        if msg.get("role") == "user" and "wordlings:" in msg.get("content", ""):
-            wl = per_clip_wordlings[clip_idx] if clip_idx < len(per_clip_wordlings) else {}
-            wordlings_str = json.dumps(wl, ensure_ascii=False)
-            content = msg["content"].replace("wordlings: {}", f"wordlings: {wordlings_str}")
+        if msg.get("role") == "user" and "<audio>" in msg.get("content", ""):
+            tm = per_clip_term_maps[clip_idx] if clip_idx < len(per_clip_term_maps) else {}
+            # Format as key=value pairs, one per line
+            term_map_lines = [f"{en}={zh}" for en, zh in tm.items()]
+            term_map_str = "\n".join(term_map_lines)
+            # Append term_map after <audio> tag
+            content = msg["content"]
+            if term_map_str:
+                content = content + f"\n\nterm_map:\n{term_map_str}"
             new_messages.append({**msg, "content": content})
             clip_idx += 1
         else:
@@ -546,16 +551,16 @@ def process_record(
                 zh_tokens=asr_entry.get("zh_tokens", []),
                 args=args,
             )
-            terms, buzz = build_wordling_lists(payload)
+            terms, buzz = build_term_map_lists(payload)
             if len(terms) < 2:
                 raise RuntimeError(f"Too few terms returned: {terms}")
 
             num_clips = count_clip_slots(rec.get("messages", []), audios)
             multiple_number, token_groups = compute_clip_groups(asr_entry.get("zh_tokens", []), num_clips)
-            per_clip = distribute_wordlings_by_clip(terms, buzz, num_clips=num_clips, max_per_clip=5)
+            per_clip = distribute_term_map_by_clip(terms, buzz, num_clips=num_clips, max_per_clip=5)
 
-            rec = {**rec, "messages": inject_wordlings_by_clip(rec.get("messages", []), per_clip)}
-            rec["wordlings_meta"] = {
+            rec = {**rec, "messages": inject_term_map_by_clip(rec.get("messages", []), per_clip)}
+            rec["term_map_meta"] = {
                 "utt_id": utt_id,
                 "english_asr": english_asr,
                 "zh_tokens": asr_entry.get("zh_tokens", []),
