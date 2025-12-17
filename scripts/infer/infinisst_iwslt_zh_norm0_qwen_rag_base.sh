@@ -67,7 +67,7 @@ simuleval \
     --min-start-sec ${ms} \
     --source dev.source \
     --target dev.target.${lang_code} \
-    --output ${save_dir}/infinisst_acl6060_rag/cache${max_llm_cache_size}_seg${src_segment_size}_beam${beam}_ms${ms}_nrnl${no_repeat_ngram_lookback}_nrns${no_repeat_ngram_size} \
+    --output ${save_dir}/infinisst_acl6060_base/cache${max_llm_cache_size}_seg${src_segment_size}_beam${beam}_ms${ms}_nrnl${no_repeat_ngram_lookback}_nrns${no_repeat_ngram_size} \
     --model-type w2v2_qwen25 \
     --w2v2-path ${w2v2_path} \
     --w2v2-type ${w2v2_type} \
@@ -94,14 +94,4 @@ simuleval \
     \
     --quality-metrics BLEU \
     --eval-latency-unit ${unit} \
-    --sacrebleu-tokenizer ${tokenizer} \
-    --rag-enabled \
-    --rag-index-path /mnt/gemini/data2/jiaxuanluo/indices/qwen2_audio_term_index_acl6060.pkl \
-    --rag-model-path /mnt/gemini/data2/jiaxuanluo/models/qwen2_audio_term_level_modal_v2_best.pt \
-    --rag-base-model Qwen/Qwen2-Audio-7B-Instruct \
-    --rag-device cuda:0 \
-    --rag-top-k 5 \
-    --rag-target-lang zh \
-    --rag-lora-r 16 \
-    --rag-lora-alpha 32 \
-    --rag-lora-dropout 0.0 \
+    --sacrebleu-tokenizer ${tokenizer}

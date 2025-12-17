@@ -1,9 +1,11 @@
 import os
 import re
+import json
+import pickle
 import contextlib
 from time import perf_counter
 
-from typing import Optional
+from typing import Optional, List, Dict
 from simuleval.agents.states import AgentStates
 from simuleval.utils import entrypoint
 from simuleval.data.segments import SpeechSegment
@@ -14,6 +16,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 import transformers
 from transformers import AutoProcessor
@@ -45,6 +48,11 @@ from train.dataset import (
 )
 
 import logging
+
+try:
+    import faiss  # type: ignore
+except ImportError:
+    faiss = None
 logger = logging.getLogger(__name__)
 
 def synchronized_timer(description: str):
@@ -68,6 +76,7 @@ class S2TAgentStates(AgentStates):
     target_ids: list
     segment_idx: int
     translations_list: list
+    references: List[Dict[str, str]]
     MAX_SRC_LEN = 16000 * 30
 
     def reset(self):
@@ -78,6 +87,284 @@ class S2TAgentStates(AgentStates):
         self.target_ids = []
         self.segment_idx = 0
         self.translations_list = []
+        self.references = []
+
+
+class ProcessorAudioAlias:
+    def __init__(self, processor):
+        self.processor = processor
+
+    def __call__(self, *args, **kwargs):
+        if "audio" in kwargs and "audios" not in kwargs:
+            kwargs["audios"] = kwargs.pop("audio")
+        return self.processor(*args, **kwargs)
+
+    def __getattr__(self, item):
+        return getattr(self.processor, item)
+
+
+class TokenizerKwCleaner:
+    def __init__(self, tokenizer):
+        self.tokenizer = tokenizer
+
+    def __call__(self, *args, **kwargs):
+        kwargs.pop("audio", None)
+        kwargs.pop("audios", None)
+        return self.tokenizer(*args, **kwargs)
+
+    def __getattr__(self, item):
+        return getattr(self.tokenizer, item)
+
+
+class TermRAGRetriever:
+    def __init__(
+        self,
+        index_path: Optional[str],
+        model_path: Optional[str],
+        base_model_name: str = "Qwen/Qwen2-Audio-7B-Instruct",
+        device: str = "cuda:0",
+        lora_r: int = 16,
+        lora_alpha: int = 32,
+        lora_dropout: float = 0.0,
+        top_k: int = 5,
+        target_lang: str = "zh",
+    ):
+        self.enabled = False
+        self.index = None
+        self.term_list: List[Dict[str, object]] = []
+        self.embedding_dim = 512
+        self.device_str = device
+        if device and device.startswith("cuda") and torch.cuda.is_available():
+            self.device = torch.device(device)
+        else:
+            self.device = torch.device("cpu")
+            if device and device.startswith("cuda"):
+                logger.warning("CUDA unavailable, falling back to CPU for RAG retriever")
+        self.top_k = top_k
+        self.target_lang = target_lang.lower() if target_lang else "zh"
+        self.model = None
+        self.speech_encoder = None
+
+        if faiss is None:
+            logger.warning("FAISS is not available; disabling RAG retriever")
+            return
+        if not index_path or not os.path.exists(index_path):
+            logger.warning("RAG index path is missing; disabling RAG retriever")
+            return
+        try:
+            self._load_index(index_path)
+        except Exception as exc:
+            logger.exception("Failed to load RAG index from %s: %s", index_path, exc)
+            return
+
+        if not model_path or not os.path.exists(model_path):
+            logger.warning("RAG model checkpoint not found at %s; disabling RAG retriever", model_path)
+            return
+
+        try:
+            self._load_model(
+                model_path=model_path,
+                base_model_name=base_model_name,
+                lora_r=lora_r,
+                lora_alpha=lora_alpha,
+                lora_dropout=lora_dropout,
+            )
+        except Exception as exc:
+            logger.exception("Failed to load RAG model: %s", exc)
+            self.index = None
+            self.term_list = []
+            return
+
+        self.enabled = self.index is not None and self.model is not None
+        if self.enabled:
+            logger.info(
+                "TermRAGRetriever initialized with %d terms (embedding_dim=%d, top_k=%d, target_lang=%s)",
+                len(self.term_list),
+                self.embedding_dim,
+                self.top_k,
+                self.target_lang,
+            )
+
+    def _load_index(self, index_path: str):
+        with open(index_path, "rb") as f:
+            data = pickle.load(f)
+        serialized_index = data.get("faiss_index")
+        if isinstance(serialized_index, bytes):
+            serialized_index = np.frombuffer(serialized_index, dtype=np.uint8)
+        elif isinstance(serialized_index, bytearray):
+            serialized_index = np.frombuffer(bytes(serialized_index), dtype=np.uint8)
+        elif isinstance(serialized_index, np.ndarray):
+            if serialized_index.dtype != np.uint8:
+                serialized_index = serialized_index.astype(np.uint8)
+        else:
+            raise ValueError(f"Unsupported faiss_index type: {type(serialized_index)}")
+        self.index = faiss.deserialize_index(serialized_index)
+        self.term_list = data.get("term_list", [])
+        self.embedding_dim = int(data.get("embedding_dim", 512))
+
+    def _load_model(
+        self,
+        model_path: str,
+        base_model_name: str,
+        lora_r: int,
+        lora_alpha: int,
+        lora_dropout: float,
+    ):
+        from transformers import Qwen2AudioForConditionalGeneration, AutoProcessor
+        from peft import LoraConfig, get_peft_model, TaskType
+        from retriever.gigaspeech.modal.Qwen2_Audio_train import Qwen2AudioSpeechEncoder
+
+        processor = AutoProcessor.from_pretrained(base_model_name)
+        processor.tokenizer = TokenizerKwCleaner(processor.tokenizer)
+        processor = ProcessorAudioAlias(processor)
+        base_model = Qwen2AudioForConditionalGeneration.from_pretrained(
+            base_model_name,
+            torch_dtype=torch.float16,
+        ).to(self.device)
+        base_model.eval()
+
+        target_modules = [
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj",
+        ]
+        lora_config = LoraConfig(
+            task_type=TaskType.CAUSAL_LM,
+            r=lora_r,
+            lora_alpha=lora_alpha,
+            lora_dropout=lora_dropout,
+            target_modules=target_modules,
+            bias="none",
+        )
+        base_model = get_peft_model(base_model, lora_config)
+        base_model.eval()
+
+        speech_encoder = Qwen2AudioSpeechEncoder.__new__(Qwen2AudioSpeechEncoder)
+        speech_encoder.device = self.device
+        speech_encoder.model_name = base_model_name
+        speech_encoder.processor = processor
+        speech_encoder.model = base_model
+        speech_encoder._analyze_model_structure()
+
+        speech_hidden = speech_encoder.get_hidden_size()
+
+        class SimpleContrastiveModel(nn.Module):
+            def __init__(self, speech_encoder, speech_hidden_dim, proj_dim, device):
+                super().__init__()
+                self.speech_encoder = speech_encoder
+                self.proj_speech = nn.Linear(speech_hidden_dim, proj_dim).to(device)
+
+            def encode_audio(self, audio_inputs):
+                with torch.no_grad():
+                    emb = self.speech_encoder.predict(audio_inputs)
+                if not isinstance(emb, torch.Tensor):
+                    emb = torch.as_tensor(emb)
+                emb = emb.float().to(self.proj_speech.weight.device)
+                if emb.dim() == 3:
+                    emb = emb.mean(dim=1)
+                return F.normalize(self.proj_speech(emb), dim=-1)
+
+        model = SimpleContrastiveModel(
+            speech_encoder,
+            speech_hidden_dim=speech_hidden,
+            proj_dim=self.embedding_dim,
+            device=self.device,
+        )
+
+        checkpoint = torch.load(model_path, map_location=self.device)
+        if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
+            state_dict = checkpoint["model_state_dict"]
+        else:
+            state_dict = checkpoint
+        if state_dict:
+            first_key = next(iter(state_dict))
+            if first_key.startswith("module."):
+                state_dict = {k[7:]: v for k, v in state_dict.items()}
+
+        proj_state = {}
+        lora_state = {}
+        for key, value in state_dict.items():
+            if key.startswith("proj_speech"):
+                proj_state[key] = value
+            elif key.startswith("proj_text"):
+                continue
+            elif "lora_" in key or "base_model" in key:
+                if key.startswith("speech_qwen2_model.") or key.startswith("text_qwen2_model."):
+                    new_key = key.split(".", 1)[1] if "." in key else key
+                    lora_state[new_key] = value
+                else:
+                    lora_state[key] = value
+
+        if proj_state:
+            filtered_proj = {k: v for k, v in proj_state.items() if k.startswith("proj_speech")}
+            missing, unexpected = model.load_state_dict(filtered_proj, strict=False)
+            if missing:
+                logger.debug("Missing projection keys for RAG model: %s", missing)
+            if unexpected:
+                logger.debug("Unexpected projection keys for RAG model: %s", unexpected)
+        if lora_state:
+            missing_keys, unexpected_keys = base_model.load_state_dict(lora_state, strict=False)
+            if missing_keys:
+                logger.debug("Missing LoRA keys during RAG load: %s", missing_keys[:10])
+            if unexpected_keys:
+                logger.debug("Unexpected LoRA keys during RAG load: %s", unexpected_keys[:10])
+
+        self.model = model.eval()
+        self.speech_encoder = speech_encoder
+
+    def retrieve(
+        self,
+        audio_tensor: torch.Tensor,
+        top_k: Optional[int] = None,
+        target_lang: Optional[str] = None,
+    ) -> List[Dict[str, str]]:
+        if not self.enabled or self.index is None or self.model is None:
+            return []
+        if not isinstance(audio_tensor, torch.Tensor):
+            audio_tensor = torch.tensor(audio_tensor)
+        audio_tensor = audio_tensor.detach().cpu().float()
+        if audio_tensor.numel() == 0:
+            return []
+        if audio_tensor.abs().sum().item() == 0.0:
+            return []
+
+        audio_np = audio_tensor.numpy()
+        audio_inputs = [audio_np]
+        with torch.no_grad():
+            embedding = self.model.encode_audio(audio_inputs)
+        if isinstance(embedding, torch.Tensor):
+            embedding = embedding.detach().cpu().float().numpy()
+
+        max_k = top_k or self.top_k
+        max_k = max(1, max_k)
+        D, I = self.index.search(embedding, max_k)
+
+        target_lang = (target_lang or self.target_lang or "zh").lower()
+        results: List[Dict[str, str]] = []
+        seen_terms = set()
+
+        for idx in I[0]:
+            if idx < 0 or idx >= len(self.term_list):
+                continue
+            term_entry = self.term_list[idx]
+            if not isinstance(term_entry, dict):
+                continue
+            term = term_entry.get("term", "")
+            if not term or term in seen_terms:
+                continue
+            seen_terms.add(term)
+            translation = ""
+            translations = term_entry.get("target_translations") or {}
+            if isinstance(translations, dict):
+                translation = translations.get(target_lang) or translations.get(target_lang.upper()) or ""
+            results.append({"term": term, "translation": translation})
+            if len(results) >= max_k:
+                break
+        return results
 
 @entrypoint
 class InfiniSST(SpeechToTextAgent):
@@ -126,6 +413,26 @@ class InfiniSST(SpeechToTextAgent):
         
         # model
         self.load_model(args)
+        self.rag_retriever = None
+        self.rag_top_k = getattr(args, "rag_top_k", 10)
+        self.rag_target_lang = getattr(args, "rag_target_lang", "zh")
+        if getattr(args, "rag_enabled", False):
+            self.rag_retriever = TermRAGRetriever(
+                index_path=getattr(args, "rag_index_path", None),
+                model_path=getattr(args, "rag_model_path", None),
+                base_model_name=getattr(args, "rag_base_model", "Qwen/Qwen2-Audio-7B-Instruct"),
+                device=getattr(args, "rag_device", "cuda:0"),
+                lora_r=getattr(args, "rag_lora_r", 16),
+                lora_alpha=getattr(args, "rag_lora_alpha", 32),
+                lora_dropout=getattr(args, "rag_lora_dropout", 0.0),
+                top_k=self.rag_top_k,
+                target_lang=self.rag_target_lang,
+            )
+            if not self.rag_retriever or not self.rag_retriever.enabled:
+                logger.warning("RAG retriever not operational; continuing without references")
+                self.rag_retriever = None
+        else:
+            logger.info("RAG retrieval disabled for InfiniSST agent")
     
     @staticmethod
     def add_args(parser):
@@ -145,6 +452,16 @@ class InfiniSST(SpeechToTextAgent):
         parser.add_argument("--output-file", type=str, default="translations.json", help="Output file for sampling")
         parser.add_argument("--pseudo-batch-size", type=int, default=1)
         parser.add_argument("--audio-normalize", type=int, default=0)
+        parser.add_argument("--rag-enabled", action='store_true', help="Enable glossary RAG retrieval for prompt augmentation")
+        parser.add_argument("--rag-index-path", type=str, default=None, help="Path to prebuilt RAG FAISS index (.pkl)")
+        parser.add_argument("--rag-model-path", type=str, default=None, help="Path to trained RAG contrastive checkpoint")
+        parser.add_argument("--rag-base-model", type=str, default="Qwen/Qwen2-Audio-7B-Instruct", help="Base model name for RAG encoder")
+        parser.add_argument("--rag-device", type=str, default="cuda:0", help="Device identifier for RAG encoder")
+        parser.add_argument("--rag-top-k", type=int, default=10, help="Number of glossary terms to retrieve per chunk")
+        parser.add_argument("--rag-target-lang", type=str, default="zh", help="Target language key for term translations")
+        parser.add_argument("--rag-lora-r", type=int, default=16, help="LoRA rank for RAG model loading")
+        parser.add_argument("--rag-lora-alpha", type=int, default=32, help="LoRA alpha for RAG model loading")
+        parser.add_argument("--rag-lora-dropout", type=float, default=0.0, help="LoRA dropout for RAG model loading")
 
     def build_states(self):
         return S2TAgentStates(
@@ -153,7 +470,8 @@ class InfiniSST(SpeechToTextAgent):
             past_key_values=None,
             target_ids=[],
             segment_idx=0,
-            translations_list=[]
+            translations_list=[],
+            references=[]
         )
     
     def update_multiplier(self, multiplier):
@@ -358,6 +676,8 @@ class InfiniSST(SpeechToTextAgent):
             self.load_seamless_llama31(args)
         elif args.model_type == 'w2v2_qwen25':
             self.load_w2v2_qwen25(args)
+        elif args.model_type == "qwen3_omni":
+            self.load_qwen3_omni(args)
         else:
             raise ValueError(f"Unsupported model type: {args.model_type}")
 
@@ -372,8 +692,14 @@ class InfiniSST(SpeechToTextAgent):
         source = states.source
         if self.audio_normalize:
             source = normalize(torch.tensor(states.source).unsqueeze(0))[0].tolist()
-           
-        source = torch.tensor(source[states.src_len:])
+        
+        new_segment = source[states.src_len:]
+        if len(new_segment) > 0:
+            rag_audio_tensor = torch.tensor(new_segment, dtype=torch.float32)
+        else:
+            rag_audio_tensor = torch.tensor([], dtype=torch.float32)
+
+        source = torch.tensor(new_segment)
         
         # Pad if needed
         if source.size(0) % sp_seg_frame != 0:
@@ -407,7 +733,7 @@ class InfiniSST(SpeechToTextAgent):
         states.src_len = len(states.source)
 
         speech_batch = source.unsqueeze(0).to(device=self.model.device, dtype=self.model.dtype)
-        return speech_batch
+        return speech_batch, rag_audio_tensor
 
     def _prepare_inputs(self, states):
         messages = []
@@ -428,10 +754,15 @@ class InfiniSST(SpeechToTextAgent):
                 truncation=False, 
                 add_special_tokens=False
             ).size(1)
+        reference_block = ""
+        if states.references:
+            reference_payload = {"reference": states.references}
+            reference_block = json.dumps(reference_payload, ensure_ascii=False) + "\n"
+        user_content = reference_block + (sp_seg_token * DEFAULT_SPEECH_PATCH_TOKEN)
         messages.append(
             {
                 "role": "user",
-                "content": sp_seg_token * DEFAULT_SPEECH_PATCH_TOKEN
+                "content": user_content
             }
         )
         messages.append(
@@ -482,7 +813,23 @@ class InfiniSST(SpeechToTextAgent):
             return WriteAction(content="", finished=True)
         
         with synchronized_timer('generate'):
-            speech_batch = self._prepare_speech(states)
+            speech_batch, rag_audio_tensor = self._prepare_speech(states)
+            if self.rag_retriever:
+                if rag_audio_tensor.numel() > 0:
+                    references = self.rag_retriever.retrieve(
+                        rag_audio_tensor,
+                        top_k=self.rag_top_k,
+                        target_lang=self.rag_target_lang,
+                    )
+                    states.references = references
+                    if references:
+                        print(f"[RAG] {json.dumps({'reference': references}, ensure_ascii=False)}")
+                    else:
+                        states.references = []
+                else:
+                    states.references = []
+            else:
+                states.references = []
             input_ids = self._prepare_inputs(states)
 
             if self.args.model_type == "seamless_llama31":

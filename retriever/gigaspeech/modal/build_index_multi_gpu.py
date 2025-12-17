@@ -35,9 +35,8 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 from Qwen2_Audio_train import (
     Qwen2AudioSpeechEncoder,
-    Qwen2AudioTextEncoder, 
+    Qwen2AudioTextEncoder,
     ContrastiveQwen2AudioModel,
-    load_glossary_terms
 )
 from peft import LoraConfig, get_peft_model, TaskType
 
@@ -396,6 +395,8 @@ def main():
     parser.add_argument('--lora_alpha', type=int, default=32, help='LoRA alpha')
     parser.add_argument('--num_gpus', type=int, default=4, help='使用的GPU数量')
     parser.add_argument('--batch_size', type=int, default=4, help='每个GPU的batch size')
+    parser.add_argument('--import_glossary', type=str, default=None, help='Optional glossary JSON that overrides --glossary_path')
+    parser.add_argument('--exclude_confused', action='store_true', help='Exclude glossary entries flagged as confused')
     
     args = parser.parse_args()
     
@@ -431,10 +432,45 @@ def main():
     print("\n" + "="*80)
     print("LOADING GLOSSARY")
     print("="*80)
-    print(f"[INFO] Loading glossary from: {args.glossary_path}")
-    all_glossary_terms = load_glossary_terms(args.glossary_path)
-    all_glossary_terms = list(set(t.lower() for t in all_glossary_terms if t and len(t.strip()) >= 3))
-    print(f"[INFO] Loaded {len(all_glossary_terms)} unique terms")
+    glossary_path = args.import_glossary or args.glossary_path
+    print(f"[INFO] Loading glossary from: {glossary_path}")
+    with open(glossary_path, "r", encoding="utf-8") as f:
+        glossary_raw = json.load(f)
+
+    if isinstance(glossary_raw, dict):
+        glossary_items = list(glossary_raw.items())
+    elif isinstance(glossary_raw, list):
+        glossary_items = []
+        for item in glossary_raw:
+            if isinstance(item, dict) and item.get("term"):
+                glossary_items.append((item["term"], item))
+            elif isinstance(item, str):
+                glossary_items.append((item, {"term": item}))
+    else:
+        raise ValueError(f"Unsupported glossary format: {type(glossary_raw)}")
+
+    filtered_entries = []
+    seen_terms = set()
+    dropped_confused = 0
+    for term, payload in glossary_items:
+        if not term:
+            continue
+        entry = dict(payload) if isinstance(payload, dict) else {"term": term}
+        entry.setdefault("term", term)
+        normalized = entry["term"].strip().lower()
+        if normalized in seen_terms:
+            continue
+        if args.exclude_confused and entry.get("confused", False):
+            dropped_confused += 1
+            continue
+        seen_terms.add(normalized)
+        filtered_entries.append(entry)
+
+    if not filtered_entries:
+        raise RuntimeError("No glossary entries left after filtering.")
+
+    all_glossary_terms = [entry["term"] for entry in filtered_entries]
+    print(f"[INFO] Loaded {len(filtered_entries)} terms (raw: {len(glossary_items)}, dropped_confused: {dropped_confused})")
     
     # 预先下载模型（避免多线程并发下载冲突）
     print("\n" + "="*80)
@@ -577,7 +613,7 @@ def main():
     
     index_data = {
         'faiss_index': faiss.serialize_index(index),
-        'term_list': [{'term': t} for t in all_glossary_terms],
+        'term_list': filtered_entries,
         'num_terms': len(all_glossary_terms),
         'embedding_dim': 512
     }
