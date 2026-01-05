@@ -197,6 +197,7 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
         
         # model
         self.use_vllm = args.use_vllm
+        self.gpu_memory_utilization = getattr(args, "gpu_memory_utilization", 0.8)
         self.debug_llm_io = bool(getattr(args, "debug_llm_io", False))
         self.debug_filter_term = (getattr(args, "debug_filter_term", "") or "").strip()
         self.debug_max_chars = int(getattr(args, "debug_max_chars", 6000))
@@ -226,6 +227,7 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
         add_gen_args(parser)
         parser.add_argument("--model-name", type=str, default="Qwen/Qwen3-Omni-30B-A3B-Instruct")
         parser.add_argument("--use-vllm", type=int, default=0)
+        parser.add_argument("--gpu-memory-utilization", type=float, default=0.8)
         parser.add_argument("--max-cache-chunks", type=int, default=120)
         parser.add_argument("--keep-cache-chunks", type=int, default=60)
         parser.add_argument("--vllm-segment-sec", type=float, default=0.96)
@@ -270,7 +272,7 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
 
     def load_model(self, args):
         if args.use_vllm:
-            gpu_memory_util = 0.9
+            gpu_memory_util = self.gpu_memory_utilization
             tp_size = 2
             self.model = LLM(
                 model=args.model_name, 
@@ -341,12 +343,12 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
         return increment
 
     def _prepare_inputs(self, states, increment, references):
+        rag_enabled = getattr(self, "rag_enabled", False)
         if len(states.messages) == 0:
-            rag_enabled = getattr(self, "rag_enabled", False)
             if rag_enabled:
-                system_text = "You are a professional simultaneous interpreter. Your task is to translate {self.source_lang} audio chunks into accurate and fluent {self.target_lang}. Use the ‘term_map’ as a reference for terminology if provided."
+                system_text = f"You are a professional simultaneous interpreter. Your task is to translate {self.source_lang} audio chunks into accurate and fluent {self.target_lang}. Use the ‘term_map’ as a reference for terminology if provided."
             else:
-                system_text = "You are a professional simultaneous interpreter. Your task is to translate {self.source_lang} audio chunks into accurate and fluent {self.target_lang}."
+                system_text = f"You are a professional simultaneous interpreter. Your task is to translate {self.source_lang} audio chunks into accurate and fluent {self.target_lang}."
             states.messages.append({"role": "system", "content": [{"type": "text", "text": system_text}]})
         
         user_content = [{"type": "audio", "audio": increment}]

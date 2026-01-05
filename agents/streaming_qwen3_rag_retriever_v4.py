@@ -102,6 +102,16 @@ class Qwen3OmniRetriever(nn.Module):
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
 
     def forward(self, input_features, feature_lens):
+        # The Qwen3 audio encoder expects "packed" 2D features: [C, sum(T_i)] and uses
+        # `feature_lens` to split along the time axis internally.
+        #
+        # In some callers (e.g. offline ACL simulation), we receive 3D features:
+        #   input_features: [B, C, T]
+        # We must pack them to avoid shape/length mismatch in `split_with_sizes`.
+        if input_features.ndim == 3:
+            # [B, C, T] -> [C, B*T]
+            input_features = input_features.transpose(0, 1).reshape(input_features.shape[1], -1)
+
         outputs = self.audio_encoder(input_features, feature_lens)
         hidden_states = outputs.last_hidden_state
         
