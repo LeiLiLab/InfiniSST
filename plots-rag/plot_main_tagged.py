@@ -23,52 +23,52 @@ data_en_zh = {
         'stremlaal': None  # No latency for offline model
     },
     'InfiniSST': {
-        'stremlaal': [1181, 1765, 2232, 2616],  # Model-specific latency values
-        'term_acc': [74.31, 76.55, 76.75, 77.54],  # 4 points
-        'bleu': [40.66, 45.82, 46.71, 47.38]
+        'stremlaal': [1179, 1837, 2331, 2718],  # Model-specific latency values
+        'term_acc': [73.3, 77.0, 77.9, 77.1],  # 4 points
+        'bleu': [42.30, 46.15, 47.53, 49.41]
     },
     'RASST': {
-        'stremlaal': [1225, 1781, 2258, 2664],  # Different latency values
-        'term_acc': [82.41, 83.93, 85.77, 85.51],  # 4 points, better
-        'bleu': [44.22, 48.75, 49.15, 49.68]
+        'stremlaal': [600, 1200, 1800, 2400],  # Different latency values
+        'term_acc': [75.8, 80.2, 82.7, 84.5],  # 4 points, better
+        'bleu': [24.2, 26.5, 27.9, 28.2]
     }
 }
 
 # En-De data
 data_en_de = {
     'Offline ST': {
-        'term_acc': 70.57,
+        'term_acc': 63.89,
         'bleu': 35.76,
         'stremlaal': None
     },
     'InfiniSST': {
-        'stremlaal': [1124, 1773, 2383, 2808],
-        'term_acc': [64.96, 67.44, 68.64, 68.81],
-        'bleu': [27.46, 31.63, 31.70, 32.67]
+        'stremlaal': [1081, 1618, 2232, 2796],
+        'term_acc': [63.6, 69.6, 66.3, 66.1],
+        'bleu': [26.11, 29.85, 30.24, 31.92]
     },
     'RASST': {
-        'stremlaal': [1055, 1698, 2233, 2744],
-        'term_acc': [73.78, 80.03, 78.51, 80.75],
-        'bleu': [27.43, 32.19, 33.19, 34.60]
+        'stremlaal': [600, 1200, 1800, 2400],
+        'term_acc': [73.2, 77.8, 80.3, 82.0],
+        'bleu': [22.8, 24.9, 26.1, 26.5]
     }
 }
 
 # En-Ja data
 data_en_ja = {
     'Offline ST': {
-        'term_acc': 66.24,
+        'term_acc': 70.39,
         'bleu': 32.9,
         'stremlaal': None
     },
     'InfiniSST': {
-        'stremlaal': [1571, 2300, 2707, 3252],
-        'term_acc': [63.31, 65.64, 67.24, 67.51],
-        'bleu': [22.01, 27.87, 29.30, 30.60]
+        'stremlaal': [1253, 2266, 2686, 3040],
+        'term_acc': [60.5, 65.0, 65.8, 67.0],
+        'bleu': [19.9, 27.4, 28.4, 29.1]
     },
     'RASST': {
-        'stremlaal': [1309, 2092, 2592, 3071],
-        'term_acc': [77.05, 79.19, 82.39, 82.66],
-        'bleu': [20.19, 28.29, 31.80, 32.53]
+        'stremlaal': [600, 1200, 1800, 2400],
+        'term_acc': [70.5, 75.3, 78.1, 79.2],
+        'bleu': [20.9, 22.8, 23.9, 24.1]
     }
 }
 
@@ -144,32 +144,20 @@ for col, lang_pair in enumerate(lang_pairs):
         # Add grid
         ax.grid(True, alpha=0.3, linestyle=':', linewidth=0.5)
         
-        # Set x-axis limits and ticks based on language pair
-        if lang_pair == 'En-Zh':
-            ax.set_xlim(1000, 2900)
-            ax.set_xticks([1000, 1500, 2000, 2500])
-        elif lang_pair == 'En-De':
-            ax.set_xlim(1000, 2900)
-            ax.set_xticks([1000, 1500, 2000, 2500])
-        else:  # En-Ja
-            ax.set_xlim(1000, 3500)
-            ax.set_xticks([1000, 1500, 2000, 2500, 3000, 3500])
+        # Set fixed x-axis limits and ticks (adjusted for data range up to 3040)
+        ax.set_xlim(500, 3200)
+        ax.set_xticks([500, 1000, 1500, 2000, 2500, 3000])
         
         # Set y-axis limits based on metric and language pair
         if metric == 'term_acc':
-            if lang_pair == 'En-Zh':
-                ax.set_ylim(72, 88)
-            elif lang_pair == 'En-De':
-                ax.set_ylim(63, 82)
-            else:  # En-Ja
-                ax.set_ylim(62, 84)
+            ax.set_ylim(55, 90)
         else:  # bleu
             if lang_pair == 'En-Zh':
-                ax.set_ylim(39, 51)
+                ax.set_ylim(20, 55)
             elif lang_pair == 'En-De':
-                ax.set_ylim(26, 37)
+                ax.set_ylim(20, 40)
             else:  # En-Ja
-                ax.set_ylim(19, 34)
+                ax.set_ylim(18, 35)
         
         # Format y-axis
         ax.yaxis.set_major_formatter(plt.FormatStrFormatter('%.1f'))
