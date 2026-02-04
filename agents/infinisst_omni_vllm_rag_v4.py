@@ -5,6 +5,13 @@ import os
 # Must be set before any vllm imports
 os.environ['VLLM_USE_V1'] = '0'
 
+# ======Configuration=====
+EFF_PRINT_DECIMALS = 4
+DEFAULT_GEN_SEED = 998244353
+DEFAULT_VLLM_ENABLE_PREFIX_CACHING = 1
+VLLM_ENABLE_PREFIX_CACHING_ENV = "VLLM_ENABLE_PREFIX_CACHING"
+# ======Configuration=====
+
 import re
 import json
 import pickle
@@ -68,6 +75,23 @@ def synchronized_timer(description: str):
         print(f"{description}: {elapsed_time:.4f} seconds")
     return timer_with_sync()
 
+@contextlib.contextmanager
+def synchronized_elapsed_timer():
+    """
+    CUDA-synchronized wall-clock timer.
+    Returns elapsed seconds via a single-element dict: {"sec": float}.
+    """
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+    t0 = perf_counter()
+    out = {"sec": 0.0}
+    try:
+        yield out
+    finally:
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        out["sec"] = float(perf_counter() - t0)
+
 
 class ProcessorAudioAlias:
     def __init__(self, processor):
@@ -106,6 +130,11 @@ class S2TAgentStates(AgentStates):
     rag_processed_samples: int
     # Last vLLM call position
     last_vllm_src_len: int
+    # Efficiency tracking
+    rag_window_total_sec: float
+    rag_window_total_count: int
+    rag_window_sec_since_last_vllm: float
+    rag_window_count_since_last_vllm: int
     MAX_SRC_LEN = 16000 * 3600  # 1 hour
 
     def reset(self):
@@ -117,6 +146,10 @@ class S2TAgentStates(AgentStates):
         self.references = []
         self.rag_processed_samples = 0
         self.last_vllm_src_len = 0
+        self.rag_window_total_sec = 0.0
+        self.rag_window_total_count = 0
+        self.rag_window_sec_since_last_vllm = 0.0
+        self.rag_window_count_since_last_vllm = 0
 
 
 @entrypoint
@@ -124,7 +157,8 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
 
     def __init__(self, args):
         super().__init__(args)
-        transformers.set_seed(998244353)
+        self.seed = int(getattr(args, "seed", DEFAULT_GEN_SEED))
+        transformers.set_seed(self.seed)
 
         # simuleval
         self.min_start_sec = args.min_start_sec
@@ -162,7 +196,8 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
         self.rag_retriever: Optional[StreamingQwen3RAGRetrieverV4] = None
         self.rag_top_k = getattr(args, "rag_top_k", 5)
         self.rag_target_lang = getattr(args, "rag_target_lang", "zh")
-        self.rag_conf_threshold = getattr(args, "rag_confidence_threshold", 0.5)
+        self.rag_conf_threshold = getattr(args, "rag_confidence_threshold", 0.0)
+        self.rag_conf_threshold_mode = getattr(args, "rag_confidence_threshold_mode", "absolute")
         self.rag_min_terms = int(getattr(args, "rag_min_terms", 0))
         
         # Sliding window parameters
@@ -186,6 +221,7 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
                 voting_k=getattr(args, "rag_voting_k", 20),
                 target_lang=self.rag_target_lang,
                 score_threshold=self.rag_conf_threshold,
+                score_threshold_mode=self.rag_conf_threshold_mode,
                 chunk_size=self.rag_chunk_size,
                 hop_size=self.rag_hop_size,
                 aggregation_strategy=getattr(args, "rag_strategy", "voting"),
@@ -198,6 +234,7 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
         # model
         self.use_vllm = args.use_vllm
         self.gpu_memory_utilization = getattr(args, "gpu_memory_utilization", 0.8)
+        self.vllm_enforce_eager = int(getattr(args, "vllm_enforce_eager", 0))
         self.debug_llm_io = bool(getattr(args, "debug_llm_io", False))
         self.debug_filter_term = (getattr(args, "debug_filter_term", "") or "").strip()
         self.debug_max_chars = int(getattr(args, "debug_max_chars", 6000))
@@ -228,6 +265,12 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
         parser.add_argument("--model-name", type=str, default="Qwen/Qwen3-Omni-30B-A3B-Instruct")
         parser.add_argument("--use-vllm", type=int, default=0)
         parser.add_argument("--gpu-memory-utilization", type=float, default=0.8)
+        parser.add_argument(
+            "--vllm-enforce-eager",
+            type=int,
+            default=0,
+            help="If 1, set vLLM enforce_eager=True (disable torch.compile/cudagraph; reduces first-token latency).",
+        )
         parser.add_argument("--max-cache-chunks", type=int, default=120)
         parser.add_argument("--keep-cache-chunks", type=int, default=60)
         parser.add_argument("--vllm-segment-sec", type=float, default=0.96)
@@ -244,6 +287,12 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
         parser.add_argument("--rag-lora-alpha", type=int, default=64)
         parser.add_argument("--rag-text-lora-r", type=int, default=16)
         parser.add_argument("--rag-confidence-threshold", type=float, default=0.5)
+        parser.add_argument(
+            "--rag-confidence-threshold-mode",
+            type=str,
+            default="absolute",
+            choices=["absolute", "relative"],
+        )
         parser.add_argument("--rag-min-terms", type=int, default=0)
         parser.add_argument("--rag-strategy", type=str, default="max_pool", choices=["voting", "max_pool"])
         parser.add_argument("--rag-chunk-size", type=float, default=1.92)
@@ -268,12 +317,21 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
             references=[],
             rag_processed_samples=0,
             last_vllm_src_len=0,
+            rag_window_total_sec=0.0,
+            rag_window_total_count=0,
+            rag_window_sec_since_last_vllm=0.0,
+            rag_window_count_since_last_vllm=0,
         )
 
     def load_model(self, args):
         if args.use_vllm:
             gpu_memory_util = self.gpu_memory_utilization
             tp_size = 2
+            enforce_eager = bool(int(getattr(self, "vllm_enforce_eager", 0)))
+            enable_prefix_caching = bool(
+                int(os.environ.get(VLLM_ENABLE_PREFIX_CACHING_ENV, str(DEFAULT_VLLM_ENABLE_PREFIX_CACHING)))
+            )
+
             self.model = LLM(
                 model=args.model_name, 
                 trust_remote_code=True, 
@@ -282,14 +340,15 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
                 limit_mm_per_prompt={'audio': self.max_cache_chunks},
                 max_num_seqs=1,
                 max_model_len=32768,
-                enable_prefix_caching=True,
-                enforce_eager=False,
+                enable_prefix_caching=enable_prefix_caching,
+                enforce_eager=enforce_eager,
             )
             self.sampling_params = SamplingParams(
                 temperature=self.temperature,
                 top_p=self.top_p,
                 top_k=self.top_k,
                 max_tokens=self.max_new_tokens,
+                seed=self.seed,
             )
         else:
             self.model = Qwen3OmniMoeForConditionalGeneration.from_pretrained(
@@ -343,13 +402,14 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
         return increment
 
     def _prepare_inputs(self, states, increment, references):
-        rag_enabled = getattr(self, "rag_enabled", False)
+        rag_enabled = bool(getattr(self, "rag_enabled", False)) or (self.rag_retriever is not None)
         if len(states.messages) == 0:
             if rag_enabled:
                 system_text = f"You are a professional simultaneous interpreter. Your task is to translate {self.source_lang} audio chunks into accurate and fluent {self.target_lang}. Use the ‘term_map’ as a reference for terminology if provided."
             else:
                 system_text = f"You are a professional simultaneous interpreter. Your task is to translate {self.source_lang} audio chunks into accurate and fluent {self.target_lang}."
             states.messages.append({"role": "system", "content": [{"type": "text", "text": system_text}]})
+            print(f"lang: {self.source_lang} -> {self.target_lang}, system_text: {system_text}, rag_enabled: {rag_enabled}")
         
         user_content = [{"type": "audio", "audio": increment}]
         norm_refs = self._normalize_references(references)
@@ -359,9 +419,11 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
                 reference_text = f"\n\nterm_map:\n{kv}"
                 user_content.append({"type": "text", "text": reference_text})
             else:
-                user_content.append({"type": "text", "text": "\n\nterm_map:NONE"})
+                #user_content.append({"type": "text", "text": "\n\nterm_map:NONE"})
+                pass
         elif rag_enabled:
-            user_content.append({"type": "text", "text": "\n\nterm_map:NONE"})
+            #user_content.append({"type": "text", "text": "\n\nterm_map:NONE"})
+            pass
         
         states.messages.append({"role": "user", "content": user_content})
 
@@ -426,14 +488,27 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
                 states.rag_processed_samples = new_samples_end
             
             if new_audio is not None or should_call_vllm or states.source_finished:
-                self.rag_retriever.accumulate_audio(
-                    new_audio, 
-                    force_process=states.source_finished
-                )
+                with synchronized_elapsed_timer() as t_rag:
+                    self.rag_retriever.accumulate_audio(
+                        new_audio,
+                        force_process=states.source_finished
+                    )
+                rag_sec = float(t_rag["sec"])
+                win_cnt = int(getattr(self.rag_retriever, "last_processed_windows", 0) or 0)
+                if win_cnt > 0:
+                    avg_win_sec = rag_sec / float(win_cnt)
+                    states.rag_window_total_sec += rag_sec
+                    states.rag_window_total_count += win_cnt
+                    states.rag_window_sec_since_last_vllm += rag_sec
+                    states.rag_window_count_since_last_vllm += win_cnt
+                    print(
+                        f"[TIME] rag_windows={win_cnt} rag_total_sec={rag_sec:.{EFF_PRINT_DECIMALS}f} "
+                        f"avg_sec_per_window={avg_win_sec:.{EFF_PRINT_DECIMALS}f}"
+                    )
         
         if not should_call_vllm: return ReadAction()
         
-        with synchronized_timer('generate'):
+        with synchronized_elapsed_timer() as t_gen:
             increment = self._prepare_speech(states)
             
             if self.debug_audio_dir:
@@ -475,6 +550,19 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
                 states.messages = [states.messages[0]] + states.messages[-2 * self.keep_cache_chunks:]
 
             if states.source_finished: states.segment_idx = -1
+
+        gen_sec = float(t_gen["sec"])
+        print(f"[TIME] vllm_generate_total_sec={gen_sec:.{EFF_PRINT_DECIMALS}f}")
+        if states.rag_window_count_since_last_vllm > 0 and gen_sec > 0:
+            avg_win_sec = states.rag_window_sec_since_last_vllm / float(states.rag_window_count_since_last_vllm)
+            ratio = avg_win_sec / gen_sec
+            print(
+                f"[EFF] rag_avg_window_sec={avg_win_sec:.{EFF_PRINT_DECIMALS}f} "
+                f"generate_sec={gen_sec:.{EFF_PRINT_DECIMALS}f} ratio={ratio:.{EFF_PRINT_DECIMALS}f} "
+                f"(rag_windows={states.rag_window_count_since_last_vllm})"
+            )
+        states.rag_window_sec_since_last_vllm = 0.0
+        states.rag_window_count_since_last_vllm = 0
 
         print(''.join(states.target))
         states.segment_idx += 1
