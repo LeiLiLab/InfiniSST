@@ -39,3 +39,4 @@ dist/
 *.txt
 *.err
 *.out
+*.jsonl
