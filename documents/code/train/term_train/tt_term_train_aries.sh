@@ -4,7 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=48
 #SBATCH --mem=256G
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:8
 #SBATCH --output=/mnt/gemini/data1/jiaxuanluo/logs/%j_qwen3_tts_term_train.out
 #SBATCH --error=/mnt/gemini/data1/jiaxuanluo/logs/%j_qwen3_tts_term_train.err
 
@@ -39,8 +39,8 @@ export WANDB_MODE=online
 WANDB_PROJECT="qwen3_rag"
 
 # Paths
-TRAIN_JSONL="/mnt/gemini/data/jiaxuanluo/tts_term_train_train.jsonl"
-DEV_JSONL="/mnt/gemini/data/jiaxuanluo/tts_term_train_test_1000.jsonl"
+TRAIN_JSONL="/mnt/gemini/data/siqiouyang/term_train_dataset_final_with_tts.jsonl"
+DEV_JSONL="/mnt/gemini/data/siqiouyang/term_dev_dataset_final_with_tts.jsonl"
 TTS_ROOT_DIR="/mnt/gemini/data/siqiouyang/term_train_tts"
 SCRIPT_PATH="/mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/train/term_train/tts_term_train.py"
 SAVE_DIR="/mnt/gemini/data/jiaxuanluo"
@@ -61,13 +61,14 @@ BATCH_SIZE=$((NUM_GPUS * PER_GPU_BATCH))
 EPOCHS=20
 NUM_WORKERS=8
 LR="1e-4"
-SAVE_STEPS=1000
-EVAL_STEPS_SAMPLE=500
+SAVE_STEPS=500
+EVAL_STEPS_SAMPLE=200
 KEEP_CHECKPOINTS=3
 TRAIN_LIMIT=0
+RESUME_PATH=""
 TEMPERATURE="0.03"
 LEARN_TEMP="false"
-TTS_LOSS_WEIGHT="0.5"
+TTS_LOSS_WEIGHT="1.0"
 FORCE_DUMMY_AUDIO="false"
 # =======================
 
@@ -91,6 +92,7 @@ echo "[INFO] CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES}"
 echo "[INFO] Batch size: ${BATCH_SIZE} (${NUM_GPUS} GPUs * ${PER_GPU_BATCH})"
 echo "[INFO] Train JSONL: ${TRAIN_JSONL}"
 echo "[INFO] Dev JSONL: ${DEV_JSONL}"
+echo "[INFO] Resume path: ${RESUME_PATH}"
 echo "[INFO] TTS loss weight: ${TTS_LOSS_WEIGHT}"
 
 OPTS=""
@@ -106,6 +108,10 @@ fi
 if [ "${TRAIN_LIMIT}" -gt 0 ]; then
     OPTS="${OPTS} --train_limit ${TRAIN_LIMIT}"
 fi
+RESUME_ARGS=()
+if [ -n "${RESUME_PATH}" ] && [ "${RESUME_PATH}" != "None" ] && [ "${RESUME_PATH}" != "none" ] && [ "${RESUME_PATH}" != "null" ]; then
+    RESUME_ARGS=(--resume "${RESUME_PATH}")
+fi
 
 torchrun \
     --nproc_per_node="${NUM_GPUS}" \
@@ -116,6 +122,7 @@ torchrun \
     --dev_jsonl "${DEV_JSONL}" \
     --tts_root_dir "${TTS_ROOT_DIR}" \
     --save_path "${SAVE_PATH}" \
+    "${RESUME_ARGS[@]}" \
     --lr "${LR}" \
     --batch_size "${BATCH_SIZE}" \
     --epochs "${EPOCHS}" \
