@@ -18,7 +18,7 @@ import argparse
 import datetime
 import logging
 import hashlib
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import soundfile as sf
@@ -62,6 +62,8 @@ DEFAULT_EVAL_BATCH_SIZE = 256
 DEFAULT_EVAL_TOPK = 5
 DEFAULT_EVAL_TOPK_EXTRA = 10
 DEFAULT_INVALID_TERM_ID = 0
+DEFAULT_INVALID_GROUP_ID = 0
+DEFAULT_SIGNED_INT64_MASK = (1 << 63) - 1
 
 # =======================
 
@@ -274,8 +276,42 @@ class TtsTermDataset(Dataset):
                 "term_tts_audio": dummy,
                 "term_text": term_text,
                 "has_tts_audio": False,
+                "skip_sample": True,
                 "chunk_audio_path": "DUMMY",
                 "term_tts_path": "DUMMY",
+            }
+
+        tts_audio_path = str(sample.get("tts_audio_path", "") or "").strip()
+        utter_id = str(sample.get("utter_id", "") or "")
+        chunk_idx_raw = sample.get("chunk_idx", None)
+        chunk_idx = str(chunk_idx_raw) if chunk_idx_raw is not None else ""
+        if not tts_audio_path:
+            logger.warning(
+                f"[SKIP_SAMPLE] reason=missing_tts_audio_path "
+                f"utter_id={utter_id} chunk_idx={chunk_idx}"
+            )
+            return {
+                "speech_audio": None,
+                "term_tts_audio": None,
+                "term_text": "",
+                "has_tts_audio": False,
+                "skip_sample": True,
+                "chunk_audio_path": str(sample.get("chunk_audio_path", "")),
+                "term_tts_path": "",
+            }
+        if not os.path.exists(tts_audio_path):
+            logger.warning(
+                f"[SKIP_SAMPLE] reason=tts_audio_missing "
+                f"utter_id={utter_id} chunk_idx={chunk_idx} path={tts_audio_path}"
+            )
+            return {
+                "speech_audio": None,
+                "term_tts_audio": None,
+                "term_text": "",
+                "has_tts_audio": False,
+                "skip_sample": True,
+                "chunk_audio_path": str(sample.get("chunk_audio_path", "")),
+                "term_tts_path": tts_audio_path,
             }
 
         speech_audio_path = sample.get("chunk_audio_path", "")
@@ -285,19 +321,18 @@ class TtsTermDataset(Dataset):
                 speech_audio_path = candidate
 
         speech_audio = self._read_audio(speech_audio_path)
-        utter_id = str(sample.get("utter_id", "") or "")
-        chunk_idx_raw = sample.get("chunk_idx", None)
-        chunk_idx = int(chunk_idx_raw) if chunk_idx_raw is not None else -1
-        tts_audio_path = build_tts_audio_path(self.tts_root_dir, utter_id, chunk_idx) if chunk_idx >= 0 else None
-        term_tts_audio = self._read_audio(tts_audio_path) if tts_audio_path and os.path.exists(tts_audio_path) else None
+        term_tts_audio = self._read_audio(tts_audio_path)
 
         return {
             "speech_audio": speech_audio,
             "term_tts_audio": term_tts_audio,
             "term_text": term_text,
             "has_tts_audio": term_tts_audio is not None,
+            "skip_sample": False,
             "chunk_audio_path": speech_audio_path,
             "term_tts_path": tts_audio_path if tts_audio_path else "",
+            "utter_id": utter_id,
+            "chunk_idx": chunk_idx,
         }
 
 
@@ -322,6 +357,7 @@ def collate_fn(batch: List[Dict], feature_extractor: WhisperFeatureExtractor) ->
         speech_audio = sample.get("speech_audio")
         term_tts_audio = sample.get("term_tts_audio")
         term_text = sample.get("term_text", "")
+        skip_sample = bool(sample.get("skip_sample", False))
 
         if speech_audio is None or len(speech_audio) <= DEFAULT_MIN_AUDIO_SAMPLES:
             speech_audio = dummy_audio
@@ -338,7 +374,7 @@ def collate_fn(batch: List[Dict], feature_extractor: WhisperFeatureExtractor) ->
         tts_list.append(term_tts_audio)
         text_list.append(term_text)
         has_tts_list.append(has_tts)
-        has_text_list.append(bool(term_text))
+        has_text_list.append(bool(term_text) and (not skip_sample))
         samples.append(sample)
 
     speech_inputs = feature_extractor(
@@ -403,39 +439,65 @@ def stable_term_id(term_text: str) -> int:
     if not term_text:
         return DEFAULT_INVALID_TERM_ID
     digest = hashlib.blake2b(term_text.encode("utf-8"), digest_size=8).digest()
-    return int.from_bytes(digest, byteorder="little", signed=False)
+    # Keep IDs in signed int64 range to avoid torch.long overflow on some hashes.
+    term_id = int.from_bytes(digest, byteorder="little", signed=False) & DEFAULT_SIGNED_INT64_MASK
+    if term_id == DEFAULT_INVALID_TERM_ID:
+        return 1
+    return term_id
 
 
-def compute_multi_positive_text_loss(
+def stable_group_id(group_key: str) -> int:
+    if not group_key:
+        return DEFAULT_INVALID_GROUP_ID
+    digest = hashlib.blake2b(group_key.encode("utf-8"), digest_size=8).digest()
+    group_id = int.from_bytes(digest, byteorder="little", signed=False) & DEFAULT_SIGNED_INT64_MASK
+    if group_id == DEFAULT_INVALID_GROUP_ID:
+        return 1
+    return group_id
+
+
+def build_speech_group_key(sample: Dict[str, Any]) -> str:
+    utter_id = str(sample.get("utter_id", "") or "").strip()
+    chunk_idx = str(sample.get("chunk_idx", "") or "").strip()
+    if utter_id and chunk_idx:
+        return f"{utter_id}::{chunk_idx}"
+
+    chunk_audio_path = str(sample.get("chunk_audio_path", "") or "").strip()
+    if chunk_audio_path:
+        return f"path::{chunk_audio_path}"
+    return ""
+
+
+def compute_multi_positive_loss(
     speech_embs: torch.Tensor,
-    text_embs: torch.Tensor,
+    key_embs: torch.Tensor,
     logit_scale: torch.Tensor,
-    local_term_ids: torch.Tensor,
-    local_has_text: torch.Tensor,
+    local_group_ids: torch.Tensor,
+    local_valid_mask: torch.Tensor,
 ) -> torch.Tensor:
     world_size = dist.get_world_size() if dist.is_available() and dist.is_initialized() else 1
-    global_text_embs = all_gather_with_grad(text_embs)
+    global_key_embs = all_gather_with_grad(key_embs)
 
     if world_size > 1:
-        gathered_term_ids = [torch.zeros_like(local_term_ids) for _ in range(world_size)]
-        gathered_has_text = [torch.zeros_like(local_has_text) for _ in range(world_size)]
-        dist.all_gather(gathered_term_ids, local_term_ids)
-        dist.all_gather(gathered_has_text, local_has_text)
-        global_term_ids = torch.cat(gathered_term_ids, dim=0)
-        global_has_text = torch.cat(gathered_has_text, dim=0)
+        gathered_group_ids = [torch.zeros_like(local_group_ids) for _ in range(world_size)]
+        gathered_valid_mask = [torch.zeros_like(local_valid_mask) for _ in range(world_size)]
+        dist.all_gather(gathered_group_ids, local_group_ids)
+        dist.all_gather(gathered_valid_mask, local_valid_mask)
+        global_group_ids = torch.cat(gathered_group_ids, dim=0)
+        global_valid_mask = torch.cat(gathered_valid_mask, dim=0)
     else:
-        global_term_ids = local_term_ids
-        global_has_text = local_has_text
+        global_group_ids = local_group_ids
+        global_valid_mask = local_valid_mask
 
-    logits = (speech_embs @ global_text_embs.T) * logit_scale
-    logits = logits.masked_fill(~global_has_text.unsqueeze(0), -1e9)
+    logits = (speech_embs @ global_key_embs.T) * logit_scale
+    logits = logits.masked_fill(~global_valid_mask.unsqueeze(0), -1e9)
 
-    pos_mask = (local_term_ids.unsqueeze(1) == global_term_ids.unsqueeze(0))
-    pos_mask = pos_mask & local_has_text.unsqueeze(1) & global_has_text.unsqueeze(0)
+    pos_mask = (local_group_ids.unsqueeze(1) == global_group_ids.unsqueeze(0))
+    pos_mask = pos_mask & local_valid_mask.unsqueeze(1) & global_valid_mask.unsqueeze(0)
 
     log_prob = logits - torch.logsumexp(logits, dim=1, keepdim=True)
     pos_count = pos_mask.sum(dim=1)
-    row_valid = (local_has_text & (pos_count > 0)).float()
+    row_valid = (local_valid_mask & (pos_count > 0)).float()
 
     loss_per_row = -((log_prob * pos_mask.float()).sum(dim=1) / pos_count.clamp(min=1).float())
     loss = (loss_per_row * row_valid).sum() / row_valid.sum().clamp(min=1.0)
@@ -497,6 +559,57 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
 
     optimizer = torch.optim.AdamW(optimizer_groups, weight_decay=DEFAULT_WEIGHT_DECAY)
     scaler = torch.amp.GradScaler("cuda")
+    start_epoch = 0
+    global_step = 0
+    pending_scheduler_state = None
+    pending_scaler_state = None
+
+    if args.resume:
+        if not os.path.exists(args.resume):
+            raise FileNotFoundError(f"Resume checkpoint not found: {args.resume}")
+
+        checkpoint = torch.load(args.resume, map_location=device)
+
+        def _strip_module_prefix(state_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+            if not isinstance(state_dict, dict) or not state_dict:
+                return state_dict
+            if any(k.startswith("module.") for k in state_dict.keys()):
+                return {k[len("module."):] if k.startswith("module.") else k: v for k, v in state_dict.items()}
+            return state_dict
+
+        model_state_dict = _strip_module_prefix(checkpoint.get("model_state_dict", {}))
+        model_incompat = raw_retriever.load_state_dict(model_state_dict, strict=False)
+
+        text_incompat = None
+        if "text_model_state_dict" in checkpoint:
+            text_state_dict = _strip_module_prefix(checkpoint.get("text_model_state_dict", {}))
+            text_incompat = raw_text_encoder.load_state_dict(text_state_dict, strict=False)
+
+        if "optimizer_state_dict" in checkpoint:
+            try:
+                optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            except Exception as exc:
+                logger.warning(f"[RESUME] Failed to load optimizer_state_dict: {exc}")
+
+        pending_scheduler_state = checkpoint.get("scheduler_state_dict")
+        pending_scaler_state = checkpoint.get("scaler_state_dict")
+        start_epoch = checkpoint.get("epoch", -1) + 1
+        global_step = checkpoint.get("global_step", 0)
+
+        if is_main:
+            model_missing = getattr(model_incompat, "missing_keys", [])
+            model_unexpected = getattr(model_incompat, "unexpected_keys", [])
+            logger.info(f"[RESUME] Loaded checkpoint: {args.resume}")
+            logger.info(
+                f"[RESUME] start_epoch={start_epoch} global_step={global_step} "
+                f"model_missing={len(model_missing)} model_unexpected={len(model_unexpected)}"
+            )
+            if text_incompat is not None:
+                text_missing = getattr(text_incompat, "missing_keys", [])
+                text_unexpected = getattr(text_incompat, "unexpected_keys", [])
+                logger.info(
+                    f"[RESUME] text_missing={len(text_missing)} text_unexpected={len(text_unexpected)}"
+                )
 
     train_samples: List[Dict] = []
     with open(args.train_jsonl, "r", encoding="utf-8") as f:
@@ -560,9 +673,19 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
         optimizer=optimizer,
         num_warmup_steps=warmup_steps,
         num_training_steps=total_steps,
+        last_epoch=global_step - 1 if global_step > 0 else -1,
     )
+    if pending_scheduler_state is not None:
+        try:
+            scheduler.load_state_dict(pending_scheduler_state)
+        except Exception as exc:
+            logger.warning(f"[RESUME] Failed to load scheduler_state_dict: {exc}")
+    if pending_scaler_state is not None:
+        try:
+            scaler.load_state_dict(pending_scaler_state)
+        except Exception as exc:
+            logger.warning(f"[RESUME] Failed to load scaler_state_dict: {exc}")
 
-    global_step = 0
     recent_checkpoints: List[str] = []
     wandb_run = None
 
@@ -608,6 +731,7 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
         tts_emb_list: List[torch.Tensor] = []
         has_tts_list: List[torch.Tensor] = []
         has_text_list: List[torch.Tensor] = []
+        term_text_list: List[str] = []
 
         with torch.no_grad():
             for eval_batch in eval_loader:
@@ -640,6 +764,7 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
                 tts_emb_list.append(term_tts_embs.float().cpu())
                 has_tts_list.append(has_tts_audio.bool().cpu())
                 has_text_list.append(has_term_text.bool().cpu())
+                term_text_list.extend([str(t).strip().lower() for t in term_texts])
 
         if not speech_emb_list:
             raw_retriever.train()
@@ -656,43 +781,116 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
         logit_scale_eval = float(raw_retriever.logit_scale.exp().detach().cpu().item())
         valid_text_indices = torch.nonzero(has_text_mask, as_tuple=False).squeeze(1)
         valid_text_count = int(valid_text_indices.numel())
+        valid_text_idx_list = valid_text_indices.tolist()
         text_top1 = 0.0
         text_recall_topk_primary = 0.0
         text_recall_topk_extra = 0.0
         text_loss_eval = 0.0
+        text_term_to_bank_idx: Dict[str, int] = {}
+        text_bank_rows: List[torch.Tensor] = []
         if valid_text_count > 0:
-            speech_text_valid = speech_embs[valid_text_indices]
-            text_valid = text_embs[valid_text_indices]
-            text_logits = speech_text_valid @ text_valid.t()
-            text_targets = torch.arange(valid_text_count)
-            recall_k_primary = min(args.eval_topk, valid_text_count)
-            recall_k_extra = min(args.eval_topk_extra, valid_text_count)
-            text_top1 = (text_logits.argmax(dim=1) == text_targets).float().mean().item()
-            text_topk_hits_primary = torch.topk(text_logits, k=recall_k_primary, dim=1).indices.eq(text_targets.unsqueeze(1)).any(dim=1)
-            text_recall_topk_primary = text_topk_hits_primary.float().mean().item()
-            text_topk_hits_extra = torch.topk(text_logits, k=recall_k_extra, dim=1).indices.eq(text_targets.unsqueeze(1)).any(dim=1)
-            text_recall_topk_extra = text_topk_hits_extra.float().mean().item()
-            text_loss_eval = F.cross_entropy(text_logits * logit_scale_eval, text_targets).item()
+            for sample_idx in valid_text_idx_list:
+                if sample_idx >= len(term_text_list):
+                    continue
+                term = term_text_list[sample_idx]
+                if not term:
+                    continue
+                if term in text_term_to_bank_idx:
+                    continue
+                text_term_to_bank_idx[term] = len(text_bank_rows)
+                text_bank_rows.append(text_embs[sample_idx])
+
+            if text_bank_rows:
+                speech_text_valid = speech_embs[valid_text_indices]
+                text_bank_embs = torch.stack(text_bank_rows, dim=0)
+                text_logits = speech_text_valid @ text_bank_embs.t()
+
+                text_targets_list: List[int] = []
+                valid_rows: List[int] = []
+                for row_idx, sample_idx in enumerate(valid_text_idx_list):
+                    if sample_idx >= len(term_text_list):
+                        continue
+                    term = term_text_list[sample_idx]
+                    target = text_term_to_bank_idx.get(term)
+                    if target is None:
+                        continue
+                    text_targets_list.append(target)
+                    valid_rows.append(row_idx)
+
+                if text_targets_list:
+                    text_logits = text_logits[valid_rows]
+                    text_targets = torch.tensor(text_targets_list, dtype=torch.long)
+                    recall_k_primary = min(args.eval_topk, text_logits.size(1))
+                    recall_k_extra = min(args.eval_topk_extra, text_logits.size(1))
+                    text_top1 = (text_logits.argmax(dim=1) == text_targets).float().mean().item()
+                    text_topk_hits_primary = torch.topk(text_logits, k=recall_k_primary, dim=1).indices.eq(text_targets.unsqueeze(1)).any(dim=1)
+                    text_recall_topk_primary = text_topk_hits_primary.float().mean().item()
+                    text_topk_hits_extra = torch.topk(text_logits, k=recall_k_extra, dim=1).indices.eq(text_targets.unsqueeze(1)).any(dim=1)
+                    text_recall_topk_extra = text_topk_hits_extra.float().mean().item()
+                    text_loss_eval = F.cross_entropy(text_logits * logit_scale_eval, text_targets).item()
 
         valid_indices = torch.nonzero(has_tts_mask, as_tuple=False).squeeze(1)
         valid_tts_count = int(valid_indices.numel())
+        valid_tts_idx_list = valid_indices.tolist()
         tts_top1 = 0.0
         tts_recall_topk_primary = 0.0
         tts_recall_topk_extra = 0.0
         tts_loss_eval = 0.0
+        tts_term_bank_count = 0
+        tts_proto_count = 0
         if valid_tts_count > 0:
-            speech_valid = speech_embs[valid_indices]
-            tts_valid = tts_embs[valid_indices]
-            tts_logits = speech_valid @ tts_valid.t()
-            tts_targets = torch.arange(valid_tts_count)
-            tts_top1 = (tts_logits.argmax(dim=1) == tts_targets).float().mean().item()
-            tts_topk_primary = min(args.eval_topk, valid_tts_count)
-            tts_topk_hits_primary = torch.topk(tts_logits, k=tts_topk_primary, dim=1).indices.eq(tts_targets.unsqueeze(1)).any(dim=1)
-            tts_recall_topk_primary = tts_topk_hits_primary.float().mean().item()
-            tts_topk_extra = min(args.eval_topk_extra, valid_tts_count)
-            tts_topk_hits_extra = torch.topk(tts_logits, k=tts_topk_extra, dim=1).indices.eq(tts_targets.unsqueeze(1)).any(dim=1)
-            tts_recall_topk_extra = tts_topk_hits_extra.float().mean().item()
-            tts_loss_eval = F.cross_entropy(tts_logits * logit_scale_eval, tts_targets).item()
+            tts_proto_by_term: Dict[str, List[torch.Tensor]] = {}
+            for sample_idx in valid_tts_idx_list:
+                if sample_idx >= len(term_text_list):
+                    continue
+                term = term_text_list[sample_idx]
+                if not term:
+                    continue
+                tts_proto_by_term.setdefault(term, []).append(tts_embs[sample_idx])
+
+            sorted_tts_terms = sorted(tts_proto_by_term.keys())
+            tts_term_bank_count = len(sorted_tts_terms)
+            tts_proto_count = sum(len(v) for v in tts_proto_by_term.values())
+
+            if tts_term_bank_count > 0:
+                proto_bank = torch.stack([proto for term in sorted_tts_terms for proto in tts_proto_by_term[term]], dim=0)
+                proto_offsets: List[Tuple[int, int]] = []
+                cursor = 0
+                for term in sorted_tts_terms:
+                    count = len(tts_proto_by_term[term])
+                    proto_offsets.append((cursor, cursor + count))
+                    cursor += count
+
+                tts_term_to_bank_idx = {term: i for i, term in enumerate(sorted_tts_terms)}
+                speech_valid = speech_embs[valid_indices]
+                proto_scores = speech_valid @ proto_bank.t()  # [N, P]
+                tts_logits = torch.empty((proto_scores.size(0), tts_term_bank_count), dtype=proto_scores.dtype)
+                for term_idx, (start_idx, end_idx) in enumerate(proto_offsets):
+                    tts_logits[:, term_idx] = proto_scores[:, start_idx:end_idx].max(dim=1).values
+
+                tts_targets_list: List[int] = []
+                valid_rows: List[int] = []
+                for row_idx, sample_idx in enumerate(valid_tts_idx_list):
+                    if sample_idx >= len(term_text_list):
+                        continue
+                    term = term_text_list[sample_idx]
+                    target = tts_term_to_bank_idx.get(term)
+                    if target is None:
+                        continue
+                    tts_targets_list.append(target)
+                    valid_rows.append(row_idx)
+
+                if tts_targets_list:
+                    tts_logits = tts_logits[valid_rows]
+                    tts_targets = torch.tensor(tts_targets_list, dtype=torch.long)
+                    tts_top1 = (tts_logits.argmax(dim=1) == tts_targets).float().mean().item()
+                    tts_topk_primary = min(args.eval_topk, tts_logits.size(1))
+                    tts_topk_hits_primary = torch.topk(tts_logits, k=tts_topk_primary, dim=1).indices.eq(tts_targets.unsqueeze(1)).any(dim=1)
+                    tts_recall_topk_primary = tts_topk_hits_primary.float().mean().item()
+                    tts_topk_extra = min(args.eval_topk_extra, tts_logits.size(1))
+                    tts_topk_hits_extra = torch.topk(tts_logits, k=tts_topk_extra, dim=1).indices.eq(tts_targets.unsqueeze(1)).any(dim=1)
+                    tts_recall_topk_extra = tts_topk_hits_extra.float().mean().item()
+                    tts_loss_eval = F.cross_entropy(tts_logits * logit_scale_eval, tts_targets).item()
 
         lambda_weight = args.tts_loss_weight
         total_eval_loss = lambda_weight * tts_loss_eval + (1.0 - lambda_weight) * text_loss_eval
@@ -701,6 +899,8 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
         logger.info(
             f"[EVAL_SAMPLE] step={current_step} epoch={current_epoch} "
             f"samples={sample_count} valid_text={valid_text_count} valid_tts={valid_tts_count} "
+            f"text_bank_terms={len(text_term_to_bank_idx)} "
+            f"tts_bank_terms={tts_term_bank_count} tts_bank_protos={tts_proto_count} "
             f"loss={total_eval_loss:.6f} text_top1={text_top1:.4f} "
             f"text_recall@{args.eval_topk}={text_recall_topk_primary:.4f} "
             f"text_recall@{args.eval_topk_extra}={text_recall_topk_extra:.4f} "
@@ -734,7 +934,7 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
         raw_retriever.train()
         raw_text_encoder.train()
 
-    for epoch in range(args.epochs):
+    for epoch in range(start_epoch, args.epochs):
         retriever.train()
         text_encoder.train()
         if sampler is not None:
@@ -753,13 +953,18 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
             has_term_text = batch["has_term_text"].to(device)
 
             with torch.amp.autocast("cuda", dtype=torch.bfloat16):
-                # Run a single retriever forward per iteration to avoid
-                # DDP + gradient-checkpointing reentrant-backward conflicts.
-                combined_features = torch.cat([speech_features, tts_features], dim=0)
-                combined_lens = torch.cat([speech_lens, tts_lens], dim=0)
-                combined_embs = retriever(combined_features, combined_lens)
+                lambda_weight = args.tts_loss_weight
                 speech_batch_size = speech_features.size(0)
-                speech_embs, term_tts_embs = torch.split(combined_embs, [speech_batch_size, speech_batch_size], dim=0)
+                if lambda_weight > 0.0:
+                    # Combined forward avoids DDP + gradient-checkpointing reentrant-backward conflicts.
+                    combined_features = torch.cat([speech_features, tts_features], dim=0)
+                    combined_lens = torch.cat([speech_lens, tts_lens], dim=0)
+                    combined_embs = retriever(combined_features, combined_lens)
+                    speech_embs, term_tts_embs = torch.split(combined_embs, [speech_batch_size, speech_batch_size], dim=0)
+                else:
+                    # TTS weight is 0: skip TTS forward entirely to avoid wasted compute.
+                    speech_embs = retriever(speech_features, speech_lens)
+                    term_tts_embs = None
                 text_inputs = text_tokenizer(
                     term_texts,
                     padding=True,
@@ -770,24 +975,27 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
                 term_text_embs = text_encoder(text_inputs.input_ids, text_inputs.attention_mask)
 
                 logit_scale = retriever.module.logit_scale.exp() if world_size > 1 else retriever.logit_scale.exp()
-                local_term_ids_list = [stable_term_id(t) for t in term_texts]
-                local_term_ids = torch.tensor(local_term_ids_list, device=device, dtype=torch.long)
+                local_speech_group_ids_list = [stable_group_id(build_speech_group_key(s)) for s in batch["samples"]]
+                local_speech_group_ids = torch.tensor(local_speech_group_ids_list, device=device, dtype=torch.long)
 
-                loss_speech_to_tts = compute_single_direction_loss(
+                if lambda_weight > 0.0 and term_tts_embs is not None:
+                    loss_speech_to_tts = compute_multi_positive_loss(
+                        speech_embs=speech_embs,
+                        key_embs=term_tts_embs,
+                        logit_scale=logit_scale,
+                        local_group_ids=local_speech_group_ids,
+                        local_valid_mask=has_tts_audio,
+                    )
+                else:
+                    loss_speech_to_tts = torch.zeros(1, device=device)
+                loss_speech_to_text = compute_multi_positive_loss(
                     speech_embs=speech_embs,
-                    key_embs=term_tts_embs,
+                    key_embs=term_text_embs,
                     logit_scale=logit_scale,
-                    positive_mask=has_tts_audio,
-                )
-                loss_speech_to_text = compute_multi_positive_text_loss(
-                    speech_embs=speech_embs,
-                    text_embs=term_text_embs,
-                    logit_scale=logit_scale,
-                    local_term_ids=local_term_ids,
-                    local_has_text=has_term_text,
+                    local_group_ids=local_speech_group_ids,
+                    local_valid_mask=has_term_text,
                 )
 
-                lambda_weight = args.tts_loss_weight
                 total_loss = (
                     lambda_weight * loss_speech_to_tts
                     + (1.0 - lambda_weight) * loss_speech_to_text
@@ -919,6 +1127,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dev_jsonl", type=str, default="")
     parser.add_argument("--tts_root_dir", type=str, required=True)
     parser.add_argument("--save_path", type=str, default="qwen3_retriever_tts.pt")
+    parser.add_argument("--resume", type=str, default="")
     parser.add_argument("--audio_model_id", type=str, default=DEFAULT_QWEN_AUDIO_MODEL_ID)
     parser.add_argument("--text_model_id", type=str, default=DEFAULT_TEXT_MODEL_ID)
 
