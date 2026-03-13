@@ -10,6 +10,10 @@ EFF_PRINT_DECIMALS = 4
 DEFAULT_GEN_SEED = 998244353
 DEFAULT_VLLM_ENABLE_PREFIX_CACHING = 1
 VLLM_ENABLE_PREFIX_CACHING_ENV = "VLLM_ENABLE_PREFIX_CACHING"
+DEFAULT_RAG_EVAL_MODE = "text"
+DEFAULT_RAG_TTS_EMBEDDING_BATCH_SIZE = 32
+DEFAULT_RAG_TTS_MAX_PROTOTYPES_PER_TERM = 8
+DEFAULT_RAG_TTS_SIMILARITY_TOP_K = 10
 # ======Configuration=====
 
 import re
@@ -199,6 +203,7 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
         self.rag_conf_threshold = getattr(args, "rag_confidence_threshold", 0.0)
         self.rag_conf_threshold_mode = getattr(args, "rag_confidence_threshold_mode", "absolute")
         self.rag_min_terms = int(getattr(args, "rag_min_terms", 0))
+        self.rag_eval_mode = getattr(args, "rag_eval_mode", DEFAULT_RAG_EVAL_MODE)
         
         # Sliding window parameters
         self.rag_chunk_size = getattr(args, "rag_chunk_size", 1.92)  # 1.92s as requested
@@ -225,6 +230,12 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
                 chunk_size=self.rag_chunk_size,
                 hop_size=self.rag_hop_size,
                 aggregation_strategy=getattr(args, "rag_strategy", "voting"),
+                rag_eval_mode=self.rag_eval_mode,
+                tts_terms_npy_path=getattr(args, "rag_tts_terms_npy_path", ""),
+                tts_wav_dir=getattr(args, "rag_tts_wav_dir", ""),
+                tts_embedding_batch_size=getattr(args, "rag_tts_embedding_batch_size", DEFAULT_RAG_TTS_EMBEDDING_BATCH_SIZE),
+                tts_max_prototypes_per_term=getattr(args, "rag_tts_max_prototypes_per_term", DEFAULT_RAG_TTS_MAX_PROTOTYPES_PER_TERM),
+                tts_similarity_top_k=getattr(args, "rag_tts_similarity_top_k", DEFAULT_RAG_TTS_SIMILARITY_TOP_K),
                 debug_audio_dir=self.debug_audio_dir if self.debug_audio_dir else None,
             )
             if not self.rag_retriever or not self.rag_retriever.enabled:
@@ -297,6 +308,12 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
         parser.add_argument("--rag-strategy", type=str, default="max_pool", choices=["voting", "max_pool"])
         parser.add_argument("--rag-chunk-size", type=float, default=1.92)
         parser.add_argument("--rag-hop-size", type=float, default=0.96)
+        parser.add_argument("--rag-eval-mode", type=str, default=DEFAULT_RAG_EVAL_MODE, choices=["text", "tts", "intersection"])
+        parser.add_argument("--rag-tts-terms-npy-path", type=str, default="")
+        parser.add_argument("--rag-tts-wav-dir", type=str, default="")
+        parser.add_argument("--rag-tts-embedding-batch-size", type=int, default=DEFAULT_RAG_TTS_EMBEDDING_BATCH_SIZE)
+        parser.add_argument("--rag-tts-max-prototypes-per-term", type=int, default=DEFAULT_RAG_TTS_MAX_PROTOTYPES_PER_TERM)
+        parser.add_argument("--rag-tts-similarity-top-k", type=int, default=DEFAULT_RAG_TTS_SIMILARITY_TOP_K)
         parser.add_argument("--debug-audio-dir", type=str, default="", help="Directory to save debug audio chunks. Empty to disable.")
         parser.add_argument("--debug-llm-io", action="store_true")
         parser.add_argument("--debug-filter-term", type=str, default="")
@@ -416,14 +433,11 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
         if norm_refs:
             kv = self._format_term_map_kv(norm_refs)
             if kv:
-                reference_text = f"\n\nterm_map:\n{kv}"
-                user_content.append({"type": "text", "text": reference_text})
-            else:
-                #user_content.append({"type": "text", "text": "\n\nterm_map:NONE"})
-                pass
+                user_content.append({"type": "text", "text": f"\n\nterm_map:\n{kv}"})
+            elif rag_enabled:
+                user_content.append({"type": "text", "text": "\n\nterm_map:\nNONE"})
         elif rag_enabled:
-            #user_content.append({"type": "text", "text": "\n\nterm_map:NONE"})
-            pass
+            user_content.append({"type": "text", "text": "\n\nterm_map:\nNONE"})
         
         states.messages.append({"role": "user", "content": user_content})
 
