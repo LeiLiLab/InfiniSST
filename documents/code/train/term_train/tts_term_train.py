@@ -169,7 +169,9 @@ class Qwen3OmniRetriever(nn.Module):
         )
         if hasattr(self.audio_encoder, "conv2d1"):
             self.audio_encoder.get_input_embeddings = lambda: self.audio_encoder.conv2d1
-        self.audio_encoder.gradient_checkpointing_enable()
+        self.audio_encoder.gradient_checkpointing_enable(
+            gradient_checkpointing_kwargs={"use_reentrant": False}
+        )
 
         if use_lora:
             if lora_target_modules is None:
@@ -744,11 +746,13 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
                 has_term_text = eval_batch["has_term_text"].to(device)
 
                 with torch.amp.autocast("cuda", dtype=torch.bfloat16):
-                    combined_features = torch.cat([speech_features, tts_features], dim=0)
-                    combined_lens = torch.cat([speech_lens, tts_lens], dim=0)
-                    combined_embs = raw_retriever(combined_features, combined_lens)
-                    eval_batch_size = speech_features.size(0)
-                    speech_embs, term_tts_embs = torch.split(combined_embs, [eval_batch_size, eval_batch_size], dim=0)
+                    # Encode speech and TTS in SEPARATE forward passes to
+                    # avoid cross-sample attention leakage inside the packed
+                    # Qwen3OmniMoeAudioEncoder.  A joint forward pass
+                    # artificially inflates similarity because each sample's
+                    # hidden states are influenced by others in the batch.
+                    speech_embs = raw_retriever(speech_features, speech_lens)
+                    term_tts_embs = raw_retriever(tts_features, tts_lens)
 
                     text_inputs = text_tokenizer(
                         term_texts,
@@ -954,16 +958,10 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
 
             with torch.amp.autocast("cuda", dtype=torch.bfloat16):
                 lambda_weight = args.tts_loss_weight
-                speech_batch_size = speech_features.size(0)
+                speech_embs = retriever(speech_features, speech_lens)
                 if lambda_weight > 0.0:
-                    # Combined forward avoids DDP + gradient-checkpointing reentrant-backward conflicts.
-                    combined_features = torch.cat([speech_features, tts_features], dim=0)
-                    combined_lens = torch.cat([speech_lens, tts_lens], dim=0)
-                    combined_embs = retriever(combined_features, combined_lens)
-                    speech_embs, term_tts_embs = torch.split(combined_embs, [speech_batch_size, speech_batch_size], dim=0)
+                    term_tts_embs = retriever(tts_features, tts_lens)
                 else:
-                    # TTS weight is 0: skip TTS forward entirely to avoid wasted compute.
-                    speech_embs = retriever(speech_features, speech_lens)
                     term_tts_embs = None
                 text_inputs = text_tokenizer(
                     term_texts,
