@@ -40,3 +40,4 @@ dist/
 *.err
 *.out
 *.jsonl
+*.png
