@@ -4,7 +4,21 @@ This repository contains a demo and the implementation of our paper "InfiniSST: 
 
 ## Online Demo
 
-The link to the online demo is [here](https://c79b-128-111-28-80.ngrok-free.app/).
+The link to the online demo is [here](https://huggingface.co/spaces/owaski/Open-LiveTranslate).
+
+## Checkpoints
+
+
+We provide checkpoints for three language directions: English-German (en-de), English-Spanish (en-es), and English-Chinese (en-zh). The "Offline" checkpoints correspond to the checkpoints used in StreamAtt and AlignAtt, while the "InfiniSST" checkpoints are for our proposed model.
+
+| Language Direction | Offline | InfiniSST |
+|--------------------|-------------------|----------------------|
+| en-de              | [pytorch_model.bin](https://f005.backblazeb2.com/file/owaski-release/ckpts/infinisst/must-c/en-de/8B-s2-bi-v3.5/last.ckpt/pytorch_model.bin) | [pytorch_model.bin](https://f005.backblazeb2.com/file/owaski-release/ckpts/infinisst/must-c/en-de/8B-traj-s2-v3.6/pytorch_model.bin) |
+| en-es              | [pytorch_model.bin](https://f005.backblazeb2.com/file/owaski-release/ckpts/infinisst/must-c/en-es/8B-s2-bi-v3.5/last.ckpt/pytorch_model.bin) | [pytorch_model.bin](https://f005.backblazeb2.com/file/owaski-release/ckpts/infinisst/must-c/en-es/8B-traj-s2-v3.6/pytorch_model.bin) |
+| en-zh              |  | [pytorch_model.bin](https://f005.backblazeb2.com/file/owaski-release/ckpts/infinisst/must-c/en-zh/8B-traj-s2-v3.6/pytorch_model.bin) |
+
+You can download the checkpoints from the links above and use them for evaluation or further experiments.
+
 
 ## Installation
 
