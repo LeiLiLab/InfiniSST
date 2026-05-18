@@ -1,0 +1,240 @@
+{
+  "schema_version": 1,
+  "event_id": "20260517T2021__retriever_train__varctx_text_multilingual_e5_large_aries8_gc256_dev100_tau1_eval",
+  "event_type": "retriever_train",
+  "family": "sst_ood_hardneg",
+  "variant": "vctx576_txt_e5l_a8_d100_tau1_g256",
+  "status": "failed",
+  "project": "qwen3_rag",
+  "wandb_run_id": "om6fnv90",
+  "slurm_job_id": "direct_varctx_e5l_gc256",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260517__varctx_lmlb_v3_text_multilingual_e5_large_aries8_gc256_fast_eval.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260517__varctx_lmlb_v3_text_multilingual_e5_large_aries8_gc256_dev100_tau1_eval.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command_template": "cd /mnt/taurus/home/jiaxuanluo/InfiniSST && SCRIPT=/mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/train/term_train/launchers/2026/05/20260517__varctx_lmlb_v3_text_multilingual_e5_large_aries8_gc256_fast_eval.sh && LOG=/mnt/gemini/data1/jiaxuanluo/logs/direct_varctx_e5l_gc256_$(date -u +%Y%m%dT%H%M%S) && nohup env CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 SLURM_JOB_PARTITION=aries SLURM_JOB_ID=direct_varctx_e5l_gc256 MASTER_PORT=30366 bash \"$SCRIPT\" > ${LOG}.out 2> ${LOG}.err &",
+  "parent_run_ids": [
+    "lh1b88kw",
+    "mhukv2bi"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260517__varctx_lmlb_v3_text_multilingual_e5_large_aries8_gc256_fast_eval.sh"
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn1024_gsv2full_gsdedup_varctx_lmlb_v3_tcmoff_ep6_8gpu_aries.sh"
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh"
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py"
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260517__varctx_lmlb_v3_text_multilingual_e5_large_aries8_gc256_dev100_tau1_eval.md"
+    },
+    {
+      "role": "source_control_run",
+      "type": "wandb_run",
+      "direction": "input",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/lh1b88kw"
+    },
+    {
+      "role": "running_bge_sibling_run",
+      "type": "wandb_run",
+      "direction": "input",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/mhukv2bi",
+      "metadata": {
+        "state_at_preparation": "running",
+        "not_final_metric_baseline": true
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_varctx2p88_3p84_4p80_5p76.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_varctx2p88_3p84_4p80_5p76_new_version.jsonl",
+      "metadata": {
+        "inline_eval_sample_limit": 100,
+        "inline_eval_sample_seed": 17
+      }
+    },
+    {
+      "role": "acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_extracted_paper_glossary_varctx2p88_3p84_4p80_5p76/acl6060_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out ACL readout, not model selection",
+        "inline_eval_sample_limit": 0
+      }
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76/medicine_dev_dataset.jsonl",
+      "metadata": {
+        "inline_eval_sample_limit": 0
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample10000.json"
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_gt_union_gs10000_min_norm2_backfill.json",
+      "metadata": {
+        "usage": "held-out ACL readout with min-norm-2 backfilled gs10k"
+      }
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76/medicine_glossary_gt_plus_medicine_wiki_gs10000.json"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs"
+    },
+    {
+      "role": "stdout_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_varctx_e5l_gc256_20260517T202422.out",
+      "metadata": {
+        "direct_pid": 2970437
+      }
+    },
+    {
+      "role": "stderr_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_varctx_e5l_gc256_20260517T202422.err",
+      "metadata": {
+        "direct_pid": 2970437,
+        "failure_signature": "torchrun received SIGHUP"
+      }
+    },
+    {
+      "role": "wandb_run",
+      "type": "wandb_run",
+      "direction": "output",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/om6fnv90",
+      "metadata": {
+        "state": "crashed"
+      }
+    }
+  ],
+  "metadata": {
+    "data_tag": "3variant_gsv2full_gsdedup_vctx576_e5l",
+    "extra_wandb_tags": [
+      "variant:vctx576_txt_e5l_a8_d100_tau1_g256",
+      "compute:aries-8gpu"
+    ],
+    "text_encoder_preset": "multilingual-e5-large",
+    "text_model_id": "intfloat/multilingual-e5-large",
+    "text_input_prefix": "query: ",
+    "text_pooling": "mean",
+    "audio_encoder_preset": "qwen3-omni",
+    "fixed_audio_seconds": 5.76,
+    "eval_fixed_audio_seconds": 5.76,
+    "num_gpus": 8,
+    "per_gpu_batch": 1024,
+    "global_batch": 8192,
+    "grad_cache_chunk_size": 256,
+    "max_steps": 2000,
+    "eval_steps_sample": 240,
+    "eval_refresh_alignment": {
+      "negative_bank_refresh_steps": 50,
+      "policy": "actual direct run used eval interval 240 from inherited environment or older launcher state; not an integer multiple of refresh interval",
+      "aligned": false
+    },
+    "eval_sample_limit": 100,
+    "acl_eval_sample_limit": 0,
+    "medicine_eval_sample_limit": 0,
+    "eval_sample_seed": 17,
+    "eval_score_device": "cuda",
+    "eval_score_query_chunk": 256,
+    "eval_score_text_chunk": 1024,
+    "eval_glossary_sizes": [
+      1000,
+      10000
+    ],
+    "acl_eval_glossary_sizes": [
+      10000
+    ],
+    "medicine_eval_glossary_sizes": [
+      10000
+    ],
+    "tcm_sweep_thresholds": [
+      0.75
+    ],
+    "eval_top100_samples": 0,
+    "eval_glossary_match_min_norm_chars": 2,
+    "strict_train_eval_term_filter": false,
+    "slurm_job_name": "q3_vctx_e5l_g256",
+    "slurm_partition": "aries",
+    "direct_run_expected": true,
+    "best_metric": "eval_dev/recall@10_gs10000",
+    "best_metric_secondary": "eval_acl6060/recall@10",
+    "baseline_anchor": {
+      "run_id": "lh1b88kw",
+      "anchor": "secondary",
+      "step": 1840,
+      "metric": "eval_acl6060/recall@10",
+      "checkpoint_path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    "related_control_run_ids": [
+      "lh1b88kw",
+      "mhukv2bi"
+    ],
+    "tcm_off": true,
+    "prepared_at_utc": "2026-05-17T20:21:35+00:00",
+    "launched_at_utc": "2026-05-17T20:24:22+00:00",
+    "direct_pid": 2970437,
+    "wandb_run_name": "variantE_varctx576_txt_e5l_aries8_bs8k_gc256_dev100Tau1_eval240",
+    "failure": {
+      "failed_at_utc": "2026-05-17T22:53:56+00:00",
+      "reason": "torchrun parent process received SIGHUP and shut down workers",
+      "signal": "SIGHUP",
+      "last_logged_wandb_step": 140,
+      "last_observed_train_step": 167,
+      "last_train_log_step": 160,
+      "checkpoint_written": false,
+      "evidence": [
+        "/mnt/gemini/data1/jiaxuanluo/logs/direct_varctx_e5l_gc256_20260517T202422.err",
+        "/mnt/gemini/data1/jiaxuanluo/logs/direct_varctx_e5l_gc256_20260517T202422.out",
+        "WandB run om6fnv90 state=crashed runtime=8347s"
+      ]
+    }
+  }
+}

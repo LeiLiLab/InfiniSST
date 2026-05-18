@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "event_id": "YYYYMMDDTHHMM__event_type__short_slug",
+  "event_type": "retriever_train",
+  "family": "experiment_family",
+  "variant": "short_variant",
+  "status": "planned",
+  "project": "qwen3_rag",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/term_train/launchers/YYYY/MM/example.sh",
+  "notes_path": "documents/code/train/term_train/notes/YYYY/MM/example.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "sbatch --parsable documents/code/train/term_train/launchers/YYYY/MM/example.sh",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/YYYY/MM/example.sh"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/example/train.jsonl"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/example/train_outputs"
+    }
+  ],
+  "metadata": {
+    "notes": "Keep metrics in WandB. Put only lineage and operational metadata here."
+  }
+}
