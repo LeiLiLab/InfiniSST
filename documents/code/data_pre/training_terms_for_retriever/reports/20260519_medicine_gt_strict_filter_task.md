@@ -66,10 +66,13 @@ $OUTPUT_BASE/strict_fixed_medicine_glossary.from_outputs_v2_terms.json
 from the 5 samples above. It preserves distinct translation variants instead
 of collapsing all rows with the same English term.
 
-For Jiaxing task, only the **1123 unique English terms** matter. Some term
-annotations may contain non-English/noisy term strings; do not spend time
-reviewing those. The larger entry count only exists because the same English
-term can have multiple translation variants.
+This is **not** the old term/glossary list from last month. It uses the current
+restored output version, where `terms` have already gone through the
+substring/exact-match restoration checks.
+
+For Jiaxing task, the review universe is the **1123 unique English source
+terms** from these current `terms` annotations. The larger entry count only
+exists because the same English term can have multiple translation variants.
 
 ## Key Files
 
@@ -241,8 +244,8 @@ find $OUTPUT_BASE_OVERRIDE -name instances.log -size +0 -print
 Expected `hypotheses.tsv`: one header plus one row per completed
 `(lang, lm, sample)`.
 
-Expected fixed-term review universe: `1123` unique English terms. Ignore
-non-English term strings during manual review.
+Expected fixed-term review universe: `1123` unique English source terms from
+the current restored `terms` annotations.
 
 ## What To Send Back
 
