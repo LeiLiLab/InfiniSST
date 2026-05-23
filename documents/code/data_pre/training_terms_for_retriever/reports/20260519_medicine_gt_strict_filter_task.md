@@ -214,6 +214,83 @@ echo $! > /path/to/psc/scratch/logs/medicine_norag_deja_lm1234.pid
 If PSC requires `sbatch`, put the same environment block inside the sbatch
 script and request 2 GPUs.
 
+## Post-Eval
+
+Do not use raw `LAAL` / `AL` from SimulEval `scores.tsv` as the final latency
+number. For these long medicine talks, run the separate StreamLAAL post-eval.
+
+Extra tools needed:
+
+```bash
+export FBK_FAIRSEQ_ROOT="/path/to/FBK-fairseq"
+export STREAM_LAAL_TOOL="${FBK_FAIRSEQ_ROOT}/examples/speech_to_text/simultaneous_translation/scripts/stream_laal_term.py"
+export MWERSEGMENTER_ROOT="/path/to/mwerSegmenter"
+export PATH="${MWERSEGMENTER_ROOT}:${PATH}"
+```
+
+For each completed `(lang, lm)`, set:
+
+```bash
+LANG=zh
+LM=2
+OUT_DIR="/path/to/output_dir_from_timing_tsv"
+COMBINED_DIR="$OUTPUT_BASE_OVERRIDE/$LANG/__medicine_inputs__/combined"
+```
+
+Run StreamLAAL + TERM_ACC:
+
+```bash
+"${CONDA_PREFIX}/bin/python" documents/code/offline_sst_eval/offline_streamlaal_eval.py \
+  --mode acl6060 \
+  --instances-log "$OUT_DIR/instances.log" \
+  --lang-code "$LANG" \
+  --ref-file "$COMBINED_DIR/medicine5.ref.$LANG.sentences.txt" \
+  --source-file "$COMBINED_DIR/medicine5.source_text.en.sentences.txt" \
+  --audio-yaml "$COMBINED_DIR/medicine5.audio.yaml" \
+  --glossary-acl6060 "$OUTPUT_BASE_OVERRIDE/strict_fixed_medicine_glossary.from_outputs_v2_terms.json" \
+  --fbk-fairseq-root "$FBK_FAIRSEQ_ROOT" \
+  --term-fcr-policy source_ref_negative_sentence \
+  --output-tsv "$OUT_DIR/eval_results_streamlaal_term.tsv" \
+  --output-log "$OUT_DIR/post_eval_streamlaal_term_full.log" \
+  --work-dir "$OUT_DIR/work_streamlaal_term" \
+  --term-mismatch-examples 20
+```
+
+Run full miss extraction:
+
+```bash
+"${CONDA_PREFIX}/bin/python" documents/code/simuleval/export_streamlaal_term_misses.py \
+  --instances-log "$OUT_DIR/instances.log" \
+  --reference "$COMBINED_DIR/medicine5.ref.$LANG.sentences.txt" \
+  --source-reference "$COMBINED_DIR/medicine5.source_text.en.sentences.txt" \
+  --audio-yaml "$COMBINED_DIR/medicine5.audio.yaml" \
+  --glossary "$OUTPUT_BASE_OVERRIDE/strict_fixed_medicine_glossary.from_outputs_v2_terms.json" \
+  --lang-code "$LANG" \
+  --stream-laal-tool "$STREAM_LAAL_TOOL" \
+  --mwersegmenter-root "$MWERSEGMENTER_ROOT" \
+  --output-misses "$OUT_DIR/term_misses.${LANG}_lm${LM}.tsv" \
+  --output-summary "$OUT_DIR/term_miss_summary.${LANG}_lm${LM}.tsv" \
+  --output-normalized-glossary "$OUT_DIR/strict_fixed_medicine_glossary.streamlaal_dict.json"
+```
+
+TERM_ACC means exact target translation hit among sentence-level occurrences
+where both the English source term and target reference translation are present.
+The miss TSV is the main file for manual strict-term filtering.
+
+For this no-RAG baseline, ignore TERM_ADOPTION / REAL_TERM_ADOPT and do not use
+TERM_FCR as the selection signal; there is no retrieval term_map. Use
+`TERM_ACC`, `term_misses`, and manual labels.
+
+Jiaxuan's completed sanity check for `zh/lm=2`:
+
+```text
+StreamLAAL = 1509.43 ms
+StreamLAAL_CA = 2024.97 ms
+TERM_ACC = 0.6343 = 1426 / 2248
+miss occurrences = 822
+unique missed term-translations = 511
+```
+
 ## Check Outputs
 
 Main output files:
@@ -224,6 +301,9 @@ $OUTPUT_BASE/timing.tsv
 $OUTPUT_BASE/hypotheses.tsv
 $OUTPUT_BASE/<lang>/<run_dir>/instances.log
 $OUTPUT_BASE/<lang>/<run_dir>/runtime_omni_vllm_rag_v4_*.jsonl
+$OUTPUT_BASE/<lang>/<run_dir>/eval_results_streamlaal_term.tsv
+$OUTPUT_BASE/<lang>/<run_dir>/term_misses.<lang>_lm<lm>.tsv
+$OUTPUT_BASE/<lang>/<run_dir>/term_miss_summary.<lang>_lm<lm>.tsv
 ```
 
 Quick checks:
@@ -255,13 +335,16 @@ Send back:
 strict_fixed_medicine_glossary.from_outputs_v2_terms.json
 timing.tsv
 hypotheses.tsv
+eval_results_streamlaal_term.tsv for each completed setting
+term_misses.<lang>_lm<lm>.tsv for each completed setting
+term_miss_summary.<lang>_lm<lm>.tsv for each completed setting
 all non-empty instances.log paths
 the launcher you used on PSC
 stdout/stderr logs
 ```
 
-Do not manually label terms yet. The next step is exact-match + manual review
-against `target_translations` from the fixed sample terms.
+Manual review should start from `term_misses.<lang>_lm<lm>.tsv`, not from raw
+BLEU/LAAL. The review target is baseline-missed strict medicine terms.
 
 ## Reminder
 
