@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T0015__data_prepare__new_v10_no_gt_retrieved_termmap_mfa_npfilter_oldnewv3_de",
+  "event_type": "data_prepare",
+  "family": "speech_llm_sft_data",
+  "variant": "new_v10_no_gt_retrieved_termmap_mfa_npfilter_oldnewv3_de",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260525__build_new_v10_no_gt_retrieved_termmap_de.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260525__new_v10_no_gt_retrieved_termmap_mfa_npfilter_oldnewv3_de_data.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'RUN_STAMP=20260525T0015 FORCE_OVERWRITE=0 bash documents/code/train/sst_omni_train/launchers/2026/05/20260525__build_new_v10_no_gt_retrieved_termmap_de.sh' > /mnt/gemini/data1/jiaxuanluo/logs/build_new_v10_no_gt_retrieved_termmap_de_20260525T0015.out 2> /mnt/gemini/data1/jiaxuanluo/logs/build_new_v10_no_gt_retrieved_termmap_de_20260525T0015.err < /dev/null &",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260525__build_new_v10_no_gt_retrieved_termmap_de.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260525__new_v10_no_gt_retrieved_termmap_mfa_npfilter_oldnewv3_de_data.md"
+    },
+    {
+      "role": "parent_data_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/train/sst_omni_train/manifests/2026/05/20260524T1530__data_prepare__new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de.json"
+    },
+    {
+      "role": "stage2_gtbackfill_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_20260524/stage2_train_s_de_oldnewv3_mfa_openai_termmap_gtbackfill.jsonl"
+    },
+    {
+      "role": "new_v9_zero_stats_reference",
+      "type": "report",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_20260524/stage3_no_gt_zero_stats.json"
+    },
+    {
+      "role": "wrap_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/wrap_assistant_term_targets.py"
+    },
+    {
+      "role": "output_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v10_no_gt_retrieved_termmap_mfa_npfilter_oldnewv3_de_20260525"
+    },
+    {
+      "role": "final_train_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v10_no_gt_retrieved_termmap_mfa_npfilter_oldnewv3_de_20260525/train_s_de_new_v10_no_gt_retrieved_termmap_mfa_npfilter_oldnewv3.jsonl"
+    },
+    {
+      "role": "final_dev_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v10_no_gt_retrieved_termmap_mfa_npfilter_oldnewv3_de_20260525/dev_s_de_new_v10_no_gt_retrieved_termmap_mfa_npfilter_oldnewv3_first355.jsonl"
+    },
+    {
+      "role": "summary_json",
+      "type": "report",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v10_no_gt_retrieved_termmap_mfa_npfilter_oldnewv3_de_20260525/new_v10_no_gt_retrieved_termmap_mfa_npfilter_oldnewv3_de_summary.json"
+    },
+    {
+      "role": "tag_stats",
+      "type": "report",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v10_no_gt_retrieved_termmap_mfa_npfilter_oldnewv3_de_20260525/stage3direct_assistant_termtag_stats.json"
+    },
+    {
+      "role": "no_gt_samples",
+      "type": "report",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v10_no_gt_retrieved_termmap_mfa_npfilter_oldnewv3_de_20260525/new_v10_no_gt_retrieved_no_gt_chunk_samples.json"
+    },
+    {
+      "role": "stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/build_new_v10_no_gt_retrieved_termmap_de_20260525T0015.out"
+    },
+    {
+      "role": "stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/build_new_v10_no_gt_retrieved_termmap_de_20260525T0015.err"
+    },
+    {
+      "role": "pid_file",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/build_new_v10_no_gt_retrieved_termmap_de_20260525T0015.pid"
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "parent_data_event_id": "20260524T1530__data_prepare__new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de",
+    "repair_rule": "skip no-GT-zero; keep translated retriever term_map entries on chunks with empty gt_terms_by_chunk",
+    "assistant_tag_rule": "assistant tags remain driven only by gt_terms_by_chunk",
+    "expected_no_gt_entries_restored_from_new_v9_zero_stats": 206314,
+    "storage_root": "/mnt/gemini/data1",
+    "pid": 448899,
+    "completed_utc": "2026-05-25T00:12:00Z",
+    "validation": {
+      "rows": 12500,
+      "dev_rows": 355,
+      "chunks": 71730,
+      "gt_chunks": 42888,
+      "no_gt_chunks": 28842,
+      "no_gt_entries": 206314,
+      "no_gt_nonempty_chunks": 25172,
+      "no_gt_nonempty_rate": 0.8727550100547812,
+      "avg_no_gt_entries": 7.153248734484432,
+      "gt_terms": 83193,
+      "gt_in_term_map_rate": 1.0,
+      "malformed_tag_assistant_messages": 0,
+      "latin_word_cut_tag_messages": 0,
+      "no_gt_immediate_assistant_tagged": 633,
+      "no_gt_immediate_assistant_tagged_rate": 0.02194716039109632
+    }
+  }
+}

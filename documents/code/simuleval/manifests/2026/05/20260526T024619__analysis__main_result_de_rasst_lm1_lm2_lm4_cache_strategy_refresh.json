@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "event_id": "20260526T024619__analysis__main_result_de_rasst_lm1_lm2_lm4_cache_strategy_refresh",
+  "event_type": "analysis",
+  "family": "main_results",
+  "variant": "de_rasst_lm1_lm2_lm4_new_cache_chunks_max_strategy_refresh",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260526__main_result_de_rasst_lm1_lm2_lm4_cache_strategy_refresh.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python plot_figure_01_main_result_tagged.py --update-paper",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260526__main_result_de_rasst_lm1_lm2_lm4_cache_strategy_refresh.md"
+    },
+    {
+      "role": "canonical_main_result_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv"
+    },
+    {
+      "role": "comparison_report",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260526_de_tagged_acl_promptfix_cache_compare.tsv"
+    },
+    {
+      "role": "selected_lm1_eval",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/data1/jiaxuanluo/tagged_acl_de_lm3_serial_promptfix_cache30_audioauto_max40lm_20260526T003437_tagged_acl_de_lm1_serial_promptfix_cache30_audioauto_max40lm_taurus/de/dtagacl_de_lm1_serial_promptfix_cache30_audioauto_max40lm_lm1_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    {
+      "role": "selected_lm2_eval",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/data1/jiaxuanluo/main_result_rasst_serial_de_ja_cache30_max40lm_20260525T215831_main_result_rasst_serial_de_ja_cache30_max40lm_taurus_retry1/acl_tagged_raw/de_cap16_denoise_ttag_hn1024_tau078_omit_serial_chunks30_max40lm/de/dmainres_acl_serial_de_cap16denoise_ttag_hn1024_tau078_omit_chunks30_max40lm_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    {
+      "role": "selected_lm4_eval",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/data1/jiaxuanluo/tagged_acl_de_lm4_serial_promptfix_cache30_audioauto_max40lm_20260526T020512_tagged_acl_de_lm4_serial_promptfix_audioauto_cache30_max40lm_taurus_direct/de/dtagacl_de_lm4_serial_promptfix_cache30_audioauto_max40lm_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    {
+      "role": "paper_local_figure_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_01_main_result_tagged/data.tsv"
+    },
+    {
+      "role": "plot_script",
+      "type": "python_script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_01_main_result_tagged/plot_figure_01_main_result_tagged.py"
+    },
+    {
+      "role": "paper_figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.pdf"
+    },
+    {
+      "role": "paper_figure_png",
+      "type": "png",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.png"
+    }
+  ],
+  "metadata": {
+    "requested_by_user": "Use de lm=4 promptfix audioauto/cache30, lm=2 old serial, and lm=1 promptfix audioauto/cache30; update reason to rerun using new cache chunks max strategy.",
+    "updated_rows": [
+      {
+        "dataset": "acl_tagged_raw",
+        "method": "RASST",
+        "lang": "de",
+        "lm": 1,
+        "selected_source": "promptfix_audioauto_cache30",
+        "BLEU": 26.418,
+        "StreamLAAL": 1026.3858,
+        "StreamLAAL_CA": 1532.6696,
+        "TERM_ACC": 0.8107,
+        "TERM_CORRECT": 758,
+        "TERM_TOTAL": 935
+      },
+      {
+        "dataset": "acl_tagged_raw",
+        "method": "RASST",
+        "lang": "de",
+        "lm": 2,
+        "selected_source": "old_serial_cache30_max40lm",
+        "BLEU": 31.5758,
+        "StreamLAAL": 1666.9229,
+        "StreamLAAL_CA": 2414.386,
+        "TERM_ACC": 0.8299,
+        "TERM_CORRECT": 776,
+        "TERM_TOTAL": 935
+      },
+      {
+        "dataset": "acl_tagged_raw",
+        "method": "RASST",
+        "lang": "de",
+        "lm": 4,
+        "selected_source": "promptfix_audioauto_cache30",
+        "BLEU": 34.7098,
+        "StreamLAAL": 2702.2864,
+        "StreamLAAL_CA": 3933.0219,
+        "TERM_ACC": 0.8481,
+        "TERM_CORRECT": 793,
+        "TERM_TOTAL": 935
+      }
+    ],
+    "validation": "TSV uniqueness by dataset/method/lang/lm passed for 87 rows; numeric fields parsed; new_main_result_tagged.pdf/png regenerated."
+  }
+}

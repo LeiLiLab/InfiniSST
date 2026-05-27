@@ -1,0 +1,181 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T0710__simuleval__medicine_gs10k_pr_sweep_new_v5_no_gt_zero_oldnewv3_r32",
+  "event_type": "simuleval",
+  "family": "medicine_gs10k_pr_sweep",
+  "variant": "new_v5_no_gt_zero_oldnewv3_r32a64_sample404_lm2_6retriever_tau",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "direct_taurus45_medicine_gs10k_pr_sweep",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260523__medicine_gs10k_pr_sweep_new_v5_no_gt_zero_oldnewv3_r32_taurus45.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260523__medicine_gs10k_pr_sweep_new_v5_no_gt_zero_oldnewv3_r32.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && RUN_STAMP=20260523T0710 GPU_PAIR=4,5 SLURM_JOB_ID=direct_medicine_gs10k_pr_sweep_newv5_taurus45 bash documents/code/simuleval/launchers/2026/05/20260523__medicine_gs10k_pr_sweep_new_v5_no_gt_zero_oldnewv3_r32_taurus45.sh' > documents/logs/simuleval/20260523_medicine_gs10k_pr_sweep_newv5_taurus45.out 2> documents/logs/simuleval/20260523_medicine_gs10k_pr_sweep_newv5_taurus45.err < /dev/null &",
+  "parent_run_ids": [
+    "cg5qisu9",
+    "40fgbr2y",
+    "lh1b88kw",
+    "342oxpmu"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__medicine_gs10k_pr_sweep_new_v5_no_gt_zero_oldnewv3_r32_taurus45.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "prep_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/prepare_medicine_one_talk_inputs.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260523__medicine_gs10k_pr_sweep_new_v5_no_gt_zero_oldnewv3_r32.md"
+    },
+    {
+      "role": "speech_llm_hf_model",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/aries/data6/jiaxuanluo/slm/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_r32a64_tp2_aries2/keep1.0_r32/v0-20260523-050346-hf"
+    },
+    {
+      "role": "runtime_glossary_gs10k",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000_translated.json"
+    },
+    {
+      "role": "medicine_strict_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_dev_dataset.jsonl"
+    },
+    {
+      "role": "nohn_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8192_gc256_wr1000k_m0.0_maxsim_mfa_variantE_nohn_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu01234567_taurus_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "hn1024_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_gs10k_pr_sweep_new_v5_no_gt_zero_oldnewv3_r32_20260523T0710"
+    },
+    {
+      "role": "logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_gs10k_pr_sweep_new_v5_20260523T0710"
+    },
+    {
+      "role": "summary_report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_gs10k_pr_sweep_new_v5_no_gt_zero_oldnewv3_r32_20260523T0710/summary_medicine_gs10k_pr_sweep_metrics.md"
+    },
+    {
+      "role": "summary_metrics",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_gs10k_pr_sweep_new_v5_no_gt_zero_oldnewv3_r32_20260523T0710/summary_medicine_gs10k_pr_sweep_metrics.tsv"
+    },
+    {
+      "role": "outer_logs_initial",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260523_medicine_gs10k_pr_sweep_newv5_taurus45.out"
+    },
+    {
+      "role": "outer_logs_hn_resume2",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260523_medicine_gs10k_pr_sweep_newv5_taurus45_hn_resume2.out"
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "lm": 2,
+    "target_sample": "404",
+    "runtime_glossary": "medicine_gs10k",
+    "metric_denominator": "per-talk strict raw medicine glossary generated from old strict medicine source",
+    "speech_llm_training_run_id": "cg5qisu9",
+    "speech_llm_raw_reference_eval_run_id": "342oxpmu",
+    "settings": [
+      {
+        "setting": "no-HN",
+        "retriever_run_id": "40fgbr2y",
+        "tau": 0.61,
+        "medicine_gs10k_precision": 10.34,
+        "medicine_gs10k_recall": 94.1
+      },
+      {
+        "setting": "no-HN",
+        "retriever_run_id": "40fgbr2y",
+        "tau": 0.7,
+        "medicine_gs10k_precision": 14.38,
+        "medicine_gs10k_recall": 91.03
+      },
+      {
+        "setting": "no-HN",
+        "retriever_run_id": "40fgbr2y",
+        "tau": 0.73,
+        "medicine_gs10k_precision": 17.23,
+        "medicine_gs10k_recall": 88.5
+      },
+      {
+        "setting": "HN1024",
+        "retriever_run_id": "lh1b88kw",
+        "tau": 0.72,
+        "medicine_gs10k_precision": 10.9,
+        "medicine_gs10k_recall": 92.69
+      },
+      {
+        "setting": "HN1024",
+        "retriever_run_id": "lh1b88kw",
+        "tau": 0.78,
+        "medicine_gs10k_precision": 16.21,
+        "medicine_gs10k_recall": 89.0
+      },
+      {
+        "setting": "HN1024",
+        "retriever_run_id": "lh1b88kw",
+        "tau": 0.82,
+        "medicine_gs10k_precision": 25.35,
+        "medicine_gs10k_recall": 83.55
+      }
+    ],
+    "wandb_run_ids": [
+      "dfyziwtq",
+      "4wicgr7b",
+      "wcfwm4t2",
+      "a0uib4pp",
+      "rzx4ttz4",
+      "6ffq1ifl"
+    ],
+    "execution_notes": [
+      "Initial direct run completed no-HN tau 0.61 and 0.70; no-HN tau 0.73 inference completed but offline eval was recovered manually from instances.log after a transient shell parse error.",
+      "HN1024 resume used SETTING_FILTER_OVERRIDE and RAG_GPU_OVERRIDE=cuda:1 to keep the requested two-GPU taurus 4,5 layout.",
+      "HN1024 tau 0.82 inference completed but offline eval was recovered manually from instances.log after the same transient shell parse error."
+    ],
+    "summary_markdown": "/mnt/gemini/data1/jiaxuanluo/medicine_gs10k_pr_sweep_new_v5_no_gt_zero_oldnewv3_r32_20260523T0710/summary_medicine_gs10k_pr_sweep_metrics.md",
+    "summary_tsv": "/mnt/gemini/data1/jiaxuanluo/medicine_gs10k_pr_sweep_new_v5_no_gt_zero_oldnewv3_r32_20260523T0710/summary_medicine_gs10k_pr_sweep_metrics.tsv"
+  }
+}

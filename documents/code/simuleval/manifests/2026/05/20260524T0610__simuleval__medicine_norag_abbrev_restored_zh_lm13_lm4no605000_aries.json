@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T0610__simuleval__medicine_norag_abbrev_restored_zh_lm13_lm4no605000_aries",
+  "event_type": "simuleval",
+  "family": "medicine_norag_baseline_abbrev_restored",
+  "variant": "zh_lm13_5samples_lm4_4samples_no605000_aries",
+  "status": "running",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_norag_abbrev_restored_zh_lm13_lm4no605000_aries.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__medicine_norag_abbrev_restored_zh_lm13_lm4no605000_aries.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries \"cd /mnt/taurus/home/jiaxuanluo/InfiniSST && mkdir -p /mnt/gemini/data1/jiaxuanluo/logs && nohup setsid bash -lc 'RUN_STAMP_OVERRIDE=20260524T0610 exec bash documents/code/simuleval/launchers/2026/05/20260524__medicine_norag_abbrev_restored_zh_lm13_lm4no605000_aries.sh' > /mnt/gemini/data1/jiaxuanluo/logs/20260524T0610_medicine_norag_abbrev_restored_zh_lm13_lm4no605000_aries.wrapper.out 2> /mnt/gemini/data1/jiaxuanluo/logs/20260524T0610_medicine_norag_abbrev_restored_zh_lm13_lm4no605000_aries.wrapper.err < /dev/null & pid=$!; echo $pid > /mnt/gemini/data1/jiaxuanluo/logs/20260524T0610_medicine_norag_abbrev_restored_zh_lm13_lm4no605000_aries.wrapper.pid; echo $pid\"; outer ssh shell was killed after wrapper reparented, and pid file corrected to wrapper pid 1171282",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_norag_abbrev_restored_zh_lm13_lm4no605000_aries.sh"
+    },
+    {
+      "role": "batched_medicine_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260522__medicine_abbrev_restored_norag_streaming_batched_aries67.sh"
+    },
+    {
+      "role": "base_no_rag_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/rank16/baseline/bypass_simuleval_rank32_iter_0000452_hf_baseline_no_rag_sweep.sh"
+    },
+    {
+      "role": "medicine_input_prepare_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/prepare_medicine_one_talk_inputs.py"
+    },
+    {
+      "role": "post_eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/offline_sst_eval/offline_streamlaal_eval.py"
+    },
+    {
+      "role": "term_miss_export_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/export_streamlaal_term_misses.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__medicine_norag_abbrev_restored_zh_lm13_lm4no605000_aries.md"
+    },
+    {
+      "role": "medicine_eso_test_root",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/home/jiaxingxu/rag-sst/eso-dataset/outputs_v2_abbrev_exact_match_abbrev_restored/test"
+    },
+    {
+      "role": "hard_manual_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hard_manual_glossary_streamlaal_20260524.json"
+    },
+    {
+      "role": "origin_model_zh",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-zh-s_origin-bsz4"
+    },
+    {
+      "role": "prior_zh_lm4_sample605000_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260523T2110__simuleval__medicine_norag_vllm_override_probe_taurus.json"
+    },
+    {
+      "role": "prior_zh_lm4_sample605000_output",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_vllm_override_probe_20260523"
+    },
+    {
+      "role": "output_zh_lm1",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_zh_lm1_aries01"
+    },
+    {
+      "role": "output_zh_lm3",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_zh_lm3_aries67"
+    },
+    {
+      "role": "output_zh_lm4_candidate",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_zh_lm4_no605000_aries23"
+    },
+    {
+      "role": "output_zh_lm4_candidate",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_zh_lm4_no605000_aries67"
+    },
+    {
+      "role": "output_zh_lm4_candidate",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_zh_lm4_no605000_aries01"
+    },
+    {
+      "role": "cache_root",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/cache/medicine_norag_zh_aries_20260524T0610"
+    },
+    {
+      "role": "log_root",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs"
+    },
+    {
+      "role": "wrapper_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524T0610_medicine_norag_abbrev_restored_zh_lm13_lm4no605000_aries.wrapper.out"
+    },
+    {
+      "role": "wrapper_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524T0610_medicine_norag_abbrev_restored_zh_lm13_lm4no605000_aries.wrapper.err"
+    },
+    {
+      "role": "wrapper_pid",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524T0610_medicine_norag_abbrev_restored_zh_lm13_lm4no605000_aries.wrapper.pid"
+    },
+    {
+      "role": "completion_monitor_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524T0610_medicine_norag_abbrev_restored_zh_lm13_lm4no605000_aries.monitor_notify.log"
+    },
+    {
+      "role": "completion_monitor_pid",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524T0610_medicine_norag_abbrev_restored_zh_lm13_lm4no605000_aries.monitor_notify.pid"
+    }
+  ],
+  "metadata": {
+    "host": "aries",
+    "wrapper_pid": "1171282",
+    "completion_monitor_pid": "1655554",
+    "notification_method": "local taurus detached monitor calls /home/jiaxuanluo/bin/codex-notify after aries wrapper exits",
+    "started_utc": "2026-05-24T06:17:13Z",
+    "lang": "zh",
+    "lm1_samples": ["404", "545006", "596001", "605000", "606"],
+    "lm3_samples": ["404", "545006", "596001", "605000", "606"],
+    "lm4_samples": ["404", "545006", "596001", "606"],
+    "excluded_lm4_sample": "605000",
+    "excluded_lm4_sample_reason": "Existing Taurus zh lm=4 sample605000 no-RAG artifact is accepted and not rerun.",
+    "initial_gpu_pairs": {
+      "lm1": "0:1",
+      "lm3": "6:7",
+      "lm4_priority": ["2:3", "6:7", "0:1"]
+    },
+    "force_rerun": "0",
+    "tmp_dirs": ["/dev/shm/jxzh1_aries01", "/dev/shm/jxzh3_aries67", "/dev/shm/jxzh4_aries23_or_aries67_or_aries01"],
+    "cache_root": "/mnt/gemini/data1/jiaxuanluo/cache/medicine_norag_zh_aries_20260524T0610",
+    "success_criteria": [
+      "lm1 and lm3 timing rows report 5 samples",
+      "lm4 timing row reports 4 samples and no sample 605000 in sample_map",
+      "instances.log exists for all three new settings",
+      "hard-manual StreamLAAL and term miss TSVs exist for all three new settings"
+    ]
+  }
+}

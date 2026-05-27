@@ -1,0 +1,5 @@
+dataset	method	lang	instance_rows	source_rows	row_match	BLEU	TERM_ACC	TERM_CORRECT	TERM_TOTAL	first_index	first_source_length	first_prediction_length	instances_log	scores_tsv
+acl_tagged_raw	Offline ST	de	468	468	True	38.691	0.7230	676	935	0	9160.0	25	/mnt/data/siqiouyang/runs/infinisst_rag/offline/acl6060/de/instances.log	/mnt/data/siqiouyang/runs/infinisst_rag/offline/acl6060/de/scores.tsv
+acl_tagged_raw	Offline + GT terms	de	468	468	True	41.485	0.9080	849	935	0	9160.0	26	/mnt/data/siqiouyang/runs/infinisst_rag/offline/acl6060/glossary/de/instances.log	/mnt/data/siqiouyang/runs/infinisst_rag/offline/acl6060/glossary/de/scores.tsv
+medicine_hardraw	Offline ST	de	1437	1437	True	34.36	0.4889	351	718	0	2130.0	7	/mnt/data/siqiouyang/runs/infinisst_rag/offline/eso/baseline/de/instances.log	/mnt/data/siqiouyang/runs/infinisst_rag/offline/eso/baseline/de/scores.tsv
+medicine_hardraw	Offline + GT terms	de	1437	1437	True	35.103	0.6546	470	718	0	2130.0	7	/mnt/data/siqiouyang/runs/infinisst_rag/offline/eso/glossary/de/instances.log	/mnt/data/siqiouyang/runs/infinisst_rag/offline/eso/glossary/de/scores.tsv

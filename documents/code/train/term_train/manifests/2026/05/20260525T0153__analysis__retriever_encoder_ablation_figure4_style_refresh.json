@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T0153__analysis__retriever_encoder_ablation_figure4_style_refresh",
+  "event_type": "analysis",
+  "family": "paper_figure_refresh",
+  "variant": "retriever_encoder_ablation_figure4_style_and_description",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260525__retriever_encoder_ablation_figure4_style_refresh.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "PYTHONDONTWRITEBYTECODE=1 python documents/code/train/term_train/src/plot_retriever_encoder_ablation.py --input-tsv documents/code/train/term_train/reports/figures/20260524_retriever_encoder_ablation_devraw.tsv --out-tsv documents/code/train/term_train/reports/figures/20260524_retriever_encoder_ablation_devraw.tsv --out-pdf documents/code/train/term_train/reports/figures/20260524_retriever_encoder_ablation_devraw.pdf --out-png documents/code/train/term_train/reports/figures/20260524_retriever_encoder_ablation_devraw.png --latex-pdf documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/retriever_encoder_ablation_devraw.pdf",
+  "parent_run_ids": [
+    "gczac4rf",
+    "deb5d6mn",
+    "q1eny6jt"
+  ],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260525__retriever_encoder_ablation_figure4_style_refresh.md"
+    },
+    {
+      "role": "analysis_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/src/plot_retriever_encoder_ablation.py"
+    },
+    {
+      "role": "figure_tsv",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/figures/20260524_retriever_encoder_ablation_devraw.tsv"
+    },
+    {
+      "role": "figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260524_retriever_encoder_ablation_devraw.pdf"
+    },
+    {
+      "role": "figure_png",
+      "type": "png",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260524_retriever_encoder_ablation_devraw.png"
+    },
+    {
+      "role": "paper_figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/retriever_encoder_ablation_devraw.pdf"
+    },
+    {
+      "role": "paper_section",
+      "type": "tex",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/sections/results.tex"
+    }
+  ],
+  "metadata": {
+    "completed_utc": "2026-05-25T01:53:00Z",
+    "metric_change": false,
+    "paper_latexmk_pdf_success": true,
+    "style_change": "muted blue/gray palette with line-style differences",
+    "description_change": "expanded GS to GigaSpeech-derived runtime distractor candidate banks and replaced Main legend with Qwen3-Omni-AuT + BGE-M3"
+  }
+}

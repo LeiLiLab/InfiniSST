@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "event_id": "20260518T2315__simuleval__medicine_onetalk_oracle_gt",
+  "event_type": "simuleval",
+  "family": "speech_llm_termmap_oracle",
+  "variant": "medicine_onetalk_oracle_gt",
+  "status": "planned",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260518__medicine_onetalk_oracle_gt_aries.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260518__medicine_onetalk_oracle_gt_speech_llm_eval.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "MODEL_NAME_OVERRIDE=<hf_speech_llm_path> TARGET_LM=<latency_multiplier> sbatch --parsable documents/code/simuleval/launchers/2026/05/20260518__medicine_onetalk_oracle_gt_aries.sh",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260518__medicine_onetalk_oracle_gt_aries.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/prepare_medicine_one_talk_inputs.py"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "agents/infinisst_omni_vllm_maxsim_rag.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260518__medicine_onetalk_oracle_gt_speech_llm_eval.md"
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_dev_dataset.jsonl"
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000_translated.json"
+    },
+    {
+      "role": "parent_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/data_pre/training_terms_for_retriever/manifests/2026/05/20260518T2300__data_prepare__medicine_strict_glossary_eso_translations.json"
+    },
+    {
+      "role": "medicine_eso_sentences",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/home/jiaxingxu/rag-sst/eso-dataset/outputs_v2/test"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data2/jiaxuanluo/medicine_onetalk_oracle_gt"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs"
+    }
+  ],
+  "metadata": {
+    "target_sample_default": "404",
+    "lang_code_default": "zh",
+    "term_map_mode": "oracle_gt",
+    "parent_event_ids": [
+      "20260518T2300__data_prepare__medicine_strict_glossary_eso_translations"
+    ],
+    "oracle_source": "ESO v2 sentence terms filtered through strict MFA-exact medicine JSONL/glossary",
+    "requires_launch_env": [
+      "MODEL_NAME_OVERRIDE",
+      "TARGET_LM"
+    ],
+    "metrics": [
+      "BLEU",
+      "StreamLAAL",
+      "TERM_ACC",
+      "realAdopt",
+      "sentence_level_FCR"
+    ]
+  }
+}

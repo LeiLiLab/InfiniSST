@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T1545__simuleval__acl_paper_extracted_union_zh_origin_norag_newv9_hn1024",
+  "event_type": "simuleval",
+  "family": "acl_paper_extracted_union_zh",
+  "variant": "origin_norag_baseline_newv9_hn1024_raw_gs1k_gs10k_lm1to4_m80",
+  "status": "running",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "detached_pid:3743266",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__acl_paper_extracted_union_zh_origin_norag_newv9_hn1024_batch.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__acl_paper_extracted_union_zh_origin_norag_newv9_hn1024.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "RUN_STAMP_OVERRIDE=20260524T1545_aclpp_union_zh_origin_newv9_hn1024_m80 MODE=launch bash documents/code/simuleval/launchers/2026/05/20260524__acl_paper_extracted_union_zh_origin_norag_newv9_hn1024_batch.sh",
+  "parent_run_ids": [
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "bash",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__acl_paper_extracted_union_zh_origin_norag_newv9_hn1024_batch.sh"
+    },
+    {
+      "role": "common_launcher",
+      "type": "bash",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py"
+    },
+    {
+      "role": "eval_script",
+      "type": "bash",
+      "direction": "control",
+      "path": "documents/code/simuleval/rank16/baseline/bypass_simuleval_rank32_iter_0000452_hf_baseline_no_rag_sweep.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/offline_sst_eval/offline_streamlaal_eval.py"
+    },
+    {
+      "role": "wandb_logger",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/offline_evaluation/wandb_eval_logger.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__acl_paper_extracted_union_zh_origin_norag_newv9_hn1024.md"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "retriever/gigaspeech/data_pre/acl6060_paper_extracted_union_raw_zh.json",
+      "metadata": {
+        "fixed_metric_denominator": true,
+        "runtime_glossary": true,
+        "entry_count": 253
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "retriever/gigaspeech/data_pre/acl6060_paper_extracted_union_gs1000_zh.json",
+      "metadata": {
+        "runtime_glossary": true,
+        "entry_count": 1000
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "retriever/gigaspeech/data_pre/acl6060_paper_extracted_union_gs10000_zh.json",
+      "metadata": {
+        "runtime_glossary": true,
+        "entry_count": 10000
+      }
+    },
+    {
+      "role": "checkpoint",
+      "type": "hf_model",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-zh-s_origin-bsz4",
+      "metadata": {
+        "method": "origin_no_tmsft_no_rag"
+      }
+    },
+    {
+      "role": "checkpoint",
+      "type": "hf_model",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm_exports/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8/keep1.0_r32/v0-20260524-062743-hf",
+      "metadata": {
+        "method": "new_v9_hn1024_rasst"
+      }
+    },
+    {
+      "role": "checkpoint",
+      "type": "pt",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "source_run_id": "lh1b88kw",
+        "tau": 0.78
+      }
+    },
+    {
+      "role": "eval_input",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/acl_paper_extracted_union_zh_20260524T1545_aclpp_union_zh_origin_newv9_hn1024_m80/__inputs__/paper_union/zh/all"
+    },
+    {
+      "role": "index_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/maxsim_index_cache/acl_paper_extracted_union_zh"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/acl_paper_extracted_union_zh_20260524T1545_aclpp_union_zh_origin_newv9_hn1024_m80"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/acl_paper_extracted_union_zh_20260524T1545_aclpp_union_zh_origin_newv9_hn1024_m80"
+    },
+    {
+      "role": "pid_file",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/acl_paper_extracted_union_zh_20260524T1545_aclpp_union_zh_origin_newv9_hn1024_m80/supervisor.pid"
+    },
+    {
+      "role": "resource_snapshot",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/acl_paper_extracted_union_zh_20260524T1545_aclpp_union_zh_origin_newv9_hn1024_m80/resource_snapshot_launch.txt"
+    }
+  ],
+  "metadata": {
+    "launch_utc": "2026-05-24T16:16:30Z",
+    "supervisor_pid": 3743266,
+    "launch_mode": "setsid_detached",
+    "retry_reason": "Initial detached supervisor built indices but failed before controlled baseline wait because worker PIDs were captured via command substitution subshells; orphan workers were terminated. Launcher was patched to track direct child PIDs, use stable Aries remote root, normalize audio paths to /mnt/taurus/data for cross-host readability, move all lm workers to Aries to free all Taurus GPUs, and force baseline clean reruns so partial instances.log files are not reused.",
+    "lang": "zh",
+    "lms": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "methods": [
+      "origin_norag",
+      "newv9_hn1024"
+    ],
+    "runtime_glossaries": [
+      "raw",
+      "gs1k",
+      "gs10k"
+    ],
+    "metric_denominator_policy": "fixed_union_raw_glossary",
+    "max_new_tokens": 80,
+    "vllm_max_model_len": 16384,
+    "retriever_tau": 0.78,
+    "gpu_plan": {
+      "lm1": "aries:0,1",
+      "lm2": "aries:2,3",
+      "lm3": "aries:4,5",
+      "lm4": "aries:6,7"
+    },
+    "storage_root": "/mnt/gemini/data1/jiaxuanluo",
+    "acl_usage": "held_out_readout_only_no_tau_or_checkpoint_selection"
+  }
+}

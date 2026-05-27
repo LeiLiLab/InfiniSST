@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T055610__data_prepare__hard_medicine_sentence_id_backfill",
+  "event_type": "data_prepare",
+  "family": "medicine_hardraw_glossary",
+  "variant": "sentence_id_backfill_v2_final",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/data_pre/medicine/notes/2026/05/20260525__hard_medicine_sentence_id_backfill.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/data_pre/medicine/src/backfill_hard_medicine_glossary_sentence_ids.py --input /mnt/gemini/home/jiaxuanluo/medicine_eval_hard_terms_llm_judge_manual_20260524/hard_medicine_glossary_raw_llm_judge_manual_zh215_unique212.json --output /mnt/gemini/home/jiaxuanluo/medicine_eval_hard_terms_llm_judge_manual_20260524/hard_medicine_glossary_raw_llm_judge_manual_zh215_unique212.json --stats-output /mnt/gemini/home/jiaxuanluo/medicine_eval_hard_terms_llm_judge_manual_20260524/hard_medicine_glossary_raw_llm_judge_manual_zh215_unique212_stats.json --eso-test-root /home/jiaxingxu/rag-sst/eso-dataset/outputs_v2_final/test",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "data_prep_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/data_pre/medicine/src/backfill_hard_medicine_glossary_sentence_ids.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/data_pre/medicine/notes/2026/05/20260525__hard_medicine_sentence_id_backfill.md"
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_hard_terms_llm_judge_manual_20260524/hard_medicine_glossary_raw_llm_judge_manual_zh215_unique212.json"
+    },
+    {
+      "role": "medicine_eso_final_test_root",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/home/jiaxingxu/rag-sst/eso-dataset/outputs_v2_final/test"
+    },
+    {
+      "role": "medicine_eval_wiki_glossary_sentence_ids",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_hard_terms_llm_judge_manual_20260524/hard_medicine_glossary_raw_llm_judge_manual_zh215_unique212.json"
+    },
+    {
+      "role": "medicine_eval_wiki_glossary_sentence_ids_stats",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_hard_terms_llm_judge_manual_20260524/hard_medicine_glossary_raw_llm_judge_manual_zh215_unique212_stats.json"
+    },
+    {
+      "role": "medicine_eval_wiki_glossary_before_backfill",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_hard_terms_llm_judge_manual_20260524/hard_medicine_glossary_raw_llm_judge_manual_zh215_unique212.before_sentence_backfill_20260525T055610.json"
+    },
+    {
+      "role": "medicine_eval_wiki_glossary_stats_before_backfill",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_hard_terms_llm_judge_manual_20260524/hard_medicine_glossary_raw_llm_judge_manual_zh215_unique212_stats.before_sentence_backfill_20260525T055610.json"
+    },
+    {
+      "role": "medicine_eval_wiki_glossary_before_target_dedup",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_hard_terms_llm_judge_manual_20260524/hard_medicine_glossary_raw_llm_judge_manual_zh215_unique212.before_target_dedup_20260525T060935.json"
+    },
+    {
+      "role": "medicine_eval_wiki_glossary_stats_before_target_dedup",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_hard_terms_llm_judge_manual_20260524/hard_medicine_glossary_raw_llm_judge_manual_zh215_unique212_stats.before_target_dedup_20260525T060935.json"
+    }
+  ],
+  "metadata": {
+    "reason": "offline oracle term-map construction needs full sentence ids, not only manual hard-term evidence ids",
+    "reference_version": "outputs_v2_final/test",
+    "sentence_count": 1437,
+    "entries": 212,
+    "before_sentence_ids_sum": 280,
+    "after_source_occurrence_count_sum": 869,
+    "after_top_level_unique_sentence_ids_sum": 850,
+    "before_target_dedup_lang_occurrence_count_sum": {
+      "zh": 753,
+      "de": 718,
+      "ja": 746
+    },
+    "after_lang_occurrence_count_sum": {
+      "zh": 744,
+      "de": 718,
+      "ja": 736
+    },
+    "scorer_term_total_by_target_dedup": {
+      "zh": 744,
+      "de": 718,
+      "ja": 736
+    },
+    "target_dedup_removed_occurrences": {
+      "zh": 9,
+      "de": 0,
+      "ja": 10
+    }
+  }
+}

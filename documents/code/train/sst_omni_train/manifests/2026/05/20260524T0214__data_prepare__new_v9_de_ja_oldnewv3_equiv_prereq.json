@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T0214__data_prepare__new_v9_de_ja_oldnewv3_equiv_prereq",
+  "event_type": "data_prepare",
+  "family": "speech_llm_tcm_termmap",
+  "variant": "new_v9_de_ja_oldnewv3_equiv_prereq",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_de_ja.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260524__new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_de_ja_data.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'TCM_BUILD_GPU_DEVICES_OVERRIDE=0,1 NUM_SHARDS_OVERRIDE=2 RUN_VARIANT_STAGE_OVERRIDE=0 LANGS_OVERRIDE=\"de ja\" FORCE_OVERWRITE=1 bash documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_de_ja.sh' > /mnt/gemini/data1/jiaxuanluo/logs/20260524_new_v9_de_ja_oldnewv3_equiv_prereq.out 2> /mnt/gemini/data1/jiaxuanluo/logs/20260524_new_v9_de_ja_oldnewv3_equiv_prereq.err < /dev/null &",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_de_ja.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260524__new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_de_ja_data.md"
+    },
+    {
+      "role": "derive_gt_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/derive_gt_terms_from_termmap_matches.py"
+    },
+    {
+      "role": "extract_glossary_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/extract_termmap_glossary.py"
+    },
+    {
+      "role": "retriever_termmap_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/data_pre/hard_negative_jsonl_for_speech_llm/generate_termmap_maxsim.py"
+    },
+    {
+      "role": "rebuild_termmap_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/data_pre/hard_negative_jsonl_for_speech_llm/rebuild_termmap.py"
+    },
+    {
+      "role": "train_jsonl_de",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/train_s_de_v4_ner_baseline_aligned_rate1.0_k20_final.jsonl"
+    },
+    {
+      "role": "train_jsonl_ja",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/train_s_ja_v4_ner_baseline_aligned_rate1.0_k20_final.jsonl"
+    },
+    {
+      "role": "checkpoint",
+      "type": "pt",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs12k_t=0.07_3var_gsv2full_gsfix_mfa_ntcm_final_v3_n64_p1n4_s2000_aries-8gpu_smallest_dense_smoke4650_best.pt"
+    },
+    {
+      "role": "output_dir_de",
+      "type": "dataset_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_de_20260524"
+    },
+    {
+      "role": "output_dir_ja",
+      "type": "dataset_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_ja_20260524"
+    },
+    {
+      "role": "oldnewv3_equiv_train_jsonl_de",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_de_20260524/stage2_train_s_de_oldnewv3_equiv_tcmwiki_termmap_gtbackfill.jsonl"
+    },
+    {
+      "role": "oldnewv3_equiv_train_jsonl_ja",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_ja_20260524/stage2_train_s_ja_oldnewv3_equiv_tcmwiki_termmap_gtbackfill.jsonl"
+    },
+    {
+      "role": "derived_gt_jsonl_de",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_de_20260524/stage0_train_s_de_derived_gt_from_llmgen_termmap.jsonl"
+    },
+    {
+      "role": "derived_gt_jsonl_ja",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_ja_20260524/stage0_train_s_ja_derived_gt_from_llmgen_termmap.jsonl"
+    },
+    {
+      "role": "stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524_new_v9_de_ja_oldnewv3_equiv_prereq.out"
+    },
+    {
+      "role": "stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524_new_v9_de_ja_oldnewv3_equiv_prereq.err"
+    }
+  ],
+  "metadata": {
+    "reason_for_prereq_stage": "de/ja legacy JSONL lacks gt_terms_by_chunk and old-new_v3 retriever-SFT data; this event builds the old-new_v3-equivalent prerequisite only",
+    "run_variant_stage": 0,
+    "langs": [
+      "de",
+      "ja"
+    ],
+    "num_shards": 2,
+    "gpu_csv": "0,1",
+    "retrieval_density": 9,
+    "score_threshold": 0.75,
+    "max_top_k": 20,
+    "term_map_max_terms": 20,
+    "glossary_source": "top 100k entries extracted from legacy language-specific train term_map",
+    "target_variant_stage_requires_openai_key": true
+    ,
+    "pid": 3403773,
+    "previous_failed_pid": 3401175,
+    "previous_failed_pid_2": 3402386,
+    "rerun_reason": "first launch hit readonly CUDA_VISIBLE_DEVICES; second launch reached shards but missed taurus spaCyEnv torch path",
+    "completion_note": "stage 0 derived GT, stage 0 glossary extraction, stage 1 retriever termmap generation, and stage 2 old-new_v3-equivalent rebuild completed for de and ja",
+    "de_stage0": {
+      "chunks_total": 71730,
+      "gt_chunk_rate": 0.67156,
+      "gt_terms_total": 166075,
+      "selected_exact": 85817,
+      "selected_fuzzy": 80258
+    },
+    "de_stage2": {
+      "chunks_total": 71730,
+      "with_term_map_rate": 0.968,
+      "avg_term_map_size": 15.9,
+      "gt_recall_before_backfill": "72745/166075"
+    },
+    "ja_stage0": {
+      "chunks_total": 53352,
+      "gt_chunk_rate": 0.60852,
+      "gt_terms_total": 94601,
+      "selected_exact": 63008,
+      "selected_fuzzy": 31593
+    },
+    "ja_stage2": {
+      "chunks_total": 53352,
+      "with_term_map_rate": 0.95,
+      "avg_term_map_size": 15.5,
+      "gt_recall_before_backfill": "48322/94601"
+    }
+  }
+}

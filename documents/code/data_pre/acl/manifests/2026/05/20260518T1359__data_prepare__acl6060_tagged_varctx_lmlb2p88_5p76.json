@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "event_id": "20260518T1359__data_prepare__acl6060_tagged_varctx_lmlb2p88_5p76",
+  "event_type": "data_prepare",
+  "family": "acl6060_tagged_eval_data",
+  "variant": "tagged_glossary_lmlb2p88_3p84_4p80_5p76",
+  "status": "success",
+  "project": null,
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/data_pre/acl/run_build_acl6060_tagged_varctx_lmlb2p88_3p84_4p80_5p76.sh",
+  "notes_path": null,
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "bash documents/code/data_pre/acl/run_build_acl6060_tagged_varctx_lmlb2p88_3p84_4p80_5p76.sh",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/data_pre/acl/run_build_acl6060_tagged_varctx_lmlb2p88_3p84_4p80_5p76.sh"
+    },
+    {
+      "role": "prepare_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/data_pre/acl/prepare_acl6060_tagged_variable_context.py"
+    },
+    {
+      "role": "diagnose_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/data_pre/training_terms_for_retriever/diagnose_variable_context_jsonl.py"
+    },
+    {
+      "role": "acl_xml",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/data/siqiouyang/datasets/acl6060/dev/text/xml/ACL.6060.dev.en-xx.en.xml"
+    },
+    {
+      "role": "acl_tagged_text",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/data/siqiouyang/datasets/acl6060/dev/text/tagged_terminology/ACL.6060.dev.tagged.en-xx.en.txt"
+    },
+    {
+      "role": "acl_wav_dir",
+      "type": "audio_dir",
+      "direction": "input",
+      "path": "/mnt/data/siqiouyang/datasets/acl6060/dev/full_wavs"
+    },
+    {
+      "role": "mfa_textgrid_dir",
+      "type": "alignment_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/acl6060_dev_offline_eval/mfa_textgrids"
+    },
+    {
+      "role": "tagged_glossary_source",
+      "type": "glossary",
+      "direction": "input",
+      "path": "documents/data/data_pre/glossary_acl6060.json",
+      "metadata": {
+        "source_script": "documents/data/data_pre/handle_tagged_glossary.py"
+      }
+    },
+    {
+      "role": "wiki_filler_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "documents/code/data_pre/glossary_scale/wiki_glossary_nlp_ai_cs_enriched.json"
+    },
+    {
+      "role": "tagged_acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_tagged_glossary_varctx2p88_3p84_4p80_5p76/acl6060_tagged_dev_dataset.jsonl"
+    },
+    {
+      "role": "tagged_acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs10000_min_norm2_backfill.json"
+    },
+    {
+      "role": "audio_chunks",
+      "type": "audio_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_tagged_varctx2p88_3p84_4p80_5p76/audio_chunks"
+    },
+    {
+      "role": "stats_json",
+      "type": "report",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_tagged_glossary_varctx2p88_3p84_4p80_5p76/acl6060_tagged_dev_dataset_stats.json"
+    },
+    {
+      "role": "diag_json",
+      "type": "report",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_tagged_glossary_varctx2p88_3p84_4p80_5p76/acl6060_tagged_dev_dataset_diag.json"
+    },
+    {
+      "role": "output_dir",
+      "type": "dataset_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_tagged_glossary_varctx2p88_3p84_4p80_5p76"
+    }
+  ],
+  "metadata": {
+    "duration_secs": [
+      2.88,
+      3.84,
+      4.8,
+      5.76
+    ],
+    "duration_assignment": "balance_rows",
+    "min_norm_chars": 2,
+    "eval_glossary_size": 10000,
+    "eval_glossary_gt_terms": 238,
+    "eval_glossary_filler_terms": 9762,
+    "filler_source": "wiki_glossary_nlp_ai_cs_enriched",
+    "observed_unique_terms": 238,
+    "written_total_rows": 4943,
+    "written_term_rows": 3946,
+    "written_empty_rows": 997,
+    "completed_at_utc": "2026-05-18T14:04:07Z",
+    "uses_cached_acl_mfa": true,
+    "acl_usage": "held-out readout only"
+  }
+}

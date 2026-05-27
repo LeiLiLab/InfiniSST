@@ -1,0 +1,192 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T2332__simuleval__medicine_sample404_hn1024_tau078_new_v9_termtag_delay",
+  "event_type": "simuleval",
+  "family": "medicine_sample404_speech_llm_quick",
+  "variant": "new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078_gs10k_lm2_sample404",
+  "status": "completed",
+  "project": "simuleval_eval",
+  "wandb_run_id": "4b86tuti",
+  "slurm_job_id": "direct_pid_3043467",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260523__medicine_sample404_hn1024_tau078_new_v9_termtag_delay_wait_hf.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260523__medicine_sample404_hn1024_tau078_new_v9_termtag_delay.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && RUN_STAMP=20260523T2332 GPU_PAIR=0,1 RAG_GPU_OVERRIDE=cuda:1 SLURM_JOB_ID=direct_medicine_sample404_hn1024_tau078_newv9_data1hf_2gpu MODEL_ROOT_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/slm_exports/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8/keep1.0_r32 bash documents/code/simuleval/launchers/2026/05/20260523__medicine_sample404_hn1024_tau078_new_v9_termtag_delay_wait_hf.sh' > documents/logs/simuleval/20260523_medicine_sample404_hn1024_tau078_new_v9_20260523T2332_data1_2gpu.out 2> documents/logs/simuleval/20260523_medicine_sample404_hn1024_tau078_new_v9_20260523T2332_data1_2gpu.err < /dev/null &",
+  "parent_run_ids": [
+    "2g6kan5y",
+    "lh1b88kw",
+    "f9hkum1p"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__medicine_sample404_hn1024_tau078_new_v9_termtag_delay_wait_hf.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "offline_eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/offline_sst_eval/offline_streamlaal_eval.py"
+    },
+    {
+      "role": "prep_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/prepare_medicine_one_talk_inputs.py"
+    },
+    {
+      "role": "wandb_logger",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/offline_evaluation/wandb_eval_logger.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260523__medicine_sample404_hn1024_tau078_new_v9_termtag_delay.md"
+    },
+    {
+      "role": "speech_llm_mcore_model",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8/keep1.0_r32/v0-20260524-062743"
+    },
+    {
+      "role": "speech_llm_hf_model",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm_exports/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8/keep1.0_r32/v0-20260524-062743-hf"
+    },
+    {
+      "role": "hn1024_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "runtime_glossary_gs10k",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000_translated.json"
+    },
+    {
+      "role": "medicine_strict_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_dev_dataset.jsonl"
+    },
+    {
+      "role": "medicine_strict_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000_translated.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_sample404_hn1024_tau078_new_v9_termtag_delay_20260523T2332"
+    },
+    {
+      "role": "logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_sample404_hn1024_tau078_new_v9_20260523T2332"
+    },
+    {
+      "role": "outer_log_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260523_medicine_sample404_hn1024_tau078_new_v9_20260523T2332_data1_2gpu.out"
+    },
+    {
+      "role": "outer_log_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260523_medicine_sample404_hn1024_tau078_new_v9_20260523T2332_data1_2gpu.err"
+    },
+    {
+      "role": "hf_export_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_new_v9_export_to_data1_2gpu_20260524T0020.out"
+    },
+    {
+      "role": "hf_export_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_new_v9_export_to_data1_2gpu_20260524T0020.err"
+    },
+    {
+      "role": "summary_report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_sample404_hn1024_tau078_new_v9_termtag_delay_20260523T2332/summary_medicine_sample404_hn1024_tau078_new_v9_metrics.md"
+    },
+    {
+      "role": "summary_metrics",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_sample404_hn1024_tau078_new_v9_termtag_delay_20260523T2332/summary_medicine_sample404_hn1024_tau078_new_v9_metrics.tsv"
+    },
+    {
+      "role": "eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_sample404_hn1024_tau078_new_v9_termtag_delay_20260523T2332/zh/dmed1_new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau0p78_gs10k_lm2_k10_th0.78_gmedicine_glossary_gt_plus_medicine_wiki_gs10000_translated_ppmedicine_404/eval_results.tsv"
+    },
+    {
+      "role": "instances_log_raw",
+      "type": "log",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_sample404_hn1024_tau078_new_v9_termtag_delay_20260523T2332/zh/dmed1_new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau0p78_gs10k_lm2_k10_th0.78_gmedicine_glossary_gt_plus_medicine_wiki_gs10000_translated_ppmedicine_404/instances.log"
+    },
+    {
+      "role": "instances_log_strip_term",
+      "type": "log",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_sample404_hn1024_tau078_new_v9_termtag_delay_20260523T2332/zh/dmed1_new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau0p78_gs10k_lm2_k10_th0.78_gmedicine_glossary_gt_plus_medicine_wiki_gs10000_translated_ppmedicine_404/instances.strip_term.log"
+    },
+    {
+      "role": "term_adoption",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_sample404_hn1024_tau078_new_v9_termtag_delay_20260523T2332/zh/dmed1_new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau0p78_gs10k_lm2_k10_th0.78_gmedicine_glossary_gt_plus_medicine_wiki_gs10000_translated_ppmedicine_404/term_adoption.json"
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "lm": 2,
+    "target_sample": "404",
+    "runtime_glossary": "medicine_gs10k",
+    "retriever_run_id": "lh1b88kw",
+    "retriever_tau": 0.78,
+    "retriever_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "speech_llm_training_run_id": "2g6kan5y",
+    "strip_output_tags": "term",
+    "strip_policy": "remove literal <term> and </term> markers from predictions before metric computation; keep inner text and filter char-level delays when lengths match",
+    "metric_denominator": "per-talk strict medicine glossary for sample 404; runtime difficulty uses medicine gs10k glossary",
+    "previous_reference_event_id": "20260523T1810__simuleval__medicine_gs10k_pr_extra_tau_hn1024_hn256_new_v5_no_gt_zero_oldnewv3_r32",
+    "hf_export_pid": 3042610,
+    "eval_watcher_pid": 3043467,
+    "hf_export_note": "Initial export to /mnt/aries/data7 failed after 7/15 shards because /mnt/aries/data7 was full. First data1 export missed the base model container mount and failed before writing shards. Second data1 export on one GPU OOMed while loading base HF shard 9/15. Completed rerun targets /mnt/gemini/data1 with two visible GPUs 0,1.",
+    "wandb_run_id": "4b86tuti",
+    "completed_at_utc": "2026-05-24T01:28:00Z",
+    "result_bleu": 44.61010764540012,
+    "result_term_acc_pct": 92.54,
+    "result_real_adopt_pct": 93.7763,
+    "result_term_fcr_pct": 15.3333,
+    "result_source_term_sent_fcr_pct": 13.736300000000002,
+    "result_streamlaal": 2118.034762348324
+  }
+}

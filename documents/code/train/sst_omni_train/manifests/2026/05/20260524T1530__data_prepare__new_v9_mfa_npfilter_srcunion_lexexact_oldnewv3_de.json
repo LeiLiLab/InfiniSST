@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T1530__data_prepare__new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de",
+  "event_type": "data_prepare",
+  "family": "speech_llm_sft_data",
+  "variant": "new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v9_mfa_openai_npfilter_oldnewv3_de.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260524__new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_data.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'OUT_NAME_PREFIX_OVERRIDE=speech_llm_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3 USE_LEGACY_TERMMAP_SPAN_AS_TARGET_WITHOUT_OPENAI_OVERRIDE=1 GPU_DEVICES_CSV_OVERRIDE=6,7 bash documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v9_mfa_openai_npfilter_oldnewv3_de.sh' > /mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_20260524T1530.out 2> /mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_20260524T1530.err < /dev/null &",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v9_mfa_openai_npfilter_oldnewv3_de.sh"
+    },
+    {
+      "role": "recovery_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__continue_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_after_shards.sh"
+    },
+    {
+      "role": "monitor_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__monitor_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_final.sh"
+    },
+    {
+      "role": "mfa_openai_gt_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_mfa_openai_rewrite_gt_terms.py"
+    },
+    {
+      "role": "train_jsonl_raw",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/train_s_de_v4_ner_baseline_aligned_rate1.0_k20_final.jsonl"
+    },
+    {
+      "role": "output_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_20260524"
+    },
+    {
+      "role": "logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs"
+    },
+    {
+      "role": "stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_20260524T1530.out"
+    },
+    {
+      "role": "stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_20260524T1530.err"
+    },
+    {
+      "role": "pid_file",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_20260524T1530.pid"
+    },
+    {
+      "role": "recovery_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/continue_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_after_shards_20260524T153536.log"
+    },
+    {
+      "role": "retriever_retry_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_20260524/logs/stage1_retriever_de_shard00_retry_gpu2_env_20260524T153613.log"
+    },
+    {
+      "role": "monitor_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/monitor_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_final_20260524T155356.log"
+    },
+    {
+      "role": "final_train_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_20260524/train_s_de_new_v9_mfa_openai_rewrite_oldnewv3.jsonl"
+    },
+    {
+      "role": "final_dev_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_20260524/dev_s_de_new_v9_mfa_openai_rewrite_oldnewv3_first355.jsonl"
+    },
+    {
+      "role": "summary_json",
+      "type": "report",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_20260524/new_v9_mfa_openai_rewrite_oldnewv3_de_summary.json"
+    },
+    {
+      "role": "tag_stats",
+      "type": "report",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_20260524/stage4_assistant_termtag_stats.json"
+    },
+    {
+      "role": "tag_samples",
+      "type": "report",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_20260524/stage4_assistant_termtag_samples.json"
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "source_glossary_fix": "wiki100k plus de old-new_v3 source candidates",
+    "legacy_term_map_usage": "translation lexicon exact-span filter only",
+    "openai_candidate_rewrite": false,
+    "termmap_lineage": "old-new_v3 TCM filtered with GT backfill",
+    "pid": 3665194,
+    "recovery_pid": 3677627,
+    "retriever_shard00_retry_pid": 3678229,
+    "monitor_pid": 3698520,
+    "monitor_log": "/mnt/gemini/data1/jiaxuanluo/logs/monitor_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_final_20260524T155356.log",
+    "manual_recovery": "retriever shard00 retried on GPU2 after original GPU6 OOM due concurrent JA eval; recovery launcher waits for shard00/shard01 then resumes from Stage1 sourcecopy",
+    "monitor_status": "success",
+    "monitor_reason": "final JSONL, dev JSONL, summary, and tag stats exist",
+    "monitor_updated_at_utc": "2026-05-24T16:06:56.528614+00:00"
+  }
+}

@@ -1,0 +1,370 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T0440__simuleval__psc_tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_gs1k_gs10k_zh_lm2",
+  "event_type": "simuleval",
+  "family": "tagged_acl_speech_llm_quick",
+  "variant": "psc_new_v5_no_gt_zero_oldnewv3_r32a64_zh_lm2_gs1k_gs10k",
+  "status": "smoke_success_generation_postprocess_repaired",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "40967275",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260523__psc_tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_gs1k_gs10k_zh_lm2.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260523__tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_gs1k_gs10k_zh_lm2.md",
+  "cwd": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/src/InfiniSST",
+  "command": "sbatch --parsable -A cis260009p -p GPU-shared --gres=gpu:v100-32:4 --cpus-per-gpu=4 -t 01:30:00 -J psc_tagacl_cont_smoke -o /ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/tagged_acl_new_v5_gs1k_gs10k/20260523T0214_psc_container_smoke_slurm/psc_tagacl_cont_smoke_%j.out -e /ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/tagged_acl_new_v5_gs1k_gs10k/20260523T0214_psc_container_smoke_slurm/psc_tagacl_cont_smoke_%j.err --wrap='cd /ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/src/InfiniSST && env USE_APPTAINER=1 APPTAINER_SIF=/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/containers/ubuntu_22_04.sif MODE=smoke SMOKE_GLOSSARY_KIND_OVERRIDE=gs1k GPU_PAIR=0,1,2,3 VLLM_TP_SIZE_OVERRIDE=4 RAG_GPU_OVERRIDE=cuda:3 VLLM_MAX_MODEL_LEN_OVERRIDE=8192 GPU_MEMORY_UTILIZATION_OVERRIDE=0.70 VLLM_DISABLE_CUSTOM_ALL_REDUCE=1 VLLM_MOE_USE_DEEP_GEMM=0 VLLM_USE_FUSED_MOE_GROUPED_TOPK=0 RUN_STAMP=20260523T0214_psc_container_smoke_${SLURM_JOB_ID} bash /ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/src/InfiniSST/documents/code/simuleval/launchers/2026/05/20260523__psc_tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_gs1k_gs10k_zh_lm2.sh'",
+  "parent_run_ids": [
+    "cg5qisu9",
+    "342oxpmu",
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__psc_tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_gs1k_gs10k_zh_lm2.sh"
+    },
+    {
+      "role": "top_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_gs1k_gs10k_zh_lm2.sh"
+    },
+    {
+      "role": "quick_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260522__tagged_acl_speech_llm_quick_zh_lm2_raw_wait_hf.sh"
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260523__tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_gs1k_gs10k_zh_lm2.md"
+    },
+    {
+      "role": "psc_model_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/models/keep1.0_r32/v0-20260523-050346-hf"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/checkpoints/lh1b88kw_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "eval_data_dir",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/data/acl6060"
+    },
+    {
+      "role": "runtime_env",
+      "type": "conda_env",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/envs/spaCyEnv_20260518"
+    },
+    {
+      "role": "mwerSegmenter",
+      "type": "tool_dir",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/tools/mwerSegmenter"
+    },
+    {
+      "role": "stream_laal_tool",
+      "type": "script",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/tools/FBK-fairseq/examples/speech_to_text/simultaneous_translation/scripts/stream_laal_term.py",
+      "metadata": {
+        "source": "/mnt/taurus/home/jiaxuanluo/FBK-fairseq/examples/speech_to_text/simultaneous_translation/scripts/stream_laal_term.py"
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "usage": "fixed denominator for term metrics"
+      }
+    },
+    {
+      "role": "runtime_glossary_gs1k",
+      "type": "json",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/glossaries/acl6060_tagged_gt_union_gs1000_min_norm2_backfill.json"
+    },
+    {
+      "role": "runtime_glossary_gs10k",
+      "type": "json",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/glossaries/acl6060_tagged_gt_union_gs10000_min_norm2_backfill.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v5_gs1k_gs10k"
+    },
+    {
+      "role": "smoke_eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v5_gs1k_gs10k/20260523T0214_psc_container_gcc_cache4_smoke4_40967275/new_v5_no_gt_zero_oldnewv3_r32a64/zh/dtagacl_new_v5_no_gt_zero_oldnewv3_r32a64_quick_tau073_lm2_k10_th0.73_gacl6060_tagged_gt_union_gs1000_min_norm2_backfill_ppsmoke/eval_results.tsv"
+    },
+    {
+      "role": "smoke_instances_log",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v5_gs1k_gs10k/20260523T0214_psc_container_gcc_cache4_smoke4_40967275/new_v5_no_gt_zero_oldnewv3_r32a64/zh/dtagacl_new_v5_no_gt_zero_oldnewv3_r32a64_quick_tau073_lm2_k10_th0.73_gacl6060_tagged_gt_union_gs1000_min_norm2_backfill_ppsmoke/instances.log"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs"
+    },
+    {
+      "role": "slurm_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/psc_tagacl_smoke3_40963929.out"
+    },
+    {
+      "role": "slurm_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/psc_tagacl_smoke3_40963929.err"
+    }
+  ],
+  "metadata": {
+    "psc_account": "cis260009p",
+    "psc_partition": "GPU-shared",
+    "psc_gres": "gpu:v100-32:3",
+    "psc_eval_job_id": "40967275",
+    "psc_smoke_job_id": "40967275",
+    "psc_smoke_mode": {
+      "mode": "smoke",
+      "lang": "zh",
+      "lm": 2,
+      "glossary": "gs1k",
+      "max_sentences": 1,
+      "time_limit": "00:30:00",
+      "gres": "gpu:v100-32:4",
+      "vllm_tp": 4,
+      "rag_gpu": "cuda:3",
+      "max_model_len": 8192,
+      "vllm_limit_audio": 4,
+      "max_cache_seconds": 4,
+      "keep_cache_seconds": 4,
+      "gpu_memory_utilization": 0.68,
+      "use_apptainer": true,
+      "container_has_gcc": true
+    },
+    "psc_cancelled_full_job_id": "40963790",
+    "psc_previous_failed_job_ids": [
+      "40963197",
+      "40963467",
+      "40963503",
+      "40963524",
+      "40963673",
+      "40963754",
+      "40963802",
+      "40963929",
+      "40964147",
+      "40964144",
+      "40964497",
+      "40964499",
+      "40966765",
+      "40966781",
+      "40966801",
+      "40967102",
+      "40967126"
+    ],
+    "psc_previous_failures": [
+      {
+        "job_id": "40963197",
+        "exit_code": "3:0",
+        "reason": "top launcher fail-fast check used taurus default RAW_DENOM before PSC glossary override"
+      },
+      {
+        "job_id": "40963467",
+        "exit_code": "1:0",
+        "reason": "eval_density_unified.sh fell back to default /mnt/gemini EVAL_TMPDIR_OVERRIDE inside nested eval env"
+      },
+      {
+        "job_id": "40963503",
+        "exit_code": "1:0",
+        "reason": "eval_density_unified.sh still used /mnt/gemini tmp default before direct TMPDIR fallback patch"
+      },
+      {
+        "job_id": "40963524",
+        "exit_code": "1:0",
+        "reason": "top launcher did not explicitly pass EVAL_TMPDIR_OVERRIDE into quick launcher"
+      },
+      {
+        "job_id": "40963673",
+        "exit_code": "1:0",
+        "reason": "eval_density_unified.sh attempted to mkdir its default /mnt/gemini INDEX_CACHE_DIR before using INDEX_PATH_OVERRIDE"
+      },
+      {
+        "job_id": "40963754",
+        "exit_code": "1:0",
+        "reason": "vLLM ZMQ IPC socket path exceeded 107 chars because TMP_ROOT was under the long PSC project path"
+      },
+      {
+        "job_id": "40963802",
+        "exit_code": "1:0",
+        "reason": "2-GPU smoke failed with CUDA OOM because vLLM TP=2 and MaxSim retriever shared one V100-32GB GPU"
+      },
+      {
+        "job_id": "40963929",
+        "exit_code": "1:0",
+        "reason": "3-GPU V100 smoke avoided retriever/vLLM sharing but vLLM TP=2 still OOMed during profile run at max_model_len=16384."
+      },
+      {
+        "job_id": "40964147",
+        "exit_code": "1:0",
+        "reason": "3-GPU H100 vLLM smoke loaded model but failed during multimodal profile with unsupported PTX in flash-attn kernel."
+      },
+      {
+        "job_id": "40964144",
+        "exit_code": "1:0",
+        "reason": "4-GPU V100 vLLM smoke loaded model with TP=4 but failed during MoE profile because vLLM custom op _moe_C.topk_softmax is missing in the PSC env."
+      },
+      {
+        "job_id": "40964497",
+        "exit_code": "0:15",
+        "reason": "3-GPU H100 Transformers non-vLLM smoke timed out after 1h before generation."
+      },
+      {
+        "job_id": "40964499",
+        "exit_code": "1:0",
+        "reason": "4-GPU V100 Transformers non-vLLM smoke loaded and entered SimulEval, but non-vLLM agent path returned empty predictions and SimulEval latency scorer crashed on empty delays."
+      },
+      {
+        "job_id": "40966765",
+        "exit_code": "127:0",
+        "reason": "First Apptainer GPU ops smoke used sbatch --wrap with broken here-doc quoting; no Python probe was executed."
+      },
+      {
+        "job_id": "40966781",
+        "exit_code": "1:0",
+        "reason": "4-GPU V100 Apptainer smoke passed vLLM _moe_C/model load but failed in Triton rotary JIT because the minimal Ubuntu container had no C compiler."
+      },
+      {
+        "job_id": "40966801",
+        "exit_code": "1:0",
+        "reason": "3-GPU V100 Apptainer TP2 smoke still OOMed during vLLM multimodal profile despite max_model_len=8192."
+      },
+      {
+        "job_id": "40967102",
+        "exit_code": "1:0",
+        "reason": "4-GPU gcc-container smoke loaded vLLM, passed profile, and generated several chunks, but VLLM_LIMIT_AUDIO_OVERRIDE=4 was lower than accumulated prompt audio count."
+      },
+      {
+        "job_id": "40967126",
+        "exit_code": "1:0",
+        "reason": "3-GPU gcc-container TP2 smoke still OOMed during vLLM multimodal profile."
+      }
+    ],
+    "psc_dependency_job_id": null,
+    "psc_dependency": null,
+    "psc_dependency_released": true,
+    "psc_queue_reason": "Priority",
+    "psc_estimated_start_time": "2026-05-23T03:20:40 EDT",
+    "lang": "zh",
+    "lm": 2,
+    "runtime_glossaries": [
+      "gs1k",
+      "gs10k"
+    ],
+    "raw_panel_denominator": "raw",
+    "training_run_id": "cg5qisu9",
+    "raw_reference_eval_run_id": "342oxpmu",
+    "retriever_run_alias": "lh1b88kw",
+    "retriever_tau": 0.73,
+    "term_metric_denominator_policy": "fixed_raw_tagged_acl",
+    "asset_transfer_event_id": "20260523T0410__maintenance__psc_tagged_acl_assets_transfer_to_hf",
+    "model_transfer_event_id": "20260523T0259__maintenance__upload_new_v5_no_gt_zero_oldnewv3_r32_hf_to_hub_for_psc",
+    "psc_active_smoke_job_ids": [],
+    "psc_active_smoke_jobs": [],
+    "psc_current_blocker": null,
+    "psc_cancelled_full_node_job_id": "40964127",
+    "psc_resource_observations": {
+      "gpu_shared_max_gpus_per_job": 4,
+      "v100_shared_4gpu_can_start": "yes, job 40964144 started after short wait but failed in vLLM custom op",
+      "v100_full_node_8gpu": "submitted as 40964127 then cancelled while pending to avoid waste",
+      "h100_shared_3gpu_can_start": "yes, job 40964147 started after short wait but failed in vLLM flash-attn/PTX"
+    },
+    "psc_container_sif": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/containers/ubuntu_22_04_gcc.sif",
+    "psc_container_base": "ubuntu:22.04 docker archive built locally and transferred to PSC",
+    "psc_env_fix": "Run existing PSC Python env inside Apptainer/Ubuntu 22.04 so vLLM _moe_C sees GLIBC_2.35 instead of host GLIBC_2.28.",
+    "psc_vllm_container_ops_smoke_job_id": "40966778",
+    "psc_vllm_container_ops_smoke_status": "completed",
+    "psc_vllm_container_ops_smoke_summary": "On V100 under Apptainer Ubuntu 22.04, torch CUDA is available and vllm._C plus vllm._moe_C load; torch.ops._moe_C.topk_softmax exists.",
+    "psc_alt_smoke_job_id": "40966801",
+    "psc_alt_smoke_mode": {
+      "mode": "smoke",
+      "lang": "zh",
+      "lm": 2,
+      "glossary": "gs1k",
+      "max_sentences": 1,
+      "time_limit": "01:00:00",
+      "gres": "gpu:v100-32:3",
+      "vllm_tp": 2,
+      "rag_gpu": "cuda:2",
+      "max_model_len": 8192,
+      "use_apptainer": true,
+      "reason": "parallel lower-GPU smoke after TP2 16k OOM; 8k should reduce KV profile memory"
+    },
+    "psc_container_gcc_sif": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/containers/ubuntu_22_04_gcc.sif",
+    "psc_gcc_smoke_job_id": "40967102",
+    "psc_alt_gcc_smoke_job_id": "40967126",
+    "psc_alt_gcc_smoke_mode": {
+      "mode": "smoke",
+      "lang": "zh",
+      "lm": 2,
+      "glossary": "gs1k",
+      "max_sentences": 1,
+      "time_limit": "01:00:00",
+      "gres": "gpu:v100-32:3",
+      "vllm_tp": 2,
+      "rag_gpu": "cuda:2",
+      "max_model_len": 8192,
+      "vllm_limit_audio": 4,
+      "gpu_memory_utilization": 0.68,
+      "use_apptainer": true,
+      "container_has_gcc": true
+    },
+    "psc_cache4_smoke_job_id": "40967275",
+    "psc_cache4_smoke_status": "generation_passed; slurm job failed only because the old offline evaluator path pointed at Taurus stream_laal_term.py; postprocess was rerun successfully after copying stream_laal_term.py to PSC and wiring FBK_FAIRSEQ_ROOT.",
+    "psc_cache4_smoke_slurm_state": "FAILED 2:0",
+    "psc_cache4_smoke_failure_after_generation": "offline_streamlaal_eval.py could not find /mnt/taurus/home/jiaxuanluo/FBK-fairseq/examples/speech_to_text/simultaneous_translation/scripts/stream_laal_term.py before the PSC tool-path fix.",
+    "psc_cache4_smoke_output_dir": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v5_gs1k_gs10k/20260523T0214_psc_container_gcc_cache4_smoke4_40967275/new_v5_no_gt_zero_oldnewv3_r32a64/zh/dtagacl_new_v5_no_gt_zero_oldnewv3_r32a64_quick_tau073_lm2_k10_th0.73_gacl6060_tagged_gt_union_gs1000_min_norm2_backfill_ppsmoke",
+    "psc_cache4_smoke_metrics": {
+      "BLEU": 45.86183180725468,
+      "StreamLAAL": 2657.97385620915,
+      "StreamLAAL_CA": 77979.83638763428,
+      "TERM_ACC": 1.0,
+      "TERM_CORRECT": 4,
+      "TERM_TOTAL": 4,
+      "REAL_TERM_ADOPT": 1.0,
+      "REAL_TERM_ADOPTED": 5,
+      "REAL_TERM_ADOPT_TOTAL": 5,
+      "TERM_FCR": 0.0,
+      "FALSE_COPY": 0,
+      "NEG_TOTAL": 1
+    },
+    "psc_stream_laal_tool_path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/tools/FBK-fairseq/examples/speech_to_text/simultaneous_translation/scripts/stream_laal_term.py",
+    "psc_eval_density_tool_path_fix": "eval_density_unified.sh now passes FBK_FAIRSEQ_ROOT and stream_laal_tool_rel to offline_streamlaal_eval.py; offline_streamlaal_eval.py default also reads FBK_FAIRSEQ_ROOT from the environment."
+  }
+}

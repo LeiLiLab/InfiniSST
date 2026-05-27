@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "event_id": "20260521T1405__simuleval__tagged_acl_v7_v8_refmatch_quick_zh_lm2_raw",
+  "event_type": "simuleval",
+  "family": "tagged_acl_v7_v8_refmatch_quick",
+  "variant": "zh_lm2_raw_v7_plain_vs_v8_xml_tagged",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "direct_aries_watch_v7_v8_20260521T140500",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260521__tagged_acl_v7_v8_refmatch_quick_zh_lm2_raw_aries.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260521__tagged_acl_v7_v8_refmatch_quick_zh_lm2_raw.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc '<watch V7/V8 HF exports, then RUN_STAMP=20260521T140500 bash documents/code/simuleval/launchers/2026/05/20260521__tagged_acl_v7_v8_refmatch_quick_zh_lm2_raw_aries.sh'",
+  "parent_run_ids": [
+    "l3igp2ot",
+    "q9c6vqxe"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260521__tagged_acl_v7_v8_refmatch_quick_zh_lm2_raw_aries.sh"
+    },
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "agents/infinisst_omni_vllm_maxsim_rag.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260521__tagged_acl_v7_v8_refmatch_quick_zh_lm2_raw.md"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/speech_llm_v7_refmatch_r95_zh_lh1b88kw_tau073_srcmatch100k_r8a32_aries2/keep1.0_r8/*-hf"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/speech_llm_v8_refmatch_r95_xmlterm_zh_lh1b88kw_tau073_srcmatch100k_r8a32_aries2/keep1.0_r8/*-hf"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "checkpoint",
+      "type": "retriever_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_v7_v8_refmatch_quick_zh_lm2_raw_20260521T140500"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_v7_v8_refmatch_quick_20260521T140500"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_file",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_watch_tagged_acl_v7_v8_refmatch_quick_20260521T140500.out"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_file",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_watch_tagged_acl_v7_v8_refmatch_quick_20260521T140500.err"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_v7_v8_refmatch_quick_zh_lm2_raw_20260521T173526"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_v7_v8_refmatch_quick_20260521T173526"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_file",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_v7_v8_refmatch_quick_serial67_20260521T173526.out"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_file",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_v7_v8_refmatch_quick_serial67_20260521T173526.err"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_v7_v8_refmatch_quick_zh_lm2_raw_20260521T174131"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_v7_v8_refmatch_quick_20260521T174131"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_file",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_v7_v8_refmatch_quick_serial67_20260521T174131.out"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_file",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_v7_v8_refmatch_quick_serial67_20260521T174131.err"
+    }
+  ],
+  "metadata": {
+    "langs": ["zh"],
+    "latency_multipliers": [2],
+    "glossary_kinds": ["raw"],
+    "v7_term_map_format": "plain",
+    "v8_term_map_format": "xml_tagged",
+    "term_fcr_policy": "term_map_source_ref_negative_sentence",
+    "rag_score_threshold": 0.73,
+    "rag_timeline_lookback_sec": 1.92,
+    "run_stamp": "20260521T140500",
+    "watcher_pid": 2910313,
+    "serial_rerun_pid": 2926324,
+    "serial_rerun_run_stamp": "20260521T162500",
+    "serial_rerun_gpu_pair": "6,7",
+    "serial_rerun_reason": "parallel quick eval collided on vLLM port and first XML attempt used stale term_map validation; rerun serial on GPUs 6,7 after xml_tagged validation fix",
+    "serial_lowmem_rerun_pid": 2927165,
+    "serial_lowmem_rerun_run_stamp": "20260521T162900",
+    "serial_lowmem_rerun_gpu_pair": "6,7",
+    "serial_lowmem_gpu_memory_utilization": 0.6,
+    "serial_lowmem_reason": "GPU 6/7 had pre-existing memory use, so vLLM 0.72 utilization failed startup; lowered to 0.60 for serial rerun",
+    "parallel_rerun_pid": 2928747,
+    "parallel_rerun_run_stamp": "20260521T163500",
+    "parallel_rerun_gpu_pairs": ["4,5", "2,3"],
+    "parallel_rerun_gpu_memory_utilization": 0.72,
+    "parallel_rerun_reason": "user requested fast parallel eval on GPUs 2,3,4,5 with default vLLM memory utilization restored",
+    "serial67_rerun_pid": 2933844,
+    "serial67_rerun_run_stamp": "20260521T173526",
+    "serial67_rerun_gpu_pair": "6,7",
+    "serial67_rerun_gpu_memory_utilization": "default",
+    "serial67_rerun_reason": "user freed GPUs 6,7 and requested serial quick eval there with default vLLM memory utilization restored",
+    "serial67_tmpfix_rerun_pid": 2934708,
+    "serial67_tmpfix_rerun_run_stamp": "20260521T174131",
+    "serial67_tmpfix_rerun_gpu_pair": "6,7",
+    "serial67_tmpfix_eval_tmpdir": "/mnt/gemini/data1/jiaxuanluo/tmp",
+    "serial67_tmpfix_reason": "previous serial67 run failed because g++ wrote temporary assembly to full /tmp during TorchInductor compile; rerun with TMPDIR/TORCHINDUCTOR/TRITON cache under /mnt/gemini/data1",
+    "final_run_stamp": "20260521T174131",
+    "final_output_root": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_v7_v8_refmatch_quick_zh_lm2_raw_20260521T174131",
+    "final_wandb_run_ids": {
+      "v7_plain_zh_lm2_raw": "mql4cqax",
+      "v8_xml_zh_lm2_raw": "ok1qp7dk"
+    },
+    "final_result_paths": {
+      "v7_plain_zh_lm2_raw": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_v7_v8_refmatch_quick_zh_lm2_raw_20260521T174131/v7_plain/zh/dtagacl_v7_plain_tau073_lm2_k10_th0.73_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "v8_xml_zh_lm2_raw": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_v7_v8_refmatch_quick_zh_lm2_raw_20260521T174131/v8_xml/zh/dtagacl_v8_xml_tau073_lm2_k10_th0.73_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    "sqlite_synced_run_ids": ["mql4cqax", "ok1qp7dk"],
+    "watcher_waits_for_training_pids": [2901112, 2901113],
+    "watcher_requires_hf_config_json": true
+  }
+}

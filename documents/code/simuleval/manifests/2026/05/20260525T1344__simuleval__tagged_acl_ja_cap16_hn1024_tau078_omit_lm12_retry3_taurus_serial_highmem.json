@@ -1,0 +1,175 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T1344__simuleval__tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry3_taurus_serial_highmem",
+  "event_type": "simuleval",
+  "family": "tagged_acl_ja_cap16_hn1024_tau078_omit",
+  "variant": "ja_cap16_hn1024_tau078_empty_term_map_omit_lm12_retry3_taurus_serial_highmem",
+  "status": "startup_verified_running",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry3_taurus_serial_highmem.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry3_taurus_serial_highmem.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "LOG_ROOT=/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry3_20260525T1344_jacap16_hn1024_tau078_omit_lm12_retry3_taurus_serial_highmem; mkdir -p ${LOG_ROOT}/controllers; setsid bash documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry3_taurus_serial_highmem.sh > ${LOG_ROOT}/controllers/taurus_lm12_retry3.out 2> ${LOG_ROOT}/controllers/taurus_lm12_retry3.err < /dev/null & echo $! > ${LOG_ROOT}/controllers/taurus_lm12_retry3.pid",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry3_taurus_serial_highmem.sh",
+      "metadata": {}
+    },
+    {
+      "role": "host_launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_ja_cap16_hn1024_tau078_omit_batch_host.sh",
+      "metadata": {}
+    },
+    {
+      "role": "batch_launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry3_taurus_serial_highmem.md",
+      "metadata": {}
+    },
+    {
+      "role": "parent_event_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260525T1211__simuleval__tagged_acl_ja_cap16_hn1024_tau078_omit_lm1to4_batch.json",
+      "metadata": {
+        "event_id": "20260525T1211__simuleval__tagged_acl_ja_cap16_hn1024_tau078_omit_lm1to4_batch"
+      }
+    },
+    {
+      "role": "failed_taurus_parallel_retry_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260525T1338__simuleval__tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry2_taurus.json",
+      "metadata": {
+        "event_id": "20260525T1338__simuleval__tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry2_taurus"
+      }
+    },
+    {
+      "role": "speech_llm_hf_model",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_retriever_cap16_exactboundary_r32a32_ep4_aries8/keep1.0_r32/v0-20260525-155544-hf",
+      "metadata": {
+        "expected_safetensor_shards": 15
+      }
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever": "HN1024",
+        "tau": 0.78,
+        "timeline_lookback_sec": 1.92
+      }
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "glossary_kind": "tagged_acl_raw"
+      }
+    },
+    {
+      "role": "eval_input_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_20260524T0933_tagacl_newv9_hn1024_tau078_raw_ja_taurus8/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/ja/all",
+      "metadata": {
+        "talks": 5
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry3_20260525T1344_jacap16_hn1024_tau078_omit_lm12_retry3_taurus_serial_highmem/ja_retr_cap16_exact_r32a32_ep4_hn1024_tau078_omit_batch_max80",
+      "metadata": {
+        "expected_lms": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "role": "log_root",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry3_20260525T1344_jacap16_hn1024_tau078_omit_lm12_retry3_taurus_serial_highmem",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "language": "ja",
+    "dataset": "tagged_acl_raw",
+    "lms": [
+      1,
+      2
+    ],
+    "runtime": "batched_vllm_rag_eval",
+    "empty_term_map_policy": "omit",
+    "term_map_format": "plain",
+    "strip_output_tags": "term",
+    "retriever": "HN1024",
+    "rag_top_k": 10,
+    "tau": 0.78,
+    "timeline_lookback_sec": 1.92,
+    "max_new_tokens": 80,
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 12288,
+    "gpu_memory_utilization": 0.72,
+    "max_idle_gpu_mem_mb": 2048,
+    "placement_plan": {
+      "taurus": {
+        "lms": [
+          1,
+          2
+        ],
+        "gpu_pairs": "lm1=0,7 then lm2=0,7",
+        "mode": "serial_one_clean_pair"
+      }
+    },
+    "co_resident_process": {
+      "pid": 2021142,
+      "description": "swift export for speech_llm_de_cap16_denoise_budget_ttag_r32a32_ep1_taurus6",
+      "gpu_memory": "approximately 5-13GB on Taurus GPUs 1-6 before retry3; retry3 uses clean GPUs 0,7 instead"
+    },
+    "launch_pids": {
+      "taurus_controller_pid": 2081082,
+      "lm1_host_launcher_pid": 2081085,
+      "lm1_batch_launcher_pid": 2081127,
+      "lm1_python_pid": 2081134,
+      "lm1_worker_pids": [
+        2081607,
+        2081609
+      ]
+    },
+    "startup_verification": {
+      "verified_utc": "2026-05-25T13:50:00Z",
+      "lm1": "started on Taurus GPU pair 0,7; vLLM loaded 15 safetensor shards, initialized KV cache, loaded HN1024 retriever, and entered decode steps",
+      "lm2": "queued in the serial launcher and will start after lm1 completes on the same pair"
+    },
+    "parent_event_id": "20260525T1211__simuleval__tagged_acl_ja_cap16_hn1024_tau078_omit_lm1to4_batch",
+    "retry_reason": "lm1/lm2 missing from parent; retry2 parallel failed due KV-cache memory while DE export co-resident",
+    "verdict": "pending"
+  }
+}

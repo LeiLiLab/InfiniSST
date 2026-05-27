@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T2110__simuleval__medicine_norag_vllm_override_probe_taurus",
+  "event_type": "simuleval",
+  "family": "medicine_norag_vllm_override_probe",
+  "variant": "taurus_zh_lm4_sample605000_orig80_vs_psc4s_vs_limit8_keep80",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260523__medicine_norag_vllm_override_probe_taurus.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260523__medicine_norag_vllm_override_probe_taurus.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "initial: setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && bash documents/code/simuleval/launchers/2026/05/20260523__medicine_norag_vllm_override_probe_taurus.sh' > /mnt/gemini/data1/jiaxuanluo/logs/medicine_norag_vllm_override_probe_20260523/probe_v4.out 2> /mnt/gemini/data1/jiaxuanluo/logs/medicine_norag_vllm_override_probe_20260523/probe_v4.err < /dev/null &; append: setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && bash documents/code/simuleval/launchers/2026/05/20260523__medicine_norag_vllm_override_probe_taurus_limit8_append.sh' > /mnt/gemini/data1/jiaxuanluo/logs/medicine_norag_vllm_override_probe_20260523/probe_limit8.out 2> /mnt/gemini/data1/jiaxuanluo/logs/medicine_norag_vllm_override_probe_20260523/probe_limit8.err < /dev/null &",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__medicine_norag_vllm_override_probe_taurus.sh"
+    },
+    {
+      "role": "append_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__medicine_norag_vllm_override_probe_taurus_limit8_append.sh"
+    },
+    {
+      "role": "batched_medicine_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260522__medicine_abbrev_restored_norag_streaming_batched_aries67.sh"
+    },
+    {
+      "role": "base_no_rag_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/rank16/baseline/bypass_simuleval_rank32_iter_0000452_hf_baseline_no_rag_sweep.sh"
+    },
+    {
+      "role": "agent",
+      "type": "python",
+      "direction": "control",
+      "path": "agents/infinisst_omni_vllm_rag_v4.py"
+    },
+    {
+      "role": "sentence_diff_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/compare_medicine_vllm_override_sentence_diff.py"
+    },
+    {
+      "role": "post_eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/offline_sst_eval/offline_streamlaal_eval.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260523__medicine_norag_vllm_override_probe_taurus.md"
+    },
+    {
+      "role": "medicine_eso_sample",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/home/jiaxingxu/rag-sst/eso-dataset/outputs_v2_abbrev_exact_match_abbrev_restored/test/sample_605000_v2"
+    },
+    {
+      "role": "origin_model",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-zh-s_origin-bsz4"
+    },
+    {
+      "role": "output_root",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_vllm_override_probe_20260523"
+    },
+    {
+      "role": "sentence_diff_summary",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_vllm_override_probe_20260523/sentence_diff.zh_lm4_sample605000.summary.json"
+    },
+    {
+      "role": "sentence_diff_summary",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_vllm_override_probe_20260523/sentence_diff.zh_lm4_sample605000.orig80_vs_psc_limit8_keep80.summary.json"
+    },
+    {
+      "role": "log_root",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_norag_vllm_override_probe_20260523"
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "lm": "4",
+    "sample_id": "605000",
+    "sample_duration_seconds": 3321.1,
+    "sample_sentences": 486,
+    "sample_term_mentions": 711,
+    "gpu_csv": "6:7",
+    "append_pid": "2839652",
+    "orig80": {
+      "VLLM_TP_SIZE_OVERRIDE": "2",
+      "VLLM_MAX_MODEL_LEN_OVERRIDE": "32768",
+      "VLLM_LIMIT_AUDIO_OVERRIDE": "",
+      "VLLM_DISABLE_CUSTOM_ALL_REDUCE": "0",
+      "MAX_CACHE_SECONDS_OVERRIDE": "80.0",
+      "KEEP_CACHE_SECONDS_OVERRIDE": "60.0"
+    },
+    "psc4s": {
+      "VLLM_TP_SIZE_OVERRIDE": "2",
+      "VLLM_MAX_MODEL_LEN_OVERRIDE": "8192",
+      "VLLM_LIMIT_AUDIO_OVERRIDE": "8",
+      "VLLM_DISABLE_CUSTOM_ALL_REDUCE": "1",
+      "MAX_CACHE_SECONDS_OVERRIDE": "4.0",
+      "KEEP_CACHE_SECONDS_OVERRIDE": "4.0"
+    },
+    "psc_limit8_keep80": {
+      "VLLM_TP_SIZE_OVERRIDE": "2",
+      "VLLM_MAX_MODEL_LEN_OVERRIDE": "8192",
+      "VLLM_LIMIT_AUDIO_OVERRIDE": "8",
+      "VLLM_DISABLE_CUSTOM_ALL_REDUCE": "1",
+      "MAX_CACHE_SECONDS_OVERRIDE": "80.0",
+      "KEEP_CACHE_SECONDS_OVERRIDE": "60.0"
+    },
+    "results": {
+      "orig80": {
+        "wall_minutes": 36.4,
+        "bleu": 42.200771124265906,
+        "streamlaal": 2318.013034599029,
+        "term_acc": 0.6567,
+        "term_correct": 551,
+        "term_total": 839,
+        "term_fcr": 0.164609
+      },
+      "psc4s": {
+        "wall_minutes": 10.333,
+        "bleu": 41.583072999373634,
+        "streamlaal": 2475.0298655900447,
+        "term_acc": 0.6031,
+        "term_correct": 506,
+        "term_total": 839,
+        "term_fcr": 0.109053,
+        "changed_sentences": 455,
+        "changed_sentence_rate": 0.9362139917695473,
+        "term_correct_delta_vs_orig80": -45
+      },
+      "psc_limit8_keep80": {
+        "wall_minutes": 10.5,
+        "bleu": 43.23301575904872,
+        "streamlaal": 2411.1489470940073,
+        "term_acc": 0.64,
+        "term_correct": 537,
+        "term_total": 839,
+        "term_fcr": 0.139918,
+        "changed_sentences": 382,
+        "changed_sentence_rate": 0.7860082304526749,
+        "term_correct_delta_vs_orig80": -14
+      }
+    }
+  }
+}

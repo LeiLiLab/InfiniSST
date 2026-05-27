@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T110915__simuleval__tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_taurus8",
+  "event_type": "simuleval",
+  "family": "tagged_acl_batchvllm_hn1024_tau078",
+  "variant": "zh_raw_lm1to4_shared_vllm_tp8",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": "t0vwd0j0",
+  "slurm_job_id": "direct_pid_2706919",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_taurus8.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_taurus8.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && bash documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_taurus8.sh' > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_20260524T1109_retry1.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_20260524T1109_retry1.err < /dev/null &",
+  "parent_run_ids": [
+    "5fhcqity",
+    "hplut7h5",
+    "a7bqd6nu"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_taurus8.sh"
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_taurus8.md"
+    },
+    {
+      "role": "checkpoint",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm_exports/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8/keep1.0_r32/v0-20260524-062743-hf"
+    },
+    {
+      "role": "checkpoint",
+      "type": "model_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "eval_input",
+      "type": "text",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_zh_lm1_20260524T0507_tagacl_newv9_hn1024_tau078_raw_zh_lm1_aries01/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/zh/all/source.list"
+    },
+    {
+      "role": "eval_input",
+      "type": "text",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_zh_lm1_20260524T0507_tagacl_newv9_hn1024_tau078_raw_zh_lm1_aries01/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/zh/all/target.list"
+    },
+    {
+      "role": "eval_input",
+      "type": "text",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_zh_lm1_20260524T0507_tagacl_newv9_hn1024_tau078_raw_zh_lm1_aries01/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/zh/all/source_text.txt"
+    },
+    {
+      "role": "eval_input",
+      "type": "text",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_zh_lm1_20260524T0507_tagacl_newv9_hn1024_tau078_raw_zh_lm1_aries01/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/zh/all/ref.txt"
+    },
+    {
+      "role": "eval_input",
+      "type": "yaml",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_zh_lm1_20260524T0507_tagacl_newv9_hn1024_tau078_raw_zh_lm1_aries01/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/zh/all/audio.yaml"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_20260524T1109_tagacl_batchvllm_hn1024_tau078_raw_zh_taurus8/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078_batchvllm"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_20260524T1109.out"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_20260524T1109.err"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_20260524T1109_retry1.out"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_20260524T1109_retry1.err"
+    },
+    {
+      "role": "report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260524_tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_compare.md"
+    }
+  ],
+  "metadata": {
+    "host": "taurus",
+    "gpu_request": "0,1,2,3,4,5,6,7",
+    "vllm_tp_size": 8,
+    "max_num_seqs": 20,
+    "scheduler_batch_size": 20,
+    "retry_reason": "First direct PID 2703528 used host python and failed before index build with ModuleNotFoundError: torch; retry1 pins PYTHON_BIN to spaCyEnv.",
+    "post_eval_fix": "Offline post-eval was rerun after fixing REPO_ROOT and exporting MWERSEGMENTER_ROOT.",
+    "wandb_run_ids_by_lm": {
+      "lm1": "t0vwd0j0",
+      "lm2": "3dd8ugqc",
+      "lm3": "7cdgkq0j",
+      "lm4": "fs9t8i3k"
+    },
+    "prototype_caveat": "Compare against serial SimulEval rows before treating as final metric truth.",
+    "serial_reference_rows": {
+      "lm1": "5fhcqity",
+      "lm2": "hplut7h5",
+      "lm3": "a7bqd6nu",
+      "lm4": "serial output at /mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_zh_lm4_20260524T0555_tagacl_newv9_hn1024_tau078_raw_zh_lm4_aries45"
+    }
+  }
+}

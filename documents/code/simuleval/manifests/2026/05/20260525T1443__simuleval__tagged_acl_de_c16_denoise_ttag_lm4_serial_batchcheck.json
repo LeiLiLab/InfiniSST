@@ -1,0 +1,176 @@
+{
+  "schema_version": "1.0",
+  "event_id": "20260525T1443__simuleval__tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck",
+  "event_type": "simuleval",
+  "family": "tagged_acl_de_c16_denoise_ttag_hn1024_tau078",
+  "variant": "serial_lm4_batchcheck_max80_omit_taurus01",
+  "status": "canceled_after_failed_start",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "LOG=/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck_20260525T1443_de_c16_den_ttag_lm4_serial_taurus01; mkdir -p \"$LOG\"; (setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && RUN_STAMP=20260525T1443_de_c16_den_ttag_lm4_serial_taurus01 GPU_PAIR=0,1 bash documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck.sh' > \"$LOG/top.out\" 2> \"$LOG/top.err\" < /dev/null & echo $! > \"$LOG/top.pid\")",
+  "parent_run_ids": [
+    "sapq66g0",
+    "20260525T1225__data_prepare__de_cap16_denoise_budget_ttag",
+    "20260525T1338__simuleval__tagged_acl_de_cap16_denoise_ttag_lm1_lm4_hn1024_tau078_max20lm"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck.sh",
+      "metadata": {
+        "purpose": "serial lm4 batch-vs-serial check"
+      }
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh",
+      "metadata": {
+        "change": "adds EMPTY_TERM_MAP_POLICY_OVERRIDE passthrough for serial SimulEval"
+      }
+    },
+    {
+      "role": "agent",
+      "type": "python",
+      "direction": "control",
+      "path": "agents/infinisst_omni_vllm_maxsim_rag.py",
+      "metadata": {
+        "change": "adds empty_term_map_policy=omit support for serial prompts"
+      }
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck.md",
+      "metadata": {}
+    },
+    {
+      "role": "speech_llm_train_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/train/sst_omni_train/manifests/2026/05/20260525T1236__speech_llm_train__de_cap16_denoise_budget_ttag_r32a32_ep1_taurus6.json",
+      "metadata": {
+        "wandb_run_id": "sapq66g0"
+      }
+    },
+    {
+      "role": "hf_model",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_de_cap16_denoise_budget_ttag_r32a32_ep1_taurus6/keep1.0_r32/v0-20260525-203735-hf",
+      "metadata": {
+        "source_megatron_run_dir": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_de_cap16_denoise_budget_ttag_r32a32_ep1_taurus6/keep1.0_r32/v0-20260525-203735"
+      }
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "label": "HN1024"
+      }
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "dataset": "acl_tagged_raw",
+        "lang": "de"
+      }
+    },
+    {
+      "role": "eval_input_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all",
+      "metadata": {
+        "files": [
+          "source.list",
+          "target.list",
+          "source_text.txt",
+          "ref.txt",
+          "audio.yaml"
+        ]
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck_20260525T1443_de_c16_den_ttag_lm4_serial_taurus01",
+      "metadata": {}
+    },
+    {
+      "role": "summary_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck_20260525T1443_de_c16_den_ttag_lm4_serial_taurus01/de_c16_denoise_ttag_r32a32_ep1_hn1024_tau078_omit_serial_lm4_max80/__summary__/summary_de_lm4_serial.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck_20260525T1443_de_c16_den_ttag_lm4_serial_taurus01",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "host": "taurus",
+    "language": "de",
+    "dataset": "acl_tagged_raw",
+    "method": "RASST",
+    "latency_multipliers": [
+      4
+    ],
+    "gpu_pair": "0,1",
+    "runtime": "serial_simuleval",
+    "batch_reference_event_id": "20260525T1338__simuleval__tagged_acl_de_cap16_denoise_ttag_lm1_lm4_hn1024_tau078_max20lm",
+    "batch_reference_lm4": {
+      "BLEU": 32.68692419540339,
+      "StreamLAAL": 2724.8138798286905,
+      "StreamLAAL_CA": 714.2451687595978,
+      "TERM_ACC": 0.8513,
+      "TERM_CORRECT": 796,
+      "TERM_TOTAL": 935
+    },
+    "max_new_tokens": 80,
+    "empty_term_map_policy": "omit",
+    "strip_output_tags": "term_t",
+    "rag_score_threshold": 0.78,
+    "rag_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 12288,
+    "effective_cache_chunks": "8/4",
+    "max_cache_seconds_override": 30.72,
+    "keep_cache_seconds_override": 15.36,
+    "wandb_logging": false
+    ,
+    "top_pid": 2170108,
+    "submitted_utc": "2026-05-25T14:43:00Z",
+    "startup_verified_utc": "2026-05-25T14:44:00Z",
+    "startup_evidence": {
+      "process": "PID 2170108 running as launcher with simuleval child PID 2170263",
+      "gpu_1_memory_mb": 10015,
+      "top_out_contains_run_meta": true
+    },
+    "cancelled_utc": "2026-05-25T14:47:00Z",
+    "cancel_reason": "user requested no further serial run; first attempt failed at vLLM startup because 2-GPU serial RAG shared retriever and vLLM memory on one GPU",
+    "cleanup_evidence": {
+      "matching_processes_after_cancel": 0,
+      "gpu_memory_after_cancel": "all Taurus GPUs at 2 MB"
+    }
+  }
+}

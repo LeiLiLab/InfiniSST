@@ -1,0 +1,297 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T1232__analysis__main_results_aclraw_medicine_figures",
+  "event_type": "analysis",
+  "family": "main_results_aclraw_medicine",
+  "variant": "canonical_tsv_new_tagged_medicine_figures",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/src/build_main_result_tables_and_figures_20260524.py",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__main_results_aclraw_medicine_figures.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/simuleval/src/build_main_result_tables_and_figures_20260524.py",
+  "parent_run_ids": [
+    "kolja8vr",
+    "hplut7h5",
+    "a7bqd6nu",
+    "mnnh7wi7",
+    "dhnplsny",
+    "fc85x5zd",
+    "jzbxajex",
+    "pqg9tvhd",
+    "5ht34lfe",
+    "ycso1ibu",
+    "408pmg2v"
+  ],
+  "artifacts": [
+    {
+      "role": "analysis_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/build_main_result_tables_and_figures_20260524.py",
+      "metadata": {
+        "purpose": "build canonical TSV and regenerate paper figures"
+      }
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__main_results_aclraw_medicine_figures.md",
+      "metadata": {}
+    },
+    {
+      "role": "plot_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv",
+      "metadata": {
+        "primary_key": ["dataset", "method", "lang", "lm"],
+        "datasets": ["acl_tagged_raw", "acl_paper_extracted", "medicine_hardraw"]
+      }
+    },
+    {
+      "role": "figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.pdf",
+      "metadata": {
+        "dataset": "acl_tagged_raw",
+        "panels": "2x3 term accuracy and BLEU vs StreamLAAL"
+      }
+    },
+    {
+      "role": "figure_png",
+      "type": "image",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.png",
+      "metadata": {
+        "dataset": "acl_tagged_raw"
+      }
+    },
+    {
+      "role": "figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/medicine_main_result.pdf",
+      "metadata": {
+        "dataset": "medicine_hardraw",
+        "dirty_curve": "medicine RASST de"
+      }
+    },
+    {
+      "role": "figure_png",
+      "type": "image",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/medicine_main_result.png",
+      "metadata": {
+        "dataset": "medicine_hardraw"
+      }
+    },
+    {
+      "role": "paper_tex",
+      "type": "tex",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/sections/experiment_setup.tex",
+      "metadata": {
+        "change": "replace main_result_tagged with new_main_result_tagged and remove placeholder wording"
+      }
+    },
+    {
+      "role": "paper_tex",
+      "type": "tex",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/sections/results.tex",
+      "metadata": {
+        "change": "replace main_result_paper with medicine_main_result and add dirty medicine de caveat"
+      }
+    },
+    {
+      "role": "source_simuleval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T1442__simuleval__tagged_acl_same_lm_batch_v1exact_hn1024_tau078_raw_zh_lm1_max256.json",
+      "metadata": {
+        "source": "ACL tagged raw RASST zh lm1 same-lm batch max256 eval"
+      }
+    },
+    {
+      "role": "source_simuleval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T0522__simuleval__tagged_acl_new_v9_hn1024_tau078_raw_zh_lm23_aries4567.json",
+      "metadata": {
+        "source": "ACL tagged raw RASST zh lm2-3 serial eval"
+      }
+    },
+    {
+      "role": "source_simuleval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T0555__simuleval__tagged_acl_new_v9_hn1024_tau078_raw_zh_lm4_aries45.json",
+      "metadata": {
+        "source": "ACL tagged raw RASST zh lm4 serial eval"
+      }
+    },
+    {
+      "role": "source_simuleval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T0755__simuleval__tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_taurus_auto_retry1.json",
+      "metadata": {
+        "source": "ACL tagged raw RASST de lm1-4 verified eval_results rows"
+      }
+    },
+    {
+      "role": "source_simuleval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T0933__simuleval__tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_taurus8_retry_shorttmp.json",
+      "metadata": {
+        "source": "ACL tagged raw RASST ja lm1-4 verified eval_results rows"
+      }
+    },
+    {
+      "role": "source_simuleval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T0242__simuleval__medicine_hardraw_hn1024_tau078_new_v9_batch.json",
+      "metadata": {
+        "source": "clean medicine hardraw RASST zh lm1-4"
+      }
+    },
+    {
+      "role": "source_simuleval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T0630__simuleval__medicine_hardraw_de_hn1024_tau078_new_v9_lm1to4_5samples.json",
+      "metadata": {
+        "source": "dirty medicine hardraw RASST de lm1-4; plotted provisional only"
+      }
+    },
+    {
+      "role": "source_simuleval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T0610__simuleval__medicine_norag_abbrev_restored_zh_lm13_lm4no605000_aries.json",
+      "metadata": {
+        "source": "medicine hard-manual InfiniSST zh lm1 and lm3"
+      }
+    },
+    {
+      "role": "source_simuleval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T0717__analysis__medicine_zh_hard_manual_lm2_lm4_605000_posteval.json",
+      "metadata": {
+        "source": "medicine hard-manual InfiniSST zh lm2 and lm4"
+      }
+    },
+    {
+      "role": "source_simuleval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T0305__simuleval__medicine_norag_abbrev_restored_de_lm1234_aries01234567.json",
+      "metadata": {
+        "source": "medicine hard-manual InfiniSST de lm1-3"
+      }
+    },
+    {
+      "role": "source_simuleval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260523T2342__simuleval__medicine_norag_abbrev_restored_ja_lm2_aries45.json",
+      "metadata": {
+        "source": "medicine hard-manual InfiniSST ja lm2"
+      }
+    },
+    {
+      "role": "source_simuleval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T0130__simuleval__medicine_norag_abbrev_restored_ja_lm134_aries012345.json",
+      "metadata": {
+        "source": "medicine generation InfiniSST ja lm1/lm3/lm4 and hard-manual InfiniSST ja lm3-4"
+      }
+    },
+    {
+      "role": "source_analysis_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T1731__analysis__medicine_ja_lm1_hard_manual_posteval.json",
+      "metadata": {
+        "source": "medicine hard-manual InfiniSST ja lm1 post-eval"
+      }
+    },
+    {
+      "role": "source_eval_tsv",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_ja_lm1_aries01/ja/gigaspeech-ja-s_origin-bsz4_gstrict_fixed_medicine_glossary_abbrev_restored__medicine5_cs0.96_hs0.48_lm1_k210_k110_th0p0/eval_results_streamlaal_term.hard_llm_manual_check.tsv",
+      "metadata": {
+        "dataset": "medicine_hardraw",
+        "method": "InfiniSST",
+        "lang": "ja",
+        "lm": 1,
+        "status": "verified"
+      }
+    },
+    {
+      "role": "source_summary_tsv",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_de_hn1024_tau078_new_v9_lm1to4_5samples_20260524T0645_de_hardraw_newv9_hn1024_tau078/summary_de_hardraw_new_v9_hn1024_tau078_lm1to4.tsv",
+      "metadata": {
+        "status": "dirty_untrusted",
+        "note": "used only to identify available dirty de RASST eval rows"
+      }
+    },
+    {
+      "role": "failed_baseline_timing",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_de_rerun_shorttmp_lm4_taurus45/timing.tsv",
+      "metadata": {
+        "dataset": "medicine_hardraw",
+        "method": "InfiniSST",
+        "lang": "de",
+        "lm": 4,
+        "status": "failed",
+        "note": "records rc=1 for the Taurus de lm4 baseline generation attempt"
+      }
+    },
+    {
+      "role": "failed_baseline_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_de_rerun_shorttmp_lm4_taurus45/de/gigaspeech-de-s_origin-bsz4_gstrict_fixed_medicine_glossary_abbrev_restored__medicine5_cs3.84_hs0.48_lm4_k210_k110_th0p0/simuleval.log",
+      "metadata": {
+        "dataset": "medicine_hardraw",
+        "method": "InfiniSST",
+        "lang": "de",
+        "lm": 4,
+        "failure": "vLLM EngineCore initialization failed before instances/eval_results were written"
+      }
+    }
+  ],
+  "metadata": {
+    "acl_usage": "held-out readout only",
+    "acl_tagged_raw_rasst_policy": "use verified eval_results.tsv rows; zh lm1 uses same-lm batch max256 readout requested by user; older mixed-lm batch prototype rows remain excluded",
+    "acl_paper_extracted_policy": "preserve user-supplied rows in canonical TSV only; do not plot in new paper figures",
+    "medicine_baseline_policy": "parse hard-manual StreamLAAL/TERM TSVs only when five-sample instance logs pass checks; otherwise emit NA placeholders",
+    "medicine_de_baseline_lm4_status": "generation failed on Taurus before instances/eval_results were written; timing.tsv records failed status and vLLM EngineCore ShmRingBuffer shared_memory initialization error appears in simuleval.log",
+    "medicine_de_policy": "RASST de rows are dirty_untrusted because gt-term/tagging data was dirty; plot with dashed hollow marker as provisional diagnostic only",
+    "medicine_missing_policy": "offline rows are placeholder_missing_offline; RASST ja rows stay placeholder_missing_rasst; unavailable baseline rows stay placeholder_missing_baseline; failed de baseline lm4 stays placeholder_failed_baseline",
+    "red_font_policy": "temporarily unavailable or abnormal medicine rows are marked with red in-figure annotations and red paper caveat text",
+    "plot_panels": "2x3 term accuracy and BLEU vs StreamLAAL for En-Zh, En-De, and En-Ja",
+    "old_figures_left_untouched": [
+      "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/main_result_tagged.pdf",
+      "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/main_result_paper.pdf"
+    ],
+    "generated_at_utc": "2026-05-24T12:32:00Z",
+    "updated_at_utc": "2026-05-24T17:34:00Z",
+    "update_note": "added verified hard-manual medicine JA InfiniSST lm1 post-eval and regenerated medicine_main_result"
+  }
+}

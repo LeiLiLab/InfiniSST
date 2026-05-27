@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import sqlite3
 import subprocess
 import sys
@@ -25,10 +26,27 @@ except ImportError:  # pragma: no cover - only for unusual direct imports.
     sys.path.append(str(Path(__file__).resolve().parent))
     from experiment_db import default_db_path, json_dumps, utc_now
 
+try:
+    from wandb_tags import MAX_WANDB_TAG_LEN
+except ImportError:  # pragma: no cover - only for unusual direct imports.
+    sys.path.append(str(Path(__file__).resolve().parent))
+    from wandb_tags import MAX_WANDB_TAG_LEN
+
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCHEMA_PATH = Path(__file__).with_name("experiment_db_schema.sql")
 JOB_ID_RE = re.compile(r"\b(\d{3,})\b")
+WAND_B_TAG_ENV_KEYS = {
+    "EXPERIMENT_FAMILY": "family",
+    "TASK_TAG": "task",
+    "DATA_TAG": "data",
+    "VARIANT_TAG": "variant",
+}
+EXPORT_RE = re.compile(
+    r"^\s*(?:export\s+)?"
+    r"(EXPERIMENT_FAMILY|TASK_TAG|DATA_TAG|VARIANT_TAG|EXTRA_WANDB_TAGS)"
+    r"=(.*)$"
+)
 
 
 def sha256_file(path: Path) -> str:
@@ -113,6 +131,134 @@ def load_manifest(path: Path) -> Dict[str, Any]:
         if not data.get(key):
             raise ValueError(f"manifest missing required key `{key}`: {path}")
     return data
+
+
+def _strip_shell_comment(text: str) -> str:
+    """Remove simple shell comments outside single/double quotes."""
+    out: List[str] = []
+    quote: Optional[str] = None
+    escaped = False
+    for ch in text:
+        if escaped:
+            out.append(ch)
+            escaped = False
+            continue
+        if ch == "\\":
+            out.append(ch)
+            escaped = True
+            continue
+        if quote:
+            if ch == quote:
+                quote = None
+            out.append(ch)
+            continue
+        if ch in ("'", '"'):
+            quote = ch
+            out.append(ch)
+            continue
+        if ch == "#":
+            break
+        out.append(ch)
+    return "".join(out).strip()
+
+
+def _unquote_shell_value(raw: str) -> str:
+    text = _strip_shell_comment(raw).strip()
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in ("'", '"'):
+        text = text[1:-1]
+    # Handle the common launcher idiom: "${DATA_TAG:-short_default}".
+    default_match = re.fullmatch(r"\$\{[A-Za-z_][A-Za-z0-9_]*:-(.*)\}", text)
+    if default_match:
+        text = default_match.group(1)
+    return text.strip()
+
+
+def _split_tag_words(text: str) -> List[str]:
+    try:
+        return [part for part in shlex.split(text) if part]
+    except ValueError:
+        return [part for part in text.split() if part]
+
+
+def _launcher_tag_candidates(launcher_path: str) -> List[str]:
+    if not launcher_path:
+        return []
+    path = resolve_local_path(launcher_path)
+    if not path.exists() or not path.is_file():
+        return []
+    tags: List[str] = []
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        match = EXPORT_RE.match(line)
+        if not match:
+            continue
+        key, raw_value = match.groups()
+        value = _unquote_shell_value(raw_value)
+        if not value or "$" in value:
+            # Do not guess dynamic shell expansions. Static defaults are handled above.
+            continue
+        if key == "EXTRA_WANDB_TAGS":
+            tags.extend(_split_tag_words(value))
+            continue
+        prefix = WAND_B_TAG_ENV_KEYS[key]
+        tags.append(f"{prefix}:{value}")
+    return tags
+
+
+def _metadata_tag_candidates(metadata: Mapping[str, Any]) -> List[str]:
+    tags: List[str] = []
+    key_map = {
+        "experiment_family": "family",
+        "family_tag": "family",
+        "task_tag": "task",
+        "data_tag": "data",
+        "variant_tag": "variant",
+    }
+    for key, prefix in key_map.items():
+        value = metadata.get(key)
+        if isinstance(value, str) and value.strip():
+            tags.append(f"{prefix}:{value.strip()}")
+    for key in ("wandb_tags", "extra_wandb_tags"):
+        value = metadata.get(key)
+        if isinstance(value, str):
+            tags.extend(_split_tag_words(value))
+        elif isinstance(value, Iterable):
+            tags.extend(str(item).strip() for item in value if str(item).strip())
+    return tags
+
+
+def validate_manifest_wandb_tags(
+    manifest: Mapping[str, Any],
+    manifest_path: Path,
+) -> None:
+    """Fail before launch/register if static manifest or launcher tags are invalid."""
+    candidates: List[str] = []
+    family = str(manifest.get("family") or "").strip()
+    if family:
+        candidates.append(f"family:{family}")
+    metadata = manifest.get("metadata") or {}
+    if isinstance(metadata, Mapping):
+        candidates.extend(_metadata_tag_candidates(metadata))
+    candidates.extend(_launcher_tag_candidates(str(manifest.get("launcher_path") or "")))
+
+    seen = set()
+    unique = []
+    for tag in candidates:
+        tag = str(tag).strip()
+        if tag and tag not in seen:
+            unique.append(tag)
+            seen.add(tag)
+
+    bad = [tag for tag in unique if not (1 <= len(tag) <= MAX_WANDB_TAG_LEN)]
+    if not bad:
+        return
+    details = "\n".join(f"  - len={len(tag)} {tag}" for tag in bad)
+    raise ValueError(
+        f"manifest has WandB tag(s) outside 1..{MAX_WANDB_TAG_LEN} chars: "
+        f"{manifest_path}\n{details}\n"
+        "Shorten DATA_TAG/VARIANT_TAG/EXTRA_WANDB_TAGS in the launcher or "
+        "metadata before registering/launching. Use long names in "
+        "WANDB_EXP_NAME, notes, manifest metadata, or artifact paths instead."
+    )
 
 
 def normalize_run_ids(raw: Any) -> List[str]:
@@ -319,6 +465,7 @@ def cmd_register(args: argparse.Namespace) -> int:
     for manifest_arg in args.manifests:
         manifest_path = resolve_local_path(manifest_arg)
         manifest = load_manifest(manifest_path)
+        validate_manifest_wandb_tags(manifest, manifest_path)
         upsert_manifest(conn, manifest_path, manifest)
         print(f"[experiment_event] registered {manifest['event_id']}")
     conn.close()
@@ -455,6 +602,7 @@ def cmd_launch(args: argparse.Namespace) -> int:
         return 2
     manifest_path = resolve_local_path(args.manifest)
     manifest = load_manifest(manifest_path)
+    validate_manifest_wandb_tags(manifest, manifest_path)
     command_text = " ".join(args.command)
     conn = open_db(args.db_path)
     upsert_manifest(

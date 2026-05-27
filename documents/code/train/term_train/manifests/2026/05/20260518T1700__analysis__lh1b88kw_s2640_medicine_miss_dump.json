@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "event_id": "20260518T1700__analysis__lh1b88kw_s2640_medicine_miss_dump",
+  "event_type": "analysis",
+  "family": "sst_ood_hardneg",
+  "variant": "lh1b88kw_s2640_medicine_miss_dump",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": "6ytwzug3",
+  "slurm_job_id": "direct_lh1b88kw_medicine_miss_gpu7_20260518T172557",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260518__lh1b88kw_s2640_medicine_miss_dump_aries1_eval.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260518__lh1b88kw_s2640_medicine_miss_dump.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "nohup env CUDA_VISIBLE_DEVICES=7 SLURM_JOB_GPUS=7 SLURM_JOB_PARTITION=aries SLURM_JOB_ID=direct_lh1b88kw_medicine_miss_gpu7_20260518T172557 RUN_STAMP=direct_lh1b88kw_medicine_miss_gpu7_20260518T172557 MASTER_PORT=30378 LOCAL_TMP_DIR=/tmp/mm7_20260518T172557 DUMP_EVAL_MISSES_DIR=/mnt/gemini/home/jiaxuanluo/analysis_outputs/direct_lh1b88kw_medicine_miss_gpu7_20260518T172557 bash /mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/train/term_train/launchers/2026/05/20260518__lh1b88kw_s2640_medicine_miss_dump_aries1_eval.sh > /mnt/gemini/data1/jiaxuanluo/logs/direct_lh1b88kw_medicine_miss_gpu7_20260518T172557.out 2> /mnt/gemini/data1/jiaxuanluo/logs/direct_lh1b88kw_medicine_miss_gpu7_20260518T172557.err &",
+  "parent_run_ids": [
+    "lh1b88kw",
+    "mry7kesp"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260518__lh1b88kw_s2640_medicine_miss_dump_aries1_eval.sh"
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh"
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py"
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260518__lh1b88kw_s2640_medicine_miss_dump.md"
+    },
+    {
+      "role": "source_wandb_run",
+      "type": "wandb_run",
+      "direction": "input",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/lh1b88kw"
+    },
+    {
+      "role": "baseline_eval_run",
+      "type": "wandb_run",
+      "direction": "input",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/mry7kesp"
+    },
+    {
+      "role": "source_checkpoint",
+      "type": "model_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "run_id": "lh1b88kw",
+        "anchor": "secondary",
+        "step": 2640
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_varctx2p88_3p84_4p80_5p76.jsonl"
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76/medicine_dev_dataset.jsonl",
+      "metadata": {
+        "glossary_sizes": [
+          "base",
+          1000,
+          10000
+        ]
+      }
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76/medicine_glossary_gt_plus_medicine_wiki_gs10000.json"
+    },
+    {
+      "role": "miss_case_output",
+      "type": "analysis_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/analysis_outputs/direct_lh1b88kw_medicine_miss_gpu7_20260518T172557",
+      "metadata": {
+        "files": [
+          "medicine_base_misses.jsonl",
+          "medicine_base_misses.md",
+          "medicine_gs1000_misses.jsonl",
+          "medicine_gs1000_misses.md",
+          "medicine_gs10000_misses.jsonl",
+          "medicine_gs10000_misses.md"
+        ]
+      }
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs"
+    }
+  ],
+  "metadata": {
+    "data_tag": "vctx576_lh1b88kw_medicine_miss_dump",
+    "eval_glossary_match_min_norm_chars": 2,
+    "fixed_audio_seconds": 5.76,
+    "eval_fixed_audio_seconds": 5.76,
+    "term_id_normalize": "aggressive",
+    "dump_eval_misses_eval_names": [
+      "medicine"
+    ],
+    "dump_eval_misses_banks": [
+      "base",
+      "gs1000",
+      "gs10000"
+    ],
+    "miss_definition": "no positive term in top eval_topk under the same positive-mask recall definition used for eval_medicine recall metrics",
+    "failed_attempts": [
+      {
+        "wandb_run_id": "nf1m0ux0",
+        "slurm_job_id": "direct_lh1b88kw_medicine_miss_gpu7_20260518T171555",
+        "status": "stalled",
+        "reason": "eval DataLoader workers hit OSError: AF_UNIX path too long; no miss output files were produced",
+        "stdout": "/mnt/gemini/data1/jiaxuanluo/logs/direct_lh1b88kw_medicine_miss_gpu7_20260518T171555.out",
+        "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/direct_lh1b88kw_medicine_miss_gpu7_20260518T171555.err"
+      }
+    ],
+    "completed_at_utc": "2026-05-18T17:28:23Z",
+    "manual_direct_launch": {
+      "host": "aries",
+      "cuda_visible_devices": "7",
+      "slurm_job_gpus": "7",
+      "stdout": "/mnt/gemini/data1/jiaxuanluo/logs/direct_lh1b88kw_medicine_miss_gpu7_20260518T172557.out",
+      "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/direct_lh1b88kw_medicine_miss_gpu7_20260518T172557.err",
+      "local_tmp_dir": "/tmp/mm7_20260518T172557",
+      "wandb_run_id": "6ytwzug3"
+    },
+    "miss_counts": {
+      "base": 447,
+      "gs1000": 458,
+      "gs10000": 525,
+      "denominator": 3760
+    }
+  }
+}

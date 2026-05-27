@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "event_id": "20260519T1144__speech_llm_train__invalid_rettm_v1_r8a32_cancelled",
+  "event_type": "speech_llm_train",
+  "family": "speech_llm_termmap_retriever",
+  "variant": "invalid_zh_lh1b88kw_tau073_timeline_v1_r8a32",
+  "status": "failed",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": "45269.17",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__speech_llm_retriever_timeline_zh_lh1b88kw_tau073_taurus4_r8a32.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260519__speech_llm_retriever_timeline_zh_lh1b88kw_tau073_r8a32.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "tmux new-session -d -s rettm_v1_r8a32_train \"srun --jobid=45269 --overlap --ntasks=1 --cpus-per-task=16 bash -lc 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && bash documents/code/train/sst_omni_train/launchers/2026/05/20260519__speech_llm_retriever_timeline_zh_lh1b88kw_tau073_taurus4_r8a32.sh' > /mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v1_r8a32_train_20260519.out 2> /mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v1_r8a32_train_20260519.err\"",
+  "parent_run_ids": [
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__speech_llm_retriever_timeline_zh_lh1b88kw_tau073_taurus4_r8a32.sh"
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260519__speech_llm_retriever_timeline_zh_lh1b88kw_tau073_r8a32.md"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_20260519/train_s_zh_retriever_timeline_lh1b88kw_tau073_k10_lb1p92.jsonl",
+      "metadata": {
+        "valid_for_sft": false
+      }
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_20260519/dev_s_zh_retriever_timeline_lh1b88kw_tau073_k10_lb1p92.jsonl",
+      "metadata": {
+        "valid_for_sft": false
+      }
+    },
+    {
+      "role": "direct_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v1_r8a32_train_20260519.out",
+      "metadata": {
+        "stream": "stdout"
+      }
+    },
+    {
+      "role": "direct_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v1_r8a32_train_20260519.err",
+      "metadata": {
+        "stream": "stderr"
+      }
+    }
+  ],
+  "metadata": {
+    "invalid_reason": "Training was started before V1 data QA was accepted; the source data was then found to use a retrieval glossary with poor coverage of gt_terms_by_chunk. Cancelled before any W&B run was created.",
+    "cancelled_at": "2026-05-19T11:45:34Z",
+    "wandb_created": false,
+    "valid_model_output": false
+  }
+}

@@ -11,6 +11,7 @@ DEFAULT_GEN_SEED = 998244353
 DEFAULT_VLLM_ENABLE_PREFIX_CACHING = 1
 VLLM_ENABLE_PREFIX_CACHING_ENV = "VLLM_ENABLE_PREFIX_CACHING"
 DEFAULT_RAG_EVAL_MODE = "text"
+DEFAULT_RAG_INTERSECTION_STRATEGY = "pool_then_intersect"
 DEFAULT_RAG_TTS_EMBEDDING_BATCH_SIZE = 32
 DEFAULT_RAG_TTS_MAX_PROTOTYPES_PER_TERM = 8
 DEFAULT_RAG_TTS_SIMILARITY_TOP_K = 10
@@ -57,6 +58,14 @@ from agents.options import (
 
 import logging
 logger = logging.getLogger(__name__)
+
+
+def _env_int(name, default):
+    value = os.environ.get(name)
+    if value is None or str(value).strip() == "":
+        return int(default)
+    return int(value)
+
 
 try:
     import faiss  # type: ignore
@@ -204,6 +213,7 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
         self.rag_conf_threshold_mode = getattr(args, "rag_confidence_threshold_mode", "absolute")
         self.rag_min_terms = int(getattr(args, "rag_min_terms", 0))
         self.rag_eval_mode = getattr(args, "rag_eval_mode", DEFAULT_RAG_EVAL_MODE)
+        self.rag_intersection_strategy = getattr(args, "rag_intersection_strategy", DEFAULT_RAG_INTERSECTION_STRATEGY)
         
         # Sliding window parameters
         self.rag_chunk_size = getattr(args, "rag_chunk_size", 1.92)  # 1.92s as requested
@@ -231,6 +241,7 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
                 hop_size=self.rag_hop_size,
                 aggregation_strategy=getattr(args, "rag_strategy", "voting"),
                 rag_eval_mode=self.rag_eval_mode,
+                intersection_strategy=self.rag_intersection_strategy,
                 tts_terms_npy_path=getattr(args, "rag_tts_terms_npy_path", ""),
                 tts_wav_dir=getattr(args, "rag_tts_wav_dir", ""),
                 tts_embedding_batch_size=getattr(args, "rag_tts_embedding_batch_size", DEFAULT_RAG_TTS_EMBEDDING_BATCH_SIZE),
@@ -246,6 +257,7 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
         self.use_vllm = args.use_vllm
         self.gpu_memory_utilization = getattr(args, "gpu_memory_utilization", 0.8)
         self.vllm_enforce_eager = int(getattr(args, "vllm_enforce_eager", 0))
+        self.vllm_prompt_audio_limit = _env_int("VLLM_LIMIT_AUDIO_OVERRIDE", self.max_cache_chunks)
         self.debug_llm_io = bool(getattr(args, "debug_llm_io", False))
         self.debug_filter_term = (getattr(args, "debug_filter_term", "") or "").strip()
         self.debug_max_chars = int(getattr(args, "debug_max_chars", 6000))
@@ -309,6 +321,15 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
         parser.add_argument("--rag-chunk-size", type=float, default=1.92)
         parser.add_argument("--rag-hop-size", type=float, default=0.96)
         parser.add_argument("--rag-eval-mode", type=str, default=DEFAULT_RAG_EVAL_MODE, choices=["text", "tts", "intersection"])
+        parser.add_argument(
+            "--rag-intersection-strategy",
+            type=str,
+            default=DEFAULT_RAG_INTERSECTION_STRATEGY,
+            choices=["pool_then_intersect", "intersect_then_pool"],
+            help="Intersection aggregation strategy: "
+                 "pool_then_intersect = max-pool text/TTS across windows then intersect (matches train); "
+                 "intersect_then_pool = intersect per window then max-pool (legacy).",
+        )
         parser.add_argument("--rag-tts-terms-npy-path", type=str, default="")
         parser.add_argument("--rag-tts-wav-dir", type=str, default="")
         parser.add_argument("--rag-tts-embedding-batch-size", type=int, default=DEFAULT_RAG_TTS_EMBEDDING_BATCH_SIZE)
@@ -343,23 +364,30 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
     def load_model(self, args):
         if args.use_vllm:
             gpu_memory_util = self.gpu_memory_utilization
-            tp_size = 2
+            tp_size = _env_int("VLLM_TP_SIZE_OVERRIDE", 2)
             enforce_eager = bool(int(getattr(self, "vllm_enforce_eager", 0)))
+            max_model_len = _env_int("VLLM_MAX_MODEL_LEN_OVERRIDE", 32768)
+            limit_audio = _env_int("VLLM_LIMIT_AUDIO_OVERRIDE", self.max_cache_chunks)
             enable_prefix_caching = bool(
                 int(os.environ.get(VLLM_ENABLE_PREFIX_CACHING_ENV, str(DEFAULT_VLLM_ENABLE_PREFIX_CACHING)))
             )
-
-            self.model = LLM(
-                model=args.model_name, 
-                trust_remote_code=True, 
+            disable_custom_ar = bool(
+                int(os.environ.get("VLLM_DISABLE_CUSTOM_ALL_REDUCE", "0"))
+            )
+            llm_kwargs = dict(
+                model=args.model_name,
+                trust_remote_code=True,
                 gpu_memory_utilization=gpu_memory_util,
                 tensor_parallel_size=tp_size,
-                limit_mm_per_prompt={'audio': self.max_cache_chunks},
+                limit_mm_per_prompt={"audio": limit_audio},
                 max_num_seqs=1,
-                max_model_len=32768,
+                max_model_len=max_model_len,
                 enable_prefix_caching=enable_prefix_caching,
                 enforce_eager=enforce_eager,
             )
+            if disable_custom_ar:
+                llm_kwargs["disable_custom_all_reduce"] = True
+            self.model = LLM(**llm_kwargs)
             self.sampling_params = SamplingParams(
                 temperature=self.temperature,
                 top_p=self.top_p,
@@ -421,10 +449,12 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
     def _prepare_inputs(self, states, increment, references):
         rag_enabled = bool(getattr(self, "rag_enabled", False)) or (self.rag_retriever is not None)
         if len(states.messages) == 0:
-            if rag_enabled:
-                system_text = f"You are a professional simultaneous interpreter. Your task is to translate {self.source_lang} audio chunks into accurate and fluent {self.target_lang}. Use the ‘term_map’ as a reference for terminology if provided."
-            else:
-                system_text = f"You are a professional simultaneous interpreter. Your task is to translate {self.source_lang} audio chunks into accurate and fluent {self.target_lang}."
+            system_text = (
+                f"You are a professional simultaneous interpreter. "
+                f"You will be given chunks of {self.source_lang} audio and you need to "
+                f"translate the audio into {self.target_lang} text. "
+                f"Use the 'term_map' as a reference for terminology if provided."
+            )
             states.messages.append({"role": "system", "content": [{"type": "text", "text": system_text}]})
             print(f"lang: {self.source_lang} -> {self.target_lang}, system_text: {system_text}, rag_enabled: {rag_enabled}")
         
@@ -438,7 +468,14 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
                 user_content.append({"type": "text", "text": "\n\nterm_map:\nNONE"})
         elif rag_enabled:
             user_content.append({"type": "text", "text": "\n\nterm_map:\nNONE"})
-        
+
+        if self.use_vllm and self.vllm_prompt_audio_limit > 0:
+            keep_pairs = max(0, self.vllm_prompt_audio_limit - 1)
+            if keep_pairs == 0:
+                states.messages = states.messages[:1]
+            else:
+                states.messages = [states.messages[0]] + states.messages[-2 * keep_pairs :]
+
         states.messages.append({"role": "user", "content": user_content})
 
         text = self.processor.apply_chat_template(states.messages, add_generation_prompt=True, tokenize=False)
@@ -581,4 +618,3 @@ class InfiniSSTOmniVLLMRAGV4(SpeechToTextAgent):
         print(''.join(states.target))
         states.segment_idx += 1
         return WriteAction(content=translation, finished=states.source_finished) if translation != '' or states.source_finished else ReadAction()
-

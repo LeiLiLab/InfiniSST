@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T055818__analysis__paper_plot_registry_all_figures",
+  "event_type": "analysis",
+  "family": "paper_plot_assets",
+  "variant": "all_current_figures_registry",
+  "status": "complete",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260525__paper_plot_registry_all_figures.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "manual registry update in documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/README.md",
+  "parent_run_ids": [
+    "20260524T1232__analysis__main_results_aclraw_medicine_figures",
+    "20260525T0149__analysis__rag_compute_rtf_figure",
+    "20260525T0153__analysis__retriever_encoder_ablation_figure4_style_refresh",
+    "20260523T0430__analysis__hn_fixeddenom_report_denominator_prcurve_update",
+    "20260525T0122__analysis__glossary_bank_ablation_zh_fixedraw",
+    "20260525T055246__analysis__paper_plot_index_figure7"
+  ],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260525__paper_plot_registry_all_figures.md"
+    },
+    {
+      "role": "paper_plot_registry",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/README.md"
+    },
+    {
+      "role": "compiled_aux",
+      "type": "tex_aux",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/acl_latex.aux"
+    },
+    {
+      "role": "results_section",
+      "type": "tex",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/sections/results.tex"
+    },
+    {
+      "role": "appendix_section",
+      "type": "tex",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/sections/appendix.tex"
+    }
+  ],
+  "metadata": {
+    "figures_indexed": 8,
+    "current_numbering_source": "acl_latex.aux",
+    "paper_local_package_existing": [
+      "figure_07_glossary_bank_ablation"
+    ],
+    "figures_without_reusable_script": [
+      "fig:ablation_hn_tau"
+    ],
+    "inline_placeholders": [
+      "fig:ablation_speechllm"
+    ],
+    "static_or_backfill_needed": [
+      "fig:term_duration"
+    ],
+    "path_validation": "all checked reusable script/data paths in the registry resolved from the plot directory"
+  }
+}

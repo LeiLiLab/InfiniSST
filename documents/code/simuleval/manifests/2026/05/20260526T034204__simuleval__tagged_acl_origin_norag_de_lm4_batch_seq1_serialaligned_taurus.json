@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "event_id": "20260526T034204__simuleval__tagged_acl_origin_norag_de_lm4_batch_seq1_serialaligned_taurus",
+  "event_type": "simuleval",
+  "family": "tagged_acl_origin_norag",
+  "variant": "de_lm4_batch_seq1_serialaligned_taurus",
+  "status": "running",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260526__tagged_acl_origin_norag_de_lm4_batch_seq1_serialaligned_taurus.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260526__tagged_acl_origin_norag_de_lm4_batch_seq1_serialaligned_taurus.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'RUN_STAMP=20260526T034204_origin_norag_de_lm4_batch_seq1_serialaligned_taurus GPU_PAIR=2,3 EVAL_TMPDIR=/tmp/jxnoilm4s1 bash documents/code/simuleval/launchers/2026/05/20260526__tagged_acl_origin_norag_de_lm4_batch_seq1_serialaligned_taurus.sh'",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260526__tagged_acl_origin_norag_de_lm4_batch_seq1_serialaligned_taurus.sh",
+      "metadata": {}
+    },
+    {
+      "role": "common_launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh",
+      "metadata": {}
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260526__tagged_acl_origin_norag_de_lm4_batch_seq1_serialaligned_taurus.md",
+      "metadata": {}
+    },
+    {
+      "role": "speech_llm_checkpoint",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-de-s_origin-bsz4",
+      "metadata": {
+        "method": "InfiniSST/no-RAG origin German Speech LLM"
+      }
+    },
+    {
+      "role": "tagged_acl_raw_metric_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "metric_denominator": true
+      }
+    },
+    {
+      "role": "eval_input_root",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all",
+      "metadata": {
+        "talks": 5
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_seq1_serialaligned_20260526T034204_origin_norag_de_lm4_batch_seq1_serialaligned_taurus",
+      "metadata": {}
+    },
+    {
+      "role": "logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm4_batch_seq1_serialaligned_20260526T034204_origin_norag_de_lm4_batch_seq1_serialaligned_taurus",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "host": "taurus",
+    "gpu_pair": "2,3",
+    "lang": "de",
+    "lm": 4,
+    "dataset": "acl_tagged_raw",
+    "method": "InfiniSST/no-RAG",
+    "mode": "batch_vllm_seq1",
+    "alignment_target_event_id": "20260524T160830__simuleval__tagged_acl_origin_norag_de_lm4_raw_rerun",
+    "serial_gate_bleu": 33.3008,
+    "max_num_seqs": 1,
+    "scheduler_batch_size": 1,
+    "schedule_mode": "serial_by_lm",
+    "max_new_tokens": 40,
+    "max_new_tokens_policy": "fixed",
+    "max_cache_seconds": 80,
+    "keep_cache_seconds": 60,
+    "expected_cache_chunks": "20/15",
+    "vllm_limit_audio": 20,
+    "norag_prompt_policy": "serial_compat",
+    "empty_term_map_policy": "omit",
+    "test_question": "whether batch evaluator can reproduce serial when max_num_seqs=1",
+    "launcher_pid": 358791
+  }
+}

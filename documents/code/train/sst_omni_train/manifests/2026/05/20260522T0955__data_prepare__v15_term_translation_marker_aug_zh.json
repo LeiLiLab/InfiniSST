@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T0955__data_prepare__v15_term_translation_marker_aug_zh",
+  "event_type": "data_prepare",
+  "family": "speech_llm_termmap_sft",
+  "variant": "zh_v15_marker_aug_retriever_timeline_lh1b88kw_tau073",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": "direct_v15_marker_aug_data",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_v15_term_translation_marker_aug_zh.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__v15_term_translation_marker_aug_zh_data.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'bash documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_v15_term_translation_marker_aug_zh.sh' > documents/logs/speech_llm_data/20260522_v15_marker_aug_zh.out 2> documents/logs/speech_llm_data/20260522_v15_marker_aug_zh.err < /dev/null & echo $! > documents/logs/speech_llm_data/20260522_v15_marker_aug_zh.pid",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_v15_term_translation_marker_aug_zh.sh"
+    },
+    {
+      "role": "data_prep_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/augment_term_translation_markers.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__v15_term_translation_marker_aug_zh_data.md"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v13_lm1to6_retriever_timeline_zh_lh1b88kw_tau073_20260522/train_s_zh_v13_lm1to6_retriever_timeline_tau073_k10_minctx2p88.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v13_lm1to6_retriever_timeline_zh_lh1b88kw_tau073_20260522/dev_s_zh_v13_lm1to6_retriever_timeline_tau073_k10_minctx2p88_first200.jsonl"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v15_marker_aug_retriever_timeline_zh_lh1b88kw_tau073_20260522/train_s_zh_v15_marker_aug_tau073_k10_minctx2p88.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v15_marker_aug_retriever_timeline_zh_lh1b88kw_tau073_20260522/dev_s_zh_v15_marker_aug_tau073_k10_minctx2p88_first200.jsonl"
+    },
+    {
+      "role": "report",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v15_marker_aug_retriever_timeline_zh_lh1b88kw_tau073_20260522/v15_marker_aug_summary.json"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_data/20260522_v15_marker_aug_zh.out"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_data/20260522_v15_marker_aug_zh.err"
+    },
+    {
+      "role": "pid",
+      "type": "text",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_data/20260522_v15_marker_aug_zh.pid"
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "source_dataset": "v13_lm1to6_retriever_timeline_tau073",
+    "augment_prob": 0.5,
+    "marker_template": "{translation}__tm{code}",
+    "marker_len": 4,
+    "max_augmented_terms_per_row": 8,
+    "requires_gt_in_current_term_map": true,
+    "requires_future_reference_exact_match": true,
+    "completed_at_utc": "2026-05-22T09:58:00Z",
+    "train_augmented_terms": 16781,
+    "train_augmented_over_gt_terms_rate": 0.4251798925711969,
+    "train_augmented_over_gt_in_map_rate": 0.5002683043167183,
+    "train_missing_future_reference_exact": 6
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "event_id": "20260520T1435__simuleval__tagged_acl_origin_bsz4_tau073_missing_de_resume",
+  "event_type": "simuleval",
+  "family": "tagged_acl_origin_bsz4_tau073",
+  "variant": "resume_missing_de_lm3_gs10k_lm4_raw1k10k_after_wandb_local_disk_full",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "45269",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260520__tagged_acl_origin_bsz4_tau073_baseline_sweep.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "cd /mnt/taurus/home/jiaxuanluo/InfiniSST && setsid bash -lc 'export WANDB_DIR=/mnt/gemini/data1/jiaxuanluo/wandb_local/wandb_dir; export WANDB_CACHE_DIR=/mnt/gemini/data1/jiaxuanluo/wandb_local/cache; export WANDB_CONFIG_DIR=/mnt/taurus/home/jiaxuanluo/.config/wandb; COMMON=\"MODE=full RUN_GRANULARITY=full_corpus RUN_STAMP=20260520T1435_missing_de_resume HOLD_JOB_ID=45269 OUTPUT_BASE_OVERRIDE=/mnt/gemini/data2/jiaxuanluo/tagged_acl_origin_bsz4_tau073_baseline_20260520T1010_ragreset_full_mp3/full INPUT_ROOT_OVERRIDE=/mnt/gemini/data2/jiaxuanluo/tagged_acl_origin_bsz4_tau073_baseline_20260520T1010_ragreset_full_mp3/full/__inputs__ SUMMARY_DIR_OVERRIDE=/mnt/gemini/data2/jiaxuanluo/tagged_acl_origin_bsz4_tau073_baseline_20260520T1010_ragreset_full_mp3/full/__summary__ LOG_DIR_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_bsz4_tau073_20260520T1435_missing_de_resume GPU_MEMORY_UTILIZATION_OVERRIDE=0.72 WANDB_LOG_OVERRIDE=1\"; env $COMMON LANGS_OVERRIDE=de LMS_OVERRIDE=3 GLOSSARY_KINDS_OVERRIDE=gs10k MAX_PARALLEL_OVERRIDE=1 bash documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh; env $COMMON LANGS_OVERRIDE=de LMS_OVERRIDE=4 GLOSSARY_KINDS_OVERRIDE=\"raw gs1k gs10k\" MAX_PARALLEL_OVERRIDE=3 bash documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh' > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_bsz4_tau073_20260520T1435_missing_de_resume_launcher.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_bsz4_tau073_20260520T1435_missing_de_resume_launcher.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_bsz4_tau073_20260520T1435_missing_de_resume_launcher.pid",
+  "parent_run_ids": [
+    "61wq39ud"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh",
+      "metadata": {
+        "resume_only": true
+      }
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260520__tagged_acl_origin_bsz4_tau073_baseline_sweep.md",
+      "metadata": {}
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data2/jiaxuanluo/tagged_acl_origin_bsz4_tau073_baseline_20260520T1010_ragreset_full_mp3/full",
+      "metadata": {
+        "missing_settings": [
+          "de lm3 gs10k",
+          "de lm4 raw",
+          "de lm4 gs1k",
+          "de lm4 gs10k"
+        ]
+      }
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_bsz4_tau073_20260520T1435_missing_de_resume",
+      "metadata": {}
+    },
+    {
+      "role": "wandb_local_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/wandb_local/wandb_dir",
+      "metadata": {
+        "reason": "avoid full local root filesystem"
+      }
+    }
+  ],
+  "metadata": {
+    "acl_usage": "held-out readout only",
+    "metric_denominator": "fixed tagged raw glossary only",
+    "term_fcr_policy": "term_map_source_ref_negative_sentence",
+    "resume_from_event": "20260520T1010__simuleval__tagged_acl_origin_bsz4_tau073_fullcorpus_ragreset_mp3",
+    "resume_reason": "The previous launcher completed 32/36 settings but failed during W&B init because /home local root was full.",
+    "completed_before_resume": {
+      "zh": 12,
+      "ja": 12,
+      "de": 8
+    },
+    "completed_after_resume": {
+      "zh": 12,
+      "ja": 12,
+      "de": 12
+    }
+  }
+}

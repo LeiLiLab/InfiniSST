@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "event_id": "20260526T0448__analysis__speechllm_ablation_zh_tau_compare",
+  "event_type": "analysis",
+  "family": "paper_plot_speechllm_ablation",
+  "variant": "zh_tau078_vs_tau000_five_line_companion",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_06_speechllm_placeholder/plot_figure_06_speechllm_ablation.py",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260526__speechllm_ablation_zh_tau_compare.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "cd documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_06_speechllm_placeholder && python build_data_zh_tau_compare.py && python plot_figure_06_speechllm_ablation.py --data data_zh_tau_compare.tsv --out-prefix speechllm_ablation_zh_tau_compare --paper-stem speechllm_ablation_zh_tau_compare --update-paper",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "analysis_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_06_speechllm_placeholder/plot_figure_06_speechllm_ablation.py",
+      "metadata": {
+        "figure": "fig:ablation_speechllm",
+        "language": "zh"
+      }
+    },
+    {
+      "role": "analysis_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_06_speechllm_placeholder/build_data_zh_tau_compare.py",
+      "metadata": {
+        "purpose": "build five-line En-Zh tau-comparison TSV"
+      }
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260526__speechllm_ablation_zh_tau_compare.md",
+      "metadata": {}
+    },
+    {
+      "role": "plot_registry",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/README.md",
+      "metadata": {
+        "updated_figure": "7",
+        "companion": "speechllm_ablation_zh_tau_compare"
+      }
+    },
+    {
+      "role": "plot_package_readme",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_06_speechllm_placeholder/README.md",
+      "metadata": {}
+    },
+    {
+      "role": "current_main_result_data",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_01_main_result_tagged/data.tsv",
+      "metadata": {
+        "dataset": "acl_tagged_raw",
+        "selected_language": "zh",
+        "used_rows": [
+          "Offline ST",
+          "Offline + GT terms",
+          "InfiniSST",
+          "RASST"
+        ]
+      }
+    },
+    {
+      "role": "tau0_comparison_data",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260526_tagged_acl_zh_tau000_vs_main_rasst.tsv",
+      "metadata": {
+        "dataset": "acl_tagged_raw",
+        "selected_language": "zh",
+        "used_rows": [
+          "tau0_BLEU",
+          "tau0_StreamLAAL",
+          "tau0_TERM_ACC"
+        ]
+      }
+    },
+    {
+      "role": "plot_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_06_speechllm_placeholder/data_zh_tau_compare.tsv",
+      "metadata": {
+        "selected_language": "zh",
+        "term_acc_unit": "fraction",
+        "row_count": 14
+      }
+    },
+    {
+      "role": "figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_06_speechllm_placeholder/speechllm_ablation_zh_tau_compare.pdf",
+      "metadata": {
+        "scope": "local_snapshot"
+      }
+    },
+    {
+      "role": "figure_png",
+      "type": "image",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_06_speechllm_placeholder/speechllm_ablation_zh_tau_compare.png",
+      "metadata": {
+        "scope": "local_snapshot"
+      }
+    },
+    {
+      "role": "paper_figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/speechllm_ablation_zh_tau_compare.pdf",
+      "metadata": {
+        "scope": "paper_companion"
+      }
+    },
+    {
+      "role": "paper_figure_png",
+      "type": "image",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/speechllm_ablation_zh_tau_compare.png",
+      "metadata": {
+        "scope": "paper_companion"
+      }
+    }
+  ],
+  "metadata": {
+    "acl_usage": "held-out readout only",
+    "language": "zh",
+    "x_axis": "StreamLAAL",
+    "metrics": [
+      "TERM_ACC",
+      "BLEU"
+    ],
+    "plotted_methods": [
+      "Offline ST",
+      "Offline + GT Terms",
+      "InfiniSST",
+      "RASST (tau=0.78)",
+      "RASST (tau=0.0)"
+    ]
+  }
+}

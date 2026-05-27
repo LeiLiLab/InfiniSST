@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T1552__data_prepare__new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_ja",
+  "event_type": "data_prepare",
+  "family": "speech_llm_sft_data",
+  "variant": "new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_ja",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v9_mfa_openai_npfilter_oldnewv3_ja.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260524__new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_ja_data.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid env GPU_DEVICES_CSV_OVERRIDE=0,1,2,3 SPACY_SHARDS_OVERRIDE=4 NUM_SHARDS_OVERRIDE=4 STAGE0_SHARDS_OVERRIDE=4 bash documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v9_mfa_openai_npfilter_oldnewv3_ja.sh > /mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_ja_20260524T1552.out 2> /mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_ja_20260524T1552.err < /dev/null &",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v9_mfa_openai_npfilter_oldnewv3_ja.sh"
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v9_mfa_openai_rewrite_oldnewv3_de_ja.sh"
+    },
+    {
+      "role": "mfa_gt_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_mfa_openai_rewrite_gt_terms.py"
+    },
+    {
+      "role": "source_candidate_script",
+      "type": "script",
+      "direction": "control",
+      "path": "retriever/gigaspeech/extract_ner_candidates_v4.py"
+    },
+    {
+      "role": "train_jsonl_raw",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/train_s_ja_v4_ner_baseline_aligned_rate1.0_k20_final.jsonl"
+    },
+    {
+      "role": "source_tsv",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/train_xl_case_robust_asr-filtered_ja_metricx-qe3.0_align.tsv"
+    },
+    {
+      "role": "base_source_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample100000.json"
+    },
+    {
+      "role": "mfa_index",
+      "type": "sqlite",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/gigaspeech_mfa_index/gigaspeech_mfa_index.sqlite"
+    },
+    {
+      "role": "textgrid_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/taurus/data/siqiouyang/datasets/gigaspeech/textgrids"
+    },
+    {
+      "role": "tcm_retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs12k_t=0.07_3var_gsv2full_gsfix_mfa_ntcm_final_v3_n64_p1n4_s2000_aries-8gpu_smallest_dense_smoke4650_best.pt"
+    },
+    {
+      "role": "output_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_ja_20260524"
+    },
+    {
+      "role": "stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_ja_20260524T1552.out"
+    },
+    {
+      "role": "stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_ja_20260524T1552.err"
+    },
+    {
+      "role": "pid_file",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_ja_20260524T1552.pid"
+    }
+  ],
+  "metadata": {
+    "language": "ja",
+    "source_glossary_fix": "wiki100k plus ja old-new_v3 source candidates",
+    "legacy_term_map_usage": "translation lexicon exact-span filter only",
+    "openai_candidate_rewrite": false,
+    "termmap_lineage": "old-new_v3 TCM filtered with GT backfill",
+    "spacy_shards": 4,
+    "retriever_shards": 4,
+    "gpu_devices_csv": "0,1,2,3",
+    "pid": 3696599,
+    "source_candidate_rows": 12500,
+    "source_candidate_count": 91287,
+    "merged_source_glossary_terms": 133512,
+    "stage0_gt_terms": 66113,
+    "stage0_chunks_with_gt_rate": 0.6108487029539661,
+    "stage0_avg_gt_terms_per_chunk": 1.2391850352376668,
+    "stage_c2_pending_filler_translations": 61993,
+    "monitor_finished_at_utc": "2026-05-24T16:26:39Z"
+  }
+}

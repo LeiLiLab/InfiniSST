@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "event_id": "20260520T0440__simuleval__tagged_acl_origin_bsz4_tau073_fullcorpus",
+  "event_type": "simuleval",
+  "family": "tagged_acl_origin_bsz4_tau073",
+  "variant": "fullcorpus_origin_bsz4_zh_ja_de_lm1to4_raw1k10k_strict_raw_metrics",
+  "status": "failed",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "45269",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260520__tagged_acl_origin_bsz4_tau073_baseline_sweep.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "cd /mnt/taurus/home/jiaxuanluo/InfiniSST && setsid env MODE=full RUN_GRANULARITY=full_corpus RUN_STAMP=20260520T0445_fullcorpus_step HOLD_JOB_ID=45269 MAX_PARALLEL_OVERRIDE=4 WANDB_LOG_OVERRIDE=1 bash documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_bsz4_tau073_20260520T0445_fullcorpus_step_launcher.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_bsz4_tau073_20260520T0445_fullcorpus_step_launcher.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_bsz4_tau073_20260520T0445_fullcorpus_step_launcher.pid",
+  "parent_run_ids": ["61wq39ud"],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh",
+      "metadata": {
+        "run_granularity": "full_corpus"
+      }
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260520__tagged_acl_origin_bsz4_tau073_baseline_sweep.md",
+      "metadata": {}
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh",
+      "metadata": {
+        "metric_glossary_override": true
+      }
+    },
+    {
+      "role": "adoption_metric_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/offline_sst_eval/compute_sentence_term_adoption.py",
+      "metadata": {
+        "supports_multi_instance_runtime_alignment": true
+      }
+    },
+    {
+      "role": "agent",
+      "type": "python",
+      "direction": "control",
+      "path": "agents/infinisst_omni_vllm_maxsim_rag.py",
+      "metadata": {
+        "rag_streaming_mode": "timeline",
+        "rag_timeline_lookback_sec": 1.92,
+        "rag_score_threshold": 0.73
+      }
+    },
+    {
+      "role": "speech_llm_checkpoints",
+      "type": "hf_model_dirs",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/{gigaspeech-zh-s_origin-bsz4,gigaspeech-ja-s_origin-bsz4,gigaspeech-de-s_origin-bsz4}",
+      "metadata": {}
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "source_run": "lh1b88kw",
+        "tau": 0.73
+      }
+    },
+    {
+      "role": "tagged_acl_raw_metric_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "expected_terms": 238
+      }
+    },
+    {
+      "role": "tagged_acl_gs1k_retrieval_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs1000_min_norm2_backfill.json",
+      "metadata": {
+        "expected_terms": 1000
+      }
+    },
+    {
+      "role": "tagged_acl_gs10k_retrieval_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs10000_min_norm2_backfill.json",
+      "metadata": {
+        "expected_terms": 10000
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data2/jiaxuanluo/tagged_acl_origin_bsz4_tau073_baseline_20260520T0445_fullcorpus_step/full",
+      "metadata": {}
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_bsz4_tau073_20260520T0445_fullcorpus_step",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "acl_usage": "held-out readout only",
+    "metric_denominator": "fixed tagged raw glossary only",
+    "term_fcr_policy": "term_map_source_ref_negative_sentence",
+    "latency_multipliers": [1, 2, 3, 4],
+    "languages": ["zh", "ja", "de"],
+    "glossary_kinds": ["raw", "gs1k", "gs10k"],
+    "hold_job_id": "45269",
+    "max_parallel": 4,
+    "per_setting_gpu_count": 2,
+    "launcher_pid": 2558116,
+    "rerun_missing_settings": [
+      {
+        "lang": "ja",
+        "latency_multiplier": 2,
+        "glossary": "gs10k",
+        "launcher_pid": 1973854,
+        "reason": "first pass vLLM startup failed because previous GPU memory was not fully released"
+      },
+      {
+        "lang": "de",
+        "latency_multiplier": 4,
+        "glossary": "raw",
+        "launcher_pid": 1973855,
+        "reason": "first pass vLLM startup failed because previous GPU memory was not fully released"
+      }
+    ],
+    "implementation_note": "Each setting runs one full ACL6060 SimulEval over all 5 talks. Sentence-level term metrics align runtime term_maps to 468 sentence rows by paper id. Relaunched after replacing per-setting srun steps with one 8-GPU hold step and inner 2-GPU worker splitting.",
+    "invalid_reason": "Current full-corpus outputs are invalid for RAG evaluation because the StreamingMaxSimRetriever audio/timeline buffer was not reset between SimulEval source instances; runtime term_maps from earlier ACL talks leaked into later talks.",
+    "invalidated_at_utc": "2026-05-20T09:55:00",
+    "invalidated_outputs": [
+      "/mnt/gemini/data2/jiaxuanluo/tagged_acl_origin_bsz4_tau073_baseline_20260520T0445_fullcorpus_step/full"
+    ],
+    "fix_applied": "agents/infinisst_omni_vllm_maxsim_rag.py now resets RAG stream state at a new source boundary when SimulEval reuses the agent object.",
+    "fix_smoke_output": "/mnt/gemini/data2/jiaxuanluo/tagged_acl_rag_reset_smoke_20260520T_smoke_rag_reset_095356"
+  }
+}

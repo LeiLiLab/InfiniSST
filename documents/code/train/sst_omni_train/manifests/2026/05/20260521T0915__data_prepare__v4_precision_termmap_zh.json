@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "event_id": "20260521T0915__data_prepare__v4_precision_termmap_zh",
+  "event_type": "data_prepare",
+  "family": "speech_llm_termmap_sft",
+  "variant": "zh_retriever_precision_lh1b88kw_tau073_srcmatch100k",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260521__build_v4_precision_termmap_zh.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260521__v4_precision_termmap_zh_data.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "bash documents/code/train/sst_omni_train/launchers/2026/05/20260521__build_v4_precision_termmap_zh.sh",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260521__build_v4_precision_termmap_zh.sh"
+    },
+    {
+      "role": "data_prep_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_robust_termmap_sft.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260521__v4_precision_termmap_zh_data.md"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260519/train_s_zh_retriever_timeline_lh1b88kw_tau073_srcmatch100k_k10_lb1p92.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260519/dev_s_zh_retriever_timeline_lh1b88kw_tau073_srcmatch100k_k10_lb1p92.jsonl"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v4_precision_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260521/train_s_zh_v4_precision_termmap_lh1b88kw_tau073_srcmatch100k.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v4_precision_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260521/dev_s_zh_v4_precision_termmap_lh1b88kw_tau073_srcmatch100k.jsonl"
+    },
+    {
+      "role": "report",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v4_precision_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260521/v4_precision_termmap_summary.json"
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "source_policy": "srcmatch100k retriever timeline lh1b88kw tau=0.73",
+    "new_policy": "precision curriculum: term_preference + clean_gt weighted, sparse no_gt noise",
+    "motivating_report": "documents/code/simuleval/reports/20260521_zh_lm2_raw_tm_sft_error_cases.md",
+    "target_match_report": "documents/code/train/sst_omni_train/reports/20260521_v4_precision_gt_translation_match_check.md",
+    "target_match_verdict": "generated successfully but not recommended for main training until GT terms are filtered by reference-supported target translations",
+    "train_rows": 12500,
+    "train_chunks": 68705,
+    "train_gt_term_in_term_map_rate": 0.5386218635295208,
+    "train_gt_chunk_any_term_in_map_rate": 0.9487074576901618,
+    "train_gt_chunk_all_terms_in_map_rate": 0.4639575971731449,
+    "train_no_gt_nonempty_term_map_rate": 0.17227987947773685,
+    "train_avg_term_map_entries_per_chunk": 2.1816170584382504,
+    "train_avg_non_gt_entries_per_chunk": 0.8275089149261334,
+    "dev_rows": 355,
+    "dev_chunks": 891,
+    "dev_gt_term_in_term_map_rate": 0.5488958990536278,
+    "dev_gt_chunk_any_term_in_map_rate": 0.9319213313161876,
+    "dev_gt_chunk_all_terms_in_map_rate": 0.47655068078668683,
+    "dev_no_gt_nonempty_term_map_rate": 0.13043478260869565,
+    "dev_avg_term_map_entries_per_chunk": 1.9562289562289563,
+    "dev_avg_non_gt_entries_per_chunk": 0.7845117845117845,
+    "train_term_map_gt_full_ref_exact_rate": 0.6365,
+    "train_term_map_gt_local4_exact_rate": 0.6085,
+    "dev_term_map_gt_full_ref_exact_rate": 0.5776,
+    "dev_term_map_gt_local4_exact_rate": 0.5613
+  }
+}

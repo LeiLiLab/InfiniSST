@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T1748__simuleval__medicine_hardraw_rasst_zh_lm1_max80_sharedaudio_batch",
+  "event_type": "simuleval",
+  "family": "medicine_hardraw",
+  "variant": "rasst_zh_lm1_5samples_hn1024_tau078_max80_sharedaudio",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_hardraw_rasst_zh_lm1_max80_batch.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__medicine_hardraw_rasst_zh_lm1_max80_batch.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && RUN_STAMP=20260524T1748_medicine_rasst_zh_lm1_max80_sharedaudio_batch GPU_PAIR=3,4 bash documents/code/simuleval/launchers/2026/05/20260524__medicine_hardraw_rasst_zh_lm1_max80_batch.sh'",
+  "parent_run_ids": [
+    "lh1b88kw",
+    "20260524T0242__simuleval__medicine_hardraw_hn1024_tau078_new_v9_batch"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_hardraw_rasst_zh_lm1_max80_batch.sh"
+    },
+    {
+      "role": "delegate_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_hardraw_lm1to4_5samples_hn1024_tau078_new_v9_batch.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__medicine_hardraw_rasst_zh_lm1_max80_batch.md"
+    },
+    {
+      "role": "speech_llm_checkpoint",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm_exports/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8/keep1.0_r32/v0-20260524-062743-hf"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "medicine_hard_raw_glossary",
+      "type": "glossary_json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_hard_terms_llm_judge_manual_20260524/hard_medicine_glossary_raw_llm_judge_manual_zh215_unique212.json"
+    },
+    {
+      "role": "prepared_inputs",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_hn1024_tau078_new_v9_batch_20260524T0242/zh/__medicine_inputs__/lists"
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_hn1024_tau078_new_v9_batch_20260524T1748_medicine_rasst_zh_lm1_max80_sharedaudio_batch"
+    },
+    {
+      "role": "shared_audio_root",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_shared_audio_20260524"
+    },
+    {
+      "role": "postprocess_watcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__watch_medicine_hardraw_rasst_zh_lm1_max80_update_fig.sh",
+      "metadata": {
+        "purpose": "wait for eval_results then update notes manifest and medicine figure"
+      }
+    },
+    {
+      "role": "postprocess_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_hn1024_tau078_new_v9_batch_20260524T1748_medicine_rasst_zh_lm1_max80_sharedaudio_batch/postprocess_watch.log",
+      "metadata": {}
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_hn1024_tau078_new_v9_batch_20260524T1748_medicine_rasst_zh_lm1_max80_sharedaudio_batch/zh/dmedhard5_new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078_max80_raw_lm1_k10_th0.78_ghard_medicine_glossary_raw_llm_judge_manual_zh215_unique212_ppmedicine5_hardraw",
+      "metadata": {
+        "lang": "zh",
+        "lm": 1,
+        "max_new_tokens": 80
+      }
+    },
+    {
+      "role": "eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_hn1024_tau078_new_v9_batch_20260524T1748_medicine_rasst_zh_lm1_max80_sharedaudio_batch/zh/dmedhard5_new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078_max80_raw_lm1_k10_th0.78_ghard_medicine_glossary_raw_llm_judge_manual_zh215_unique212_ppmedicine5_hardraw/eval_results.tsv",
+      "metadata": {
+        "BLEU": 32.07541056015536,
+        "StreamLAAL": 1224.0800126450672,
+        "StreamLAAL_CA": 2290.574497549,
+        "TERM_ACC": 0.7459,
+        "TERM_CORRECT": 502,
+        "TERM_TOTAL": 673,
+        "REAL_TERM_ADOPT": 0.848139,
+        "REAL_TERM_ADOPTED": 449,
+        "REAL_TERM_ADOPT_TOTAL": 528,
+        "TERM_FCR": 0.345291
+      }
+    },
+    {
+      "role": "main_result_report",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv",
+      "metadata": {
+        "updated_row": "medicine_hardraw/RASST/zh/lm1"
+      }
+    },
+    {
+      "role": "medicine_main_figure",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/medicine_main_result.pdf",
+      "metadata": {
+        "updated_row": "medicine_hardraw/RASST/zh/lm1"
+      }
+    }
+  ],
+  "metadata": {
+    "lang_code": "zh",
+    "samples": [
+      "404",
+      "545006",
+      "596001",
+      "605000",
+      "606"
+    ],
+    "lms": [
+      1
+    ],
+    "max_new_tokens": 80,
+    "rag_score_threshold": 0.78,
+    "rag_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "strip_output_tags": "term",
+    "term_fcr_policy": "term_map_source_ref_negative_sentence",
+    "launch_policy": "detached ssh to aries, one combined five-sample process for lm=1",
+    "launch_host": "aries",
+    "gpu_pair": "3,4",
+    "shared_audio_root": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_shared_audio_20260524",
+    "supersedes_event_id": "20260524T1742__simuleval__medicine_hardraw_rasst_zh_lm1_max80_batch",
+    "startup_pid_recorded_utc": "2026-05-24T17:48:00Z",
+    "postprocess_watcher_pid": "3938747",
+    "postprocess_status": "success_manual_refresh_20260524T2130",
+    "metrics": {
+      "BLEU": 32.07541056015536,
+      "StreamLAAL": 1224.0800126450672,
+      "StreamLAAL_CA": 2290.574497549,
+      "TERM_ACC": 0.7459,
+      "TERM_CORRECT": 502,
+      "TERM_TOTAL": 673,
+      "REAL_TERM_ADOPT": 0.848139,
+      "REAL_TERM_ADOPTED": 449,
+      "REAL_TERM_ADOPT_TOTAL": 528,
+      "TERM_FCR": 0.345291
+    },
+    "main_result_selection_status": "rejected_not_selected",
+    "superseded_by_event_id": "20260524T2149__analysis__medicine_main_result_revert_zh_rasst_lm1_max40",
+    "rejection_reason": "max80 degraded BLEU and TERM_ACC versus max40, with long-output degeneration"
+  },
+  "pid": 2747459
+}

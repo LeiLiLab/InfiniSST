@@ -1,0 +1,266 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T1608__retriever_train__varctx_lmlb_v3_hn512_gc128_resume_step400_taurus6",
+  "event_type": "retriever_train",
+  "family": "sst_ood_hardneg",
+  "variant": "hn512_varctx576_v3_gc128_resume_step400_taurus6",
+  "status": "paused",
+  "project": "qwen3_rag",
+  "wandb_run_id": "yp0rmgrl",
+  "slurm_job_id": "45300",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260522__varctx_lmlb_v3_hn512_gc256_taurus6.sh",
+  "launcher_sha256": "d8eda6dd87ca0a09eae86dd5921231346c591053731611e4df70d01c9d6938b8",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260523__varctx_lmlb_v3_hn512_gc128_resume_step400_taurus6.md",
+  "git_commit": "8a051b3f65dfda8e29956ad113a9d69603fd5013",
+  "git_dirty": 1,
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "cd /mnt/taurus/home/jiaxuanluo/InfiniSST && setsid env RUN_STAMP=hn512_gc128_resume_step400_20260523T1608Z CUDA_DEVICE_LIST=0,1,2,3,4,5 NUM_GPUS=6 TARGET_GLOBAL_BATCH=8192 PER_GPU_BATCH=1365 BATCH_SIZE=8190 GRAD_CACHE_CHUNK_SIZE=128 HARD_NEG_K=0 HARD_NEG_K_PER_SAMPLE=512 RESUME=/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8190_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8190_gc256_wr1000k_m0.0_maxsim_mfa_variantE_hn512_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu012345_taurus_latest.pt RESET_SCHEDULER=false RESET_BEST_ON_RESUME=false SELECT_CLEAN_GPUS=true WAIT_FOR_CLEAN_GPUS=true GPU_CLEAN_THRESHOLD_MIB=500 GPU_WAIT_INTERVAL_SEC=60 GPU_WAIT_TIMEOUT_SEC=172800 MASTER_PORT=29997 NOTES_FILE=/mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/train/term_train/notes/2026/05/20260523__varctx_lmlb_v3_hn512_gc128_resume_step400_taurus6.md WANDB_EXP_NAME=variantE_hn512_gsv2full_gsdedup_varctx576_v3_bs8190_gc128_resume_step400_taurus6_hn512_gc128_resume_step400_20260523T1608Z EXTRA_WANDB_TAGS=\"variant:hn512_varctx576_v3 compute:taurus-6gpu ablation:hard_neg512 source:lh1b88kw resume_of:5fwrs7rh resume_after:gasqw118 gradcache:128\" BASELINE_RUN_IDS=\"lh1b88kw 5fwrs7rh gasqw118 gsjheh6r e981df6j 40fgbr2y bgz7akb6 ah9u1bao dxwrgbln\" RUN_VERDICT=\"HN512 gc128 resume from gasqw118 step400 latest after gc256 OOM; preserve scheduler and best trackers.\" bash documents/code/train/term_train/launchers/2026/05/20260522__varctx_lmlb_v3_hn512_gc256_taurus6.sh > /mnt/gemini/data1/jiaxuanluo/logs/hn512_gc128_resume_step400_20260523T1608Z.direct.log 2>&1 < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/hn512_gc128_resume_step400_20260523T1608Z.direct.pid",
+  "parent_run_ids": [
+    "gasqw118",
+    "5fwrs7rh",
+    "gsjheh6r",
+    "lh1b88kw",
+    "e981df6j",
+    "40fgbr2y",
+    "bgz7akb6",
+    "ah9u1bao",
+    "dxwrgbln"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260522__varctx_lmlb_v3_hn512_gc256_taurus6.sh",
+      "metadata": {}
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn1024_gsv2full_gsdedup_varctx_lmlb_v3_tcmoff_ep6_8gpu_aries.sh",
+      "metadata": {}
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh",
+      "metadata": {}
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260523__varctx_lmlb_v3_hn512_gc128_resume_step400_taurus6.md",
+      "metadata": {}
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_varctx2p88_3p84_4p80_5p76_new_version.jsonl",
+      "metadata": {
+        "usage": "primary checkpoint selection"
+      }
+    },
+    {
+      "role": "acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_extracted_paper_glossary_varctx2p88_3p84_4p80_5p76/acl6060_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout"
+      }
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "domain readout"
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_varctx2p88_3p84_4p80_5p76.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample10000.json",
+      "metadata": {
+        "eval_glossary_sizes": [
+          10000
+        ]
+      }
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_gt_union_gs10000_min_norm2_backfill.json",
+      "metadata": {
+        "eval_glossary_sizes": [
+          10000
+        ]
+      }
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000.json",
+      "metadata": {
+        "eval_glossary_sizes": [
+          10000
+        ]
+      }
+    },
+    {
+      "role": "resume_checkpoint",
+      "type": "model",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8190_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8190_gc256_wr1000k_m0.0_maxsim_mfa_variantE_hn512_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu012345_taurus_latest.pt",
+      "metadata": {
+        "source_run_id": "gasqw118",
+        "step": 400,
+        "checkpoint_role": "latest_checkpoint"
+      }
+    },
+    {
+      "role": "source_wandb_run",
+      "type": "wandb_run",
+      "direction": "input",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/gasqw118",
+      "metadata": {
+        "usage": "failed gc256 resume that produced step400 latest"
+      }
+    },
+    {
+      "role": "original_hn512_wandb_run",
+      "type": "wandb_run",
+      "direction": "input",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/5fwrs7rh",
+      "metadata": {
+        "usage": "original HN512 source run"
+      }
+    },
+    {
+      "role": "direct_launch_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/hn512_gc128_resume_step400_20260523T1608Z.direct.log",
+      "metadata": {
+        "host": "taurus"
+      }
+    },
+    {
+      "role": "pid_file",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/hn512_gc128_resume_step400_20260523T1608Z.direct.pid",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint_latest",
+      "type": "model",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8190_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8190_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn512_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu012345_taurus_latest.pt",
+      "metadata": {
+        "save_latest_on_eval": true,
+        "step": 560,
+        "resume_recommended": true
+      }
+    },
+    {
+      "role": "checkpoint_best_primary",
+      "type": "model",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8190_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8190_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn512_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu012345_taurus_best.pt",
+      "metadata": {
+        "best_metric": "eval_dev/recall@10_gs10000"
+      }
+    },
+    {
+      "role": "checkpoint_best_secondary",
+      "type": "model",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8190_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8190_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn512_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu012345_taurus_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "best_metric_secondary": "eval_acl6060/recall@10"
+      }
+    }
+  ],
+  "metadata": {
+    "prepared_at_utc": "2026-05-23T16:10:59+00:00",
+    "schema_version": 1,
+    "source_run_id": "gasqw118",
+    "original_hn512_run_id": "5fwrs7rh",
+    "resume_checkpoint": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8190_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8190_gc256_wr1000k_m0.0_maxsim_mfa_variantE_hn512_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu012345_taurus_latest.pt",
+    "resume_checkpoint_step": 400,
+    "previous_failure_reason": "gasqw118 failed with rank1 CUDA OOM after step400 latest save at grad_cache_chunk_size=256",
+    "grad_cache_chunk_size": 128,
+    "previous_grad_cache_chunk_size": 256,
+    "hard_neg_k": 0,
+    "hard_neg_k_per_sample": 512,
+    "cuda_device_list": "0,1,2,3,4,5",
+    "num_gpus": 6,
+    "target_global_batch": 8192,
+    "per_gpu_batch": 1365,
+    "effective_global_batch": 8190,
+    "batch_size_policy": "same 6-GPU equal per-rank batch as previous HN512; only GradCache chunk changes",
+    "best_metric": "eval_dev/recall@10_gs10000",
+    "best_metric_secondary": "eval_acl6060/recall@10",
+    "reset_scheduler": false,
+    "reset_best_on_resume": false,
+    "save_latest_on_eval": true,
+    "slurm_allocation_job_id": "45300",
+    "slurm_partition": "taurus",
+    "launch_method": "direct detached process on taurus inside existing hold allocation",
+    "launch_log": "/mnt/gemini/data1/jiaxuanluo/logs/hn512_gc128_resume_step400_20260523T1608Z.direct.log",
+    "pid_file": "/mnt/gemini/data1/jiaxuanluo/logs/hn512_gc128_resume_step400_20260523T1608Z.direct.pid",
+    "run_stamp": "hn512_gc128_resume_step400_20260523T1608Z",
+    "wandb_exp_name": "variantE_hn512_gsv2full_gsdedup_varctx576_v3_bs8190_gc128_resume_step400_taurus6_hn512_gc128_resume_step400_20260523T1608Z",
+    "acl_policy": "ACL is readout-only and must not select checkpoint, tau, hyperparameters, or ablation winner.",
+    "launched_at_utc": "2026-05-23T16:11:55Z",
+    "direct_launch_pid": "1846119",
+    "torchrun_pid": "1846150",
+    "manifest_updated_at_utc": "2026-05-23T21:00:51Z",
+    "wandb_run_id": "yp0rmgrl",
+    "wandb_run_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/yp0rmgrl",
+    "wandb_detected_at_utc": "2026-05-23T16:15:59Z",
+    "early_training_verified_at_utc": "2026-05-23T16:20:43Z",
+    "early_training_status": "passed step401 hard-negative refresh and reached first post-resume batches without immediate OOM",
+    "observed_gpu_memory_mib_after_early_batches": "approximately 38900-40200 MiB on GPUs 0-5",
+    "paused_at_utc": "2026-05-23T21:00:51Z",
+    "pause_reason": "user_gpu_release",
+    "last_completed_eval_step": 560,
+    "last_saved_latest_step": 560,
+    "resume_recommended_checkpoint": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8190_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8190_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn512_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu012345_taurus_latest.pt",
+    "process_stop_signal": "SIGTERM",
+    "process_stop_at_utc": "2026-05-23T20:59:45Z",
+    "gpu_release_verified_at_utc": "2026-05-23T20:59:59Z",
+    "post_pause_gpu_memory_mib": "all GPUs reported 2 MiB used after stop"
+  },
+  "updated_at": "2026-05-23T21:00:51+00:00"
+}

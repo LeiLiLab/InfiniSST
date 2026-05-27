@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "event_id": "20260517T2217__retriever_train__varctx_audio_whisper_mid_en_taurus8_bs4k_gc128_eval100_smallestfix",
+  "event_type": "retriever_train",
+  "family": "sst_ood_hardneg",
+  "variant": "vctx576_aud_wmid_t8_bs4k_g128sfix",
+  "status": "failed",
+  "project": "qwen3_rag",
+  "wandb_run_id": "jxllzdon",
+  "slurm_job_id": "45257",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260517__varctx_lmlb_v3_audio_whisper_mid_en_taurus8_bs4k_gc128_eval100_smallestfix.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260517__varctx_lmlb_v3_audio_whisper_mid_en_taurus8_bs4k_gc128_eval100_smallestfix.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command_template": "cd /mnt/taurus/home/jiaxuanluo/InfiniSST && sbatch --parsable documents/code/train/term_train/launchers/2026/05/20260517__varctx_lmlb_v3_audio_whisper_mid_en_taurus8_bs4k_gc128_eval100_smallestfix.sh",
+  "parent_run_ids": [
+    "lh1b88kw",
+    "o0p64pr7",
+    "qft43kd9",
+    "09p9rojy",
+    "prft06bl",
+    "7gbny5qt",
+    "4qehcl59"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260517__varctx_lmlb_v3_audio_whisper_mid_en_taurus8_bs4k_gc128_eval100_smallestfix.sh"
+    },
+    {
+      "role": "parent_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260517__varctx_lmlb_v3_audio_whisper_mid_en_taurus8_gc128_eval100_pad3000_cropvalid_smallestfix.sh"
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py",
+      "metadata": {
+        "changes": [
+          "Whisper mel pad/truncate to 3000 frames with valid-length mask preservation",
+          "Crop MaxSim pooling to maximum valid hidden length before dense window generation",
+          "Optimize MFA smallest-window MaxSim scoring to avoid full [B,W,N] and [B,W,K] tensors",
+          "Fix optimized smallest fallback rows with indexed assignment"
+        ]
+      }
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260517__varctx_lmlb_v3_audio_whisper_mid_en_taurus8_bs4k_gc128_eval100_smallestfix.md"
+    },
+    {
+      "role": "wandb_run",
+      "type": "wandb_run",
+      "direction": "output",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/jxllzdon"
+    },
+    {
+      "role": "source_control_run",
+      "type": "wandb_run",
+      "direction": "input",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/lh1b88kw"
+    },
+    {
+      "role": "failed_predecessor_run",
+      "type": "wandb_run",
+      "direction": "input",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/4qehcl59"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs"
+    }
+  ],
+  "metadata": {
+    "data_tag": "3variant_gsv2full_gsdedup_vctx576_wmid",
+    "extra_wandb_tags": [
+      "variant:vctx576_aud_wmid_t8_bs4k_g128sfix",
+      "compute:taurus-8gpu"
+    ],
+    "text_encoder_preset": "bge-m3",
+    "text_model_id": "BAAI/bge-m3",
+    "audio_encoder_preset": "whisper-mid-en",
+    "audio_encoder_type": "whisper",
+    "audio_model_id": "openai/whisper-medium.en",
+    "audio_feature_extractor_id": "openai/whisper-medium.en",
+    "fixed_audio_seconds": 5.76,
+    "eval_fixed_audio_seconds": 5.76,
+    "whisper_expected_mel_frames": 3000,
+    "valid_hidden_crop": true,
+    "mfa_smallest_fast_path": true,
+    "mfa_smallest_fallback_fix": true,
+    "num_gpus": 8,
+    "per_gpu_batch": 512,
+    "global_batch": 4096,
+    "grad_cache_chunk_size": 128,
+    "max_steps": 2000,
+    "eval_steps_sample": 100,
+    "eval_sample_limit": 100,
+    "acl_eval_sample_limit": 0,
+    "medicine_eval_sample_limit": 0,
+    "eval_glossary_sizes": [
+      1000,
+      10000
+    ],
+    "acl_eval_glossary_sizes": [
+      10000
+    ],
+    "medicine_eval_glossary_sizes": [
+      10000
+    ],
+    "tcm_sweep_thresholds": [
+      0.75
+    ],
+    "eval_glossary_match_min_norm_chars": 2,
+    "slurm_job_name": "q3_vctx_wmid_bs4k",
+    "slurm_partition": "taurus",
+    "best_metric": "eval_dev/recall@10_gs10000",
+    "best_metric_secondary": "eval_acl6060/recall@10",
+    "baseline_anchor": {
+      "run_id": "lh1b88kw",
+      "anchor": "secondary",
+      "step": 2640,
+      "metric": "eval_acl6060/recall@10"
+    },
+    "tcm_off": true,
+    "prepared_at_utc": "2026-05-17T22:17:40+00:00",
+    "submitted_at_utc": "2026-05-17T22:18:39+00:00",
+    "wandb_init_at_utc": "2026-05-17T22:21:29+00:00",
+    "slurm_stdout": "/mnt/gemini/data1/jiaxuanluo/logs/45257_q3_vctx_wmid_bs4k_q3_vctx_wmid_bs4k.out",
+    "slurm_stderr": "/mnt/gemini/data1/jiaxuanluo/logs/45257_q3_vctx_wmid_bs4k_q3_vctx_wmid_bs4k.err",
+    "finished_at_utc": "2026-05-17T22:26:52+00:00",
+    "failure_reason": "OOM in GradCache phase-3 speech backward with per_rank_bs=512 and gc128; reduce grad_cache_chunk_size to 64."
+  }
+}

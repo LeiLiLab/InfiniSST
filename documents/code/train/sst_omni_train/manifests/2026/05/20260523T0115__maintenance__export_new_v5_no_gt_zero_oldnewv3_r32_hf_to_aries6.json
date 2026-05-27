@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T0115__maintenance__export_new_v5_no_gt_zero_oldnewv3_r32_hf_to_aries6",
+  "event_type": "maintenance",
+  "family": "speech_llm_export",
+  "variant": "new_v5_no_gt_zero_oldnewv3_r32a64_hf_export_to_data6",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": "direct_aries45_export_new_v5_r32_hf",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260523__export_new_v5_no_gt_zero_oldnewv3_r32_hf_to_aries6.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260523__export_new_v5_no_gt_zero_oldnewv3_r32_hf_to_aries6.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash documents/code/train/sst_omni_train/launchers/2026/05/20260523__export_new_v5_no_gt_zero_oldnewv3_r32_hf_to_aries6.sh > documents/logs/speech_llm_train/20260523_export_new_v5_no_gt_zero_oldnewv3_r32_hf_to_aries6.out 2> documents/logs/speech_llm_train/20260523_export_new_v5_no_gt_zero_oldnewv3_r32_hf_to_aries6.err < /dev/null &",
+  "parent_run_ids": [
+    "cg5qisu9"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260523__export_new_v5_no_gt_zero_oldnewv3_r32_hf_to_aries6.sh"
+    },
+    {
+      "role": "export_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/export_mcore_checkpoint_to_hf.sh"
+    },
+    {
+      "role": "docker_wrapper",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/auto_train_sampling_docker.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260523__export_new_v5_no_gt_zero_oldnewv3_r32_hf_to_aries6.md"
+    },
+    {
+      "role": "mcore_checkpoint",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_r32a64_tp2_aries2/keep1.0_r32/v0-20260523-050346"
+    },
+    {
+      "role": "hf_model_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/aries/data6/jiaxuanluo/slm/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_r32a64_tp2_aries2/keep1.0_r32/v0-20260523-050346-hf"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_train/20260523_export_new_v5_no_gt_zero_oldnewv3_r32_hf_to_aries6.out"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_train/20260523_export_new_v5_no_gt_zero_oldnewv3_r32_hf_to_aries6.err"
+    }
+  ],
+  "metadata": {
+    "reason": "Recover eval-ready HF model from usable MCore checkpoint after training failed on data7 TensorBoard write.",
+    "source_training_run_state": "failed",
+    "source_checkpoint_iteration": 1000,
+    "expected_hf_shards": 15,
+    "completed_hf_shards": 15,
+    "completed_at_utc": "2026-05-23T09:27:26",
+    "gpu_devices": "4,5",
+    "output_filesystem": "/mnt/aries/data6"
+  }
+}

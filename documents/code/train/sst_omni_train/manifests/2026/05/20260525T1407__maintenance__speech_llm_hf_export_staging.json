@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T1407__maintenance__speech_llm_hf_export_staging",
+  "event_type": "maintenance",
+  "family": "speech_llm_export",
+  "variant": "staged_hf_export_helper",
+  "status": "success_syntax_validated",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260525__speech_llm_hf_export_staging.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "bash -n documents/code/train/sst_omni_train/common/hf_export_staging.sh && bash -n documents/code/train/sst_omni_train/auto_train_sampling_rank32_try.sh && bash -n documents/code/train/sst_omni_train/auto_train_sampling_rank16_try.sh && bash -n documents/code/train/sst_omni_train/auto_train_sampling_docker.sh && bash -n documents/code/train/sst_omni_train/export_mcore_checkpoint_to_hf.sh && bash -n documents/code/train/sst_omni_train/launchers/2026/05/20260525__speech_llm_de_cap16_denoise_budget_ttag_taurus6_r32a32_ep1.sh",
+  "parent_run_ids": [
+    "sapq66g0"
+  ],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260525__speech_llm_hf_export_staging.md",
+      "metadata": {}
+    },
+    {
+      "role": "export_helper",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/common/hf_export_staging.sh",
+      "metadata": {}
+    },
+    {
+      "role": "rank32_train_script",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/auto_train_sampling_rank32_try.sh",
+      "metadata": {}
+    },
+    {
+      "role": "rank16_train_script",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/auto_train_sampling_rank16_try.sh",
+      "metadata": {}
+    },
+    {
+      "role": "docker_wrapper",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/auto_train_sampling_docker.sh",
+      "metadata": {}
+    },
+    {
+      "role": "standalone_export_script",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/export_mcore_checkpoint_to_hf.sh",
+      "metadata": {}
+    },
+    {
+      "role": "launcher_updated",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260525__speech_llm_de_cap16_denoise_budget_ttag_taurus6_r32a32_ep1.sh",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "hf_export_stage_root_env": "HF_EXPORT_STAGE_ROOT",
+    "hf_export_local_cache_root_env": "HF_EXPORT_LOCAL_CACHE_ROOT",
+    "hf_export_local_latest_link_env": "HF_EXPORT_LOCAL_LATEST_LINK",
+    "base_model_stage_root_env": "BASE_MODEL_STAGE_ROOT",
+    "preferred_taurus_local_storage": "/mnt/data1",
+    "validation": "bash -n passed for helper, train scripts, docker wrapper, standalone export script, and updated launcher",
+    "current_export_note": "sapq66g0 export had already started with the old direct export path before this maintenance patch"
+  }
+}

@@ -1,0 +1,282 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T0335__retriever_train__varctx_lmlb_v3_hn256_step1200_aclmetric_reset_taurus6",
+  "event_type": "retriever_train",
+  "family": "sst_ood_hardneg",
+  "variant": "hn256_varctx576_v3_gc256_step1200_aclmetric_reset_taurus6",
+  "status": "paused",
+  "project": "qwen3_rag",
+  "wandb_run_id": "gsjheh6r",
+  "slurm_job_id": "45300",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260523__varctx_lmlb_v3_hn256_step1200_aclmetric_reset_taurus6.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260523__varctx_lmlb_v3_hn256_step1200_aclmetric_reset_taurus6.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && CUDA_DEVICE_LIST=0,1,2,3,6,7 NUM_GPUS=6 PER_GPU_BATCH=1365 BATCH_SIZE=8190 documents/code/train/term_train/launchers/2026/05/20260523__varctx_lmlb_v3_hn256_step1200_aclmetric_reset_taurus6.sh' > /mnt/gemini/data1/jiaxuanluo/logs/hn256_step1200_aclmetric_reset_taurus6_20260523T0335Z.direct.log 2>&1 < /dev/null &",
+  "parent_run_ids": [
+    "lrdx14pm",
+    "e981df6j",
+    "lh1b88kw",
+    "5fwrs7rh",
+    "40fgbr2y",
+    "bgz7akb6",
+    "ah9u1bao",
+    "dxwrgbln"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260523__varctx_lmlb_v3_hn256_step1200_aclmetric_reset_taurus6.sh",
+      "metadata": {
+        "sha256": "cca59728c0eda4016827fd09dc6f1818cae5c52255eb061dd79e9203daf63943"
+      }
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh",
+      "metadata": {
+        "sha256": "d55921fe1a32b696b5d59bbdffd181c57878cecca9904ee28bc8419e6fc04122"
+      }
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn1024_gsv2full_gsdedup_varctx_lmlb_v3_tcmoff_ep6_8gpu_aries.sh",
+      "metadata": {}
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py",
+      "metadata": {
+        "sha256": "2a035bd9fb13bc4b15b9d5ed996bcfe80825041c568483eb60f5c5252aefd44f"
+      }
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260523__varctx_lmlb_v3_hn256_step1200_aclmetric_reset_taurus6.md",
+      "metadata": {}
+    },
+    {
+      "role": "source_wandb_run",
+      "type": "wandb_run",
+      "direction": "input",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/lrdx14pm",
+      "metadata": {
+        "usage": "interrupted HN256 resume whose frozen step-1200 checkpoint is reused"
+      }
+    },
+    {
+      "role": "resume_checkpoint",
+      "type": "model",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/lrdx14pm_hn256_bestsec_acl6060r10_0p9924_step1200_tie1280_frozen_20260523.pt",
+      "metadata": {
+        "source_run_id": "lrdx14pm",
+        "step": 1200,
+        "checkpoint_role": "frozen_best_secondary_acl6060_recall_at_10",
+        "sha256": "259527afc80c8f81e4b6614f4c2f27fbbe61f1f58a78d17adcf515d5b12af9bb"
+      }
+    },
+    {
+      "role": "resume_checkpoint_metadata",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/lrdx14pm_hn256_bestsec_acl6060r10_0p9924_step1200_tie1280_frozen_20260523.pt.json",
+      "metadata": {}
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_varctx2p88_3p84_4p80_5p76.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_varctx2p88_3p84_4p80_5p76_new_version.jsonl",
+      "metadata": {
+        "usage": "dev readout, not checkpoint selection for this user-requested metric-reset run"
+      }
+    },
+    {
+      "role": "acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_extracted_paper_glossary_varctx2p88_3p84_4p80_5p76/acl6060_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "user-requested checkpoint metric override"
+      }
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "domain readout"
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample10000.json",
+      "metadata": {
+        "eval_glossary_sizes": [
+          10000
+        ]
+      }
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_gt_union_gs10000_min_norm2_backfill.json",
+      "metadata": {
+        "eval_glossary_sizes": [
+          10000
+        ]
+      }
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000.json",
+      "metadata": {
+        "eval_glossary_sizes": [
+          10000
+        ]
+      }
+    },
+    {
+      "role": "direct_launch_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/hn256_step1200_aclmetric_reset_taurus6_20260523T0335Z.direct.log",
+      "metadata": {
+        "host": "taurus"
+      }
+    },
+    {
+      "role": "pid_file",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/hn256_step1200_aclmetric_reset_taurus6_20260523T0335Z.direct.pid",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint",
+      "type": "model",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8190_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8190_gc256_wr1000k_m0.0_maxsim_mfa_variantE_hn256_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu012367_taurus_step1200_aclmetric_reset.pt",
+      "metadata": {
+        "best_metric": "eval_acl6060/top1"
+      }
+    },
+    {
+      "role": "checkpoint_secondary",
+      "type": "model",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8190_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8190_gc256_wr1000k_m0.0_maxsim_mfa_variantE_hn256_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu012367_taurus_step1200_aclmetric_reset_best_eval_acl6060_recallat10_gs10000.pt",
+      "metadata": {
+        "best_metric_secondary": "eval_acl6060/recall@10_gs10000"
+      }
+    },
+    {
+      "role": "checkpoint_latest",
+      "type": "model",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8190_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8190_gc256_wr1000k_m0.0_maxsim_mfa_variantE_hn256_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu012367_taurus_step1200_aclmetric_reset_latest.pt",
+      "metadata": {
+        "save_latest_on_eval": true
+      }
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs",
+      "metadata": {}
+    },
+    {
+      "role": "wandb_run",
+      "type": "wandb_run",
+      "direction": "output",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/gsjheh6r",
+      "metadata": {
+        "local_run_dir": "/mnt/gemini/data1/jiaxuanluo/wandb/wandb/run-20260523_034225-gsjheh6r"
+      }
+    }
+  ],
+  "metadata": {
+    "source_run_id": "lrdx14pm",
+    "source_checkpoint_step": 1200,
+    "source_checkpoint_role": "frozen_best_secondary_acl6060_recall_at_10",
+    "source_checkpoint_path": "/mnt/gemini/home/jiaxuanluo/train_outputs/lrdx14pm_hn256_bestsec_acl6060r10_0p9924_step1200_tie1280_frozen_20260523.pt",
+    "interrupted_run_id": "lrdx14pm",
+    "comparison_run_ids": [
+      "lrdx14pm",
+      "e981df6j",
+      "lh1b88kw",
+      "5fwrs7rh",
+      "40fgbr2y",
+      "bgz7akb6"
+    ],
+    "ablation": "hard_neg_per_sample_256_step1200_aclmetric_reset",
+    "hard_neg_k": 0,
+    "hard_neg_k_per_sample": 256,
+    "grad_cache_chunk_size": 256,
+    "cuda_device_list": "0,1,2,3,6,7",
+    "num_gpus": 6,
+    "per_gpu_batch": 1365,
+    "target_global_batch": 8190,
+    "effective_global_batch": 8190,
+    "batch_size_policy": "near-8k equal-rank 6GPU batch because Taurus GPU 4/5 were occupied at launch",
+    "slurm_allocation_job_id": "45300",
+    "slurm_partition": "taurus",
+    "launch_method": "direct detached process on taurus; Slurm hold allocation 45300 was present",
+    "direct_launch_pid": 129472,
+    "torchrun_pid": 129492,
+    "step_log": "/mnt/gemini/data1/jiaxuanluo/logs/hn256_step1200_aclmetric_reset_taurus6_20260523T0335Z.direct.log",
+    "pid_file": "/mnt/gemini/data1/jiaxuanluo/logs/hn256_step1200_aclmetric_reset_taurus6_20260523T0335Z.direct.pid",
+    "epochs": 6,
+    "scheduler_epochs": 6,
+    "fixed_audio_seconds": 5.76,
+    "eval_fixed_audio_seconds": 5.76,
+    "best_metric": "eval_acl6060/top1",
+    "best_metric_secondary": "eval_acl6060/recall@10_gs10000",
+    "reset_best_on_resume": true,
+    "reset_scheduler": false,
+    "protocol_override": "User explicitly requested ACL metrics as checkpoint metrics for this internal ablation resume.",
+    "wandb_run_id": "gsjheh6r",
+    "wandb_run_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/gsjheh6r",
+    "launched_at_utc": "2026-05-23T03:37:32Z",
+    "wandb_init_at_utc": "2026-05-23T03:42:25Z",
+    "best_trackers_reset_confirmed_at_utc": "2026-05-23T03:42:31Z",
+    "eval_glossary_match_min_norm_chars": 2,
+    "eval_top100_samples": 0,
+    "tcm_sweep_thresholds": [
+      0.75
+    ],
+    "save_latest_on_eval": true,
+    "prepared_at_utc": "2026-05-23T03:35:41Z",
+    "manifest_updated_at_utc": "2026-05-23T10:58:59Z",
+    "scheduled_pause_at_utc": "2026-05-23T10:58:59Z",
+    "pause_reason": "scheduled_hn512_resume",
+    "replacement_event_id": "20260523T1054__retriever_train__varctx_lmlb_v3_hn512_resume_after_hn256_taurus6",
+    "pause_timer_event_id": "20260523T0754__maintenance__timer_stop_hn256_resume_hn512_taurus"
+  },
+  "created_at": "2026-05-23T03:35:41Z",
+  "updated_at": "2026-05-23T10:58:59Z"
+}

@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "event_id": "20260519T1114__data_prepare__retriever_timeline_termmap_zh_lh1b88kw_tau073",
+  "event_type": "data_prepare",
+  "family": "speech_llm_termmap_retriever",
+  "variant": "zh_lh1b88kw_tau073_timeline_v1",
+  "status": "deprecated",
+  "project": null,
+  "wandb_run_id": null,
+  "slurm_job_id": "45269",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__build_retriever_timeline_termmap_zh_lh1b88kw_tau073.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260519__retriever_timeline_termmap_zh_lh1b88kw_tau073_data.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "tmux new-session -d -s rettm_v1_data \"srun --jobid=45269 --overlap --ntasks=1 --cpus-per-task=8 bash -lc 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && bash documents/code/train/sst_omni_train/launchers/2026/05/20260519__build_retriever_timeline_termmap_zh_lh1b88kw_tau073.sh' > /mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v1_data_20260519T111945.out 2> /mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v1_data_20260519T111945.err\"",
+  "parent_run_ids": [
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__build_retriever_timeline_termmap_zh_lh1b88kw_tau073.sh",
+      "metadata": {}
+    },
+    {
+      "role": "prepare_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_retriever_timeline_termmap_sft.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260519__retriever_timeline_termmap_zh_lh1b88kw_tau073_data.md",
+      "metadata": {}
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/train_s_zh_v4_ner_baseline_aligned_rate1.0_k20_final.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/dev_s_zh_v4_ner_baseline_aligned_freq_k20.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample100000_zh100k_train_gt.json",
+      "metadata": {
+        "target_lang": "zh"
+      }
+    },
+    {
+      "role": "checkpoint",
+      "type": "model",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "wandb_run_id": "lh1b88kw",
+        "tau": 0.73
+      }
+    },
+    {
+      "role": "text_index",
+      "type": "pt",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_20260519/lh1b88kw_tau073_zh100k_text_index.pt",
+      "metadata": {}
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_20260519/train_s_zh_retriever_timeline_lh1b88kw_tau073_k10_lb1p92.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_20260519/dev_s_zh_retriever_timeline_lh1b88kw_tau073_k10_lb1p92.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "stats",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_20260519/retriever_timeline_termmap_manifest.json",
+      "metadata": {}
+    },
+    {
+      "role": "stats",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_20260519/train_retriever_timeline_stats.json",
+      "metadata": {}
+    },
+    {
+      "role": "stats",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_20260519/dev_retriever_timeline_stats.json",
+      "metadata": {}
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs",
+      "metadata": {}
+    },
+    {
+      "role": "direct_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v1_data_20260519T111945.out",
+      "metadata": {
+        "stream": "stdout"
+      }
+    },
+    {
+      "role": "direct_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v1_data_20260519T111945.err",
+      "metadata": {
+        "stream": "stderr"
+      }
+    }
+  ],
+  "metadata": {
+    "lang_code": "zh",
+    "policy": "timeline MaxSim retriever term_map V1; no GT backfill; GT zh override only on retrieved term match",
+    "deprecated_reason": "Post-run QA showed the input zh100k glossary has poor exact coverage of source JSONL gt_terms_by_chunk; the 47.20% GT-term recall is a glossary/GT surface mismatch and this dataset must not be used for SFT.",
+    "valid_for_sft": false,
+    "top_k": 10,
+    "score_threshold": 0.73,
+    "lookback_sec": 1.92,
+    "num_shards": 4,
+    "audio_batch_size": 4,
+    "compute": "taurus_hold45269",
+    "expected_followup_train": "speech_llm_termmap_retriever zh r8/a32 SFT from initial mcore if data QA passes",
+    "tmux_session": "rettm_v1_data",
+    "direct_log_prefix": "/mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v1_data_20260519T111945",
+    "train_rows": 12500,
+    "train_audio_user_chunks": 68705,
+    "train_gt_terms_total": 124843,
+    "train_gt_terms_hit": 58931,
+    "train_gt_term_recall": 0.47204088334948696,
+    "train_nonempty_term_map_rate": 0.9817626082526745,
+    "train_no_gt_nonempty_term_map_rate": 0.9303456356180434,
+    "train_avg_term_map_entries_per_chunk": 9.637973946583218,
+    "dev_rows": 355,
+    "dev_audio_user_chunks": 891,
+    "dev_gt_term_recall": 0.5,
+    "dev_nonempty_term_map_rate": 0.9797979797979798,
+    "dev_no_gt_nonempty_term_map_rate": 0.9453376205787781,
+    "dev_avg_term_map_entries_per_chunk": 9.5331088664422
+  }
+}

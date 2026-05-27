@@ -1,0 +1,270 @@
+{
+  "schema_version": 1,
+  "event_id": "20260519T0000__data_prepare__fixed_ctx5p76_train_dev_tagacl_med",
+  "event_type": "data_prepare",
+  "family": "retriever_context_ablation_data",
+  "variant": "fixed_ctx5p76_train_dev_tagacl_med",
+  "status": "success",
+  "project": null,
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/data_pre/training_terms_for_retriever/launchers/2026/05/20260519__fixed_ctx5p76_train_dev_tagacl_med.sh",
+  "notes_path": "documents/code/data_pre/training_terms_for_retriever/notes/2026/05/20260519__fixed_ctx5p76_train_dev_tagacl_med.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "bash documents/code/data_pre/training_terms_for_retriever/launchers/2026/05/20260519__fixed_ctx5p76_train_dev_tagacl_med.sh",
+  "parent_run_ids": [
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/data_pre/training_terms_for_retriever/launchers/2026/05/20260519__fixed_ctx5p76_train_dev_tagacl_med.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/data_pre/training_terms_for_retriever/notes/2026/05/20260519__fixed_ctx5p76_train_dev_tagacl_med.md",
+      "metadata": {}
+    },
+    {
+      "role": "train_context_builder",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/data_pre/training_terms_for_retriever/build_variable_gigaspeech_context.py",
+      "metadata": {
+        "duration_secs": [
+          5.76
+        ]
+      }
+    },
+    {
+      "role": "dev_context_builder",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/data_pre/training_terms_for_retriever/build_term_dev_variable_context_from_multipliers.py",
+      "metadata": {
+        "duration_multiplier": 6
+      }
+    },
+    {
+      "role": "acl_tagged_context_builder",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/data_pre/acl/prepare_acl6060_tagged_variable_context.py",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_context_builder",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/data_pre/training_terms_for_retriever/prepare_medicine_variable_context.py",
+      "metadata": {}
+    },
+    {
+      "role": "diagnose_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/data_pre/training_terms_for_retriever/diagnose_variable_context_jsonl.py",
+      "metadata": {}
+    },
+    {
+      "role": "train_jsonl_source",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "dev_tsv_source",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/dev_case_robust_asr-filtered_zh_metricx-qe3.0_align.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "dev_ner_source",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/ner_candidates_dev_en_core_web_trf.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "acl_tagged_text",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/data/siqiouyang/datasets/acl6060/dev/text/tagged_terminology/ACL.6060.dev.tagged.en-xx.en.txt",
+      "metadata": {
+        "usage": "tagged ACL readout source; paper extracted ACL intentionally excluded"
+      }
+    },
+    {
+      "role": "acl_tagged_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "documents/data/data_pre/glossary_acl6060.json",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_raw_input_dir",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/home/jiaxingxu/rag-sst/eso-dataset/outputs_v2/test",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_mfa_textgrid_dir",
+      "type": "alignment_dir",
+      "direction": "input",
+      "path": "/home/jiaxingxu/rag-sst/eso-dataset/mfa_v1/textgrids",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_filler_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "documents/code/data_pre/glossary_scale/wiki_glossary_medicine_enriched.json",
+      "metadata": {}
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_ctx5p76.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_ctx5p76_new_version.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_tagged_glossary_ctx5p76/acl6060_tagged_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "tagged ACL held-out readout only"
+      }
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs10000_min_norm2_backfill_ctx5p76.json",
+      "metadata": {
+        "min_norm_chars": 2,
+        "target_size": 10000
+      }
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_ctx5p76/medicine_dev_dataset.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_ctx5p76/medicine_glossary_gt_plus_medicine_wiki_gs10000.json",
+      "metadata": {}
+    },
+    {
+      "role": "stats",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_ctx5p76_stats.json",
+      "metadata": {}
+    },
+    {
+      "role": "stats",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_ctx5p76_stats.json",
+      "metadata": {}
+    },
+    {
+      "role": "stats",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_tagged_glossary_ctx5p76/acl6060_tagged_dev_dataset_stats.json",
+      "metadata": {}
+    },
+    {
+      "role": "stats",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_ctx5p76/medicine_dev_dataset_stats.json",
+      "metadata": {}
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "duration_secs": [
+      5.76
+    ],
+    "duration_assignment": "balance_rows",
+    "active_resume": {
+      "started_at_utc": "2026-05-19T16:17:00Z",
+      "wrapper_pid": 1625466,
+      "pid_file": "/mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep/resume_shards4_7_wrapper.pid",
+      "monitor_pid": 1672335,
+      "monitor_pid_file": "/mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep/monitor_shards4_7.pid",
+      "monitor_log": "/mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep/monitor_shards4_7.log",
+      "start_shard": 4,
+      "end_shard": 7,
+      "skip_completed_shards": true,
+      "command": "setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && START_SHARD=4 END_SHARD=7 SKIP_COMPLETED_SHARDS=true LOG_DIR=/mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep bash documents/code/data_pre/training_terms_for_retriever/launchers/2026/05/20260519__fixed_ctx5p76_train_dev_tagacl_med.sh' > /mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep/resume_shards4_7_wrapper.out 2> /mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep/resume_shards4_7_wrapper.err < /dev/null &"
+    },
+    "copy_unexpandable_gs": false,
+    "wiki_expand_failure_policy": "drop",
+    "dev_multiplier": 6,
+    "acl_source": "tagged_acl_only",
+    "acl_min_norm_chars": 2,
+    "medicine_unmatched_term_policy": "drop",
+    "medicine_allowed_locate_methods": [
+      "mfa_exact",
+      "char_proportional"
+    ],
+    "diag_target_frac": "1.0 for fixed single-duration 5p76 train diagnostic",
+    "active_resume_after_train_diag": {
+      "started_at_utc": "2026-05-20T01:25:00Z",
+      "wrapper_pid": 2167843,
+      "pid_file": "/mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep/resume_after_train_diag_to_dev_acl_med_20260520.pid",
+      "stdout": "/mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep/resume_after_train_diag_to_dev_acl_med_20260520.out",
+      "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep/resume_after_train_diag_to_dev_acl_med_20260520.err",
+      "start_shard": 4,
+      "end_shard": 7,
+      "skip_completed_shards": true,
+      "diag_target_frac": 1.0,
+      "command": "setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && START_SHARD=4 END_SHARD=7 SKIP_COMPLETED_SHARDS=true DIAG_TARGET_FRAC=1.0 LOG_DIR=/mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep bash documents/code/data_pre/training_terms_for_retriever/launchers/2026/05/20260519__fixed_ctx5p76_train_dev_tagacl_med.sh' > /mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep/resume_after_train_diag_to_dev_acl_med_20260520.out 2> /mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep/resume_after_train_diag_to_dev_acl_med_20260520.err < /dev/null &"
+    },
+    "train_invalid_mfa_repair_policy": "repair_variable_context_jsonl.py filters rows with invalid MFA spans and records repair_drop_reasons before final diagnostic",
+    "active_resume_repair_then_eval_data": {
+      "started_at_utc": "2026-05-20T01:36:00Z",
+      "wrapper_pid": 2177782,
+      "pid_file": "/mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep/resume_repair_train_then_dev_acl_med_20260520.pid",
+      "stdout": "/mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep/resume_repair_train_then_dev_acl_med_20260520.out",
+      "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep/resume_repair_train_then_dev_acl_med_20260520.err",
+      "run_train_context": false,
+      "repair_train_invalid_rows": true,
+      "diag_target_frac": 1.0,
+      "command": "setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && RUN_TRAIN_CONTEXT=false DIAG_TARGET_FRAC=1.0 REPAIR_TRAIN_INVALID_ROWS=true LOG_DIR=/mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep bash documents/code/data_pre/training_terms_for_retriever/launchers/2026/05/20260519__fixed_ctx5p76_train_dev_tagacl_med.sh' > /mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep/resume_repair_train_then_dev_acl_med_20260520.out 2> /mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep/resume_repair_train_then_dev_acl_med_20260520.err < /dev/null &"
+    },
+    "completed_at_utc": "2026-05-20T01:48:02Z",
+    "final_resume_log": "/mnt/gemini/data1/jiaxuanluo/logs/fixed_ctx5p76_data_prep/resume_dev_acl_med_after_diagfix_20260520.out"
+  }
+}

@@ -1,0 +1,9 @@
+timestamp_utc	lm	status	alive_pids	engine_pids_all	stage	eval_results	instances_rows	strip_rows	BLEU	StreamLAAL	StreamLAAL_CA	TERM_ACC	TERM_CORRECT	TERM_TOTAL	note
+2026-05-25T02:00:31Z	1	running	605650	606402,606415,606430,606446	loading_shards_13_of_15_87pct										
+2026-05-25T02:00:32Z	2	running	605652	606402,606415,606430,606446	loading_shards_13_of_15_87pct										
+2026-05-25T02:00:32Z	3	running	605651	606402,606415,606430,606446	loading_shards_13_of_15_87pct										
+2026-05-25T02:00:33Z	4	running	605649	606402,606415,606430,606446	loading_shards_13_of_15_87pct										
+2026-05-25T02:01:33Z	1	running	605650	606402,606415,606430,606446	loading_shards_15_of_15_100pct										
+2026-05-25T02:01:34Z	2	running	605652	606402,606415,606430,606446	loading_shards_15_of_15_100pct										
+2026-05-25T02:01:34Z	3	running	605651	606402,606415,606430,606446	loading_shards_15_of_15_100pct										
+2026-05-25T02:01:35Z	4	running	605649	606402,606415,606430,606446	loading_shards_15_of_15_100pct										

@@ -1,0 +1,8 @@
+variant	threshold_role	pos_threshold	neg_threshold	pos_weight	neg_weight	inference_tau
+n64_p1n1	balanced_anchor	0.8500	0.6400	1	1	0.7500
+n64_p1n4	balanced_anchor	0.8500	0.6400	1	4	0.7500
+n64_p2n4	balanced_anchor	0.8500	0.6400	2	4	0.7500
+n64_p1n8	finalist_probe	0.8500	0.6400	1	8	0.7500
+n70_p1n1	aggressive_anchor	0.8500	0.7000	1	1	0.7800
+n70_p1n4	aggressive_anchor	0.8500	0.7000	1	4	0.7800
+n70_p2n4	aggressive_anchor	0.8500	0.7000	2	4	0.7800

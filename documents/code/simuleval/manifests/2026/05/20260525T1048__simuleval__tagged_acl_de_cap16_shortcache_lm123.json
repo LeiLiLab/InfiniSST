@@ -1,0 +1,378 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T1048__simuleval__tagged_acl_de_cap16_shortcache_lm123",
+  "event_type": "simuleval",
+  "family": "tagged_acl_de_cap16_shortcache",
+  "variant": "lm123_maxnew_20x_lm_cache40_20_chunks8_4",
+  "status": "completed_success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_cap16_lm4_decode_cache_probe.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_de_cap16_shortcache_lm123.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "detached Taurus launches; one standalone batched-vLLM process per lm; max_new_tokens scaled as 20*lm",
+  "parent_run_ids": [
+    "wtkgnf8k"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_cap16_lm4_decode_cache_probe.sh",
+      "metadata": {
+        "supports_lm_value_override": true
+      }
+    },
+    {
+      "role": "delegate_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_de_cap16_shortcache_lm123.md",
+      "metadata": {}
+    },
+    {
+      "role": "speech_llm_model",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_de_retriever_cap16_exactboundary_r32a32_ep4_taurus8/keep1.0_r32/v1-20260525-141908-hf",
+      "metadata": {
+        "parent_wandb_run_id": "wtkgnf8k",
+        "train_event_id": "20260525T0620__speech_llm_train__de_retriever_cap16_exactboundary_r32a32_ep4_taurus8"
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_deja_termmap_ablation_cap16_exactboundary_20260525/de/retriever_hn1024_tau078_cap16_exactboundary/train_s_de_retriever_hn1024_tau078_cap16_gttermwrap_exactboundary.jsonl",
+      "metadata": {
+        "rows": 12500,
+        "chunks": 71730,
+        "max_termmap_entries": 16
+      }
+    },
+    {
+      "role": "eval_input_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all",
+      "metadata": {
+        "lang": "de",
+        "talk_count": 5
+      }
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "dataset": "acl_tagged_raw"
+      }
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever": "HN1024",
+        "tau": 0.78
+      }
+    },
+    {
+      "role": "eval_output_root",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_shortcache_lm123_20260525T1048",
+      "metadata": {}
+    },
+    {
+      "role": "log_root",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_shortcache_lm123_20260525T1048",
+      "metadata": {}
+    },
+    {
+      "role": "lm3_log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_shortcache_lm123_20260525T1048/full5_lm3_mt60_c40k20_ch8k4",
+      "metadata": {
+        "pid": 1694596
+      }
+    },
+    {
+      "role": "lm2_log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_shortcache_lm123_20260525T1048/full5_lm2_mt40_c40k20_ch8k4",
+      "metadata": {
+        "pid": 1694599
+      }
+    },
+    {
+      "role": "lm3_output_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_shortcache_lm123_20260525T1048/full5_lm3_mt60_c40k20_ch8k4",
+      "metadata": {
+        "lm": 3
+      }
+    },
+    {
+      "role": "lm2_output_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_shortcache_lm123_20260525T1048/full5_lm2_mt40_c40k20_ch8k4",
+      "metadata": {
+        "lm": 2
+      }
+    },
+    {
+      "role": "lm1_log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_shortcache_lm123_20260525T1048/full5_lm1_mt20_c40k20_ch8k4",
+      "metadata": {
+        "pid": 1697806
+      }
+    },
+    {
+      "role": "lm1_output_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_shortcache_lm123_20260525T1048/full5_lm1_mt20_c40k20_ch8k4",
+      "metadata": {
+        "lm": 1
+      }
+    },
+    {
+      "role": "lm2_summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_shortcache_lm123_20260525T1048/full5_lm2_mt40_c40k20_ch8k4/de_retriever_cap16_shortcache_lm2_mt40/__summary__/summary_de_lm2.tsv",
+      "metadata": {
+        "lm": 2
+      }
+    },
+    {
+      "role": "lm2_eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_shortcache_lm123_20260525T1048/full5_lm2_mt40_c40k20_ch8k4/de_retriever_cap16_shortcache_lm2_mt40/de/dtagacl_bv1_decap16_full5_lm2_mt40_c40k20_ch8k4_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {
+        "lm": 2
+      }
+    },
+    {
+      "role": "lm3_summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_shortcache_lm123_20260525T1048/full5_lm3_mt60_c40k20_ch8k4/de_retriever_cap16_shortcache_lm3_mt60/__summary__/summary_de_lm3.tsv",
+      "metadata": {
+        "lm": 3
+      }
+    },
+    {
+      "role": "lm3_eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_shortcache_lm123_20260525T1048/full5_lm3_mt60_c40k20_ch8k4/de_retriever_cap16_shortcache_lm3_mt60/de/dtagacl_bv1_decap16_full5_lm3_mt60_c40k20_ch8k4_lm3_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {
+        "lm": 3
+      }
+    },
+    {
+      "role": "lm1_summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_shortcache_lm123_20260525T1048/full5_lm1_mt20_c40k20_ch8k4/de_retriever_cap16_shortcache_lm1_mt20/__summary__/summary_de_lm1.tsv",
+      "metadata": {
+        "lm": 1
+      }
+    },
+    {
+      "role": "lm1_eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_shortcache_lm123_20260525T1048/full5_lm1_mt20_c40k20_ch8k4/de_retriever_cap16_shortcache_lm1_mt20/de/dtagacl_bv1_decap16_full5_lm1_mt20_c40k20_ch8k4_lm1_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {
+        "lm": 1
+      }
+    },
+    {
+      "role": "selected_lm1to4_report",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_de_shortcache_lm1to4_selected.tsv",
+      "metadata": {
+        "lm_rows": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "lm4_row_is_reference_from_prior_probe": true
+      }
+    }
+  ],
+  "metadata": {
+    "dataset": "acl_tagged_raw",
+    "language": "de",
+    "method": "RASST",
+    "runtime_glossary": "acl6060_tagged_gt_raw_min_norm2",
+    "model_config_summary": {
+      "base_model": "Qwen3-Omni-30B-A3B-Instruct-v2",
+      "train_type": "lora",
+      "lora_rank": 32,
+      "lora_alpha": 32,
+      "max_length": 3072,
+      "epochs": 1,
+      "global_batch_size": 8,
+      "expert_model_parallel_size": 4,
+      "data_branch": "de/retriever_hn1024_tau078_cap16_exactboundary",
+      "term_wrapping": "assistant exact boundary <term> wrapping",
+      "term_map": "HN1024 tau=0.78 retriever term_map capped to 16 entries"
+    },
+    "eval_plan": [
+      {
+        "lm": 1,
+        "max_new_tokens": 20,
+        "max_cache_seconds": 40,
+        "keep_cache_seconds": 20,
+        "max_cache_chunks": 8,
+        "keep_cache_chunks": 4
+      },
+      {
+        "lm": 2,
+        "max_new_tokens": 40,
+        "max_cache_seconds": 40,
+        "keep_cache_seconds": 20,
+        "max_cache_chunks": 8,
+        "keep_cache_chunks": 4
+      },
+      {
+        "lm": 3,
+        "max_new_tokens": 60,
+        "max_cache_seconds": 40,
+        "keep_cache_seconds": 20,
+        "max_cache_chunks": 8,
+        "keep_cache_chunks": 4
+      }
+    ],
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 12288,
+    "wandb_logging": false,
+    "launches": [
+      {
+        "lm": 3,
+        "max_new_tokens": 60,
+        "gpu_pair": "3,7",
+        "pid": 1694596,
+        "config_id": "full5_lm3_mt60_c40k20_ch8k4",
+        "status": "completed_success"
+      },
+      {
+        "lm": 2,
+        "max_new_tokens": 40,
+        "gpu_pair": "4,5",
+        "pid": 1694599,
+        "config_id": "full5_lm2_mt40_c40k20_ch8k4",
+        "status": "completed_success"
+      },
+      {
+        "lm": 1,
+        "max_new_tokens": 20,
+        "gpu_pair": "4,5",
+        "pid": 1697806,
+        "config_id": "full5_lm1_mt20_c40k20_ch8k4",
+        "status": "running_generation_verified"
+      }
+    ],
+    "lm1_launch_policy": "submit after lm2 has occupied gpu pair 4,5, then wait for pair release",
+    "partial_results": {
+      "lm2": {
+        "BLEU": "30.29528012772279",
+        "StreamLAAL": "1641.653657238043",
+        "StreamLAAL_CA": "930.2461613290243",
+        "TERM_ACC": "0.8503",
+        "TERM_CORRECT": "795",
+        "TERM_TOTAL": "935",
+        "eval_results": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_shortcache_lm123_20260525T1048/full5_lm2_mt40_c40k20_ch8k4/de_retriever_cap16_shortcache_lm2_mt40/de/dtagacl_bv1_decap16_full5_lm2_mt40_c40k20_ch8k4_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+        "instances_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_shortcache_lm123_20260525T1048/full5_lm2_mt40_c40k20_ch8k4/de_retriever_cap16_shortcache_lm2_mt40/de/dtagacl_bv1_decap16_full5_lm2_mt40_c40k20_ch8k4_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+        "instances_strip_term_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_shortcache_lm123_20260525T1048/full5_lm2_mt40_c40k20_ch8k4/de_retriever_cap16_shortcache_lm2_mt40/de/dtagacl_bv1_decap16_full5_lm2_mt40_c40k20_ch8k4_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.strip_term.log"
+      },
+      "lm3": {
+        "BLEU": "31.79968576214227",
+        "StreamLAAL": "2237.8185959359785",
+        "StreamLAAL_CA": "1178.7784609305354",
+        "TERM_ACC": "0.8588",
+        "TERM_CORRECT": "803",
+        "TERM_TOTAL": "935",
+        "eval_results": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_shortcache_lm123_20260525T1048/full5_lm3_mt60_c40k20_ch8k4/de_retriever_cap16_shortcache_lm3_mt60/de/dtagacl_bv1_decap16_full5_lm3_mt60_c40k20_ch8k4_lm3_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+        "instances_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_shortcache_lm123_20260525T1048/full5_lm3_mt60_c40k20_ch8k4/de_retriever_cap16_shortcache_lm3_mt60/de/dtagacl_bv1_decap16_full5_lm3_mt60_c40k20_ch8k4_lm3_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+        "instances_strip_term_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_shortcache_lm123_20260525T1048/full5_lm3_mt60_c40k20_ch8k4/de_retriever_cap16_shortcache_lm3_mt60/de/dtagacl_bv1_decap16_full5_lm3_mt60_c40k20_ch8k4_lm3_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.strip_term.log"
+      }
+    },
+    "result_summary": {
+      "lm1": {
+        "max_new_tokens": 20,
+        "BLEU": 23.410484333001026,
+        "StreamLAAL": 1047.3306385145245,
+        "StreamLAAL_CA": 995.1144933388273,
+        "TERM_ACC": 0.7968,
+        "TERM_CORRECT": 745,
+        "TERM_TOTAL": 935
+      },
+      "lm2": {
+        "max_new_tokens": 40,
+        "BLEU": 30.29528012772279,
+        "StreamLAAL": 1641.653657238043,
+        "StreamLAAL_CA": 930.2461613290243,
+        "TERM_ACC": 0.8503,
+        "TERM_CORRECT": 795,
+        "TERM_TOTAL": 935
+      },
+      "lm3": {
+        "max_new_tokens": 60,
+        "BLEU": 31.79968576214227,
+        "StreamLAAL": 2237.8185959359785,
+        "StreamLAAL_CA": 1178.7784609305354,
+        "TERM_ACC": 0.8588,
+        "TERM_CORRECT": 803,
+        "TERM_TOTAL": 935
+      }
+    },
+    "selected_lm4_reference": {
+      "max_new_tokens": 80,
+      "BLEU": 33.482003332358964,
+      "StreamLAAL": 2745.098537273287,
+      "StreamLAAL_CA": 819.5417415693659,
+      "TERM_ACC": 0.8674,
+      "TERM_CORRECT": 811,
+      "TERM_TOTAL": 935,
+      "summary_tsv": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T103743_full5_shortcache_full5_mt80_c40k20_ch8k4/de_retriever_cap16_lm4_full5_mt80_c40k20_ch8k4/__summary__/summary_de_lm4.tsv",
+      "note": "Reference row from prior lm4 short-cache probe, not produced by this lm123 event."
+    },
+    "validation": {
+      "lm1_instances_log_rows": 5,
+      "lm1_instances_strip_term_log_rows": 5,
+      "lm2_instances_log_rows": 5,
+      "lm2_instances_strip_term_log_rows": 5,
+      "lm3_instances_log_rows": 5,
+      "lm3_instances_strip_term_log_rows": 5,
+      "term_total_all_lms": 935
+    }
+  }
+}

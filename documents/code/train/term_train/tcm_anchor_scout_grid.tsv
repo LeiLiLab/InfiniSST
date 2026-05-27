@@ -1,0 +1,7 @@
+variant	threshold_role	pos_threshold	neg_threshold	pos_weight	neg_weight
+tcmanc_c_p1n2	center	0.8200	0.7900	1	2
+tcmanc_c_p1n4	center	0.8200	0.7900	1	4
+tcmanc_c_p2n4	center	0.8200	0.7900	2	4
+tcmanc_c_p2n2	center	0.8200	0.7900	2	2
+tcmanc_c_p1n1	center	0.8200	0.7900	1	1
+tcmanc_c_p4n2	center	0.8200	0.7900	4	2

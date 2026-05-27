@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T1754__retriever_eval__hn1024_tau091_099_dev100k_pr_extension",
+  "event_type": "retriever_eval",
+  "family": "sst_ood_hardneg_eval_compare",
+  "variant": "hn1024_tau091_099_dev100k_pr_extension",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": "ifs45d6j",
+  "slurm_job_id": "45300",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260522__tau_delta_dev_acl_tagacl_medstrict_compare_aries1_eval.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260523__hn1024_tau091_099_dev100k_eval.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "setsid env SLURM_JOB_ID=45300 SLURM_JOB_PARTITION=taurus RUN_STAMP=hn1024_tau091_099_dev100k_taurus_gpu6_20260523T1754Z MODEL_TAG=hn1024_tau091_099_dev100k VARIANT_TAG=hn1024_tau091_099_dev100k DATA_TAG=vctx576_hn1024_tau091_099_dev100k EXPERIMENT_FAMILY=sst_ood_hardneg_eval_compare EXTRA_WANDB_TAGS='variant:hn1024_tau091_099_dev100k compute:taurus-1gpu comparison:nohn_hn256_hn1024 calibration:dev_pr_curve readout:dev_only protocol:fixed-raw-denominator hn:1024 sweep:tau091_099' BASELINE_RUN_IDS='lh1b88kw 31xmxmdp 40fgbr2y e8t8zdtd evcgcdlu 8h9q0v4t' CUDA_DEVICE_LIST=6 NUM_GPUS=1 PER_GPU_BATCH=1 BATCH_SIZE=1 MASTER_PORT=30462 RESUME=/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt NOTES_FILE=/mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/train/term_train/notes/2026/05/20260523__hn1024_tau091_099_dev100k_eval.md EVAL_GLOSSARY_SIZES='100000' ACL_DEV_JSONL= TAGGED_ACL_DEV_JSONL= MEDICINE_DEV_JSONL= ACL_EVAL_WIKI_GLOSSARY= ACL_EVAL_GLOSSARY_SIZES= TAGGED_ACL_EVAL_WIKI_GLOSSARY= TAGGED_ACL_EVAL_GLOSSARY_SIZES= MEDICINE_EVAL_WIKI_GLOSSARY= MEDICINE_EVAL_GLOSSARY_SIZES= BEST_METRIC=eval_dev/recall@10_gs100000 EVAL_SCORE_QUERY_CHUNK=256 EVAL_SCORE_TEXT_CHUNK=4096 TCM_SWEEP_THRESHOLDS='0.91 0.92 0.93 0.94 0.95 0.96 0.97 0.98 0.99' bash documents/code/train/term_train/launchers/2026/05/20260522__tau_delta_dev_acl_tagacl_medstrict_compare_aries1_eval.sh > /mnt/gemini/data1/jiaxuanluo/logs/hn1024_tau091_099_dev100k_taurus_gpu6_20260523T1754Z.direct.log 2>&1 < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/hn1024_tau091_099_dev100k_taurus_gpu6_20260523T1754Z.direct.pid",
+  "parent_run_ids": [
+    "lh1b88kw",
+    "31xmxmdp",
+    "40fgbr2y",
+    "e8t8zdtd",
+    "evcgcdlu",
+    "8h9q0v4t"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260522__tau_delta_dev_acl_tagacl_medstrict_compare_aries1_eval.sh"
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh"
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py"
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260523__hn1024_tau091_099_dev100k_eval.md"
+    },
+    {
+      "role": "checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "source_run_id": "lh1b88kw",
+        "checkpoint_kind": "best_secondary",
+        "checkpoint_step": 2640
+      }
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_varctx2p88_3p84_4p80_5p76_new_version.jsonl",
+      "metadata": {
+        "usage": "dev-only PR extension"
+      }
+    },
+    {
+      "role": "eval_retriever_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample1000000.json",
+      "metadata": {
+        "retriever_glossary_sizes": [100000]
+      }
+    },
+    {
+      "role": "direct_launch_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/hn1024_tau091_099_dev100k_taurus_gpu6_20260523T1754Z.direct.log"
+    },
+    {
+      "role": "pid_file",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/hn1024_tau091_099_dev100k_taurus_gpu6_20260523T1754Z.direct.pid"
+    },
+    {
+      "role": "report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/20260522_nohn_vs_hn1024_fixeddenom_eval_report.md"
+    },
+    {
+      "role": "wandb_summary_export",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tmp/retriever_eval_fixeddenom_20260522/report_summaries/ifs45d6j.json"
+    }
+  ],
+  "metadata": {
+    "schema_version": 1,
+    "host": "taurus",
+    "cuda_device_list": "6",
+    "slurm_allocation_job_id": "45300",
+    "tau_grid": "0.91..0.99 stride 0.01",
+    "eval_metric_denominator": "fixed_raw",
+    "readout_scope": "dev_only_gs100k",
+    "heldout_policy": "ACL6060, tagged ACL6060, and strict medicine are disabled",
+    "eval_score_query_chunk": 256,
+    "eval_score_text_chunk": 4096,
+    "prepared_at_utc": "2026-05-23T17:54:43Z",
+    "started_at_utc": "2026-05-23T17:56:00Z",
+    "completed_at_utc": "2026-05-23T18:04:34Z",
+    "runtime_s": 473.21,
+    "direct_launch_pid": 2040091,
+    "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/ifs45d6j",
+    "right_tail_points_gs100k": {
+      "tau0p91": {"precision": 29.76, "recall": 94.83},
+      "tau0p92": {"precision": 31.58, "recall": 94.22},
+      "tau0p93": {"precision": 33.51, "recall": 93.35},
+      "tau0p94": {"precision": 35.73, "recall": 92.06},
+      "tau0p95": {"precision": 38.19, "recall": 90.69},
+      "tau0p96": {"precision": 41.11, "recall": 87.81},
+      "tau0p97": {"precision": 46.60, "recall": 82.89},
+      "tau0p98": {"precision": 59.82, "recall": 65.10},
+      "tau0p99": {"precision": 86.80, "recall": 2.72}
+    },
+    "plot_update": "Merged into dev gs100k PR curve; removed yellow band; x-axis extended to precision 30.",
+    "failed_attempts": [
+      {
+        "attempted_at_utc": "2026-05-23T17:55:00Z",
+        "reason": "local shell command substitution stripped EXTRA_WANDB_TAGS quoting; command exited before starting eval or W&B"
+      }
+    ]
+  }
+}

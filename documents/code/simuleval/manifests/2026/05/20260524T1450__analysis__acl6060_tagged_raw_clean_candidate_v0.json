@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0",
+  "event_id": "20260524T1450__analysis__acl6060_tagged_raw_clean_candidate_v0",
+  "event_type": "analysis",
+  "family": "acl6060_tagged_glossary_cleaning",
+  "variant": "raw_min_norm2_clean_candidate_v0",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__acl6060_tagged_raw_clean_candidate_v0.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python inline: filter acl6060 tagged raw glossary into clean candidate v0; see notes for criteria",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "terms": 238
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/glossary_clean_candidates/20260524_acl6060_tagged_raw/acl6060_tagged_gt_raw_min_norm2_clean_candidate_v0.json",
+      "metadata": {
+        "terms": 175,
+        "candidate_only": true
+      }
+    },
+    {
+      "role": "report",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/glossary_clean_candidates/20260524_acl6060_tagged_raw/acl6060_tagged_gt_raw_min_norm2_clean_candidate_v0_removed.tsv",
+      "metadata": {
+        "removed_terms": 63
+      }
+    },
+    {
+      "role": "report",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/glossary_clean_candidates/20260524_acl6060_tagged_raw/acl6060_tagged_gt_raw_min_norm2_clean_candidate_v0_kept.tsv",
+      "metadata": {
+        "kept_terms": 175
+      }
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__acl6060_tagged_raw_clean_candidate_v0.md",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "candidate_only": true,
+    "input_terms": 238,
+    "kept_terms": 175,
+    "removed_terms": 63,
+    "criteria": [
+      "identity_copy_zh",
+      "generic_one_word",
+      "too_short_zh"
+    ]
+  },
+  "created_at": "2026-05-24T14:40:27+00:00",
+  "updated_at": "2026-05-24T14:40:27+00:00"
+}

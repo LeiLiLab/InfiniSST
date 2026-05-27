@@ -359,6 +359,7 @@ def train(rank, world_size, args):
     # 3. 准备 Glossary 用于评测 (仅 main process)
     glossary_info = None
     dev_glossary_index = None
+    full_glossary_index = None
     dev_unique_terms = []
     
     if is_main:
@@ -370,13 +371,24 @@ def train(rank, world_size, args):
         dev_unique_terms = dev_info["unique_terms"]
         dev_indices = dev_info["indices"]
         
-        # 构建一个常驻内存的小型 FAISS 索引
+        # 构建常驻内存的 FAISS 索引
         import faiss
+        
+        # Dev 索引
         dev_glossary_embs = dev_term_mmap[dev_indices].copy().astype('float32')
         faiss.normalize_L2(dev_glossary_embs)
         dev_glossary_index = faiss.IndexFlatIP(dev_glossary_embs.shape[1])
         dev_glossary_index.add(dev_glossary_embs)
         logger.info(f"Dev glossary index built.")
+
+        # 全量索引 (优化：只构建一次)
+        logger.info(f"Building full glossary index (500k terms)...")
+        full_indices = glossary_info['indices']
+        full_glossary_embs = term_mmap[full_indices].copy().astype('float32')
+        faiss.normalize_L2(full_glossary_embs)
+        full_glossary_index = faiss.IndexFlatIP(full_glossary_embs.shape[1])
+        full_glossary_index.add(full_glossary_embs)
+        logger.info(f"Full glossary index built.")
 
     # 3. Optimizer & Data
     # 1) 获取裸模型引用 (处理 DDP .module 包装)
@@ -543,6 +555,128 @@ def train(rank, world_size, args):
         import wandb
         wandb.init(project=args.wandb_project, name=args.wandb_exp_name, config=vars(args))
 
+    def run_eval(is_full_eval=False):
+        nonlocal best_recall5_sampled, best_recall5_full
+        logger.info(f"Starting evaluation (Full Glossary: {is_full_eval}, Step: {global_step})...")
+        
+        import faiss
+        retriever.eval()
+        
+        # 准备搜索库 (已优化：使用预构建索引)
+        search_index = full_glossary_index if is_full_eval else dev_glossary_index
+
+        recall_results = {5: [], 10: [], 20: []}
+        pos_scores = []
+        neg_scores = []
+        eval_samples_count = 0
+        max_eval_samples = 2000 # 评测采样 2000 条音频
+        
+        with torch.no_grad():
+            for eval_batch in tqdm(test_loader, desc=f"Eval {'Full' if is_full_eval else 'Sampled'}"):
+                if eval_batch is None: 
+                    logger.warning(f"Eval batch is None")
+                    continue
+                if eval_samples_count >= max_eval_samples: break
+                
+                input_features = eval_batch["input_features"].to(device).to(torch.bfloat16)
+                feature_lens = eval_batch["feature_lens"].to(device)
+                batch_samples = eval_batch["samples"]
+                
+                # 获取音频特征
+                with torch.amp.autocast("cuda", dtype=torch.bfloat16):
+                    audio_embs = retriever(input_features, feature_lens)
+                
+                audio_embs_np = audio_embs.cpu().float().numpy()
+                faiss.normalize_L2(audio_embs_np)
+                
+                # 批量搜索以提高效率
+                D, I = search_index.search(audio_embs_np, 20)
+                
+                for i, sample in enumerate(batch_samples):
+                    eval_samples_count += 1
+                    gt_term = sample.get("gt_term", "").strip().lower()
+                    top1_score = float(D[i][0])
+                    
+                    # 🟢 修正点 1：如果是垃圾桶数据 (No Term)，记录分数后跳过 Recall 统计
+                    if not gt_term:
+                        neg_scores.append(top1_score)
+                        continue
+                    
+                    # 正样本记录分数
+                    pos_scores.append(top1_score)
+                    
+                    if is_full_eval:
+                        # 1. 全量 50万 词库搜索
+                        retrieved_terms = [glossary_info['raw_terms'][idx] for idx in I[i]]
+                        for k in recall_results.keys():
+                            recall_results[k].append(1.0 if gt_term in [t.lower() for t in retrieved_terms[:k]] else 0.0)
+                    else:
+                        # 2. 采样评测：针对 Dev 集特有的词库搜索 (数千个词)
+                        retrieved_terms = [dev_unique_terms[idx] for idx in I[i]]
+                        for k in recall_results.keys():
+                            recall_results[k].append(1.0 if gt_term in retrieved_terms[:k] else 0.0)
+        
+        # 计算并记录平均 Recall
+        final_metrics = {}
+        current_epoch_recall5 = 0.0
+        for k, hits in recall_results.items():
+            avg_recall = sum(hits) / len(hits) if hits else 0
+            metric_name = f"eval/recall@{k}" + ("_full" if is_full_eval else "_sampled")
+            final_metrics[metric_name] = avg_recall
+            logger.info(f"{metric_name}: {avg_recall:.2%}")
+            if k == 5:
+                current_epoch_recall5 = avg_recall
+        
+        # 🟢 修正点 2：统计并打印 Score 分布
+        suffix = "_full" if is_full_eval else "_sampled"
+        avg_pos, avg_neg = 0.0, 0.0
+        if pos_scores:
+            avg_pos = sum(pos_scores) / len(pos_scores)
+            final_metrics[f"eval/avg_pos_score{suffix}"] = avg_pos
+            logger.info(f"📊 Positive Avg Score: {avg_pos:.4f}")
+        if neg_scores:
+            avg_neg = sum(neg_scores) / len(neg_scores)
+            final_metrics[f"eval/avg_neg_score{suffix}"] = avg_neg
+            logger.info(f"📊 Negative Avg Score: {avg_neg:.4f}")
+        
+        if pos_scores and neg_scores:
+            logger.info(f"💡 Score Gap: {avg_pos - avg_neg:.4f} (Pos - Neg)")
+
+        wandb.log(final_metrics)
+
+        # 只有在各自分类的 Recall@5 提升时才保存
+        improved = False
+        best_ref = ""
+        
+        if is_full_eval:
+            if current_epoch_recall5 > best_recall5_full:
+                best_recall5_full = current_epoch_recall5
+                improved = True
+                best_ref = "full"
+        else:
+            if current_epoch_recall5 > best_recall5_sampled:
+                best_recall5_sampled = current_epoch_recall5
+                improved = True
+                best_ref = "sampled"
+
+        if improved:
+            logger.info(f"New best Recall@5 ({best_ref}): {current_epoch_recall5:.2%}, saving checkpoint...")
+            actual_save_path = args.save_path.replace(".pt", f"_{best_ref}_best.pt")
+            save_data = {
+                "model_state_dict": retriever.module.state_dict() if world_size > 1 else retriever.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "scheduler_state_dict": scheduler.state_dict(),
+                "epoch": epoch,
+                "global_step": global_step,
+                "best_recall5_sampled": best_recall5_sampled,
+                "best_recall5_full": best_recall5_full,
+                "args": vars(args)
+            }
+            torch.save(save_data, actual_save_path)
+            logger.info(f"Model saved to {actual_save_path}")
+        
+        retriever.train()
+
     for epoch in range(start_epoch, args.epochs):
         retriever.train()
         if train_sampler: train_sampler.set_epoch(epoch)
@@ -552,6 +686,14 @@ def train(rank, world_size, args):
             if batch is None: continue
             global_step += 1
             
+            # 每 N 步做一次全量评测
+            if args.eval_steps_full > 0 and global_step % args.eval_steps_full == 0 and is_main:
+                run_eval(is_full_eval=True)
+            
+            # 每 N 步做一次采样评测 (如果同时到了全量步数，优先跑全量，此处跳过采样)
+            elif args.eval_steps_sample > 0 and global_step % args.eval_steps_sample == 0 and is_main:
+                run_eval(is_full_eval=False)
+
             # 每 N 步保存一次 pt (与 best 隔离)
             if args.save_steps > 0 and global_step % args.save_steps == 0 and is_main:
                 step_save_path = args.save_path.replace(".pt", f"_step_{global_step}.pt")
@@ -620,14 +762,27 @@ def train(rank, world_size, args):
                         
                         # 写入文件供后续数据清洗
                         with open("training_anomalies.jsonl", "a") as af:
-                            # bad_sample contains "audio" (np.ndarray) which is not JSON-serializable.
-                            # Keep only JSON-safe metadata (drop raw audio).
+                            # Use a recursive helper to convert any numpy arrays to lists for JSON serialization
+                            def to_json_compatible(obj):
+                                if isinstance(obj, np.ndarray):
+                                    return obj.tolist()
+                                if isinstance(obj, dict):
+                                    return {k: to_json_compatible(v) for k, v in obj.items()}
+                                if isinstance(obj, (list, tuple)):
+                                    return [to_json_compatible(i) for i in obj]
+                                if isinstance(obj, (np.float32, np.float64)):
+                                    return float(obj)
+                                if isinstance(obj, (np.int32, np.int64)):
+                                    return int(obj)
+                                return obj
+
+                            # 核心修复：排除掉极其占用空间的 audio 数据并转换其余 numpy 类型
                             clean_metadata = {k: v for k, v in bad_sample.items() if k != "audio"}
                             anomaly_record = {
                                 "global_step": global_step,
                                 "batch_avg_loss": total_loss.item(),
                                 "sample_loss": max_loss.item(),
-                                "metadata": clean_metadata
+                                "metadata": to_json_compatible(clean_metadata)
                             }
                             af.write(json.dumps(anomaly_record, ensure_ascii=False) + "\n")
 
@@ -660,112 +815,8 @@ def train(rank, world_size, args):
 
         # ==================== Evaluation ====================
         if is_main:
-            # 每 1 个 epoch 做一次采样评测 (In-batch 逻辑)，每 10 个 epoch 做一次全量 Glossary 评测
-            is_full_eval = (epoch + 1) % 10 == 0 or (epoch + 1) == args.epochs
-            logger.info(f"Starting evaluation (Full Glossary: {is_full_eval})...")
-            
-            import faiss
-            retriever.eval()
-            
-            # 准备搜索库
-            if is_full_eval:
-                # 全量 50万 Term 搜索
-                glossary_indices = glossary_info['indices']
-                search_embs = term_mmap[glossary_indices].copy().astype('float32')
-                faiss.normalize_L2(search_embs)
-                search_index = faiss.IndexFlatIP(search_embs.shape[1])
-                search_index.add(search_embs)
-            else:
-                # 简单逻辑：仅针对测试集采样出的 Batch 进行对比
-                # 我们会在下面的循环中动态处理
-                search_index = None
-
-            recall_results = {5: [], 10: [], 20: []}
-            eval_samples_count = 0
-            max_eval_samples = 1000 # 评测采样 1000 条音频
-            
-            with torch.no_grad():
-                for eval_batch in tqdm(test_loader, desc="Evaluating Recall"):
-                    if eval_batch is None: continue
-                    if eval_samples_count >= max_eval_samples: break
-                    
-                    input_features = eval_batch["input_features"].to(device).to(torch.bfloat16)
-                    feature_lens = eval_batch["feature_lens"].to(device)
-                    batch_samples = eval_batch["samples"]
-                    
-                    # 获取音频特征
-                    with torch.amp.autocast("cuda", dtype=torch.bfloat16):
-                        audio_embs = retriever(input_features, feature_lens)
-                    
-                    audio_embs_np = audio_embs.cpu().float().numpy()
-                    faiss.normalize_L2(audio_embs_np)
-                    
-                    for i, sample in enumerate(batch_samples):
-                        gt_term = sample.get("gt_term", "").strip().lower()
-                        if not gt_term: gt_term = "[NO_TERM]" # 与 NULL_TOKEN 对齐
-                        
-                        if is_full_eval:
-                            # 1. 全量 50万 词库搜索
-                            D, I = search_index.search(audio_embs_np[i:i+1], 20)
-                            retrieved_terms = [glossary_info['raw_terms'][idx] for idx in I[0]]
-                            for k in recall_results.keys():
-                                recall_results[k].append(1.0 if gt_term in [t.lower() for t in retrieved_terms[:k]] else 0.0)
-                        else:
-                            # 2. 采样评测：针对 Dev 集特有的词库搜索 (数千个词)
-                            # 这比 In-batch 难得多，但比 Full 快得多
-                            D, I = dev_glossary_index.search(audio_embs_np[i:i+1], 20)
-                            retrieved_terms = [dev_unique_terms[idx] for idx in I[0]]
-                            for k in recall_results.keys():
-                                recall_results[k].append(1.0 if gt_term in retrieved_terms[:k] else 0.0)
-
-                        eval_samples_count += 1
-            
-            # 计算并记录平均 Recall
-            final_metrics = {}
-            current_epoch_recall5 = 0.0
-            for k, hits in recall_results.items():
-                avg_recall = sum(hits) / len(hits) if hits else 0
-                metric_name = f"eval/recall@{k}" + ("_full" if is_full_eval else "_sampled")
-                final_metrics[metric_name] = avg_recall
-                logger.info(f"{metric_name}: {avg_recall:.2%}")
-                if k == 5:
-                    current_epoch_recall5 = avg_recall
-            
-            wandb.log(final_metrics)
-
-            # 只有在各自分类的 Recall@5 提升时才保存
-            improved = False
-            best_ref = ""
-            
-            if is_full_eval:
-                if current_epoch_recall5 > best_recall5_full:
-                    best_recall5_full = current_epoch_recall5
-                    improved = True
-                    best_ref = "full"
-            else:
-                if current_epoch_recall5 > best_recall5_sampled:
-                    best_recall5_sampled = current_epoch_recall5
-                    improved = True
-                    best_ref = "sampled"
-
-            if improved:
-                logger.info(f"New best Recall@5 ({best_ref}): {current_epoch_recall5:.2%}, saving checkpoint...")
-                
-                # 构造文件名：直接追加 best 类型后缀
-                actual_save_path = args.save_path.replace(".pt", f"_{best_ref}_best.pt")
-                
-                save_data = {
-                    "model_state_dict": retriever.module.state_dict() if world_size > 1 else retriever.state_dict(),
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    "scheduler_state_dict": scheduler.state_dict(),
-                    "epoch": epoch,
-                    "global_step": global_step,
-                    "best_recall5_sampled": best_recall5_sampled,
-                    "best_recall5_full": best_recall5_full,
-                    "args": vars(args)
-                }
-                torch.save(save_data, actual_save_path)
-                logger.info(f"Model saved to {actual_save_path}")
+            # 每个 epoch 结束做一次全量词库评测
+            run_eval(is_full_eval=True)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -786,6 +837,8 @@ def main():
     parser.add_argument("--num_workers", type=int, default=8)
     parser.add_argument("--test_limit", type=int, default=None)
     parser.add_argument("--save_steps", type=int, default=1000, help="Save checkpoint every N steps")
+    parser.add_argument("--eval_steps_sample", type=int, default=200, help="Sampled evaluation every N steps")
+    parser.add_argument("--eval_steps_full", type=int, default=500, help="Full evaluation every N steps")
     parser.add_argument("--term_weight", type=float, default=1.0, help="Weight for Audio-Term loss")
     parser.add_argument("--trans_weight", type=float, default=0.0, help="Weight for Audio-Transcript loss")
     parser.add_argument("--wandb_project", type=str, default="qwen3_rag")

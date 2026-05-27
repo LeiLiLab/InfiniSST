@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T0410__maintenance__psc_tagged_acl_assets_transfer_to_hf",
+  "event_type": "maintenance",
+  "family": "psc_eval_asset_transfer",
+  "variant": "tagged_acl_newv5_r32_lh1b88kw_assets_hf_dataset",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "40963196",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260523__psc_tagged_acl_assets_transfer_to_hf.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260523__psc_tagged_acl_assets_transfer_to_hf.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'bash documents/code/simuleval/launchers/2026/05/20260523__psc_tagged_acl_assets_transfer_to_hf.sh' > /mnt/gemini/data1/jiaxuanluo/logs/psc_tagged_acl_assets_transfer_20260523T0410.out 2> /mnt/gemini/data1/jiaxuanluo/logs/psc_tagged_acl_assets_transfer_20260523T0410.err < /dev/null &",
+  "parent_run_ids": [
+    "lh1b88kw",
+    "cg5qisu9",
+    "342oxpmu"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__psc_tagged_acl_assets_transfer_to_hf.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260523__psc_tagged_acl_assets_transfer_to_hf.md"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "run_id": "lh1b88kw",
+        "selection": "best_eval_acl6060_recallat10"
+      }
+    },
+    {
+      "role": "env_tar",
+      "type": "archive",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/transfer_packages/spaCyEnv_20260518.tar.gz"
+    },
+    {
+      "role": "acl6060_data_dir",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/mnt/taurus/data/siqiouyang/datasets/acl6060"
+    },
+    {
+      "role": "mwerSegmenter",
+      "type": "tool_dir",
+      "direction": "input",
+      "path": "/mnt/taurus/home/jiaxuanluo/mwerSegmenter"
+    },
+    {
+      "role": "hf_asset_repo",
+      "type": "huggingface_dataset_repo",
+      "direction": "output",
+      "path": "gavinlaw/infinisst-psc-tagged-acl-newv5-r32-assets",
+      "metadata": {
+        "visibility": "private"
+      }
+    },
+    {
+      "role": "asset_manifest_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/aries/data6/jiaxuanluo/hf_upload_staging/psc_tagged_acl_newv5_r32_assets/psc_tagged_acl_newv5_r32_assets_files.tsv"
+    },
+    {
+      "role": "upload_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/psc_tagged_acl_assets_transfer_20260523T0410.out"
+    },
+    {
+      "role": "upload_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/psc_tagged_acl_assets_transfer_20260523T0410.err"
+    },
+    {
+      "role": "psc_pull_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__psc_pull_extract_tagged_acl_assets.sh"
+    },
+    {
+      "role": "psc_asset_manifest_tsv",
+      "type": "tsv",
+      "direction": "control",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/assets/psc_tagged_acl_newv5_r32_assets_files.tsv"
+    },
+    {
+      "role": "psc_asset_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/assets/tagged_acl_newv5_r32"
+    },
+    {
+      "role": "psc_pull_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/psc_assets_newv5_40963196.out"
+    },
+    {
+      "role": "psc_pull_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/psc_assets_newv5_40963196.err"
+    }
+  ],
+  "metadata": {
+    "hf_repo_id": "gavinlaw/infinisst-psc-tagged-acl-newv5-r32-assets",
+    "hf_repo_type": "dataset",
+    "transfer_target": "psc",
+    "psc_account": "cis260009p",
+    "retriever_run_alias": "lh1b88kw",
+    "asset_files": {
+      "checkpoints/lh1b88kw_best_eval_acl6060_recallat10.pt": 4278377821,
+      "data/acl6060_20260523.tar.gz": 950017764,
+      "envs/spaCyEnv_20260518.tar.gz": 6539540160,
+      "tools/mwerSegmenter_20260523.tar.gz": 1123907
+    },
+    "psc_pull_job_id": "40963196",
+    "psc_pull_partition": "GPU-shared",
+    "psc_pull_gres": "gpu:v100-32:1",
+    "psc_pull_status": "completed",
+    "psc_pull_exit_code": "0:0",
+    "psc_pull_elapsed": "00:24:46",
+    "psc_validation": {
+      "asset_sizes_matched_manifest": true,
+      "archives_extracted": true,
+      "python_imports_passed": [
+        "torch",
+        "transformers",
+        "vllm",
+        "simuleval",
+        "yaml",
+        "soundfile",
+        "wandb"
+      ]
+    }
+  }
+}

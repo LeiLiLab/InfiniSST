@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T0214__simuleval__tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_gs1k_gs10k_zh_lm2",
+  "event_type": "simuleval",
+  "family": "tagged_acl_speech_llm_quick",
+  "variant": "new_v5_no_gt_zero_oldnewv3_r32a64_zh_lm2_gs1k_gs10k",
+  "status": "planned",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260523__tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_gs1k_gs10k_zh_lm2.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260523__tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_gs1k_gs10k_zh_lm2.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "RUN_STAMP=20260523T0214 GPU_PAIR=<gpu_pair> bash documents/code/simuleval/launchers/2026/05/20260523__tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_gs1k_gs10k_zh_lm2.sh",
+  "parent_run_ids": [
+    "cg5qisu9",
+    "342oxpmu"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_gs1k_gs10k_zh_lm2.sh"
+    },
+    {
+      "role": "quick_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260522__tagged_acl_speech_llm_quick_zh_lm2_raw_wait_hf.sh"
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260523__tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_gs1k_gs10k_zh_lm2.md"
+    },
+    {
+      "role": "model_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/aries/data6/jiaxuanluo/slm/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_r32a64_tp2_aries2/keep1.0_r32"
+    },
+    {
+      "role": "hf_model_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/aries/data6/jiaxuanluo/slm/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_r32a64_tp2_aries2/keep1.0_r32/v0-20260523-050346-hf"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "usage": "fixed denominator for term metrics"
+      }
+    },
+    {
+      "role": "runtime_glossary_gs1k",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs1000_min_norm2_backfill.json"
+    },
+    {
+      "role": "runtime_glossary_gs10k",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs10000_min_norm2_backfill.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data6/jiaxuanluo/slm/tagged_acl_new_v5_no_gt_zero_oldnewv3_r32a64_quick_zh_lm2_gs1k_gs10k_20260523T0214"
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "lm": 2,
+    "runtime_glossaries": [
+      "gs1k",
+      "gs10k"
+    ],
+    "raw_panel_denominator": "raw",
+    "training_run_id": "cg5qisu9",
+    "training_model_name": "speech-llm-new_v5-no-gt-zero-oldnewv3-r32a64-tp2-aries2_keep1.0_r32",
+    "raw_reference_eval_run_id": "342oxpmu",
+    "hf_export_event_id": "20260523T0115__maintenance__export_new_v5_no_gt_zero_oldnewv3_r32_hf_to_aries6",
+    "retriever_run_alias": "lh1b88kw",
+    "retriever_tau": 0.73,
+    "term_metric_denominator_policy": "fixed_raw_tagged_acl"
+  }
+}

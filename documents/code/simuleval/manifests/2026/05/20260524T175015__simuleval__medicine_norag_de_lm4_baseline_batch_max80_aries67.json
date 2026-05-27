@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T175015__simuleval__medicine_norag_de_lm4_baseline_batch_max80_aries67",
+  "event_type": "simuleval",
+  "family": "medicine_norag_baseline_abbrev_restored",
+  "variant": "de_lm4_same_lm_batch_5samples_max80_aries67_no_rag",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_norag_de_lm4_baseline_batch_max80_aries67.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__medicine_norag_de_lm4_baseline_batch_max80_aries67.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries setsid bash -lc 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && RUN_TAG_OVERRIDE=20260524T175015_medicine_norag_de_lm4_batch_max80_aries67 CUDA_VISIBLE_DEVICES_PHYSICAL_OVERRIDE=6,7 bash documents/code/simuleval/launchers/2026/05/20260524__medicine_norag_de_lm4_baseline_batch_max80_aries67.sh'",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_norag_de_lm4_baseline_batch_max80_aries67.sh"
+    },
+    {
+      "role": "batch_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh"
+    },
+    {
+      "role": "batch_eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__medicine_norag_de_lm4_baseline_batch_max80_aries67.md"
+    },
+    {
+      "role": "prepared_inputs_from_superseded_serial",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_de_rerun_shorttmp_lm4_aries67/de/__medicine_inputs__/combined"
+    },
+    {
+      "role": "model_checkpoint",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-de-s_origin-bsz4"
+    },
+    {
+      "role": "hard_manual_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hard_manual_glossary_streamlaal_20260524.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_de_lm4_batch_max80_aries67_20260524T175015_medicine_norag_de_lm4_batch_max80_aries67"
+    },
+    {
+      "role": "hard_manual_eval_tsv_invalid_boundary_bug",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_de_lm4_batch_max80_aries67_20260524T175015_medicine_norag_de_lm4_batch_max80_aries67/batch_eval/de/dmedicine_norag_baseline_batch_max80_lm4_k0_th0.0_ghard_llm_manual_check/eval_results_streamlaal_term.hard_llm_manual_check.invalid_boundary_bug.tsv",
+      "metadata": {
+        "invalid_for_metrics": true,
+        "reason": "kept only as an audit copy; standard filename was removed to prevent accidental reuse"
+      }
+    },
+    {
+      "role": "hard_manual_eval_tsv_boundaryfix",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_de_lm4_batch_max80_aries67_20260524T175015_medicine_norag_de_lm4_batch_max80_aries67/batch_eval/de/dmedicine_norag_baseline_batch_max80_lm4_k0_th0.0_ghard_llm_manual_check/eval_results_streamlaal_term.hard_llm_manual_check.boundaryfix.tsv",
+      "metadata": {
+        "preferred_for_metrics": true,
+        "reason": "German chunk-boundary spacing was reconstructed from runtime llm_output records so word-level prediction units match delays."
+      }
+    },
+    {
+      "role": "instances_log_boundaryfix",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_de_lm4_batch_max80_aries67_20260524T175015_medicine_norag_de_lm4_batch_max80_aries67/batch_eval/de/dmedicine_norag_baseline_batch_max80_lm4_k0_th0.0_ghard_llm_manual_check/instances.boundaryfix.log"
+    },
+    {
+      "role": "instances_log_boundaryfix_strip_term",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_de_lm4_batch_max80_aries67_20260524T175015_medicine_norag_de_lm4_batch_max80_aries67/batch_eval/de/dmedicine_norag_baseline_batch_max80_lm4_k0_th0.0_ghard_llm_manual_check/instances.boundaryfix.strip_term.log"
+    },
+    {
+      "role": "launcher_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_norag_baseline_de_lm4_batch_max80_aries67_20260524T175015_medicine_norag_de_lm4_batch_max80_aries67/launcher.out"
+    },
+    {
+      "role": "launcher_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_norag_baseline_de_lm4_batch_max80_aries67_20260524T175015_medicine_norag_de_lm4_batch_max80_aries67/launcher.err"
+    },
+    {
+      "role": "wrapper_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_norag_baseline_de_lm4_batch_max80_aries67_20260524T175015_medicine_norag_de_lm4_batch_max80_aries67/wrapper.out"
+    },
+    {
+      "role": "wrapper_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_norag_baseline_de_lm4_batch_max80_aries67_20260524T175015_medicine_norag_de_lm4_batch_max80_aries67/wrapper.err"
+    }
+  ],
+  "metadata": {
+    "target_langs": ["de"],
+    "target_lms": [4],
+    "target_samples": ["404", "545006", "596001", "605000", "606"],
+    "gpu_assignment": {
+      "lm4": "6,7"
+    },
+    "compute": "aries direct detached launch on GPU 6,7",
+    "rag_enabled": false,
+    "same_lm_batch": true,
+    "scheduler_batch_size": 5,
+    "max_num_seqs": 5,
+    "max_new_tokens": 80,
+    "max_new_tokens_policy": "fixed",
+    "supersedes_event_id": "20260524T172832__simuleval__medicine_norag_de_lm4_baseline_aries67_rerun_after_taurus_shmfail",
+    "supersede_reason": "user requested same-lm batch script with five concurrent samples and max_new_tokens=80",
+    "prelaunch_gpu_state": {
+      "gpu6_memory_mib": 2,
+      "gpu7_memory_mib": 2
+    },
+    "launched_utc": "2026-05-24T17:54:41Z",
+    "remote_wrapper_pid": 2769784,
+    "startup_status": "batch_vllm_started_on_aries_gpu_6_7",
+    "startup_observation_utc": "2026-05-24T17:56:13Z",
+    "startup_evidence": {
+      "remote_wrapper_pid": 2769784,
+      "batch_eval_pid": 2769849,
+      "vllm_engine_pid": 2771520,
+      "vllm_worker_pids": [2771526, 2771528],
+      "gpu6_memory_mib": 34600,
+      "gpu7_memory_mib": 34600,
+      "log_markers": [
+        "[DECODE] max_new_tokens_policy=fixed {4: 80}",
+        "[LOAD] retriever disabled; prompts will use term_map: NONE",
+        "[STEP] 0 ready=5 active=5"
+      ]
+    },
+    "monitor_pid": 3911068,
+    "monitor_log": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_norag_baseline_de_lm4_batch_max80_aries67_20260524T175015_medicine_norag_de_lm4_batch_max80_aries67/monitor.out",
+    "completed_utc": "2026-05-24T18:20:01Z",
+    "completion_evidence": {
+      "wrapper_done_marker": "[ALL DONE] de lm4 no-RAG batch max80",
+      "invalid_original_instances_log_lines": 5,
+      "invalid_original_instances_strip_term_log_lines": 5,
+      "boundaryfix_instances_log_lines": 5,
+      "boundaryfix_instances_strip_term_log_lines": 5,
+      "hard_manual_eval_tsv_lines": 2,
+      "aries_gpu6_memory_mib_after": 2,
+      "aries_gpu7_memory_mib_after": 2
+    },
+    "raw_metrics_invalid": {
+      "BLEU": 27.538561959014395,
+      "StreamLAAL": -3538.119780461579,
+      "StreamLAAL_CA": -3599.416813837647,
+      "TERM_ACC": 0.4805,
+      "TERM_CORRECT": 345,
+      "TERM_TOTAL": 718,
+      "invalid_reason": "original instances.log joined German generated chunks without boundary spaces; prediction word count did not match delay count, causing StreamLAAL to become negative after mWER sentence resegmentation"
+    },
+    "metrics": {
+      "BLEU": 27.81957520314305,
+      "StreamLAAL": 2827.5546192535794,
+      "StreamLAAL_CA": 826.5603601106437,
+      "TERM_ACC": 0.4735,
+      "TERM_CORRECT": 340,
+      "TERM_TOTAL": 718,
+      "source": "boundaryfix_tsv"
+    },
+    "boundaryfix_diagnostics": {
+      "original_word_delay_mismatch": {
+        "instance0_prediction_words": 5642,
+        "instance0_delay_count": 5916
+      },
+      "runtime_piece_word_counts_matched_delays": true,
+      "reconstructed_instances_log": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_de_lm4_batch_max80_aries67_20260524T175015_medicine_norag_de_lm4_batch_max80_aries67/batch_eval/de/dmedicine_norag_baseline_batch_max80_lm4_k0_th0.0_ghard_llm_manual_check/instances.boundaryfix.log"
+    }
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T182839__simuleval__tagged_acl_de_cap16_denoise_lm4_serial_k10_taurus03",
+  "event_type": "simuleval",
+  "family": "tagged_acl_de_cap16_denoise_ttag_hn1024_tau078",
+  "variant": "lm4_serial_simuleval_k10_taurus_gpu012",
+  "status": "canceled_wrong_config",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_de_cap16_denoise_lm4_serial_k10_taurus03.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && RUN_STAMP=20260525T182839_de_c16_den_ttag_lm4_serial_k10_taurus03 GPU_PAIR=0,1,2 MODEL_NAME=/mnt/data1/jiaxuanluo/slm_local_cache/de_tagged_acl_20260525/cap16_denoise_ttag/v0-20260525-203735-hf NOTES_FILE=/home/jiaxuanluo/InfiniSST/documents/code/simuleval/notes/2026/05/20260525__tagged_acl_de_cap16_denoise_lm4_serial_k10_taurus03.md bash documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck.sh' > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck_20260525T182839_de_c16_den_ttag_lm4_serial_k10_taurus03/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck_20260525T182839_de_c16_den_ttag_lm4_serial_k10_taurus03/top.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck_20260525T182839_de_c16_den_ttag_lm4_serial_k10_taurus03/top.pid",
+  "parent_run_ids": [
+    "20260525T1236__speech_llm_train__de_cap16_denoise_budget_ttag_r32a32_ep1_taurus6",
+    "20260525T1443__simuleval__tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck.sh"
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_de_cap16_denoise_lm4_serial_k10_taurus03.md"
+    },
+    {
+      "role": "speech_llm_checkpoint",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/data1/jiaxuanluo/slm_local_cache/de_tagged_acl_20260525/cap16_denoise_ttag/v0-20260525-203735-hf"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "acl_tagged_raw_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "acl_tagged_raw_inputs",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all"
+    },
+    {
+      "role": "output_root",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck_20260525T182839_de_c16_den_ttag_lm4_serial_k10_taurus03"
+    },
+    {
+      "role": "summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck_20260525T182839_de_c16_den_ttag_lm4_serial_k10_taurus03/de_c16_denoise_ttag_r32a32_ep1_hn1024_tau078_omit_serial_lm4_max80/__summary__/summary_de_lm4_serial.tsv"
+    },
+    {
+      "role": "log_root",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck_20260525T182839_de_c16_den_ttag_lm4_serial_k10_taurus03"
+    }
+  ],
+  "metadata": {
+    "host": "taurus",
+    "top_pid": 3146398,
+    "startup_verified_at": "2026-05-25T18:31:15Z",
+    "startup_verified_stage": "serial SimulEval running; vLLM loaded on visible cuda:0,1 and MaxSim retriever on visible cuda:2",
+    "gpu_pair": "0,1,2",
+    "lm": 4,
+    "batch_eval": false,
+    "rag_top_k": 10,
+    "rag_score_threshold": 0.78,
+    "rag_timeline_lookback_sec": 1.92,
+    "vllm_tp_size": 2,
+    "rag_gpu": "auto cuda:2",
+    "max_new_tokens": 80,
+    "empty_term_map_policy": "omit",
+    "strip_output_tags": "term_t",
+    "canceled_at": "2026-05-25T18:34:03Z",
+    "cancel_reason": "Superseded before result production: this launch used max_new_tokens=80 and cache chunks 8/4, but the corrected protocol requires max_new_tokens=lm*40=160 and max_cache/keep_cache=30/30."
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "event_id": "20260526T015250__simuleval__tagged_acl_de_lm34_serial_promptfix_audioauto_cache30_max40lm_wait_taurus",
+  "event_type": "simuleval",
+  "family": "main_result_rasst_serial_promptfix",
+  "variant": "tagged_acl_de_lm34_audioauto_cache30_max40lm_wait",
+  "status": "canceled_replaced",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260526__tagged_acl_de_lm34_serial_promptfix_audioauto_cache30_max40lm_wait_taurus.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260526__tagged_acl_de_lm34_serial_promptfix_audioauto_cache30_max40lm_wait_taurus.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "RUN_STAMP=20260526T015250_tagged_acl_de_lm34_serial_promptfix_audioauto_cache30_max40lm_wait_taurus setsid bash documents/code/simuleval/launchers/2026/05/20260526__tagged_acl_de_lm34_serial_promptfix_audioauto_cache30_max40lm_wait_taurus.sh > /mnt/data1/jiaxuanluo/logs/tagged_acl_de_lm34_serial_promptfix_audioauto_cache30_max40lm_wait_20260526T015250_tagged_acl_de_lm34_serial_promptfix_audioauto_cache30_max40lm_wait_taurus/watcher.out 2> /mnt/data1/jiaxuanluo/logs/tagged_acl_de_lm34_serial_promptfix_audioauto_cache30_max40lm_wait_20260526T015250_tagged_acl_de_lm34_serial_promptfix_audioauto_cache30_max40lm_wait_taurus/watcher.err < /dev/null & echo $! > /mnt/data1/jiaxuanluo/logs/tagged_acl_de_lm34_serial_promptfix_audioauto_cache30_max40lm_wait_20260526T015250_tagged_acl_de_lm34_serial_promptfix_audioauto_cache30_max40lm_wait_taurus/setsid.pid",
+  "parent_run_ids": [
+    "20260526T003437__simuleval__tagged_acl_de_lm1_serial_promptfix_cache30_audioauto_max40lm_taurus",
+    "20260526T003438__simuleval__tagged_acl_de_lm2_serial_promptfix_cache30_audioauto_max40lm_taurus",
+    "20260526T002820__simuleval__tagged_acl_de_lm3_serial_promptfix_cache30_audioauto_max40lm_taurus",
+    "20260526T010249__simuleval__tagged_acl_de_lm3_serial_promptfix_cache30_vllmaudio128_max40lm_taurus"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260526__tagged_acl_de_lm34_serial_promptfix_audioauto_cache30_max40lm_wait_taurus.sh"
+    },
+    {
+      "role": "child_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260526__tagged_acl_de_lm3_serial_promptfix_cache30_audioauto_max40lm_taurus.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260526__tagged_acl_de_lm34_serial_promptfix_audioauto_cache30_max40lm_wait_taurus.md"
+    },
+    {
+      "role": "eval_agent",
+      "type": "python_script",
+      "direction": "control",
+      "path": "agents/infinisst_omni_vllm_maxsim_rag.py"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/data1/jiaxuanluo/slm_local_cache/de_tagged_acl_20260525/cap16_denoise_ttag/v0-20260525-203735-hf"
+    },
+    {
+      "role": "checkpoint",
+      "type": "retriever_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "maxsim_index",
+      "type": "pt",
+      "direction": "input",
+      "path": "/mnt/data1/jiaxuanluo/maxsim_index_cache/tagged_acl_de_lm3_serial_promptfix_cache30_audioauto_max40lm/maxsim_acl6060_tagged_gt_raw_min_norm2_ebc26806ed693f1a_tr128_ta256.pt"
+    },
+    {
+      "role": "eval_input",
+      "type": "prepared_lists",
+      "direction": "input",
+      "path": "/mnt/data1/jiaxuanluo/main_result_rasst_serial_de_ja_cache30_max40lm_20260525T215831_main_result_rasst_serial_de_ja_cache30_max40lm_taurus_retry1/__inputs__/acl_de"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/data1/jiaxuanluo/tagged_acl_de_lm3_serial_promptfix_cache30_audioauto_max40lm_20260526T015250_tagged_acl_de_lm34_serial_promptfix_audioauto_cache30_max40lm_wait_taurus_lm3"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/data1/jiaxuanluo/tagged_acl_de_lm3_serial_promptfix_cache30_audioauto_max40lm_20260526T015250_tagged_acl_de_lm34_serial_promptfix_audioauto_cache30_max40lm_wait_taurus_lm4"
+    },
+    {
+      "role": "watcher_logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/data1/jiaxuanluo/logs/tagged_acl_de_lm34_serial_promptfix_audioauto_cache30_max40lm_wait_20260526T015250_tagged_acl_de_lm34_serial_promptfix_audioauto_cache30_max40lm_wait_taurus"
+    }
+  ],
+  "metadata": {
+    "host": "taurus",
+    "dataset": "acl_tagged_raw",
+    "lang": "de",
+    "lms": [
+      3,
+      4
+    ],
+    "mode": "serial_simuleval",
+    "wait_for_gpu_pairs": {
+      "lm3": "0,1",
+      "lm4": "2,3"
+    },
+    "max_cache_chunks": 30,
+    "keep_cache_chunks": 30,
+    "vllm_limit_audio": "auto",
+    "vllm_limit_audio_resolved": 30,
+    "max_new_tokens": "40*lm",
+    "empty_term_map_policy": "omit",
+    "system_prompt_style": "given_chunks",
+    "reason": "user suspects larger latency multiplier should use less prompt audio cache",
+    "watcher_pid": 3144473,
+    "status_detail": "watcher running; waiting for Taurus GPU pair 0,1, then 2,3",
+    "canceled_at_utc": "2026-05-26T02:05:12Z",
+    "canceled_reason": "User requested immediate de lm4 on free GPU 2,3 and medicine de lm1/lm2 on GPUs 4-7; old watcher was still waiting on GPU 0,1 and would later duplicate work."
+  }
+}

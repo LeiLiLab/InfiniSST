@@ -52,6 +52,9 @@ try:
 except ImportError:
     faiss = None
 
+# Import streaming RAG retriever
+from agents.streaming_rag_retriever import StreamingTermRAGRetriever
+
 def synchronized_timer(description: str):
     @contextlib.contextmanager
     def timer_with_sync():
@@ -92,291 +95,8 @@ class TokenizerKwCleaner:
         return getattr(self.tokenizer, item)
 
 
-class TermRAGRetriever:
-    def __init__(
-        self,
-        index_path: Optional[str],
-        model_path: Optional[str],
-        base_model_name: str = "Qwen/Qwen2-Audio-7B-Instruct",
-        device: str = "cuda:0",
-        lora_r: int = 16,
-        lora_alpha: int = 32,
-        lora_dropout: float = 0.0,
-        top_k: int = 5,
-        target_lang: str = "zh",
-        score_threshold: float = 0.5,
-    ):
-        self.enabled = False
-        self.index = None
-        self.term_list: List[Dict[str, object]] = []
-        self.embedding_dim = 512
-        self.device_str = device
-        if device and device.startswith("cuda") and torch.cuda.is_available():
-            self.device = torch.device(device)
-        else:
-            self.device = torch.device("cpu")
-            if device and device.startswith("cuda"):
-                logger.warning("CUDA unavailable, falling back to CPU for RAG retriever")
-        self.top_k = top_k
-        self.target_lang = target_lang.lower() if target_lang else "zh"
-        self.score_threshold = float(max(0.0, min(1.0, score_threshold)))
-        self.model = None
-        self.speech_encoder = None
-
-        if faiss is None:
-            logger.warning("FAISS is not available; disabling RAG retriever")
-            return
-        if not index_path or not os.path.exists(index_path):
-            logger.warning("RAG index path is missing; disabling RAG retriever")
-            return
-        try:
-            self._load_index(index_path)
-        except Exception as exc:
-            logger.exception("Failed to load RAG index from %s: %s", index_path, exc)
-            return
-
-        if not model_path or not os.path.exists(model_path):
-            logger.warning("RAG model checkpoint not found at %s; disabling RAG retriever", model_path)
-            return
-
-        try:
-            self._load_model(
-                model_path=model_path,
-                base_model_name=base_model_name,
-                lora_r=lora_r,
-                lora_alpha=lora_alpha,
-                lora_dropout=lora_dropout,
-            )
-        except Exception as exc:
-            logger.exception("Failed to load RAG model: %s", exc)
-            self.index = None
-            self.term_list = []
-            return
-
-        self.enabled = self.index is not None and self.model is not None
-        if self.enabled:
-            logger.info(
-                (
-                    "TermRAGRetriever initialized with %d terms "
-                    "(embedding_dim=%d, top_k=%d, target_lang=%s, confidence_threshold=%.2f)"
-                ),
-                len(self.term_list),
-                self.embedding_dim,
-                self.top_k,
-                self.target_lang,
-                self.score_threshold,
-            )
-
-    def _load_index(self, index_path: str):
-        with open(index_path, "rb") as f:
-            data = pickle.load(f)
-        serialized_index = data.get("faiss_index")
-        if isinstance(serialized_index, bytes):
-            serialized_index = np.frombuffer(serialized_index, dtype=np.uint8)
-        elif isinstance(serialized_index, bytearray):
-            serialized_index = np.frombuffer(bytes(serialized_index), dtype=np.uint8)
-        elif isinstance(serialized_index, np.ndarray):
-            if serialized_index.dtype != np.uint8:
-                serialized_index = serialized_index.astype(np.uint8)
-        else:
-            raise ValueError(f"Unsupported faiss_index type: {type(serialized_index)}")
-        self.index = faiss.deserialize_index(serialized_index)
-        self.term_list = data.get("term_list", [])
-        self.embedding_dim = int(data.get("embedding_dim", 512))
-
-    def _load_model(
-        self,
-        model_path: str,
-        base_model_name: str,
-        lora_r: int,
-        lora_alpha: int,
-        lora_dropout: float,
-    ):
-        from transformers import Qwen2AudioForConditionalGeneration, AutoProcessor
-        from peft import LoraConfig, get_peft_model, TaskType
-        from retriever.gigaspeech.modal.Qwen2_Audio_train import Qwen2AudioSpeechEncoder
-
-        processor = AutoProcessor.from_pretrained(base_model_name)
-        processor.tokenizer = TokenizerKwCleaner(processor.tokenizer)
-        processor = ProcessorAudioAlias(processor)
-        base_model = Qwen2AudioForConditionalGeneration.from_pretrained(
-            base_model_name,
-            torch_dtype=torch.float16,
-        ).to(self.device)
-        base_model.eval()
-
-        target_modules = [
-            "q_proj",
-            "k_proj",
-            "v_proj",
-            "o_proj",
-            "gate_proj",
-            "up_proj",
-            "down_proj",
-        ]
-        lora_config = LoraConfig(
-            task_type=TaskType.CAUSAL_LM,
-            r=lora_r,
-            lora_alpha=lora_alpha,
-            lora_dropout=lora_dropout,
-            target_modules=target_modules,
-            bias="none",
-        )
-        base_model = get_peft_model(base_model, lora_config)
-        base_model.eval()
-
-        speech_encoder = Qwen2AudioSpeechEncoder.__new__(Qwen2AudioSpeechEncoder)
-        speech_encoder.device = self.device
-        speech_encoder.model_name = base_model_name
-        speech_encoder.processor = processor
-        speech_encoder.model = base_model
-        speech_encoder._analyze_model_structure()
-
-        speech_hidden = speech_encoder.get_hidden_size()
-
-        class SimpleContrastiveModel(nn.Module):
-            def __init__(self, speech_encoder, speech_hidden_dim, proj_dim, device):
-                super().__init__()
-                self.speech_encoder = speech_encoder
-                self.proj_speech = nn.Linear(speech_hidden_dim, proj_dim).to(device)
-
-            def encode_audio(self, audio_inputs):
-                with torch.no_grad():
-                    emb = self.speech_encoder.predict(audio_inputs)
-                if not isinstance(emb, torch.Tensor):
-                    emb = torch.as_tensor(emb)
-                emb = emb.float().to(self.proj_speech.weight.device)
-                if emb.dim() == 3:
-                    emb = emb.mean(dim=1)
-                return F.normalize(self.proj_speech(emb), dim=-1)
-
-        model = SimpleContrastiveModel(
-            speech_encoder,
-            speech_hidden_dim=speech_hidden,
-            proj_dim=self.embedding_dim,
-            device=self.device,
-        )
-
-        checkpoint = torch.load(model_path, map_location=self.device)
-        if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
-            state_dict = checkpoint["model_state_dict"]
-        else:
-            state_dict = checkpoint
-        if state_dict:
-            first_key = next(iter(state_dict))
-            if first_key.startswith("module."):
-                state_dict = {k[7:]: v for k, v in state_dict.items()}
-
-        proj_state = {}
-        lora_state = {}
-        for key, value in state_dict.items():
-            if key.startswith("proj_speech"):
-                proj_state[key] = value
-            elif key.startswith("proj_text"):
-                continue
-            elif "lora_" in key or "base_model" in key:
-                if key.startswith("speech_qwen2_model.") or key.startswith("text_qwen2_model."):
-                    new_key = key.split(".", 1)[1] if "." in key else key
-                    lora_state[new_key] = value
-                else:
-                    lora_state[key] = value
-
-        if proj_state:
-            filtered_proj = {k: v for k, v in proj_state.items() if k.startswith("proj_speech")}
-            missing, unexpected = model.load_state_dict(filtered_proj, strict=False)
-            if missing:
-                logger.debug("Missing projection keys for RAG model: %s", missing)
-            if unexpected:
-                logger.debug("Unexpected projection keys for RAG model: %s", unexpected)
-        if lora_state:
-            missing_keys, unexpected_keys = base_model.load_state_dict(lora_state, strict=False)
-            if missing_keys:
-                logger.debug("Missing LoRA keys during RAG load: %s", missing_keys[:10])
-            if unexpected_keys:
-                logger.debug("Unexpected LoRA keys during RAG load: %s", unexpected_keys[:10])
-
-        self.model = model.eval()
-        self.speech_encoder = speech_encoder
-
-    @staticmethod
-    def _distance_to_confidence(distance: float) -> float:
-        if not np.isfinite(distance):
-            return 0.0
-        cosine = 1.0 - 0.5 * distance
-        cosine = max(-1.0, min(1.0, cosine))
-        confidence = (cosine + 1.0) / 2.0
-        return float(max(0.0, min(1.0, confidence)))
-
-    def retrieve(
-        self,
-        audio_tensor: torch.Tensor,
-        top_k: Optional[int] = None,
-        target_lang: Optional[str] = None,
-    ) -> List[Dict[str, str]]:
-        if not self.enabled or self.index is None or self.model is None:
-            return []
-        if not isinstance(audio_tensor, torch.Tensor):
-            audio_tensor = torch.tensor(audio_tensor)
-        audio_tensor = audio_tensor.detach().cpu().float()
-        if audio_tensor.numel() == 0:
-            return []
-        if audio_tensor.abs().sum().item() == 0.0:
-            return []
-
-        audio_np = audio_tensor.numpy()
-        audio_inputs = [audio_np]
-        with torch.no_grad():
-            embedding = self.model.encode_audio(audio_inputs)
-        if isinstance(embedding, torch.Tensor):
-            embedding = embedding.detach().cpu().float().numpy()
-
-        max_k = top_k or self.top_k
-        max_k = max(1, max_k)
-        D, I = self.index.search(embedding, max_k)
-
-        target_lang = (target_lang or self.target_lang or "zh").lower()
-        results: List[Dict[str, str]] = []
-        seen_terms = set()
-        candidate_logs: List[Dict[str, object]] = []
-
-        for distance, idx in zip(D[0], I[0]):
-            if idx < 0 or idx >= len(self.term_list):
-                continue
-            term_entry = self.term_list[idx]
-            if not isinstance(term_entry, dict):
-                continue
-            term = term_entry.get("term", "")
-            if not term or term in seen_terms:
-                continue
-            seen_terms.add(term)
-            confidence = self._distance_to_confidence(float(distance))
-            candidate_logs.append(
-                {
-                    "term": term,
-                    "confidence": round(confidence, 4),
-                }
-            )
-            if confidence < self.score_threshold:
-                continue
-            translation = ""
-            translations = term_entry.get("target_translations") or {}
-            if isinstance(translations, dict):
-                translation = translations.get(target_lang) or translations.get(target_lang.upper()) or ""
-            results.append({"term": term, "translation": translation})
-            if len(results) >= max_k:
-                break
-        if candidate_logs:
-            logger.info(
-                "RAG candidates (threshold=%.2f): %s",
-                self.score_threshold,
-                json.dumps(candidate_logs, ensure_ascii=False),
-            )
-        if not results and candidate_logs:
-            logger.info(
-                "RAG references suppressed because all confidences are below threshold %.2f",
-                self.score_threshold,
-            )
-        return results
+# Note: TermRAGRetriever has been replaced by StreamingTermRAGRetriever
+# imported from agents.streaming_rag_retriever
 
 
 @dataclass
@@ -386,6 +106,10 @@ class S2TAgentStates(AgentStates):
     segment_idx: int
     messages: list
     references: list
+    # Track audio samples processed by RAG (independent of src_len for vLLM)
+    rag_processed_samples: int
+    # Last vLLM call position (for decoupling RAG and vLLM)
+    last_vllm_src_len: int
     MAX_SRC_LEN = 16000 * 30
 
     def reset(self):
@@ -395,6 +119,8 @@ class S2TAgentStates(AgentStates):
         self.segment_idx = 0
         self.messages = []
         self.references = []
+        self.rag_processed_samples = 0
+        self.last_vllm_src_len = 0
 
 
 @entrypoint
@@ -430,14 +156,25 @@ class InfiniSSTOmniVLLMRAG(SpeechToTextAgent):
         self.max_cache_chunks = args.max_cache_chunks
         self.keep_cache_chunks = args.keep_cache_chunks
         
-        # RAG retriever
-        self.rag_retriever: Optional[TermRAGRetriever] = None
+        # RAG retriever (streaming version with sliding window support)
+        self.rag_retriever: Optional[StreamingTermRAGRetriever] = None
         self.rag_top_k = getattr(args, "rag_top_k", 5)
         self.rag_target_lang = getattr(args, "rag_target_lang", "zh")
         self.rag_conf_threshold = getattr(args, "rag_confidence_threshold", 0.5)
+        # Minimum number of terms to keep per vLLM call (avoid forcing negatives)
+        # Default: 0 (do NOT force 5 terms; let score_threshold/top-N decide)
+        self.rag_min_terms = int(getattr(args, "rag_min_terms", 0))
+        # Sliding window parameters (consistent with eval_local_sliding_window)
+        self.rag_chunk_size = getattr(args, "rag_chunk_size", 2.0)  # seconds
+        self.rag_hop_size = getattr(args, "rag_hop_size", 1.0)      # seconds
+        self.rag_terms_per_second = getattr(args, "rag_terms_per_second", 2.5)
+        self.rag_enable_top_n_filter = getattr(args, "rag_enable_top_n_filter", True)
+        
         if getattr(args, "rag_enabled", False):
-            logger.info("Initializing RAG retriever...")
-            self.rag_retriever = TermRAGRetriever(
+            logger.info("Initializing StreamingTermRAGRetriever with sliding window...")
+            logger.info("  chunk_size=%.1fs, hop_size=%.1fs, terms_per_second=%.1f",
+                       self.rag_chunk_size, self.rag_hop_size, self.rag_terms_per_second)
+            self.rag_retriever = StreamingTermRAGRetriever(
                 index_path=getattr(args, "rag_index_path", None),
                 model_path=getattr(args, "rag_model_path", None),
                 base_model_name=getattr(args, "rag_base_model", "Qwen/Qwen2-Audio-7B-Instruct"),
@@ -448,6 +185,10 @@ class InfiniSSTOmniVLLMRAG(SpeechToTextAgent):
                 top_k=self.rag_top_k,
                 target_lang=self.rag_target_lang,
                 score_threshold=self.rag_conf_threshold,
+                chunk_size=self.rag_chunk_size,
+                hop_size=self.rag_hop_size,
+                terms_per_second=self.rag_terms_per_second,
+                enable_top_n_filter=self.rag_enable_top_n_filter,
             )
             if not self.rag_retriever or not self.rag_retriever.enabled:
                 logger.warning("RAG retriever not operational; continuing without references")
@@ -457,6 +198,9 @@ class InfiniSSTOmniVLLMRAG(SpeechToTextAgent):
         
         # model
         self.use_vllm = args.use_vllm
+        self.vllm_segment_sec = args.vllm_segment_sec
+        self.log_sample = args.log_sample
+        self._log_sample_count = 0
         # Debug (LLM IO dump)
         self.debug_llm_io = bool(getattr(args, "debug_llm_io", False))
         self.debug_filter_term = (getattr(args, "debug_filter_term", "") or "").strip()
@@ -464,9 +208,12 @@ class InfiniSSTOmniVLLMRAG(SpeechToTextAgent):
         self.debug_llm_io_file = (getattr(args, "debug_llm_io_file", "") or "").strip() or None
 
         # Runtime log (persistent JSONL, enabled by default; does NOT rely on stdout/stderr redirection)
-        self.runtime_log_dir = (getattr(args, "runtime_log_dir", "/home/jiaxuanluo/InfiniSST/converted_logs") or "").strip()
+        self.runtime_log_dir = (getattr(args, "runtime_log_dir", "/mnt/gemini/data2/jiaxuanluo/converted_logs") or "").strip()
         self.runtime_log_enabled = bool(getattr(args, "runtime_log_enabled", True))
         self.runtime_log_path = None
+
+
+
         if self.runtime_log_enabled and self.runtime_log_dir:
             try:
                 os.makedirs(self.runtime_log_dir, exist_ok=True)
@@ -488,6 +235,20 @@ class InfiniSSTOmniVLLMRAG(SpeechToTextAgent):
         parser.add_argument("--use-vllm", type=int, default=0)
         parser.add_argument("--max-cache-chunks", type=int, default=120)
         parser.add_argument("--keep-cache-chunks", type=int, default=60)
+        parser.add_argument(
+            "--vllm-segment-sec",
+            type=float,
+            default=0.96,
+            help="vLLM call interval in seconds. Default: 0.96 (960ms). "
+                 "This controls how much audio to accumulate before calling vLLM for translation.",
+        )
+        parser.add_argument(
+            "--log-sample",
+            type=int,
+            default=0,
+            help="Print detailed input/output for the first N vLLM calls. "
+                 "Includes RAG results, vLLM prompt, and translation output. Default: 0 (disabled).",
+        )
         parser.add_argument("--rag-enabled", action="store_true", help="Enable glossary RAG retrieval for prompt augmentation")
         parser.add_argument("--rag-index-path", type=str, default=None, help="Path to prebuilt RAG FAISS index (.pkl)")
         parser.add_argument("--rag-model-path", type=str, default=None, help="Path to trained RAG contrastive checkpoint")
@@ -503,6 +264,38 @@ class InfiniSSTOmniVLLMRAG(SpeechToTextAgent):
             type=float,
             default=0.5,
             help="Minimum confidence (0-1) required to keep retrieved glossary references",
+        )
+        parser.add_argument(
+            "--rag-min-terms",
+            type=int,
+            default=0,
+            help="Minimum number of terms to keep per vLLM call (default: 0). "
+                 "Setting this to 5 can inject many negative terms and confuse the model.",
+        )
+        # Sliding window parameters for streaming RAG
+        parser.add_argument(
+            "--rag-chunk-size",
+            type=float,
+            default=2.0,
+            help="Sliding window chunk size in seconds (default: 2.0)",
+        )
+        parser.add_argument(
+            "--rag-hop-size",
+            type=float,
+            default=1.0,
+            help="Sliding window hop size in seconds (default: 1.0)",
+        )
+        parser.add_argument(
+            "--rag-terms-per-second",
+            type=float,
+            default=2.5,
+            help="Number of terms to keep per second of audio for top-N filtering (default: 2.5)",
+        )
+        parser.add_argument(
+            "--rag-enable-top-n-filter",
+            type=int,
+            default=1,
+            help="Enable top-N filtering based on audio duration (1=enabled, 0=disabled)",
         )
         parser.add_argument(
             "--debug-llm-io",
@@ -536,17 +329,23 @@ class InfiniSSTOmniVLLMRAG(SpeechToTextAgent):
         parser.add_argument(
             "--runtime-log-dir",
             type=str,
-            default="/home/jiaxuanluo/InfiniSST/converted_logs",
+            default="/mnt/gemini/data2/jiaxuanluo/converted_logs",
             help="Directory for persistent runtime JSONL logs (UTF-8).",
         )
 
     def build_states(self):
+        # Reset RAG retriever state for new utterance
+        # Use hasattr because build_states may be called before __init__ completes
+        if hasattr(self, 'rag_retriever') and self.rag_retriever:
+            self.rag_retriever.reset()
         return S2TAgentStates(
             src_len=0,
             target_ids=[],
             segment_idx=0,
             messages=[],
             references=[],
+            rag_processed_samples=0,
+            last_vllm_src_len=0,
         )
 
     def load_model(self, args):
@@ -590,7 +389,7 @@ class InfiniSSTOmniVLLMRAG(SpeechToTextAgent):
                 tensor_parallel_size=tp_size,
                 limit_mm_per_prompt={'audio': self.max_cache_chunks},
                 max_num_seqs=1,
-                max_model_len=10240,
+                max_model_len=32768,
                 enable_prefix_caching=True,
                 enforce_eager=False,  # Use CUDA graphs for better performance
             )
@@ -615,16 +414,44 @@ class InfiniSSTOmniVLLMRAG(SpeechToTextAgent):
     def _normalize_references(self, references: List[Dict[str, str]]) -> Dict[str, str]:
         """
         Normalize references into a simple {term: translation} mapping,
-        matching the training format: term_map: {"benson": "班森 (电视节目)", ...}
+        matching the training format:
+
+            term_map:
+            jungle diary=丛林日记
+            los angeles=洛杉矶
         """
         norm_refs: Dict[str, str] = {}
+        seen_keys: set = set()
         for r in references:
+            # Strict mode: require canonical lowercase key to be present.
+            key = (r.get("key") or "").strip().lower()
+            if not key:
+                raise ValueError("Invalid RAG reference: missing required 'key' field")
             term = (r.get("term") or "").strip()
             if not term:
                 continue
+            if key in seen_keys:
+                continue
             translation = (r.get("translation") or "").strip()
             norm_refs[term] = translation
+            seen_keys.add(key)
         return norm_refs
+
+    @staticmethod
+    def _format_term_map_kv(term_map: Dict[str, str]) -> str:
+        """
+        Format term_map as key=value lines.
+        - Keep insertion order from dict.
+        - Strip newlines to avoid prompt injection / broken formatting.
+        """
+        lines: List[str] = []
+        for k, v in (term_map or {}).items():
+            kk = (str(k) if k is not None else "").replace("\n", " ").strip()
+            vv = (str(v) if v is not None else "").replace("\n", " ").strip()
+            if not kk or not vv:
+                continue
+            lines.append(f"{kk}={vv}")
+        return "\n".join(lines)
 
     def _prepare_speech(self, states):        
         # Only tensorize the new part
@@ -640,13 +467,21 @@ class InfiniSSTOmniVLLMRAG(SpeechToTextAgent):
         states.src_len = len(states.source)
         return increment
 
+
     def _prepare_inputs(self, states, increment, references):
         if len(states.messages) == 0:
+            system_text = (
+                f"You are a professional simultaneous interpreter. "
+                f"You will be given chunks of {self.source_lang} audio and you need to "
+                f"translate the audio into {self.target_lang} text. "
+                f"Use the 'term_map' as a reference for terminology if provided."
+            )
+            
             states.messages.append(
                 {
                     "role": "system",
                     "content": [
-                        {"type": "text", "text": f"You are a professional simultaneous interpreter. You will be given chunks of English audio and you need to translate the audio into Chinese text. Use the term_map for term reference."}
+                        {"type": "text", "text": system_text}
                     ]
                 }
             )
@@ -654,11 +489,21 @@ class InfiniSSTOmniVLLMRAG(SpeechToTextAgent):
         # Build user content with audio and references
         user_content = [{"type": "audio", "audio": increment}]
         
-        # ✅ Match training format exactly: "<audio>, term_map: {term: translation, ...}"
+        # ✅ Match training format exactly:
+        #
+        # <audio>
+        #
+        # term_map:
+        # a=b
+        # c=d
         norm_refs = self._normalize_references(references)
         if norm_refs:
-            reference_text = f"\n\nterm_map: {json.dumps(norm_refs, ensure_ascii=False, separators=(',', ':'))}"
-            user_content.append({"type": "text", "text": reference_text})
+            kv = self._format_term_map_kv(norm_refs)
+            if kv:
+                reference_text = f"\n\nterm_map:\n{kv}"
+                user_content.append({"type": "text", "text": reference_text})
+        else:
+            user_content.append({"type": "text", "text": "\n\nterm_map:NONE"})
         
         states.messages.append(
             {
@@ -770,6 +615,7 @@ class InfiniSSTOmniVLLMRAG(SpeechToTextAgent):
 
     @torch.inference_mode()
     def policy(self, states: Optional[S2TAgentStates] = None):
+
         if states is None:
             states = self.states
 
@@ -785,34 +631,94 @@ class InfiniSSTOmniVLLMRAG(SpeechToTextAgent):
         if states.source_finished and length_in_seconds < 0.32:
             return WriteAction(content="", finished=True)
         
+        # === DECOUPLED RAG PROCESSING ===
+        # RAG is called every step (~120ms) with incremental audio
+        # vLLM is only called when accumulated audio reaches vllm_segment_sec or source_finished
+        
+        # Step 1: Check if we should call vLLM first (to determine if we need cold start)
+        samples_since_last_vllm = len(states.source) - states.last_vllm_src_len
+        # Use vllm_segment_sec (default 960ms) to control vLLM call interval
+        samples_for_vllm_call = int(self.vllm_segment_sec * states.source_sample_rate) if states.source_sample_rate > 0 else 15360
+        
+        should_call_vllm = (
+            states.source_finished or
+            samples_since_last_vllm >= samples_for_vllm_call
+        )
+        
+        # Step 2: Accumulate new audio to RAG (every ~120ms)
+        if self.rag_retriever:
+            # Get new audio samples since last RAG processing
+            new_samples_start = states.rag_processed_samples
+            new_samples_end = len(states.source)
+            
+            if new_samples_end > new_samples_start:
+                new_audio = np.array(states.source[new_samples_start:new_samples_end], dtype=np.float32)
+                
+                # Accumulate to RAG with sliding window processing
+                # force_process=True only when source is finished
+                self.rag_retriever.accumulate_audio(
+                    new_audio,
+                    force_process=states.source_finished,
+                )
+                states.rag_processed_samples = new_samples_end
+        
+        if not should_call_vllm:
+            # Not enough audio for vLLM yet, but RAG is still accumulating
+            return ReadAction()
+        
         with synchronized_timer('generate'):
             increment = self._prepare_speech(states)
             
-            # RAG retrieval
+            # Check if we should log this sample (for debugging first N calls)
+            should_log_sample = self.log_sample > 0 and self._log_sample_count < self.log_sample
+            
+            # Get accumulated RAG references (with sliding window aggregation)
+            # KEY FIX: Use increment samples (not total buffer) for top-N calculation
+            # top_n = max(ceil(2.5 * increment_sec), 5)
             references: List[Dict[str, str]] = []
+            vllm_increment_samples = samples_since_last_vllm
+            increment_sec = vllm_increment_samples / states.source_sample_rate if states.source_sample_rate > 0 else 0
+            
             if self.rag_retriever:
-                rag_audio_tensor = torch.tensor(increment, dtype=torch.float32)
-                if rag_audio_tensor.numel() > 0:
-                    references = self.rag_retriever.retrieve(
-                        rag_audio_tensor,
-                        top_k=self.rag_top_k,
-                        target_lang=self.rag_target_lang,
+                # Calculate increment samples for this vLLM call
+                references = self.rag_retriever.get_current_references(
+                    min_terms=self.rag_min_terms,
+                )
+                states.references = references
+                rag_duration = self.rag_retriever.get_audio_duration()
+                
+                if references:
+                    print(f"[RAG] total_duration={rag_duration:.2f}s, increment={increment_sec:.2f}s, {json.dumps({'reference': references}, ensure_ascii=False)}")
+                    self._append_runtime_jsonl(
+                        {
+                            "type": "rag",
+                            "segment_idx": int(getattr(states, "segment_idx", -1)),
+                            "rag_audio_duration": round(rag_duration, 2),
+                            "vllm_increment_sec": round(increment_sec, 2),
+                            "references": references,
+                        }
                     )
-                    states.references = references
-                    if references:
-                        print(f"[RAG] {json.dumps({'reference': references}, ensure_ascii=False)}")
-                        self._append_runtime_jsonl(
-                            {
-                                "type": "rag",
-                                "segment_idx": int(getattr(states, "segment_idx", -1)),
-                                "references": references,
-                            }
-                        )
+                
+                # Log sample: detailed RAG output
+                if should_log_sample:
+                    print(f"\n{'='*80}")
+                    print(f"[LOG_SAMPLE {self._log_sample_count + 1}/{self.log_sample}] RAG Results")
+                    print(f"{'='*80}")
+                    print(f"  Total audio duration: {rag_duration:.2f}s")
+                    print(f"  vLLM increment: {increment_sec:.2f}s ({vllm_increment_samples} samples)")
+                    print(f"  RAG references ({len(references)} terms):")
+                    for i, ref in enumerate(references):
+                        print(f"    {i+1}. {ref.get('term', '')} -> {ref.get('translation', '')}")
+                    if not references:
+                        print(f"    (no references)")
             else:
                 states.references = []
             
+            # Update last vLLM call position
+            states.last_vllm_src_len = len(states.source)
+            
             inputs = self._prepare_inputs(states, increment, references)
-            print(f"inputs:\n{inputs}")
+            #print(f"inputs:\n{inputs}")
             self._append_runtime_jsonl(
                 {
                     "type": "llm_input",
@@ -822,6 +728,19 @@ class InfiniSSTOmniVLLMRAG(SpeechToTextAgent):
                     "sampling_params": self._sampling_params_payload() if self.use_vllm else None,
                 }
             )
+            
+            # Log sample: vLLM input
+            if should_log_sample:
+                print(f"\n[LOG_SAMPLE {self._log_sample_count + 1}/{self.log_sample}] vLLM Input")
+                print(f"{'-'*80}")
+                prompt_text = inputs.get("prompt", "") if isinstance(inputs, dict) else ""
+                # Print last 2000 chars of prompt (usually contains the most recent audio and term_map)
+                if len(prompt_text) > 2000:
+                    print(f"  Prompt (last 2000 chars):\n{prompt_text[-2000:]}")
+                else:
+                    print(f"  Prompt:\n{prompt_text}")
+                audio_count = len(inputs.get("multi_modal_data", {}).get("audio", []) or []) if isinstance(inputs, dict) else 0
+                print(f"  Audio chunks: {audio_count}")
 
             if self.use_vllm:
                 dump_ok = self._should_dump_llm_io(references, inputs.get("prompt", ""))
@@ -849,6 +768,15 @@ class InfiniSSTOmniVLLMRAG(SpeechToTextAgent):
                         "text": self._truncate_text(translation),
                     }
                 )
+                
+                # Log sample: vLLM output
+                if should_log_sample:
+                    print(f"\n[LOG_SAMPLE {self._log_sample_count + 1}/{self.log_sample}] vLLM Output")
+                    print(f"{'-'*80}")
+                    print(f"  Translation: {translation}")
+                    print(f"{'='*80}\n")
+                    self._log_sample_count += 1
+                
                 if dump_ok:
                     out0 = outputs[0] if outputs else None
                     gen0 = out0.outputs[0] if out0 and getattr(out0, "outputs", None) else None
@@ -861,36 +789,36 @@ class InfiniSSTOmniVLLMRAG(SpeechToTextAgent):
                     }
                     print(f"[LLM_OUTPUT] {json.dumps(debug_out, ensure_ascii=False)}")
                     self._append_debug_jsonl(debug_out)
-            else:
-                text_ids, _ = self.model.generate(
-                    **inputs,
-                    generation_config=self.generation_config,
-                    return_audio=False,
-                    thinker_return_dict_in_generate=True,
-                    use_audio_in_video=False,
-                )
-                translation = self.processor.batch_decode(
-                    text_ids.sequences[:, inputs["input_ids"].shape[1] :],
-                    skip_special_tokens=True,
-                    clean_up_tokenization_spaces=False
-                )[0]
-                self._append_runtime_jsonl(
-                    {
-                        "type": "llm_output",
-                        "segment_idx": int(getattr(states, "segment_idx", -1)),
-                        "text": self._truncate_text(translation),
-                    }
-                )
-                dump_ok = self._should_dump_llm_io(references, "")
-                if dump_ok:
-                    debug_out = {
-                        "type": "llm_output",
-                        "segment_idx": int(getattr(states, "segment_idx", -1)),
-                        "text": self._truncate_text(translation),
-                        "generation_config": dict(self.generation_config.to_dict()) if hasattr(self.generation_config, "to_dict") else str(self.generation_config),
-                    }
-                    print(f"[LLM_OUTPUT] {json.dumps(debug_out, ensure_ascii=False)}")
-                    self._append_debug_jsonl(debug_out)
+            # else:
+            #     text_ids, _ = self.model.generate(
+            #         **inputs,
+            #         generation_config=self.generation_config,
+            #         return_audio=False,
+            #         thinker_return_dict_in_generate=True,
+            #         use_audio_in_video=False,
+            #     )
+            #     translation = self.processor.batch_decode(
+            #         text_ids.sequences[:, inputs["input_ids"].shape[1] :],
+            #         skip_special_tokens=True,
+            #         clean_up_tokenization_spaces=False
+            #     )[0]
+            #     self._append_runtime_jsonl(
+            #         {
+            #             "type": "llm_output",
+            #             "segment_idx": int(getattr(states, "segment_idx", -1)),
+            #             "text": self._truncate_text(translation),
+            #         }
+            #     )
+            #     dump_ok = self._should_dump_llm_io(references, "")
+            #     if dump_ok:
+            #         debug_out = {
+            #             "type": "llm_output",
+            #             "segment_idx": int(getattr(states, "segment_idx", -1)),
+            #             "text": self._truncate_text(translation),
+            #             "generation_config": dict(self.generation_config.to_dict()) if hasattr(self.generation_config, "to_dict") else str(self.generation_config),
+            #         }
+            #         print(f"[LLM_OUTPUT] {json.dumps(debug_out, ensure_ascii=False)}")
+            #         self._append_debug_jsonl(debug_out)
 
             states.messages.append(
                 {
@@ -919,4 +847,3 @@ class InfiniSSTOmniVLLMRAG(SpeechToTextAgent):
             )
         else:
             return ReadAction()
-

@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T172832__simuleval__medicine_norag_de_lm4_baseline_aries67_rerun_after_taurus_shmfail",
+  "event_type": "simuleval",
+  "family": "medicine_norag_baseline_abbrev_restored",
+  "variant": "restored_eso_streaming_norag_origin_bsz4_de_lm4_batched5_aries67_after_taurus_shmfail",
+  "status": "cancelled_superseded",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_norag_de_lm4_baseline_aries67_rerun_after_taurus_shmfail.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__medicine_norag_de_lm4_baseline_aries67_rerun_after_taurus_shmfail.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries setsid bash -lc 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && RUN_STAMP_OVERRIDE=20260524T172832 CUDA_VISIBLE_DEVICES_PHYSICAL_OVERRIDE_CSV=6:7 bash documents/code/simuleval/launchers/2026/05/20260524__medicine_norag_de_lm4_baseline_aries67_rerun_after_taurus_shmfail.sh'",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_norag_de_lm4_baseline_aries67_rerun_after_taurus_shmfail.sh"
+    },
+    {
+      "role": "medicine_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260522__medicine_abbrev_restored_norag_streaming_batched_aries67.sh"
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/rank16/baseline/bypass_simuleval_rank32_iter_0000452_hf_baseline_no_rag_sweep.sh"
+    },
+    {
+      "role": "post_eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/offline_sst_eval/offline_streamlaal_eval.py"
+    },
+    {
+      "role": "term_miss_export_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/export_streamlaal_term_misses.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__medicine_norag_de_lm4_baseline_aries67_rerun_after_taurus_shmfail.md"
+    },
+    {
+      "role": "eso_restored_test_root",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/taurus/home/jiaxingxu/rag-sst/eso-dataset/outputs_v2_abbrev_exact_match_abbrev_restored/test"
+    },
+    {
+      "role": "model_checkpoint",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-de-s_origin-bsz4"
+    },
+    {
+      "role": "hard_manual_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hard_manual_glossary_streamlaal_20260524.json"
+    },
+    {
+      "role": "failed_taurus_lm4_timing",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_de_rerun_shorttmp_lm4_taurus45/timing.tsv"
+    },
+    {
+      "role": "failed_taurus_lm4_log",
+      "type": "log",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_de_rerun_shorttmp_lm4_taurus45/de/gigaspeech-de-s_origin-bsz4_gstrict_fixed_medicine_glossary_abbrev_restored__medicine5_cs3.84_hs0.48_lm4_k210_k110_th0p0/simuleval.log"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_de_rerun_shorttmp_lm4_aries67"
+    },
+    {
+      "role": "hard_manual_eval_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_de_rerun_shorttmp_lm4_aries67/de/gigaspeech-de-s_origin-bsz4_gstrict_fixed_medicine_glossary_abbrev_restored__medicine5_cs3.84_hs0.48_lm4_k210_k110_th0p0/eval_results_streamlaal_term.hard_llm_manual_check.tsv"
+    },
+    {
+      "role": "cache_dir",
+      "type": "directory",
+      "direction": "control",
+      "path": "/mnt/gemini/data1/jiaxuanluo/cache/medicine_norag_de_lm4_aries67_rerun_20260524T172832"
+    },
+    {
+      "role": "short_tmpdir",
+      "type": "directory",
+      "direction": "control",
+      "path": "/dev/shm/jxde4r67"
+    },
+    {
+      "role": "wrapper_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524T172832_medicine_norag_de_lm4_baseline_aries67_rerun_after_taurus_shmfail.wrapper.out"
+    },
+    {
+      "role": "wrapper_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524T172832_medicine_norag_de_lm4_baseline_aries67_rerun_after_taurus_shmfail.wrapper.err"
+    },
+    {
+      "role": "generation_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524T172832_medicine_norag_de_lm4_baseline_aries67_rerun_after_taurus_shmfail.out"
+    },
+    {
+      "role": "generation_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524T172832_medicine_norag_de_lm4_baseline_aries67_rerun_after_taurus_shmfail.err"
+    },
+    {
+      "role": "status_file",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524T172832_medicine_norag_de_lm4_baseline_aries67_rerun_after_taurus_shmfail.status"
+    },
+    {
+      "role": "completion_monitor_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524T172832_medicine_norag_de_lm4_baseline_aries67_rerun_after_taurus_shmfail.monitor.out"
+    },
+    {
+      "role": "completion_monitor_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524T172832_medicine_norag_de_lm4_baseline_aries67_rerun_after_taurus_shmfail.monitor.err"
+    }
+  ],
+  "metadata": {
+    "target_langs": ["de"],
+    "target_samples": ["404", "545006", "596001", "605000", "606"],
+    "target_lms": [4],
+    "gpu_assignment": {
+      "lm4": "6,7"
+    },
+    "compute": "aries direct detached launch on GPU 6,7",
+    "rag_enabled": false,
+    "oracle_term_map": false,
+    "force_rerun": true,
+    "rerun_reason": "fill missing medicine hardraw InfiniSST baseline de lm4 row; previous Taurus lm4 failed before instances.log/post-eval",
+    "previous_failed_output": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_de_rerun_shorttmp_lm4_taurus45",
+    "previous_failure_reason": "vLLM EngineCore initialization failed with ShmRingBuffer.shared_memory AttributeError; no usable hard-manual StreamLAAL/TERM TSV was produced",
+    "storage_check_utc": "2026-05-24T17:28:32Z",
+    "data1_available": "687G on aries at prelaunch check",
+    "aries_root_available": "2.3G and 100 percent used; launcher directs tmp/cache away from root",
+    "prelaunch_gpu_state": {
+      "gpu6_memory_mib": 2,
+      "gpu7_memory_mib": 2
+    },
+    "runtime_overrides": {
+      "TMPDIR": "/dev/shm/jxde4r67",
+      "XDG_CACHE_HOME": "/mnt/gemini/data1/jiaxuanluo/cache/medicine_norag_de_lm4_aries67_rerun_20260524T172832/xdg",
+      "TRITON_CACHE_DIR": "/mnt/gemini/data1/jiaxuanluo/cache/medicine_norag_de_lm4_aries67_rerun_20260524T172832/triton",
+      "TORCHINDUCTOR_CACHE_DIR": "/mnt/gemini/data1/jiaxuanluo/cache/medicine_norag_de_lm4_aries67_rerun_20260524T172832/torchinductor",
+      "CUDA_CACHE_PATH": "/mnt/gemini/data1/jiaxuanluo/cache/medicine_norag_de_lm4_aries67_rerun_20260524T172832/cuda",
+      "VLLM_DISABLE_CUSTOM_ALL_REDUCE": "1",
+      "VLLM_MOE_USE_DEEP_GEMM": "0",
+      "VLLM_USE_FUSED_MOE_GROUPED_TOPK": "0"
+    },
+    "launched_utc": "2026-05-24T17:30:49Z",
+    "remote_wrapper_pid": 2740752,
+    "generation_child_pid": 2740771,
+    "startup_status": "vllm_started_on_aries_gpu_6_7",
+    "startup_observation_utc": "2026-05-24T17:36:34Z",
+    "setting_start_observed": true,
+    "vllm_engine_pid": 2743222,
+    "simuleval_pid": 2742864,
+    "completion_monitor_pid": 3857077,
+    "completion_monitor_started_utc": "2026-05-24T17:45:00Z",
+    "gpu_memory_after_vllm_start": {
+      "gpu6_memory_mib": 39224,
+      "gpu7_memory_mib": 39224
+    },
+    "cancelled_utc": "2026-05-24T17:50:15Z",
+    "cancel_reason": "superseded by user instruction to use same-lm batch script with concurrent five-sample scheduling and max_new_tokens=80"
+  }
+}

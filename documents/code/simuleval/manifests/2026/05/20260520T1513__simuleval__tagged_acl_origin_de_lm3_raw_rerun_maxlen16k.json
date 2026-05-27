@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "event_id": "20260520T1513__simuleval__tagged_acl_origin_de_lm3_raw_rerun_maxlen16k",
+  "event_type": "simuleval",
+  "family": "tagged_acl_origin_bsz4_tau073",
+  "variant": "de_lm3_raw_rerun_max_model_len_16k",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": "f1kickb9",
+  "slurm_job_id": "45269",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260520__tagged_acl_origin_bsz4_tau073_baseline_sweep.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "cd /mnt/taurus/home/jiaxuanluo/InfiniSST && setsid env MODE=full RUN_GRANULARITY=full_corpus RUN_STAMP=20260520T1513_de_lm3_raw_rerun_maxlen16k HOLD_JOB_ID=45269 LANGS_OVERRIDE=de LMS_OVERRIDE=3 GLOSSARY_KINDS_OVERRIDE=raw MAX_PARALLEL_OVERRIDE=1 VLLM_MAX_MODEL_LEN_OVERRIDE=16384 GPU_MEMORY_UTILIZATION_OVERRIDE=0.72 WANDB_LOG_OVERRIDE=1 WANDB_DIR=/mnt/gemini/data1/jiaxuanluo/wandb_local/wandb_dir WANDB_CACHE_DIR=/mnt/gemini/data1/jiaxuanluo/wandb_local/cache bash documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_bsz4_tau073_20260520T1513_de_lm3_raw_rerun_maxlen16k_launcher.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_bsz4_tau073_20260520T1513_de_lm3_raw_rerun_maxlen16k_launcher.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_bsz4_tau073_20260520T1513_de_lm3_raw_rerun_maxlen16k_launcher.pid",
+  "parent_run_ids": [
+    "61wq39ud"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh",
+      "metadata": {
+        "vllm_max_model_len": 16384
+      }
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260520__tagged_acl_origin_bsz4_tau073_baseline_sweep.md",
+      "metadata": {}
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data2/jiaxuanluo/tagged_acl_origin_bsz4_tau073_baseline_20260520T1513_de_lm3_raw_rerun_maxlen16k/full",
+      "metadata": {}
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_bsz4_tau073_20260520T1513_de_lm3_raw_rerun_maxlen16k",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "acl_usage": "held-out readout only",
+    "metric_denominator": "fixed tagged raw glossary only",
+    "term_fcr_policy": "term_map_source_ref_negative_sentence",
+    "reason": "Rerun anomalous de lm3 raw result after W&B local disk full incident and with reduced ACL-domain vLLM max model length.",
+    "previous_result": {
+      "TERM_ACC": 0.7187,
+      "BLEU": 25.843986135851313
+    },
+    "rerun_result": {
+      "wandb_run_id": "f1kickb9",
+      "TERM_ACC": 0.7187,
+      "BLEU": 25.843986135851313,
+      "StreamLAAL": 2072.1713722319378
+    }
+  }
+}

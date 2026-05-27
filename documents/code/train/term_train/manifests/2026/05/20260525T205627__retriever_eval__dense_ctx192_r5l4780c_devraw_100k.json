@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T205627__retriever_eval__dense_ctx192_r5l4780c_devraw_100k",
+  "event_type": "retriever_eval",
+  "family": "sst_ood_multiscale_inference_ablation",
+  "variant": "dense_ctx192_r5l4780c_devraw_100k",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": "740c7y40",
+  "slurm_job_id": "direct_taurus_pid_255868",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260525__context_ablation_devraw_fixeddenom_100k_eval.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260525__dense_ctx192_r5l4780c_devraw_100k_eval.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'env RUN_STAMP=dense_ctx192_r5l4780c_20260525T205627Z CONTEXT_TAG=dense_ctx192 SOURCE_RUN_ID=r5l4780c FIXED_SECONDS=1.92 RESUME=/mnt/aries/data4/jiaxuanluo/train_outputs/sweep_text_pooling/sweep_tp_cls_tfpool_bs12k_best.pt TRAIN_JSONL=/mnt/gemini/data1/jiaxuanluo/term_train_3variant_1m.jsonl DEV_JSONL=/mnt/gemini/data1/jiaxuanluo/term_dev_with_wiki_synth_normalized.jsonl EVAL_METRICS_GLOSSARY=/home/jiaxuanluo/InfiniSST/documents/code/train/term_train/reports/figures/20260525_dev_raw_glossary_ctx192.json NOTES_FILE=/home/jiaxuanluo/InfiniSST/documents/code/train/term_train/notes/2026/05/20260525__dense_ctx192_r5l4780c_devraw_100k_eval.md CUDA_DEVICE_LIST=1 NUM_GPUS=1 MASTER_PORT=20125 SLURM_JOB_PARTITION=taurus COMPUTE_TAG=taurus-1gpu VARIANT_TAG=dense_ctx192_r5l4780c DATA_TAG=devraw_dense_ctx192 EXPERIMENT_FAMILY=sst_ood_multiscale_inference_ablation EXTRA_WANDB_TAGS=\"variant:dense_ctx192_r5l4780c compute:taurus-1gpu ablation:multiscale protocol:ctx192-devraw readout:dev-only source:r5l4780c dense:single\" BASELINE_RUN_IDS=\"r5l4780c q2fus6f1 y454004y\" USE_MAXSIM=false MFA_SUPERVISED=false TEXT_POOLING=cls EVAL_SCORE_QUERY_CHUNK=128 EVAL_SCORE_TEXT_CHUNK=512 bash documents/code/train/term_train/launchers/2026/05/20260525__context_ablation_devraw_fixeddenom_100k_eval.sh' > /mnt/gemini/data1/jiaxuanluo/logs/dense_ctx192_r5l4780c_20260525T205627Z.out 2> /mnt/gemini/data1/jiaxuanluo/logs/dense_ctx192_r5l4780c_20260525T205627Z.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/dense_ctx192_r5l4780c_20260525T205627Z.pid",
+  "parent_run_ids": [
+    "r5l4780c",
+    "q2fus6f1",
+    "y454004y"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260525__context_ablation_devraw_fixeddenom_100k_eval.sh",
+      "metadata": {
+        "sha256": "7ada4deef485beaedf8eedc7247694c2c84fb2c3290bbf4a9d7e43f4c734ab09",
+        "patch_reason": "allow USE_MAXSIM and MFA_SUPERVISED override for dense single-embedding ablation"
+      }
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh",
+      "metadata": {
+        "sha256": "90b77595a94ac48551b4e88d45249f5860ad81108285988ec9dab94c8a349d64"
+      }
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260525__dense_ctx192_r5l4780c_devraw_100k_eval.md",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint",
+      "type": "model",
+      "direction": "input",
+      "path": "/mnt/aries/data4/jiaxuanluo/train_outputs/sweep_text_pooling/sweep_tp_cls_tfpool_bs12k_best.pt",
+      "metadata": {
+        "source_run": "r5l4780c",
+        "source_wandb_config_save_path": "/mnt/data4/jiaxuanluo/train_outputs/sweep_text_pooling/sweep_tp_cls_tfpool_bs12k.pt",
+        "selection_role": "dense_single_embedding_best_gs1000"
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/term_train_3variant_1m.jsonl",
+      "metadata": {
+        "usage": "script-required input; eval_only does not train"
+      }
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/term_dev_with_wiki_synth_normalized.jsonl",
+      "metadata": {
+        "usage": "dev-only eval",
+        "context_tag": "ctx192"
+      }
+    },
+    {
+      "role": "dev_raw_metrics_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/figures/20260525_dev_raw_glossary_ctx192.json",
+      "metadata": {
+        "term_count": 1852,
+        "usage": "fixed raw denominator for ctx1.92 dev"
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample100000.json",
+      "metadata": {
+        "eval_glossary_sizes": [
+          1000,
+          10000,
+          100000
+        ],
+        "prefix_equal_to_sample1000000": true
+      }
+    },
+    {
+      "role": "stdout_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/dense_ctx192_r5l4780c_20260525T205627Z.out",
+      "metadata": {
+        "host": "taurus",
+        "gpu": 1
+      }
+    },
+    {
+      "role": "stderr_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/dense_ctx192_r5l4780c_20260525T205627Z.err",
+      "metadata": {
+        "host": "taurus",
+        "gpu": 1
+      }
+    },
+    {
+      "role": "pid_file",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/dense_ctx192_r5l4780c_20260525T205627Z.pid",
+      "metadata": {
+        "launcher_pid": 255868,
+        "torchrun_pid": 256039,
+        "worker_pid": 256287
+      }
+    },
+    {
+      "role": "wandb_run",
+      "type": "wandb_run",
+      "direction": "output",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/740c7y40",
+      "metadata": {
+        "status": "success"
+      }
+    }
+  ],
+  "metadata": {
+    "ablation_axis": "dense_single_embedding_1p92_training",
+    "source_training_run_id": "r5l4780c",
+    "source_training_state": "crashed_after_best_checkpoint",
+    "source_training_step": 198,
+    "use_maxsim": false,
+    "mfa_supervised_maxsim": false,
+    "text_pooling": "cls",
+    "fixed_audio_seconds": 1.92,
+    "eval_scope": "dev_only",
+    "eval_metric_denominator": "fixed_raw",
+    "eval_metrics_glossary": "documents/code/train/term_train/reports/figures/20260525_dev_raw_glossary_ctx192.json",
+    "eval_metrics_term_count": 1852,
+    "eval_glossary_sizes": [
+      1000,
+      10000,
+      100000
+    ],
+    "eval_wiki_glossary": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample100000.json",
+    "gpu_list": "1",
+    "num_gpus": 1,
+    "master_port": 20125,
+    "score_query_chunk": 128,
+    "score_text_chunk": 512,
+    "run_stamp": "dense_ctx192_r5l4780c_20260525T205627Z",
+    "log_dir": "/mnt/gemini/data1/jiaxuanluo/logs",
+    "acl_usage": "disabled",
+    "medicine_usage": "disabled",
+    "launch_host": "taurus",
+    "wandb_run_id": "740c7y40",
+    "startup_verified_at_utc": "2026-05-25T20:58:06Z",
+    "worker_pid": 256287,
+    "metrics": {
+      "eval_dev/step": 198,
+      "eval_dev/bank_terms": 1852,
+      "eval_dev/metrics_bank_terms": 1852,
+      "eval_dev/base_label_any_positive": 4014,
+      "eval_dev/fixed_metric_denominator": 1,
+      "eval_dev/recall@10": 0.976,
+      "eval_dev/recall@10_gs10000": 0.9597,
+      "eval_dev/recall@10_gs100000": 0.9265,
+      "eval_dev/topk10_chunk_any_positive_filtered_recall@tau_0p75": 0.2394,
+      "eval_dev/topk10_chunk_any_positive_filtered_recall@tau_0p75_gs100000": 0.2394
+    },
+    "completed_at_utc": "2026-05-25T20:59:04Z",
+    "verdict": "success_dense_ctx192_devraw_fixeddenom_100k"
+  }
+}

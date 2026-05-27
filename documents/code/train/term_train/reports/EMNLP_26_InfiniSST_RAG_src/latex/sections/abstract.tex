@@ -1,0 +1,12 @@
+
+\begin{abstract}
+
+Simultaneous speech translation (SST) produces target text incrementally from partial speech input. 
+Recent speech large language models (Speech LLMs) have substantially improved SST quality, yet they still struggle to correctly translate rare and domain-specific terminology. 
+While retrieval augmentation has been effective for terminology translation in machine translation, bringing retrieval to SST is non-trivial: it requires fast and accurate cross-modal (speech-to-text) retrieval under partial, continually arriving input, and the model must decide whether and when to apply retrieved terms during incremental generation.
+We propose \textbf{R}etrieval-\textbf{A}ugmented \textbf{S}imultaneous \textbf{S}peech \textbf{T}ranslation (\method), which tightly integrates cross-modal retrieval into the SST pipeline. 
+\method trains a lightweight speech--text retriever and performs efficient sliding-window retrieval, providing chunkwise terminology hints to the Speech LLM. 
+We further synthesize training data that teaches the Speech LLM to leverage retrieved terms precisely. 
+Experiments on three language directions of the ACL 60/60 dev set show that \method improves terminology translation accuracy by up to \textbf{16\%} and increases overall translation quality by up to \textbf{3 BLEU} points, with ablations confirming the contribution of each component.
+
+\end{abstract}

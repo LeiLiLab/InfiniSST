@@ -1,7 +1,7 @@
 # siqi_train_term_map 交接文档
 
 ## Part 0：（Quick Start）
-
+  `
 ### 1) 这脚本干什么
 
 从 `input.jsonl` 抽样一部分样本，读取对应 TSV 里的 `English ASR + zh_tokens`，再拼接 jsonl 里的 assistant 中文翻译，用本地 **Qwen3 (vLLM)** 生成 `term_map`（English→中文）。  

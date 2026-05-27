@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=q3_v1full
-#SBATCH --partition=taurus
+#SBATCH --partition=aries
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=48
 #SBATCH --mem=256G
@@ -18,7 +18,7 @@ set -euo pipefail
 export CONDA_PREFIX="/mnt/taurus/home/jiaxuanluo/miniconda3/envs/spaCyEnv"
 export PATH="${CONDA_PREFIX}/bin:${PATH}"
 export LD_LIBRARY_PATH="${CONDA_PREFIX}/lib:${LD_LIBRARY_PATH:-}"
-export PYTHONPATH="/home/jiaxuanluo/InfiniSST:/mnt/taurus/home/jiaxuanluo/InfiniSST:${PYTHONPATH:-}"
+export PYTHONPATH="/mnt/taurus/home/jiaxuanluo/InfiniSST:${PYTHONPATH:-}"
 
 LOCAL_TMP_DIR="/dev/shm/${USER}/pytorch_tmp"
 mkdir -p "${LOCAL_TMP_DIR}"
@@ -37,7 +37,7 @@ MASTER_ADDR="127.0.0.1"
 MASTER_PORT=29920
 
 # WandB
-export WANDB_API_KEY=8bffc48f5b611b7e51ef591ae7e9f139a3501828
+export WANDB_API_KEY=${WANDB_API_KEY:-}
 export WANDB_MODE=online
 WANDB_PROJECT="qwen3_rag"
 
@@ -45,7 +45,7 @@ WANDB_PROJECT="qwen3_rag"
 TRAIN_JSONL="/mnt/gemini/data1/jiaxuanluo/term_train_v1_0.jsonl"
 DEV_JSONL="/mnt/gemini/data1/jiaxuanluo/term_dev_with_wiki_synth_normalized.jsonl"
 SCRIPT_PATH="/mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/train/term_train/qwen3_glossary_neg_train.py"
-SAVE_DIR="/mnt/data/jiaxuanluo"
+SAVE_DIR="/mnt/taurus/data/jiaxuanluo"
 RESUME_PATH=""
 
 # Audio model (LoRA)
@@ -64,7 +64,7 @@ TEXT_TARGET_MODULES="query key value dense"
 
 # Training
 # dual-audio doubles wiki_synth rows; keep same effective batch for in-batch negatives
-PER_GPU_BATCH=384
+PER_GPU_BATCH=512
 BATCH_SIZE=$((NUM_GPUS * PER_GPU_BATCH))
 EPOCHS=5
 NUM_WORKERS=8
@@ -72,7 +72,7 @@ LR="1e-4"
 TEMPERATURE="0.03"
 LEARN_TEMP="false"
 TRAIN_LIMIT=0
-WIKI_RANK=1000000
+WIKI_RANK=2000000
 FORCE_DUMMY_AUDIO="false"
 # No on-the-fly augmentation — clean+noisy already in data as separate rows
 AUGMENT_SYNTH="false"
@@ -85,7 +85,6 @@ GLOSSARY_NEG_REFRESH_STEPS=0
 HARD_NEG_K=0
 NEG_BANK_SIZE=0
 NEG_BANK_REFRESH_STEPS=0
-HARD_NEG_GLOSSARY=""
 
 # Eval & checkpointing
 SAVE_STEPS=300
@@ -115,8 +114,12 @@ MODE_NAME="scale_lora-r${LORA_RANK}-${TEXT_TAG}"
 if [ "${LEARN_TEMP}" = "true" ]; then
     MODE_NAME="${MODE_NAME}_lt"
 fi
-WIKI_RANK_K=$((WIKI_RANK / 1000))
-VERSION="v1_0_wr${WIKI_RANK_K}k"
+if [ "${WIKI_RANK}" -gt 0 ]; then
+    WIKI_RANK_K=$((WIKI_RANK / 1000))
+    VERSION="v1_0_wr${WIKI_RANK_K}k"
+else
+    VERSION="v1_0_full"
+fi
 SAVE_NAME="q3rag_${MODE_NAME}_bs${BS_ABBR}_t=${TEMPERATURE}_${VERSION}"
 SAVE_PATH="${SAVE_DIR}/${SAVE_NAME}.pt"
 WANDB_EXP_NAME="stage2_${SAVE_NAME}"
@@ -186,7 +189,6 @@ torchrun \
     --neg_bank_size "${NEG_BANK_SIZE}" \
     --neg_bank_refresh_steps "${NEG_BANK_REFRESH_STEPS}" \
     --hard_neg_k "${HARD_NEG_K}" \
-    --hard_neg_glossary "${HARD_NEG_GLOSSARY}" \
     --save_steps "${SAVE_STEPS}" \
     --eval_steps_sample "${EVAL_STEPS_SAMPLE}" \
     --eval_topk "${EVAL_TOPK}" \

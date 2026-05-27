@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "event_id": "20260517T2058__retriever_eval__epoch0_text_encoder_compare",
+  "event_type": "retriever_eval",
+  "family": "sst_ood_hardneg",
+  "variant": "epoch0_text_encoder_compare",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_ids": {
+    "bgel_epoch0": "y7dlbzmc",
+    "bgem3_epoch0": "p14315yp"
+  },
+  "slurm_job_id": "direct_epoch0_text_encoder_compare",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260517__epoch0_text_encoder_compare_eval_one_taurus1.sh",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "parent_run_ids": [
+    "lh1b88kw",
+    "mhukv2bi"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260517__epoch0_text_encoder_compare_eval_one_taurus1.sh"
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh"
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py"
+    },
+    {
+      "role": "bgel_notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260517__eval_bgel_epoch0_vs_bgem3_compare.md"
+    },
+    {
+      "role": "bgem3_notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260517__eval_bgem3_epoch0_vs_bgel_compare.md"
+    },
+    {
+      "role": "bgel_checkpoint",
+      "type": "model_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_txt_bgel_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_dev100Tau1_eval240_taurus8_smoke2000_epoch_0.pt",
+      "metadata": {
+        "source_run_id": "mhukv2bi",
+        "text_encoder": "BAAI/bge-large-en-v1.5",
+        "text_pooling": "cls"
+      }
+    },
+    {
+      "role": "bgem3_checkpoint",
+      "type": "model_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_epoch_0.pt",
+      "metadata": {
+        "source_run_id": "lh1b88kw",
+        "text_encoder": "BAAI/bge-m3",
+        "text_pooling": "cls"
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_varctx2p88_3p84_4p80_5p76.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_varctx2p88_3p84_4p80_5p76_new_version.jsonl"
+    },
+    {
+      "role": "acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_extracted_paper_glossary_varctx2p88_3p84_4p80_5p76/acl6060_dev_dataset.jsonl"
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76/medicine_dev_dataset.jsonl"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample10000.json"
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_gt_union_gs10000_min_norm2_backfill.json"
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76/medicine_glossary_gt_plus_medicine_wiki_gs10000.json"
+    },
+    {
+      "role": "log_dir",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs"
+    }
+  ],
+  "metadata": {
+    "comparison_axis": "text_encoder",
+    "eval_only": true,
+    "num_gpus_per_eval": 1,
+    "parallel_direct_runs": true,
+    "eval_domains": [
+      "dev",
+      "acl6060",
+      "medicine"
+    ],
+    "eval_glossary_sizes": [
+      "base",
+      1000,
+      10000
+    ],
+    "tcm_sweep_thresholds": [
+      0.75
+    ],
+    "eval_score_device": "cuda",
+    "eval_score_query_chunk": 256,
+    "eval_score_text_chunk": 1024,
+    "eval_glossary_match_min_norm_chars": 2,
+    "prepared_at_utc": "2026-05-17T20:58:00+00:00",
+    "canceled_training_job": {
+      "slurm_job_id": "45238",
+      "wandb_run_id": "mhukv2bi",
+      "status": "failed"
+    },
+    "completed_at_utc": "2026-05-17T21:07:39+00:00",
+    "wandb_urls": {
+      "bgel_epoch0": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/y7dlbzmc",
+      "bgem3_epoch0": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/p14315yp"
+    },
+    "outcome": "BGE-M3 epoch-0 outperformed BGE-large epoch-0 across dev, ACL6060, and medicine in the paired full eval-only readout."
+  }
+}

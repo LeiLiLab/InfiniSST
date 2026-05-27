@@ -1,0 +1,15 @@
+timestamp_utc	lm	status	alive_pids	engine_pids_all	stage	eval_results	instances_rows	strip_rows	BLEU	StreamLAAL	StreamLAAL_CA	TERM_ACC	TERM_CORRECT	TERM_TOTAL	note
+2026-05-25T02:08:33Z	1	running	644919	606446,645232,653673	generation_step_31_ready_5_active_5										
+2026-05-25T02:09:34Z	1	running	644919	606446,645232	generation_step_93_ready_5_active_5										
+2026-05-25T02:10:34Z	1	running	644919	645232	generation_step_151_ready_5_active_5										
+2026-05-25T02:11:35Z	1	running	644919	645232	generation_step_213_ready_5_active_5										
+2026-05-25T02:12:35Z	1	running	644919	645232	generation_step_272_ready_5_active_5										
+2026-05-25T02:13:35Z	1	running	644919	645232	generation_step_330_ready_5_active_5										
+2026-05-25T02:14:36Z	1	running	644919	645232	generation_step_390_ready_5_active_5										
+2026-05-25T02:15:36Z	1	running	644919	645232	generation_step_448_ready_5_active_5										
+2026-05-25T02:16:37Z	1	running	644919	645232	generation_step_506_ready_5_active_5										
+2026-05-25T02:17:37Z	1	running	644919	645232	generation_step_562_ready_5_active_5										
+2026-05-25T02:18:38Z	1	running	644919	645232	generation_step_620_ready_4_active_4										
+2026-05-25T02:19:38Z	1	running	644919	645232	generation_step_685_ready_4_active_4										
+2026-05-25T02:20:39Z	1	running	644919	645232	generation_step_757_ready_2_active_2										
+2026-05-25T02:21:39Z	1	done			completed_eval_results	/mnt/gemini/data1/jiaxuanluo/tagged_acl_same_lm_batch_v1_new_v10_s50_hn1024_tau079_raw_de_lm1_audio128_retry_20260525T020628/new_v10_s50_no_gt_retrieved_oldnewv3_de_r32a64_hn1024_tau079_same_lm_batch_v1/de/dtagacl_bv1_newv10_s50_hn1024_tau079_lm1_k10_th0.79_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv	5	5	25.39898029257455	1069.3421696423013	1254.781303093179	0.8182	765	935	

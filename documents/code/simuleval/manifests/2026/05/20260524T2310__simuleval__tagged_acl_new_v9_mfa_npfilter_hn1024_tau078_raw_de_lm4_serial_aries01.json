@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T2310__simuleval__tagged_acl_new_v9_mfa_npfilter_hn1024_tau078_raw_de_lm4_serial_aries01",
+  "event_type": "simuleval",
+  "family": "tagged_acl_serial_hn1024_tau078",
+  "variant": "de_lm4_raw_clean_new_v9_mfa_npfilter_hn1024_tau078_serial",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": "uvf3r9if",
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_new_v9_mfa_npfilter_hn1024_tau078_raw_de_lm4_serial_aries01.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_new_v9_mfa_npfilter_hn1024_tau078_raw_de_lm4_serial_aries01.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries \"cd /mnt/taurus/home/jiaxuanluo/InfiniSST && mkdir -p /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_serial_mfa_npfilter_hn1024_tau078_raw_de_lm4_20260524T2310_tagacl_newv9_mfa_np_serial_de_lm4 && setsid env RUN_STAMP=20260524T2310_tagacl_newv9_mfa_np_serial_de_lm4 GPU_PAIR=0,1 bash documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_new_v9_mfa_npfilter_hn1024_tau078_raw_de_lm4_serial_aries01.sh > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_serial_mfa_npfilter_hn1024_tau078_raw_de_lm4_20260524T2310_tagacl_newv9_mfa_np_serial_de_lm4/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_serial_mfa_npfilter_hn1024_tau078_raw_de_lm4_20260524T2310_tagacl_newv9_mfa_np_serial_de_lm4/top.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_serial_mfa_npfilter_hn1024_tau078_raw_de_lm4_20260524T2310_tagacl_newv9_mfa_np_serial_de_lm4/top.pid\"",
+  "parent_run_ids": [
+    "6l7ncy2v"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_new_v9_mfa_npfilter_hn1024_tau078_raw_de_lm4_serial_aries01.sh"
+    },
+    {
+      "role": "base_serial_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh",
+      "metadata": {
+        "batch_eval": false
+      }
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_new_v9_mfa_npfilter_hn1024_tau078_raw_de_lm4_serial_aries01.md"
+    },
+    {
+      "role": "speech_llm_model",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_r32a64_tp2_taurus8/keep1.0_r32/v0-20260525-001708-hf"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_serial_mfa_npfilter_hn1024_tau078_raw_de_lm4_20260524T2310_tagacl_newv9_mfa_np_serial_de_lm4"
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_serial_mfa_npfilter_hn1024_tau078_raw_de_lm4_20260524T2310_tagacl_newv9_mfa_np_serial_de_lm4"
+    },
+    {
+      "role": "pid_file",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_serial_mfa_npfilter_hn1024_tau078_raw_de_lm4_20260524T2310_tagacl_newv9_mfa_np_serial_de_lm4/top.pid"
+    },
+    {
+      "role": "eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_serial_mfa_npfilter_hn1024_tau078_raw_de_lm4_20260524T2310_tagacl_newv9_mfa_np_serial_de_lm4/new_v9_mfa_npfilter_lexexact_oldnewv3_de_r32a64_hn1024_tau078_serial/de/dtagacl_newv9_mfa_np_serial_hn1024_tau078_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    {
+      "role": "summary_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_serial_mfa_npfilter_hn1024_tau078_raw_de_lm4_20260524T2310_tagacl_newv9_mfa_np_serial_de_lm4/new_v9_mfa_npfilter_lexexact_oldnewv3_de_r32a64_hn1024_tau078_serial/__summary__/summary_de_lm4_serial.tsv"
+    },
+    {
+      "role": "summary_md",
+      "type": "markdown",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_serial_mfa_npfilter_hn1024_tau078_raw_de_lm4_20260524T2310_tagacl_newv9_mfa_np_serial_de_lm4/new_v9_mfa_npfilter_lexexact_oldnewv3_de_r32a64_hn1024_tau078_serial/__summary__/summary_de_lm4_serial.md"
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "latency_multipliers": [
+      4
+    ],
+    "runtime_glossary": "acl6060_tagged_gt_raw_min_norm2",
+    "metric_glossary_policy": "fixed_raw_tagged_acl",
+    "retriever_id": "lh1b88kw",
+    "rag_tau": 0.78,
+    "rag_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "driver": "serial_simuleval",
+    "batch_eval": false,
+    "same_lm_batch": false,
+    "clean_speech_llm": "mfa_npfilter_srcunion_lexexact_oldnewv3_de_r32a64",
+    "gpu_pair": "0,1",
+    "max_new_tokens": 40,
+    "strip_output_tags": [
+      "term"
+    ],
+    "eval_tmpdir": "/tmp/jx_tacl_de4_ser",
+    "purpose": "Check whether the batch evaluator caused the clean SLM + HN1024 En-De lm4 BLEU drop.",
+    "launched_utc": "2026-05-24T23:12:07Z",
+    "launcher_pid": 3386444,
+    "remote_parent_pid": 3386442,
+    "simuleval_pid": 3387488,
+    "startup_status": "vllm_loading_safetensors",
+    "startup_observation_utc": "2026-05-24T23:14:00Z",
+    "startup_evidence": {
+      "host": "aries",
+      "gpu_pair": "0,1",
+      "driver": "serial_simuleval",
+      "batch_eval": false,
+      "simuleval_args": [
+        "--max-new-tokens 40",
+        "--rag-enabled",
+        "--rag-device cuda:1",
+        "--source-segment-size 1920"
+      ],
+      "log_markers": [
+        "StreamingMaxSimRetriever ready",
+        "Initializing a V1 LLM engine",
+        "Starting to load model",
+        "Loading safetensors checkpoint shards"
+      ]
+    },
+    "launch_caveat": "Initial detached ssh command hit shell ampersand precedence for top.pid creation; the serial worker still launched. top.pid was recovered from the live launcher process.",
+    "completed_utc": "2026-05-24T23:38:48Z",
+    "wandb_status": "success",
+    "metrics": {
+      "BLEU": 30.03088861892439,
+      "StreamLAAL": 2657.565898965207,
+      "StreamLAAL_CA": 4358.399335751418,
+      "TERM_ACC": 0.846,
+      "TERM_CORRECT": 791,
+      "TERM_TOTAL": 935,
+      "REAL_TERM_ADOPT": 0.863239,
+      "TERM_FCR": 0.15869
+    },
+    "metric_correction": {
+      "corrected_utc": "2026-05-25T00:02:00Z",
+      "reason": "Initial German word-level term-tag stripping misaligned prediction tokens and delay entries in instances.strip_term.log, producing an invalid low StreamLAAL=1611.4236.",
+      "fix": "Recomputed offline metrics after word-token-aligned tag stripping and malformed <term prefix removal.",
+      "invalid_eval_results_backup": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_serial_mfa_npfilter_hn1024_tau078_raw_de_lm4_20260524T2310_tagacl_newv9_mfa_np_serial_de_lm4/new_v9_mfa_npfilter_lexexact_oldnewv3_de_r32a64_hn1024_tau078_serial/de/dtagacl_newv9_mfa_np_serial_hn1024_tau078_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.invalid_wordstrip_20260524T2359.tsv",
+      "corrected_eval_results": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_serial_mfa_npfilter_hn1024_tau078_raw_de_lm4_20260524T2310_tagacl_newv9_mfa_np_serial_de_lm4/new_v9_mfa_npfilter_lexexact_oldnewv3_de_r32a64_hn1024_tau078_serial/de/dtagacl_newv9_mfa_np_serial_hn1024_tau078_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    "completion_evidence": {
+      "instances_log_rows": 5,
+      "eval_results_rows": 1,
+      "term_adoption_json": true,
+      "wandb_run_id": "uvf3r9if",
+      "sqlite_db_sync": true
+    },
+    "post_completion_caveat": "Generation, offline eval, and W&B logging completed, but the wrapper failed after W&B while writing summary because bare python was not in PATH on Aries. Launcher was patched to use explicit spaCyEnv Python and summary files were recovered from eval_results.tsv."
+  }
+}

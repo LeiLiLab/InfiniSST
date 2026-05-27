@@ -1,0 +1,93 @@
+{
+  "artifacts": [
+    {
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v9_mfa_openai_npfilter_oldnewv3_de.sh",
+      "role": "launcher",
+      "type": "script"
+    },
+    {
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v9_mfa_openai_rewrite_oldnewv3_de_ja.sh",
+      "role": "base_launcher",
+      "type": "script"
+    },
+    {
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_mfa_openai_rewrite_gt_terms.py",
+      "role": "mfa_openai_gt_script",
+      "type": "script"
+    },
+    {
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/train_s_de_v4_ner_baseline_aligned_rate1.0_k20_final.jsonl",
+      "role": "train_jsonl_raw",
+      "type": "dataset"
+    },
+    {
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/train_xl_case_robust_asr-filtered_de_metricx-qe3.0_align.tsv",
+      "role": "source_tsv",
+      "type": "dataset"
+    },
+    {
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample100000.json",
+      "role": "base_source_glossary",
+      "type": "glossary"
+    },
+    {
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_mfa_openai_npfilter_srcunion_lexprefilter_oldnewv3_de_20260524",
+      "role": "output_dir",
+      "type": "directory"
+    },
+    {
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs",
+      "role": "logs",
+      "type": "directory"
+    },
+    {
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_openai_npfilter_srcunion_lexprefilter_oldnewv3_de_20260524T1520.out",
+      "role": "stdout",
+      "type": "log"
+    },
+    {
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_openai_npfilter_srcunion_lexprefilter_oldnewv3_de_20260524T1520.err",
+      "role": "stderr",
+      "type": "log"
+    },
+    {
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_openai_npfilter_srcunion_lexprefilter_oldnewv3_de_20260524T1520.pid",
+      "role": "pid_file",
+      "type": "pid"
+    }
+  ],
+  "command": "setsid bash -lc 'OUT_NAME_PREFIX_OVERRIDE=speech_llm_new_v9_mfa_openai_npfilter_srcunion_lexprefilter_oldnewv3 GPU_DEVICES_CSV_OVERRIDE=6,7 bash documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v9_mfa_openai_npfilter_oldnewv3_de.sh' > /mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_openai_npfilter_srcunion_lexprefilter_oldnewv3_de_20260524T1520.out 2> /mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_openai_npfilter_srcunion_lexprefilter_oldnewv3_de_20260524T1520.err < /dev/null &",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "event_id": "20260524T1520__data_prepare__new_v9_mfa_openai_npfilter_srcunion_lexprefilter_oldnewv3_de",
+  "event_type": "data_prepare",
+  "family": "speech_llm_sft_data",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v9_mfa_openai_npfilter_oldnewv3_de.sh",
+  "metadata": {
+    "cancel_reason": "legacy translation prefilter still left about 83k OpenAI rewrite tasks; replaced by canonical exact-span GT without per-candidate OpenAI",
+    "gt_source": "MFA source exact + future assistant target exact + OpenAI variant rewrite",
+    "language": "de",
+    "legacy_term_map_usage": "translation lexicon exact-span prefilter only",
+    "pid": 3653837,
+    "source_glossary_fix": "wiki100k plus de old-new_v3 source candidates",
+    "termmap_lineage": "old-new_v3 TCM filtered with GT backfill"
+  },
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260524__new_v9_mfa_openai_npfilter_srcunion_lexprefilter_oldnewv3_de_data.md",
+  "parent_run_ids": [],
+  "project": "sst_omni",
+  "schema_version": 1,
+  "slurm_job_id": null,
+  "status": "cancelled",
+  "variant": "new_v9_mfa_openai_npfilter_srcunion_lexprefilter_oldnewv3_de",
+  "wandb_run_id": null
+}

@@ -1,0 +1,218 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T163317__analysis__retriever_inference_maxsim_draft_figure",
+  "event_type": "analysis",
+  "family": "paper_figure_draft",
+  "variant": "retriever_inference_maxsim_clean_svg_draft",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__retriever_inference_maxsim_draft_figure.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_00_retriever_inference_maxsim_draft/draw_retriever_inference_maxsim_svg.py",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__retriever_inference_maxsim_draft_figure.md",
+      "metadata": {}
+    },
+    {
+      "role": "plot_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_00_retriever_inference_maxsim_draft/draw_retriever_inference_maxsim_svg.py",
+      "metadata": {
+        "preferred": true,
+        "source_format": "svg",
+        "export_backend": "playwright_chromium"
+      }
+    },
+    {
+      "role": "legacy_plot_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_00_retriever_inference_maxsim_draft/draw_retriever_inference_maxsim_html.py",
+      "metadata": {
+        "legacy": true
+      }
+    },
+    {
+      "role": "legacy_plot_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_00_retriever_inference_maxsim_draft/draw_retriever_inference_maxsim_draft.py",
+      "metadata": {}
+    },
+    {
+      "role": "plot_readme",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_00_retriever_inference_maxsim_draft/README.md",
+      "metadata": {}
+    },
+    {
+      "role": "plot_registry",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/README.md",
+      "metadata": {}
+    },
+    {
+      "role": "method_source",
+      "type": "tex",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/sections/method.tex",
+      "metadata": {
+        "used_sections": [
+          "method_overview",
+          "retriever",
+          "retriever_inference"
+        ]
+      }
+    },
+    {
+      "role": "editable_figure",
+      "type": "svg",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_00_retriever_inference_maxsim_draft/retriever_inference_maxsim_clean.svg",
+      "metadata": {
+        "preferred": true
+      }
+    },
+    {
+      "role": "figure_preview",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_00_retriever_inference_maxsim_draft/retriever_inference_maxsim_clean.pdf",
+      "metadata": {
+        "preferred": true,
+        "source": "svg_playwright"
+      }
+    },
+    {
+      "role": "figure_preview",
+      "type": "png",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_00_retriever_inference_maxsim_draft/retriever_inference_maxsim_clean.png",
+      "metadata": {
+        "preferred": true,
+        "source": "svg_playwright"
+      }
+    },
+    {
+      "role": "legacy_editable_figure",
+      "type": "html",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_00_retriever_inference_maxsim_draft/retriever_inference_maxsim_compact.html",
+      "metadata": {
+        "legacy": true,
+        "contains_inline_svg": true
+      }
+    },
+    {
+      "role": "figure_preview",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_00_retriever_inference_maxsim_draft/retriever_inference_maxsim_compact.pdf",
+      "metadata": {
+        "legacy": true,
+        "source": "html_svg_playwright"
+      }
+    },
+    {
+      "role": "figure_preview",
+      "type": "svg",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_00_retriever_inference_maxsim_draft/retriever_inference_maxsim_compact.svg",
+      "metadata": {
+        "legacy": true,
+        "source": "html_generator"
+      }
+    },
+    {
+      "role": "figure_preview",
+      "type": "png",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_00_retriever_inference_maxsim_draft/retriever_inference_maxsim_compact.png",
+      "metadata": {
+        "legacy": true,
+        "source": "html_svg_playwright"
+      }
+    },
+    {
+      "role": "editable_figure",
+      "type": "pptx",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_00_retriever_inference_maxsim_draft/retriever_inference_maxsim_draft.pptx",
+      "metadata": {
+        "legacy": true
+      }
+    },
+    {
+      "role": "figure_preview",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_00_retriever_inference_maxsim_draft/retriever_inference_maxsim_draft.pdf",
+      "metadata": {}
+    },
+    {
+      "role": "figure_preview",
+      "type": "png",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_00_retriever_inference_maxsim_draft/retriever_inference_maxsim_draft.png",
+      "metadata": {}
+    },
+    {
+      "role": "figure_preview",
+      "type": "svg",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_00_retriever_inference_maxsim_draft/retriever_inference_maxsim_draft.svg",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "figure_status": "draft_not_inserted",
+    "preferred_source": "retriever_inference_maxsim_clean.svg",
+    "design_focus": [
+      "look-back audio context",
+      "multi-scale MaxSim speech windows",
+      "semi-transparent candidate speech windows",
+      "MaxSim heatmap",
+      "threshold and top-K filtering",
+      "concrete Term_map examples"
+    ],
+    "validation": {
+      "status": "passed",
+      "generated_files": [
+        "clean_svg",
+        "clean_pdf",
+        "clean_png",
+        "html",
+        "compact_pdf",
+        "compact_png",
+        "compact_svg",
+        "pptx",
+        "legacy_pdf",
+        "legacy_png",
+        "legacy_svg"
+      ],
+      "svg_export_backend": "playwright_chromium",
+      "clean_visual_review": "passed_tighter_layout_smaller_arrowheads_longer_flow_arrows_balanced_right_output_translucent_overlapping_candidate_windows_large_filter_uppercase_term_map",
+      "html_export_backend": "playwright_chromium",
+      "compact_visual_review": "legacy_passed_no_gray_panels_short_text",
+      "pptx_zip_integrity": "passed",
+      "python_pptx_reload": {
+        "slides": 1,
+        "shapes_slide1": 91
+      },
+      "legacy_pptx_visual_review": "passed",
+      "libreoffice_headless_convert": "failed_source_file_could_not_be_loaded",
+      "note": "The clean SVG source is preferred. It removes gray panel frames and step headings, uses semi-transparent overlapping candidate windows, smaller arrowheads, longer flow arrows, larger math labels, a larger Filter box, uppercase TERM_MAP, and concrete term-map examples. LaTeX source was not modified."
+    }
+  }
+}

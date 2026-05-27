@@ -4,7 +4,7 @@
   "event_type": "retriever_train",
   "family": "sst_ood_hardneg",
   "variant": "vctx576_aud_wavl_fu_t8_b8k_g128",
-  "status": "running",
+  "status": "cancelled",
   "project": "qwen3_rag",
   "wandb_run_id": "qou1rg53",
   "slurm_job_id": "45265",
@@ -80,6 +80,8 @@
     "tcm_off": true,
     "prepared_at_utc": "2026-05-18T02:47:01+00:00",
     "launched_at_utc": "2026-05-18T02:48:56+00:00",
-    "wandb_init_at_utc": "2026-05-18T02:51:34+00:00"
+    "wandb_init_at_utc": "2026-05-18T02:51:34+00:00",
+    "cancelled_at_utc": "2026-05-18T13:33:39+00:00",
+    "cancel_reason": "User requested cancellation of Slurm job 45265 so the WavLM run can be handed off to a colleague on other resources."
   }
 }

@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "event_id": "20260519T0130__speech_llm_train__oracle_gt_zh_r32a64_taurus4",
+  "event_type": "speech_llm_train",
+  "family": "speech_llm_termmap_oracle",
+  "variant": "zh_oracle_gt_r32a64_taurus4",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": "3h4wm92o",
+  "slurm_job_id": "45269",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__speech_llm_oracle_gt_zh_taurus4_r32a64.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260519__speech_llm_oracle_gt_zh_r32a64.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "tmux new-session -d -s rasst_oraclegt_train \"srun --jobid=45269 --overlap --ntasks=1 --cpus-per-task=1 bash -lc 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && HOST_GPU_DEVICES_OVERRIDE_CSV=0:1:2:3 bash documents/code/train/sst_omni_train/launchers/2026/05/20260519__speech_llm_oracle_gt_zh_taurus4_r32a64.sh' > /mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_oraclegt_zh_train_20260519.out 2> /mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_oraclegt_zh_train_20260519.err\"",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__speech_llm_oracle_gt_zh_taurus4_r32a64.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260519__speech_llm_oracle_gt_zh_r32a64.md",
+      "metadata": {}
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/auto_train_sampling_docker.sh",
+      "metadata": {}
+    },
+    {
+      "role": "train_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/auto_train_sampling_rank32_try.sh",
+      "metadata": {}
+    },
+    {
+      "role": "parent_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/train/sst_omni_train/manifests/2026/05/20260519T0010__data_prepare__oracle_gt_termmap_zh_sft.json",
+      "metadata": {
+        "event_id": "20260519T0010__data_prepare__oracle_gt_termmap_zh_sft"
+      }
+    },
+    {
+      "role": "mcore_model",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/Qwen3-Omni-30B-A3B-Instruct-v2/",
+      "metadata": {
+        "override_env": "MCORE_MODEL_OVERRIDE"
+      }
+    },
+    {
+      "role": "base_model_hf",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/Qwen3-Omni-30B-A3B-Instruct",
+      "metadata": {
+        "override_env": "BASE_MODEL_HOST_OVERRIDE"
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_oracle_gt_termmap_zh_20260519/train_s_zh_v4_ner_baseline_aligned_rate1p0_k20_oracle_gt_termmap_none.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_oracle_gt_termmap_zh_20260519/dev_s_zh_v4_ner_baseline_aligned_freq_k20_oracle_gt_termmap_none.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/data2/jiaxuanluo/speech_llm_oracle_gt_termmap_zh_r32a64_taurus4",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint_version_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/data2/jiaxuanluo/speech_llm_oracle_gt_termmap_zh_r32a64_taurus4/keep1.0_r32/v1-20260519-105111",
+      "metadata": {
+        "checkpoint_iteration": 496,
+        "note": "Final versioned mcore output directory. Earlier v0 directory was created by a cancelled foreground debug launch."
+      }
+    },
+    {
+      "role": "hf_checkpoint",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/data2/jiaxuanluo/speech_llm_oracle_gt_termmap_zh_r32a64_taurus4/keep1.0_r32/v1-20260519-105111-hf",
+      "metadata": {
+        "source_mcore_dir": "/mnt/gemini/data2/jiaxuanluo/speech_llm_oracle_gt_termmap_zh_r32a64_taurus4/keep1.0_r32/v1-20260519-105111",
+        "checkpoint_iteration": 496,
+        "export_tool": "swift export --mcore_adapters --to_hf true"
+      }
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs",
+      "metadata": {
+        "output_pattern": "%j_slm_oraclegt_zh_taurus4.out",
+        "error_pattern": "%j_slm_oraclegt_zh_taurus4.err"
+      }
+    },
+    {
+      "role": "direct_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_oraclegt_zh_train_20260519.out",
+      "metadata": {
+        "stream": "stdout"
+      }
+    },
+    {
+      "role": "direct_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_oraclegt_zh_train_20260519.err",
+      "metadata": {
+        "stream": "stderr"
+      }
+    }
+  ],
+  "metadata": {
+    "parent_event_ids": [
+      "20260519T0010__data_prepare__oracle_gt_termmap_zh_sft"
+    ],
+    "term_map_policy": "GT-only chunk term_map; term_map:NONE for no-GT chunks",
+    "lang_code": "zh",
+    "train_rows": 12318,
+    "dev_rows": 303,
+    "train_audio_user_chunks": 68450,
+    "train_gt_chunk_ratio": 0.7543462381300219,
+    "dev_audio_user_chunks": 829,
+    "dev_gt_chunk_ratio": 0.6996381182147166,
+    "lora_rank": 32,
+    "lora_alpha": 64,
+    "nproc_per_node": 4,
+    "expert_model_parallel_size": 4,
+    "tensor_model_parallel_size": 2,
+    "sequence_parallel": true,
+    "global_batch_size": 4,
+    "micro_batch_size": 1,
+    "max_length": 3072,
+    "max_epochs": 1,
+    "iterations_per_epoch": 452,
+    "save_interval": 452,
+    "compute": "taurus_hold45269",
+    "allocation_job_id": "45269",
+    "gpu_csv": "0:1:2:3",
+    "tmux_session": "rasst_oraclegt_train",
+    "slurm_step_id": "45269.11",
+    "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/sst_omni/runs/3h4wm92o",
+    "mcore_checkpoint_iteration": 496,
+    "mcore_output_dir": "/mnt/gemini/data2/jiaxuanluo/speech_llm_oracle_gt_termmap_zh_r32a64_taurus4/keep1.0_r32/v1-20260519-105111",
+    "hf_export_dir": "/mnt/gemini/data2/jiaxuanluo/speech_llm_oracle_gt_termmap_zh_r32a64_taurus4/keep1.0_r32/v1-20260519-105111-hf",
+    "hf_export_status": "success"
+  }
+}

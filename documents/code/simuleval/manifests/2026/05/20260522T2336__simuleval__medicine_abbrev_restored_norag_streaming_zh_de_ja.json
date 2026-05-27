@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T2336__simuleval__medicine_abbrev_restored_norag_streaming_zh_de_ja",
+  "event_type": "simuleval",
+  "family": "medicine_gt_strict_filter",
+  "variant": "restored_eso_streaming_norag_origin_bsz4_zh_de_ja_lm2_batched5",
+  "status": "running",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "45290",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260522__medicine_abbrev_restored_norag_streaming_batched_aries67.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260522__medicine_abbrev_restored_norag_streaming_zh_de_ja_lm2.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && MASTER_PORT=20042 TARGET_LMS_OVERRIDE=2 srun --jobid=45290 --overlap --nodes=1 --ntasks=1 --cpus-per-task=8 --chdir=/mnt/taurus/home/jiaxuanluo/InfiniSST bash /mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/simuleval/launchers/2026/05/20260522__medicine_abbrev_restored_norag_streaming_batched_aries67.sh' > /mnt/gemini/data1/jiaxuanluo/logs/20260522T2336_medicine_abbrev_restored_norag_streaming_batched_aries67.out 2> /mnt/gemini/data1/jiaxuanluo/logs/20260522T2336_medicine_abbrev_restored_norag_streaming_batched_aries67.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/20260522T2336_medicine_abbrev_restored_norag_streaming_batched_aries67.pid",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260522__medicine_abbrev_restored_norag_streaming_batched_aries67.sh"
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/rank16/baseline/bypass_simuleval_rank32_iter_0000452_hf_baseline_no_rag_sweep.sh"
+    },
+    {
+      "role": "prepare_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/prepare_medicine_one_talk_inputs.py"
+    },
+    {
+      "role": "agent",
+      "type": "python",
+      "direction": "control",
+      "path": "agents/infinisst_omni_vllm_rag_v4.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260522__medicine_abbrev_restored_norag_streaming_zh_de_ja_lm2.md"
+    },
+    {
+      "role": "eso_restored_test_root",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/taurus/home/jiaxingxu/rag-sst/eso-dataset/outputs_v2_abbrev_exact_match_abbrev_restored/test"
+    },
+    {
+      "role": "strict_medicine_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000_translated.json"
+    },
+    {
+      "role": "model_checkpoint",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-zh-s_origin-bsz4"
+    },
+    {
+      "role": "model_checkpoint",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-de-s_origin-bsz4"
+    },
+    {
+      "role": "model_checkpoint",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-ja-s_origin-bsz4"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260522"
+    },
+    {
+      "role": "timing_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260522/timing.tsv"
+    },
+    {
+      "role": "hypothesis_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260522/hypotheses.tsv"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260522T2336_medicine_abbrev_restored_norag_streaming_batched_aries67.out"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260522T2336_medicine_abbrev_restored_norag_streaming_batched_aries67.err"
+    },
+    {
+      "role": "pid_file",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260522T2336_medicine_abbrev_restored_norag_streaming_batched_aries67.pid"
+    }
+  ],
+  "metadata": {
+    "target_langs": ["zh", "de", "ja"],
+    "target_samples": ["404", "545006", "596001", "605000", "606"],
+    "target_lms": [2],
+    "compute": "aries hold job 45290, physical GPUs 6,7",
+    "rag_enabled": false,
+    "oracle_term_map": false,
+    "launcher_pid": 2265750,
+    "started_utc": "2026-05-22T23:49:26Z",
+    "aries_connection_port": 20042,
+    "startup_retry_note": "Initial launches failed before generation because the baseline no-RAG script used node-local /home paths on aries for both conda activation and ROOT_DIR; the shared baseline launcher was patched to use direct env PATH setup and /mnt/taurus/home as the default ROOT_DIR.",
+    "term_source": "glossary_match",
+    "glossary_source_filter": "medicine_gt",
+    "batching_policy": "Each setting is one language and latency multiplier containing all five samples, to avoid one model reload per sample.",
+    "purpose": "Generate streaming no-RAG hypotheses and per-setting timing for medicine_gt strict-term filtering.",
+    "output_filesystem_note": "/mnt/gemini/data2 was full at launch time, so this event writes outputs to /mnt/gemini/data1."
+  }
+}

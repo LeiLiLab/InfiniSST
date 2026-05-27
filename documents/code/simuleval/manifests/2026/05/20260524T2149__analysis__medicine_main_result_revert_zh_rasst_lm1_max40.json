@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0",
+  "event_id": "20260524T2149__analysis__medicine_main_result_revert_zh_rasst_lm1_max40",
+  "event_type": "analysis",
+  "family": "medicine_main_result",
+  "variant": "revert_zh_rasst_lm1_to_max40",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__medicine_main_result_revert_zh_rasst_lm1_max40.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python3 documents/code/simuleval/src/build_main_result_tables_and_figures_20260524.py",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "analysis_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/build_main_result_tables_and_figures_20260524.py",
+      "metadata": {
+        "change": "removed zh lm1 max80 override"
+      }
+    },
+    {
+      "role": "selected_eval_results",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_hn1024_tau078_new_v9_batch_20260524T0242/zh/dmedhard5_new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau0p78_raw_lm1_k10_th0.78_ghard_medicine_glossary_raw_llm_judge_manual_zh215_unique212_ppmedicine5_hardraw/eval_results.tsv",
+      "metadata": {
+        "lang": "zh",
+        "lm": 1,
+        "max_new_tokens": 40,
+        "BLEU": 33.400545298493356,
+        "StreamLAAL": 1140.065570226361,
+        "TERM_ACC": 0.7905,
+        "TERM_CORRECT": 532,
+        "TERM_TOTAL": 673
+      }
+    },
+    {
+      "role": "rejected_eval_results",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_hn1024_tau078_new_v9_batch_20260524T1748_medicine_rasst_zh_lm1_max80_sharedaudio_batch/zh/dmedhard5_new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078_max80_raw_lm1_k10_th0.78_ghard_medicine_glossary_raw_llm_judge_manual_zh215_unique212_ppmedicine5_hardraw/eval_results.tsv",
+      "metadata": {
+        "lang": "zh",
+        "lm": 1,
+        "max_new_tokens": 80,
+        "reason": "lower BLEU and TERM_ACC with long-output degeneration"
+      }
+    },
+    {
+      "role": "main_result_report",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv",
+      "metadata": {
+        "updated_row": "medicine_hardraw/RASST/zh/lm1"
+      }
+    },
+    {
+      "role": "medicine_main_figure",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/medicine_main_result.pdf",
+      "metadata": {
+        "updated_row": "medicine_hardraw/RASST/zh/lm1"
+      }
+    }
+  ],
+  "metadata": {
+    "selected_event_id": "20260524T0242__simuleval__medicine_hardraw_hn1024_tau078_new_v9_batch",
+    "rejected_event_id": "20260524T1748__simuleval__medicine_hardraw_rasst_zh_lm1_max80_sharedaudio_batch",
+    "selected_decode_cap": 40,
+    "rejected_decode_cap": 80
+  }
+}

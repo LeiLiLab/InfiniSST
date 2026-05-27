@@ -1,0 +1,2 @@
+mode	lang_code	BLEU	StreamLAAL	StreamLAAL_CA	TERM_ACC	TERM_CORRECT	TERM_TOTAL	instances_log
+acl6060	de	35.7640563769948	362953.85614273505	510600.2485391077	0.7057	880	1247	/home/jiaxuanluo/InfiniSST/documents/code/offline_sst_eval/en-de/offline/instances.log

@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=eval_local
-#SBATCH --output=eval_local.out
-#SBATCH --error=eval_local.err
+#SBATCH --output=/home/jiaxuanluo/InfiniSST/retriever/gigaspeech/modal/eval_local_v2.out
+#SBATCH --error=/home/jiaxuanluo/InfiniSST/retriever/gigaspeech/modal/eval_local_v2.err
 #SBATCH --partition=taurus
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=16
@@ -27,7 +27,7 @@ MMAP_SHARD_DIR="/mnt/gemini/data1/jiaxuanluo/mmap_shards"
 MODEL_NAME="Qwen/Qwen2-Audio-7B-Instruct"
 LORA_R=16
 LORA_ALPHA=32
-LORA_DROPOUT=0.1
+LORA_DROPOUT=0.0
 
 # 评估配置
 MAX_EVAL=1000           # 最大评估样本数
@@ -35,7 +35,7 @@ NUM_FAILED_CASES=10     # 打印的失败案例数量
 DEVICE="cuda:0"         # 使用的GPU设备（单GPU足够）
 
 # 预生成的索引（如果有的话）
-PREBUILT_INDEX="/mnt/gemini/data2/jiaxuanluo/indices/qwen2_audio_term_index.pkl"
+#PREBUILT_INDEX="/mnt/gemini/data2/jiaxuanluo/indices/qwen2_audio_term_index.pkl"
 
 # ===================== 运行评估 =====================
 
@@ -63,7 +63,7 @@ fi
 echo ""
 
 # 运行评估
-python eval_local.py \
+python eval_local_v2.py \
     --model_path "$MODEL_PATH" \
     --test_samples_path "$TEST_SAMPLES" \
     --glossary_path "$GLOSSARY_PATH" \

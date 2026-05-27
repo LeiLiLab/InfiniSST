@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "event_id": "20260526T030216__simuleval__tagged_acl_de_lm3_serial_promptfix_cache80s60s_audioauto_max40lm_taurus",
+  "event_type": "simuleval",
+  "family": "main_result_rasst_serial",
+  "variant": "tagged_acl_de_lm3_promptfix_cache80s60s_audioauto_max40lm",
+  "status": "completed",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260526__tagged_acl_de_lm3_serial_promptfix_cache30_audioauto_max40lm_taurus.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260526__tagged_acl_de_serial_promptfix_cache80s60s_audioauto_max40lm_taurus.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "mkdir -p /mnt/data1/jiaxuanluo/logs/tagged_acl_de_lm3_serial_promptfix_cache80s60s_audioauto_max40lm_20260526T030216_taurus && setsid bash -lc 'RUN_STAMP=20260526T030216_tagged_acl_de_lm3_serial_promptfix_cache80s60s_audioauto_max40lm_taurus OUT_ROOT=/mnt/data1/jiaxuanluo/tagged_acl_de_lm3_serial_promptfix_cache80s60s_audioauto_max40lm_20260526T030216_taurus LOG_ROOT=/mnt/data1/jiaxuanluo/logs/tagged_acl_de_lm3_serial_promptfix_cache80s60s_audioauto_max40lm_20260526T030216_taurus GPU_PAIR=2,3 LM=3 VLLM_LIMIT_AUDIO=auto VLLM_LIMIT_AUDIO_OVERRIDE=auto EVAL_TMPDIR=/tmp/jxde3c8060 bash documents/code/simuleval/launchers/2026/05/20260526__tagged_acl_de_lm3_serial_promptfix_cache30_audioauto_max40lm_taurus.sh' > /mnt/data1/jiaxuanluo/logs/tagged_acl_de_lm3_serial_promptfix_cache80s60s_audioauto_max40lm_20260526T030216_taurus/launcher.outer.log 2>&1 < /dev/null & echo $! > /mnt/data1/jiaxuanluo/logs/tagged_acl_de_lm3_serial_promptfix_cache80s60s_audioauto_max40lm_20260526T030216_taurus/outer.pid",
+  "parent_run_ids": [],
+  "artifacts": [
+    {"role": "launcher", "type": "shell", "direction": "control", "path": "documents/code/simuleval/launchers/2026/05/20260526__tagged_acl_de_lm3_serial_promptfix_cache30_audioauto_max40lm_taurus.sh", "metadata": {}},
+    {"role": "notes", "type": "markdown", "direction": "control", "path": "documents/code/simuleval/notes/2026/05/20260526__tagged_acl_de_serial_promptfix_cache80s60s_audioauto_max40lm_taurus.md", "metadata": {}},
+    {"role": "eval_script", "type": "shell", "direction": "control", "path": "documents/code/simuleval/eval_density_unified.sh", "metadata": {}},
+    {"role": "agent", "type": "python", "direction": "control", "path": "agents/infinisst_omni_vllm_maxsim_rag.py", "metadata": {}},
+    {"role": "model", "type": "checkpoint_dir", "direction": "input", "path": "/mnt/data1/jiaxuanluo/slm_local_cache/de_tagged_acl_20260525/cap16_denoise_ttag/v0-20260525-203735-hf", "metadata": {}},
+    {"role": "retriever_checkpoint", "type": "checkpoint", "direction": "input", "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt", "metadata": {}},
+    {"role": "acl_eval_wiki_glossary", "type": "json", "direction": "input", "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json", "metadata": {}},
+    {"role": "eval_input_root", "type": "directory", "direction": "input", "path": "/mnt/data1/jiaxuanluo/main_result_rasst_serial_de_ja_cache30_max40lm_20260525T215831_main_result_rasst_serial_de_ja_cache30_max40lm_taurus_retry1/__inputs__/acl_de", "metadata": {}},
+    {"role": "eval_output", "type": "directory", "direction": "output", "path": "/mnt/data1/jiaxuanluo/tagged_acl_de_lm3_serial_promptfix_cache80s60s_audioauto_max40lm_20260526T030216_taurus", "metadata": {}},
+    {"role": "logs", "type": "directory", "direction": "log", "path": "/mnt/data1/jiaxuanluo/logs/tagged_acl_de_lm3_serial_promptfix_cache80s60s_audioauto_max40lm_20260526T030216_taurus", "metadata": {}}
+  ],
+  "metadata": {
+    "host": "taurus",
+    "lang": "de",
+    "lm": 3,
+    "dataset": "acl_tagged_raw",
+    "mode": "serial",
+    "cache_policy": "max=floor(80/(0.96*lm)); keep=floor(60/(0.96*lm))",
+    "expected_cache_chunks": "27/20",
+    "max_new_tokens": 120,
+    "vllm_limit_audio": "auto",
+    "gpu_pair": "2,3",
+    "launcher_pid": 4060694,
+    "eval_density_pid": 4060764,
+    "startup_validation": "run_meta written; cache_chunks=27/20; vLLM startup verified with limit_mm_per_prompt audio=27"
+    ,
+    "result": {
+      "BLEU": 30.232083732730384,
+      "StreamLAAL": 2208.4824867922375,
+      "StreamLAAL_CA": 3176.5903882704097,
+      "TERM_ACC": 0.8342,
+      "TERM_CORRECT": 780,
+      "TERM_TOTAL": 935,
+      "eval_results": "/mnt/data1/jiaxuanluo/tagged_acl_de_lm3_serial_promptfix_cache80s60s_audioauto_max40lm_20260526T030216_taurus/de/dtagacl_de_lm3_serial_promptfix_cache80s60s_audioauto_max40lm_lm3_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    }
+  }
+}

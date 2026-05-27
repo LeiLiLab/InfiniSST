@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T0405__simuleval__tagged_acl_tmsft_gttermwrap_exact_ja_lm1to4_hn1024_tau078_batch_aries8",
+  "event_type": "simuleval",
+  "family": "tagged_acl_tmsft_gtwrap_ja_hn1024_tau078",
+  "variant": "tmsft_gttermwrap_exact_ja_lm1to4_hn1024_tau078_batch_aries8",
+  "status": "cancelled_wrong_language",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmsft_gttermwrap_exact_ja_hn1024_tau078_batch_aries_lm1to4.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_tmsft_gttermwrap_exact_ja_hn1024_tau078_batch_aries_lm1to4.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries \"mkdir -p /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmsft_gttermwrap_exact_ja_hn1024_tau078_batch_20260525T0405_tagacl_tmsftgtwrap_ja_hn1024_tau078_lm1to4_aries && cd /mnt/taurus/home/jiaxuanluo/InfiniSST && setsid bash -lc 'RUN_STAMP=20260525T0405_tagacl_tmsftgtwrap_ja_hn1024_tau078_lm1to4_aries LMS=\\\"1 2 3 4\\\" GPU_PAIRS_CSV=\\\"0,1;2,3;4,5;6,7\\\" WANDB_LOG_OVERRIDE=0 bash documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmsft_gttermwrap_exact_ja_hn1024_tau078_batch_aries_lm1to4.sh' > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmsft_gttermwrap_exact_ja_hn1024_tau078_batch_20260525T0405_tagacl_tmsftgtwrap_ja_hn1024_tau078_lm1to4_aries/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmsft_gttermwrap_exact_ja_hn1024_tau078_batch_20260525T0405_tagacl_tmsftgtwrap_ja_hn1024_tau078_lm1to4_aries/top.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmsft_gttermwrap_exact_ja_hn1024_tau078_batch_20260525T0405_tagacl_tmsftgtwrap_ja_hn1024_tau078_lm1to4_aries/top.pid && cat /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmsft_gttermwrap_exact_ja_hn1024_tau078_batch_20260525T0405_tagacl_tmsftgtwrap_ja_hn1024_tau078_lm1to4_aries/top.pid\"",
+  "parent_run_ids": [
+    "juqlpjdc"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmsft_gttermwrap_exact_ja_hn1024_tau078_batch_aries_lm1to4.sh",
+      "metadata": {}
+    },
+    {
+      "role": "delegate_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh",
+      "metadata": {}
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_tmsft_gttermwrap_exact_ja_hn1024_tau078_batch_aries_lm1to4.md",
+      "metadata": {}
+    },
+    {
+      "role": "parent_train_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/train/sst_omni_train/manifests/2026/05/20260525T0250__speech_llm_train__tmsft_gttermwrap_exact_ja_r32a32_ep4_taurus8.json",
+      "metadata": {
+        "event_id": "20260525T0250__speech_llm_train__tmsft_gttermwrap_exact_ja_r32a32_ep4_taurus8",
+        "wandb_run_id": "juqlpjdc"
+      }
+    },
+    {
+      "role": "speech_llm_model",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_tmsft_gttermwrap_exact_ja_r32a32_ep4_taurus8/keep1.0_r32/v0-20260525-104902-hf",
+      "metadata": {}
+    },
+    {
+      "role": "eval_input_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_20260524T0933_tagacl_newv9_hn1024_tau078_raw_ja_taurus8/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/ja/all",
+      "metadata": {
+        "source_list_rewritten_to_taurus_paths": true
+      }
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "glossary_tag": "acl6060_tagged_gt_raw_min_norm2"
+      }
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever_id": "HN1024"
+      }
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmsft_gttermwrap_exact_ja_hn1024_tau078_batch_20260525T0405_tagacl_tmsftgtwrap_ja_hn1024_tau078_lm1to4_aries",
+      "metadata": {}
+    },
+    {
+      "role": "pid_file",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmsft_gttermwrap_exact_ja_hn1024_tau078_batch_20260525T0405_tagacl_tmsftgtwrap_ja_hn1024_tau078_lm1to4_aries/top.pid",
+      "metadata": {}
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmsft_gttermwrap_exact_ja_hn1024_tau078_batch_20260525T0405_tagacl_tmsftgtwrap_ja_hn1024_tau078_lm1to4_aries",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "host": "aries",
+    "gpu_pairs": [
+      "0,1",
+      "2,3",
+      "4,5",
+      "6,7"
+    ],
+    "language": "ja",
+    "latency_multipliers": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "same_lm_batch": true,
+    "parallel_lm_processes": 4,
+    "talks_per_lm": 5,
+    "max_new_tokens": 80,
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 12288,
+    "rag_tau": 0.78,
+    "rag_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "runtime_glossary": "acl6060_tagged_gt_raw_min_norm2",
+    "wandb_logging": "disabled_for_fast_artifact_readout",
+    "submitted_utc": "2026-05-25T04:09:42Z",
+    "remote_shell_pid": 3551802,
+    "launcher_pid": 3551804,
+    "startup_evidence": {
+      "gpu_memory_mib": {
+        "0": 31782,
+        "1": 31782,
+        "2": 31782,
+        "3": 31782,
+        "4": 31782,
+        "5": 31782,
+        "6": 31782,
+        "7": 31782
+      },
+      "log_markers": [
+        "[RUN] lm=1 gpu_pair=0,1",
+        "[RUN] lm=2 gpu_pair=2,3",
+        "[RUN] lm=3 gpu_pair=4,5",
+        "[RUN] lm=4 gpu_pair=6,7"
+      ]
+    },
+    "cancelled_utc": "2026-05-25T04:12:20Z",
+    "status_note": "Cancelled after startup because the requested language was de, not ja. No JA metrics from this event should be used."
+  }
+}

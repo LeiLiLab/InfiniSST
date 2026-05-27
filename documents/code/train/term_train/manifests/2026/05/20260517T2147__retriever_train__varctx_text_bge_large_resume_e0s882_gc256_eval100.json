@@ -1,0 +1,266 @@
+{
+  "schema_version": 1,
+  "event_id": "20260517T2147__retriever_train__varctx_text_bge_large_resume_e0s882_gc256_eval100",
+  "event_type": "retriever_train",
+  "family": "sst_ood_hardneg",
+  "variant": "vctx576_txt_bgel_resume_g256_eval100",
+  "status": "planned",
+  "project": "qwen3_rag",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260517__varctx_lmlb_v3_text_bge_large_en_resume_e0s882_taurus8_gc256_eval100.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260517__varctx_lmlb_v3_text_bge_large_en_resume_e0s882_gc256_eval100.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/general/experiment_event.py launch documents/code/train/term_train/manifests/2026/05/20260517T2147__retriever_train__varctx_text_bge_large_resume_e0s882_gc256_eval100.json -- sbatch --parsable documents/code/train/term_train/launchers/2026/05/20260517__varctx_lmlb_v3_text_bge_large_en_resume_e0s882_taurus8_gc256_eval100.sh",
+  "parent_run_ids": [
+    "ggeqpwie",
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260517__varctx_lmlb_v3_text_bge_large_en_resume_e0s882_taurus8_gc256_eval100.sh",
+      "metadata": {}
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn1024_gsv2full_gsdedup_varctx_lmlb_v3_tcmoff_ep6_8gpu_aries.sh",
+      "metadata": {}
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh",
+      "metadata": {}
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260517__varctx_lmlb_v3_text_bge_large_en_resume_e0s882_gc256_eval100.md",
+      "metadata": {}
+    },
+    {
+      "role": "source_manifest",
+      "type": "manifest",
+      "direction": "control",
+      "path": "documents/code/train/term_train/manifests/2026/05/20260517T0000__retriever_train__varctx_text_bge_large_taurus8_fast_eval.json",
+      "metadata": {
+        "source_run_id": "ggeqpwie",
+        "source_slurm_job_id": "45236"
+      }
+    },
+    {
+      "role": "handoff_report",
+      "type": "report",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/20260517_varctx_text_bge_large_resume_handoff.md",
+      "metadata": {}
+    },
+    {
+      "role": "resume_checkpoint",
+      "type": "model_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_txt_bgel_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_dev100Tau1_eval240_taurus8_smoke2000_epoch_0.pt",
+      "metadata": {
+        "source_run_id": "ggeqpwie",
+        "source_slurm_job_id": "45236",
+        "epoch": 0,
+        "global_step": 882,
+        "size_human": "3.6G",
+        "must_transfer": true
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_varctx2p88_3p84_4p80_5p76.jsonl",
+      "metadata": {
+        "size_human": "6.6G"
+      }
+    },
+    {
+      "role": "train_audio_chunks",
+      "type": "audio_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_audio_chunks_gsv2full_gsdedup_varctx2p88_3p84_4p80_5p76",
+      "metadata": {
+        "subdirs": [
+          "2p88",
+          "3p84",
+          "4p8",
+          "5p76",
+          "wiki_synth"
+        ],
+        "must_transfer": true
+      }
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_varctx2p88_3p84_4p80_5p76_new_version.jsonl",
+      "metadata": {
+        "size_human": "5.9M"
+      }
+    },
+    {
+      "role": "dev_audio_chunks",
+      "type": "audio_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_audio_chunks_varctx_m3",
+      "metadata": {
+        "must_transfer": true
+      }
+    },
+    {
+      "role": "acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_extracted_paper_glossary_varctx2p88_3p84_4p80_5p76/acl6060_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out ACL readout, not model selection",
+        "size_human": "2.7M"
+      }
+    },
+    {
+      "role": "acl_audio_chunks",
+      "type": "audio_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_varctx2p88_3p84_4p80_5p76/audio_chunks",
+      "metadata": {
+        "subdirs": [
+          "2p88",
+          "3p84",
+          "4p8",
+          "5p76"
+        ],
+        "must_transfer": true
+      }
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76/medicine_dev_dataset.jsonl",
+      "metadata": {
+        "size_human": "8.3M"
+      }
+    },
+    {
+      "role": "medicine_audio_chunks",
+      "type": "audio_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76/audio_chunks",
+      "metadata": {
+        "must_transfer": true
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample10000.json",
+      "metadata": {
+        "size_human": "1.3M"
+      }
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_gt_union_gs10000_min_norm2_backfill.json",
+      "metadata": {
+        "usage": "held-out ACL readout with min-norm-2 backfilled gs10k",
+        "size_human": "1.7M"
+      }
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76/medicine_glossary_gt_plus_medicine_wiki_gs10000.json",
+      "metadata": {
+        "size_human": "736K"
+      }
+    },
+    {
+      "role": "nlp_ai_cs_eval_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/data_pre/glossary_scale/wiki_glossary_nlp_ai_cs_enriched.json",
+      "metadata": {
+        "size_human": "2.3M"
+      }
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs",
+      "metadata": {}
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "data_tag": "3variant_gsv2full_gsdedup_vctx576_bgel",
+    "extra_wandb_tags": [
+      "variant:vctx576_bgel_resume_g256",
+      "compute:taurus-8gpu",
+      "source:ggeqpwie"
+    ],
+    "text_encoder_preset": "bge-large-en-v1.5",
+    "text_model_id": "BAAI/bge-large-en-v1.5",
+    "audio_encoder_preset": "qwen3-omni",
+    "audio_model_id": "Atotti/Qwen3-Omni-AudioTransformer",
+    "audio_feature_extractor_id": "openai/whisper-large-v3",
+    "fixed_audio_seconds": 5.76,
+    "eval_fixed_audio_seconds": 5.76,
+    "num_gpus": 8,
+    "per_gpu_batch": 1024,
+    "global_batch": 8192,
+    "grad_cache_chunk_size": 256,
+    "resume_from_grad_cache_chunk_size": 128,
+    "resume_checkpoint_epoch": 0,
+    "resume_checkpoint_global_step": 882,
+    "max_steps": 0,
+    "epochs": 6,
+    "scheduler_epochs": 6,
+    "eval_steps_sample": 100,
+    "eval_top100_samples": 0,
+    "eval_sample_limit": 100,
+    "acl_eval_sample_limit": 0,
+    "medicine_eval_sample_limit": 0,
+    "eval_glossary_match_min_norm_chars": 2,
+    "strict_train_eval_term_filter": false,
+    "best_metric": "eval_dev/recall@10_gs10000",
+    "best_metric_secondary": "eval_acl6060/recall@10",
+    "tcm_off": true,
+    "acl_policy": "held-out readout only; do not select checkpoint or hyperparameters from ACL",
+    "handoff": {
+      "new_cluster_data_shared": false,
+      "must_transfer_resume_checkpoint": true,
+      "must_transfer_jsonl_and_audio_roots": true,
+      "path_rewrite_required_unless_mounts_are_recreated": true
+    }
+  }
+}

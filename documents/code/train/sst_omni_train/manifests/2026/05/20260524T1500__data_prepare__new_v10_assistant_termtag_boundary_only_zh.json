@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T1500__data_prepare__new_v10_assistant_termtag_boundary_only_zh",
+  "event_type": "data_prepare",
+  "family": "speech_llm_sft_data",
+  "variant": "new_v10_assistant_termtag_boundary_only_zh",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": "direct:pid=2662679",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v10_assistant_termtag_boundary_only_zh.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260524__new_v10_assistant_termtag_boundary_only_zh_data.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && FORCE_OVERWRITE=1 bash documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v10_assistant_termtag_boundary_only_zh.sh' > /mnt/gemini/data1/jiaxuanluo/logs/20260524_new_v10_assistant_termtag_boundary_only_zh.out 2> /mnt/gemini/data1/jiaxuanluo/logs/20260524_new_v10_assistant_termtag_boundary_only_zh.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/20260524_new_v10_assistant_termtag_boundary_only_zh.pid",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v10_assistant_termtag_boundary_only_zh.sh"
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260524__new_v10_assistant_termtag_boundary_only_zh_data.md"
+    },
+    {
+      "role": "data_prepare_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/wrap_assistant_term_targets.py"
+    },
+    {
+      "role": "base_train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_20260522/train_s_zh_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_cacheonly.jsonl"
+    },
+    {
+      "role": "base_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_20260522/dev_s_zh_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_cacheonly.jsonl"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v10_assistant_termtag_boundary_only_no_gt_zero_oldnewv3_zh_20260524/train_s_zh_new_v10_assistant_termtag_boundary_only_no_gt_zero_oldnewv3.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v10_assistant_termtag_boundary_only_no_gt_zero_oldnewv3_zh_20260524/dev_s_zh_new_v10_assistant_termtag_boundary_only_no_gt_zero_oldnewv3.jsonl"
+    },
+    {
+      "role": "summary",
+      "type": "report",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v10_assistant_termtag_boundary_only_no_gt_zero_oldnewv3_zh_20260524/new_v10_assistant_termtag_boundary_only_no_gt_zero_oldnewv3_summary.json"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "logs",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524_new_v10_assistant_termtag_boundary_only_zh.out"
+    },
+    {
+      "role": "stderr",
+      "type": "logs",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524_new_v10_assistant_termtag_boundary_only_zh.err"
+    },
+    {
+      "role": "pid_file",
+      "type": "logs",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524_new_v10_assistant_termtag_boundary_only_zh.pid"
+    }
+  ],
+  "metadata": {
+    "language": "zh",
+    "base_event_id": "20260523T2235__data_prepare__new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh",
+    "new_v9_rewrite_events": 4591,
+    "new_v9_true_boundary_delay_events": 2093,
+    "new_v9_non_boundary_rewrite_events_to_remove": 2498,
+    "policy": "exact wrapping plus adjacent assistant boundary-only rewrite; arbitrary SequenceMatcher local fuzzy rewrite disabled",
+    "completed_at_utc": "2026-05-24T10:38:25Z",
+    "train_rows": 12500,
+    "train_chunks": 68450,
+    "train_assistant_tag_replacements": 81377,
+    "train_assistant_tag_exact_replacements": 78389,
+    "train_assistant_tag_boundary_delay_replacements": 2988,
+    "train_skipped_missing_boundary_split": 11747,
+    "train_rows_with_assistant_tags": 12061,
+    "train_rows_with_tag_rate": 0.96488,
+    "dev_rows": 355
+  }
+}

@@ -1,0 +1,150 @@
+{
+  "schema_version": "1.0",
+  "event_id": "20260524T1426__simuleval__tagged_acl_same_lm_batch_v1exact_hn1024_tau078_raw_zh_lm2",
+  "event_type": "simuleval",
+  "family": "tagged_acl_same_lm_batch_v1_hn1024_tau078",
+  "variant": "zh_raw_lm2_tp2_maxseq5_exact_batchmel_retriever_taurus456",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": "mr9z5mzp",
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_same_lm_batch_v1_hn1024_tau078_raw_zh_lm2_taurus456.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_same_lm_batch_v1_hn1024_tau078_raw_zh_lm2.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && RUN_TAG_OVERRIDE=20260524T1426_tagacl_same_lm_batch_v1exact_hn1024_tau078_raw_zh_lm2_taurus456 CUDA_VISIBLE_DEVICES_PHYSICAL_OVERRIDE=4,5,6 bash documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_same_lm_batch_v1_hn1024_tau078_raw_zh_lm2_taurus456.sh' > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_same_lm_batch_v1_hn1024_tau078_raw_zh_lm2_20260524T1426_tagacl_same_lm_batch_v1exact_hn1024_tau078_raw_zh_lm2_taurus456/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_same_lm_batch_v1_hn1024_tau078_raw_zh_lm2_20260524T1426_tagacl_same_lm_batch_v1exact_hn1024_tau078_raw_zh_lm2_taurus456/top.err < /dev/null & echo $!",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "bash",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_same_lm_batch_v1_hn1024_tau078_raw_zh_lm2_taurus456.sh",
+      "metadata": {}
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py",
+      "metadata": {
+        "rag_batch_retrieval": true,
+        "max_new_tokens_policy": "fixed"
+      }
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "agents/streaming_maxsim_retriever.py",
+      "metadata": {
+        "new_batch_api": "retrieve_timeline_batch"
+      }
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_same_lm_batch_v1_hn1024_tau078_raw_zh_lm2.md",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint",
+      "type": "hf_model",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm_exports/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8/keep1.0_r32/v0-20260524-062743-hf",
+      "metadata": {
+        "model_label": "new_v9_termtag_delay_oldnewv3_r32a64"
+      }
+    },
+    {
+      "role": "checkpoint",
+      "type": "pt",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever_id": "lh1b88kw",
+        "tau": 0.78
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "glossary_kind": "raw",
+        "fixed_denominator": true
+      }
+    },
+    {
+      "role": "eval_input",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_zh_lm1_20260524T0507_tagacl_newv9_hn1024_tau078_raw_zh_lm1_aries01/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/zh/all",
+      "metadata": {
+        "source": "tagged_acl_full_all_input_bundle"
+      }
+    },
+    {
+      "role": "baseline_eval_output",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_zh_lm23_20260524T0522_tagacl_newv9_hn1024_tau078_raw_zh_lm23_aries4567/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/zh/dtagacl_new_v9_hn1024_tau078_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2",
+      "metadata": {
+        "baseline": "serial_simuleval_zh_lm2_raw"
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_same_lm_batch_v1_hn1024_tau078_raw_zh_lm2_20260524T1411_tagacl_same_lm_batch_v1_hn1024_tau078_raw_zh_lm2_taurus456/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078_same_lm_batch_v1",
+      "metadata": {},
+      "path_or_uri": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_same_lm_batch_v1_hn1024_tau078_raw_zh_lm2_20260524T1426_tagacl_same_lm_batch_v1exact_hn1024_tau078_raw_zh_lm2_taurus456/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078_same_lm_batch_v1"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_same_lm_batch_v1_hn1024_tau078_raw_zh_lm2_20260524T1411",
+      "metadata": {},
+      "path_or_uri": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_same_lm_batch_v1_hn1024_tau078_raw_zh_lm2_20260524T1426_tagacl_same_lm_batch_v1exact_hn1024_tau078_raw_zh_lm2_taurus456"
+    },
+    {
+      "role": "report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_same_lm_batch_v1_hn1024_tau078_raw_zh_lm2_20260524T1411_tagacl_same_lm_batch_v1_hn1024_tau078_raw_zh_lm2_taurus456/compare_same_lm_batch_v1_lm2.md",
+      "metadata": {},
+      "path_or_uri": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_same_lm_batch_v1_hn1024_tau078_raw_zh_lm2_20260524T1426_tagacl_same_lm_batch_v1exact_hn1024_tau078_raw_zh_lm2_taurus456/compare_same_lm_batch_v1_lm2.md",
+      "exists_local": 0
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "lm": 2,
+    "glossary_kind": "raw",
+    "retriever": "HN1024",
+    "tau": 0.78,
+    "same_lm_batch": true,
+    "mixed_lm": false,
+    "vllm_tp_size": 2,
+    "max_num_seqs": 5,
+    "scheduler_batch_size": 5,
+    "rag_batch_retrieval": true,
+    "max_new_tokens": 40,
+    "max_new_tokens_policy": "fixed",
+    "max_cache_seconds": 80,
+    "keep_cache_seconds": 60,
+    "verdict": "completed_near_serial_equivalent_retriever_inputs_match_generation_differs_under_batched_sampling",
+    "compare_report": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_same_lm_batch_v1_hn1024_tau078_raw_zh_lm2_20260524T1426_tagacl_same_lm_batch_v1exact_hn1024_tau078_raw_zh_lm2_taurus456/compare_same_lm_batch_v1_lm2.md",
+    "serial_equivalence_passed": "near_metrics_not_token_exact",
+    "run_tag": "20260524T1426_tagacl_same_lm_batch_v1exact_hn1024_tau078_raw_zh_lm2_taurus456",
+    "retriever_batch_mode": "batched_whisper_feature_extractor_per_sample_audio_encoder_exact",
+    "previous_failed_event": "20260524T1411__simuleval__tagged_acl_same_lm_batch_v1_hn1024_tau078_raw_zh_lm2",
+    "direct_pid": 3423340,
+    "wandb_run_id": "mr9z5mzp"
+  },
+  "created_at": "2026-05-24T14:25:52+00:00",
+  "updated_at": "2026-05-24T14:35:10+00:00"
+}

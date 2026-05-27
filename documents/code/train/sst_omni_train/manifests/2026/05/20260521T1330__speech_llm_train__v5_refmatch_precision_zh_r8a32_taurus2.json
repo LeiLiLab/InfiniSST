@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "event_id": "20260521T1330__speech_llm_train__v5_refmatch_precision_zh_r8a32_taurus2",
+  "event_type": "speech_llm_train",
+  "family": "speech_llm_termmap_retriever",
+  "variant": "v5_refmatch_precision_zh_r8a32",
+  "status": "planned",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": "45269",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260521__speech_llm_v5_refmatch_precision_zh_taurus2_r8a32.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260521__speech_llm_v5_refmatch_precision_zh_r8a32.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "HOST_GPU_DEVICES_OVERRIDE_CSV=<two-free-gpus-colon-separated> MASTER_PORT=<free-port> bash documents/code/train/sst_omni_train/launchers/2026/05/20260521__speech_llm_v5_refmatch_precision_zh_taurus2_r8a32.sh",
+  "parent_run_ids": [
+    "dvpmpqma",
+    "k2xo8quk"
+  ],
+  "parent_event_ids": [
+    "20260521T1314__data_prepare__v5_refmatch_precision_termmap_zh",
+    "20260520T0010__speech_llm_train__v3_real_zh_r8a32_taurus2"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260521__speech_llm_v5_refmatch_precision_zh_taurus2_r8a32.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260521__speech_llm_v5_refmatch_precision_zh_r8a32.md"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v5_refmatch_precision_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260521/train_s_zh_v5_refmatch_precision_termmap_lh1b88kw_tau073_srcmatch100k.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v5_refmatch_precision_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260521/dev_s_zh_v5_refmatch_precision_termmap_lh1b88kw_tau073_srcmatch100k.jsonl"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data2/jiaxuanluo/speech_llm_v5_refmatch_precision_termmap_zh_lh1b88kw_tau073_srcmatch100k_r8a32_taurus2"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_v5_refmatch_precision_r8a32_<timestamp>.out",
+      "metadata": {
+        "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_v5_refmatch_precision_r8a32_<timestamp>.err"
+      }
+    }
+  ],
+  "metadata": {
+    "lora_rank": 8,
+    "lora_alpha": 32,
+    "term_map_format": "plain",
+    "compute": "taurus2",
+    "baseline_run_id": "dvpmpqma",
+    "negative_control_run_id": "k2xo8quk",
+    "launch_mode": "direct_docker_on_taurus_hold_node",
+    "hold_slurm_job_id": "45269",
+    "blocked_currently": "taurus GPUs currently occupied by no-HN retriever run; launch when two GPUs are free"
+  }
+}

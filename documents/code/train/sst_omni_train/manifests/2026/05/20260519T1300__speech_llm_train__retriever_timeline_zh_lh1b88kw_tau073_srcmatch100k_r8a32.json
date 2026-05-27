@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "event_id": "20260519T1300__speech_llm_train__retriever_timeline_zh_lh1b88kw_tau073_srcmatch100k_r8a32",
+  "event_type": "speech_llm_train",
+  "family": "speech_llm_termmap_retriever",
+  "variant": "zh_lh1b88kw_tau073_timeline_v2_srcmatch100k_r8a32_taurus4",
+  "status": "running",
+  "project": "sst_omni",
+  "wandb_run_id": "dvpmpqma",
+  "slurm_job_id": "45269",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__speech_llm_retriever_timeline_zh_lh1b88kw_tau073_srcmatch100k_taurus4_r8a32.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260519__speech_llm_retriever_timeline_zh_lh1b88kw_tau073_srcmatch100k_r8a32.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "setsid /usr/bin/env HOST_GPU_DEVICES_OVERRIDE_CSV=4:5:6:7 MASTER_PORT=29559 bash -lc 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && bash documents/code/train/sst_omni_train/launchers/2026/05/20260519__speech_llm_retriever_timeline_zh_lh1b88kw_tau073_srcmatch100k_taurus4_r8a32.sh' > /mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v2_srcmatch100k_r8a32_train_20260519T1300.out 2> /mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v2_srcmatch100k_r8a32_train_20260519T1300.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v2_srcmatch100k_r8a32_train_20260519T1300.pid",
+  "parent_run_ids": [
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__speech_llm_retriever_timeline_zh_lh1b88kw_tau073_srcmatch100k_taurus4_r8a32.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260519__speech_llm_retriever_timeline_zh_lh1b88kw_tau073_srcmatch100k_r8a32.md",
+      "metadata": {}
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/auto_train_sampling_docker.sh",
+      "metadata": {}
+    },
+    {
+      "role": "train_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/auto_train_sampling_rank32_try.sh",
+      "metadata": {
+        "rank_overridden_by_env": 8,
+        "alpha_overridden_by_env": 32
+      }
+    },
+    {
+      "role": "parent_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/train/sst_omni_train/manifests/2026/05/20260519T1235__data_prepare__retriever_timeline_termmap_zh_lh1b88kw_tau073_srcmatch100k.json",
+      "metadata": {
+        "event_id": "20260519T1235__data_prepare__retriever_timeline_termmap_zh_lh1b88kw_tau073_srcmatch100k"
+      }
+    },
+    {
+      "role": "mcore_model",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/Qwen3-Omni-30B-A3B-Instruct-v2/",
+      "metadata": {
+        "source": "initial_mcore_base"
+      }
+    },
+    {
+      "role": "base_model_hf",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/Qwen3-Omni-30B-A3B-Instruct",
+      "metadata": {}
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260519/train_s_zh_retriever_timeline_lh1b88kw_tau073_srcmatch100k_k10_lb1p92.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260519/dev_s_zh_retriever_timeline_lh1b88kw_tau073_srcmatch100k_k10_lb1p92.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/data2/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_srcmatch100k_r8a32_taurus4",
+      "metadata": {}
+    },
+    {
+      "role": "direct_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v2_srcmatch100k_r8a32_train_20260519T1300.out",
+      "metadata": {
+        "stream": "stdout"
+      }
+    },
+    {
+      "role": "direct_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v2_srcmatch100k_r8a32_train_20260519T1300.err",
+      "metadata": {
+        "stream": "stderr"
+      }
+    }
+  ],
+  "metadata": {
+    "compute": "taurus_hold45269",
+    "allocation_job_id": "45269",
+    "gpu_csv": "4:5:6:7",
+    "lora_rank": 8,
+    "lora_alpha": 32,
+    "max_epochs": 1,
+    "iterations_per_epoch": 500,
+    "save_interval": 500,
+    "nproc_per_node": 4,
+    "expert_model_parallel_size": 4,
+    "tensor_model_parallel_size": 2,
+    "sequence_parallel": true,
+    "global_batch_size": 4,
+    "micro_batch_size": 1,
+    "max_length": 4096,
+    "data_policy": "V2 source-glossary exact GT from imported zh100k glossary; retriever timeline term_map tau=0.73 top_k=10 no GT backfill."
+    ,
+    "launch_pid": 1245800,
+    "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/sst_omni/runs/dvpmpqma"
+  }
+}

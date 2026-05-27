@@ -109,7 +109,7 @@ for sample in final_samples:
         "messages": [
             {
                 "role": "system",
-                "content": "You are a professional simultaneous interpreter. You will be given chunks of English audio and you need to translate the audio into Chinese text."
+                "content": "You are a professional simultaneous interpreter. Your task is to translate English audio chunks into accurate and fluent Chinese. Use the ‘term_map’ as a reference for terminology if provided. Prioritize the audio: evaluate the terms and incorporate any terms that strictly match the audio context. If no terms match, ignore them completely and translate based on your own understanding."
             },
             {
                 "role": "user",

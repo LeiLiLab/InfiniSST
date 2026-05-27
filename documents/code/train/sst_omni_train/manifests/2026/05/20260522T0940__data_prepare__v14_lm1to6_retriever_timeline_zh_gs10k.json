@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T0940__data_prepare__v14_lm1to6_retriever_timeline_zh_gs10k",
+  "event_type": "data_prepare",
+  "family": "speech_llm_termmap_sft",
+  "variant": "zh_v14_lm1to6_retriever_timeline_lh1b88kw_tau073_gs10k",
+  "status": "cancelled",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": "direct_aries67_v14_data",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_v14_lm1to6_retriever_timeline_zh_gs10k.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__v14_lm1to6_retriever_timeline_zh_gs10k_data.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p 20042 jiaxuanluo@localhost \"cd /mnt/taurus/home/jiaxuanluo/InfiniSST && setsid bash -lc 'bash documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_v14_lm1to6_retriever_timeline_zh_gs10k.sh' > documents/logs/speech_llm_data/20260522_v14_lm1to6_gs10k_aries67.out 2> documents/logs/speech_llm_data/20260522_v14_lm1to6_gs10k_aries67.err < /dev/null & echo \\$! > documents/logs/speech_llm_data/20260522_v14_lm1to6_gs10k_aries67.pid\"",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_v14_lm1to6_retriever_timeline_zh_gs10k.sh"
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_v13_lm1to6_retriever_timeline_zh.sh"
+    },
+    {
+      "role": "data_prep_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_source_glossary_exact_gt_terms.py"
+    },
+    {
+      "role": "data_prep_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_retriever_timeline_termmap_sft.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__v14_lm1to6_retriever_timeline_zh_gs10k_data.md"
+    },
+    {
+      "role": "train_gt_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample10000_zh.json"
+    },
+    {
+      "role": "source_gt_jsonl",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v14_lm1to6_retriever_timeline_zh_lh1b88kw_tau073_gs10k_20260522/train_s_zh_srcchunk_asr_10k_future_ref_gt_termmap_none.jsonl"
+    },
+    {
+      "role": "text_index",
+      "type": "checkpoint",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v14_lm1to6_retriever_timeline_zh_lh1b88kw_tau073_gs10k_20260522/lh1b88kw_tau073_zh10k_text_index.pt"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v14_lm1to6_retriever_timeline_zh_lh1b88kw_tau073_gs10k_20260522/train_s_zh_v14_lm1to6_retriever_timeline_tau073_k10_minctx2p88_gs10k.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v14_lm1to6_retriever_timeline_zh_lh1b88kw_tau073_gs10k_20260522/dev_s_zh_v14_lm1to6_retriever_timeline_tau073_k10_minctx2p88_gs10k_first200.jsonl"
+    },
+    {
+      "role": "report",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v14_lm1to6_retriever_timeline_zh_lh1b88kw_tau073_gs10k_20260522/v14_lm1to6_retriever_timeline_gs10k_summary.json"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_data/20260522_v14_lm1to6_gs10k_aries67.out"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_data/20260522_v14_lm1to6_gs10k_aries67.err"
+    },
+    {
+      "role": "pid",
+      "type": "text",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_data/20260522_v14_lm1to6_gs10k_aries67.pid"
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "glossary_size": 10000,
+    "merge_multiplier_min": 1,
+    "merge_multiplier_max": 6,
+    "lookback_sec": 1.92,
+    "min_context_sec": 2.88,
+    "max_context_sec": 5.76,
+    "tau": 0.73,
+    "top_k": 10,
+    "gpu_devices_csv": "6,7",
+    "num_shards": 2,
+    "gt_backfill": false,
+    "cancelled_at_utc": "2026-05-22T09:44:00Z",
+    "cancel_reason": "10k glossary source/ref exact-match GT was too sparse for speech-LLM term-adoption SFT: 56 future-ref GT terms across 68,705 chunks; user decided not to pursue V14."
+  }
+}

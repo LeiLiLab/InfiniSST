@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "event_id": "20260520T1530__analysis__tagged_acl_main_results_fourline_figure",
+  "event_type": "analysis",
+  "family": "tagged_acl_origin_bsz4_tau073",
+  "variant": "fourline_main_results_figure_raw_tagged_glossary",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/src/plot_tagged_acl_main_results_20260520.py",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260520__tagged_acl_main_results_fourline_figure.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/simuleval/src/plot_tagged_acl_main_results_20260520.py",
+  "parent_run_ids": [
+    "61wq39ud"
+  ],
+  "artifacts": [
+    {
+      "role": "analysis_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/plot_tagged_acl_main_results_20260520.py",
+      "metadata": {
+        "plot_current_glossary": "raw",
+        "current_method_label": "SLLM+RAG (no TM-SFT)"
+      }
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260520__tagged_acl_main_results_fourline_figure.md",
+      "metadata": {}
+    },
+    {
+      "role": "source_simuleval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260520T1010__simuleval__tagged_acl_origin_bsz4_tau073_fullcorpus_ragreset_mp3.json",
+      "metadata": {
+        "status": "partial_failed_but_outputs_reused"
+      }
+    },
+    {
+      "role": "source_simuleval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260520T1435__simuleval__tagged_acl_origin_bsz4_tau073_missing_de_resume.json",
+      "metadata": {
+        "status": "success",
+        "completed_full_sweep": true
+      }
+    },
+    {
+      "role": "current_eval_output",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/tagged_acl_origin_bsz4_tau073_baseline_20260520T1010_ragreset_full_mp3/full",
+      "metadata": {
+        "selected_glossary": "raw",
+        "expected_settings": 36,
+        "plotted_settings": 12
+      }
+    },
+    {
+      "role": "figure_png",
+      "type": "image",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260520_tagged_acl_main_results_fourline.png",
+      "metadata": {}
+    },
+    {
+      "role": "figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260520_tagged_acl_main_results_fourline.pdf",
+      "metadata": {}
+    },
+    {
+      "role": "plot_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260520_tagged_acl_main_results_fourline_data.tsv",
+      "metadata": {
+        "contains": "rows used for plot only; RASST is previous placeholder data"
+      }
+    }
+  ],
+  "metadata": {
+    "acl_usage": "held-out readout only",
+    "metric_denominator": "tagged raw glossary",
+    "x_axis": "StreamLAAL",
+    "panels": "2x3 term accuracy and BLEU for zh,de,ja",
+    "current_glossary_selection": "raw",
+    "current_method_label": "SLLM+RAG (no TM-SFT)",
+    "rasst_data_status": "previous placeholder, pending update"
+  }
+}

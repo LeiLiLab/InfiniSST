@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T1400__data_prepare__speech_llm_new_v10_sourceexact_de_ja",
+  "event_type": "data_prepare",
+  "family": "speech_llm_tcm_termmap",
+  "variant": "new_v10_sourceexact_de_ja",
+  "status": "canceled",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_clean_new_v10_sourceexact_de_ja.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260524__new_v10_sourceexact_de_ja_data.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "parallel detached: de pid 2701872 on GPUs 0,1,2,3; ja pid 2701873 on GPUs 4,5,6,7; both use LANGS_OVERRIDE single language, NUM_SHARDS_OVERRIDE=4, SCORE_THRESHOLD_OVERRIDE=0.78, FORCE_OVERWRITE=1, RUN_VARIANT_STAGE_OVERRIDE=1",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_clean_new_v10_sourceexact_de_ja.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260524__new_v10_sourceexact_de_ja_data.md"
+    },
+    {
+      "role": "source_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_source_glossary_exact_gt_terms.py"
+    },
+    {
+      "role": "source_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_retriever_timeline_termmap_sft.py"
+    },
+    {
+      "role": "source_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/wrap_assistant_term_targets.py"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/train_s_de_v4_ner_baseline_aligned_rate1.0_k20_final.jsonl"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/train_s_ja_v4_ner_baseline_aligned_rate1.0_k20_final.jsonl"
+    },
+    {
+      "role": "source_tsv",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/train_xl_case_robust_asr-filtered_de_metricx-qe3.0_align.tsv"
+    },
+    {
+      "role": "source_tsv",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/train_xl_case_robust_asr-filtered_ja_metricx-qe3.0_align.tsv"
+    },
+    {
+      "role": "train_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/glossary_for_de_rate1.0_k20.json"
+    },
+    {
+      "role": "train_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/glossary_for_ja_rate1.0_k20.json"
+    },
+    {
+      "role": "checkpoint",
+      "type": "model",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v10_sourceexact_de_20260524/train_s_de_new_v10_sourceexact_llmvariant_no_gt_zero_termtag_boundary.jsonl"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v10_sourceexact_ja_20260524/train_s_ja_new_v10_sourceexact_llmvariant_no_gt_zero_termtag_boundary.jsonl"
+    },
+    {
+      "role": "report",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v10_sourceexact_de_20260524/new_v10_sourceexact_de_summary.json"
+    },
+    {
+      "role": "report",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v10_sourceexact_ja_20260524/new_v10_sourceexact_ja_summary.json"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/new_v10_sourceexact_de_20260524T111118.out"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/new_v10_sourceexact_de_20260524T111118.err"
+    },
+    {
+      "role": "pid_file",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/new_v10_sourceexact_de_20260524T111118.pid"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/new_v10_sourceexact_ja_20260524T111118.out"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/new_v10_sourceexact_ja_20260524T111118.err"
+    },
+    {
+      "role": "pid_file",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/new_v10_sourceexact_ja_20260524T111118.pid"
+    }
+  ],
+  "metadata": {
+    "gt_policy": "source_chunk_asr exact whole-token match plus future assistant exact target substring",
+    "dirty_gt_derive_script_used": false,
+    "fuzzy_gt_used": false,
+    "assistant_tag_policy": "exact wrap plus adjacent assistant boundary-only repair",
+    "global_fuzzy_assistant_rewrite_used": false,
+    "pid": 2685930,
+    "num_shards": 4,
+    "gpu_devices_csv": "0,1,2,3",
+    "score_threshold": 0.78,
+    "api_key_recorded": false,
+    "pids": {
+      "de": 2701872,
+      "ja": 2701873
+    },
+    "gpu_devices_by_lang": {
+      "de": "0,1,2,3",
+      "ja": "4,5,6,7"
+    },
+    "merge_multiplier_filter": "disabled for de/ja because source JSONL lacks merge_multiplier",
+    "canceled_reason": "Wrong lineage: zh final uses old new_v3 r32 -> new_v4 -> new_v5 -> new_v9, not v13/sourceexact route.",
+    "generated_outputs_removed": true,
+    "do_not_use_for_mainline": true
+  }
+}

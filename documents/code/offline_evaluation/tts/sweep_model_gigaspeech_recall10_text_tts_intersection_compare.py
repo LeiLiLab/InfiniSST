@@ -34,16 +34,20 @@ TTS_ROOT_DIR = "/mnt/gemini/data/siqiouyang/term_dev_tts"
 # new_model_tts_v3: /mnt/gemini/data/jiaxuanluo/q3rag_new_tts_lora-r32-tr16_bs4k_ttsw0.3_ttm=query key value_temperature=0.03_epoch_0.pt
 MODEL_SPECS = [
     {
-        "model_name": "old_model_v1",
+        "model_name": "final_main_result_v1",
         "model_path": "/mnt/gemini/data2/jiaxuanluo/final_main_result_model_v1.pt",
         "enable_tts_eval": False,
     },
+    {
+        "model_name": "ttsw0.0_epoch5",
+        "model_path": (
+            "/mnt/gemini/data/jiaxuanluo/"
+            "q3rag_tts_lora-r32-tr16_bs4k_ttsw0.0_ttm=query key value_temperature=0.03_v2_epoch_5.pt"
+        ),
+        "enable_tts_eval": False,
+    },
 ]
-# "q3rag_tts_lora-r32-tr16_bs4k_ttsw0.5_ttm=query key value_temperature=0.03_v2_epoch_{$EPOCH}.pt"
-# q3rag_tts_lora-r32-tr16_bs4k_ttsw0.5_ttm=query key value_temperature=0.03_v2_epoch_{$EPOCH}.pt
-# "q3rag_new_tts_lora-r32-tr16_bs4k_ttsw0.3_ttm=query key value_temperature=0.03_v2_epoch_{$EPOCH}.pt"
-# Sweep epochs for the new TTS model.
-EPOCH_SWEEP_VALUES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+EPOCH_SWEEP_VALUES: List[int] = []
 EPOCH_PLACEHOLDER = "{$EPOCH}"
 NEW_TTS_MODEL_NAME_PREFIX = "new_model_tts_v2"
 NEW_TTS_MODEL_PATH_TEMPLATE = (
@@ -86,10 +90,10 @@ EXPECTED_CHUNK_SAMPLES = 30720  # 1.92s * 16kHz
 EVAL_BATCH_SIZE = 32
 TTS_EMB_BATCH_SIZE = 256
 MAX_TTS_PROTOTYPES_PER_TERM = 0  # <=0 means use all available prototypes per term
-MAX_CHUNKS = 0  # 0 means no limit
+MAX_CHUNKS = 0  # 0 means no limit; >0 for smoke test
 
 # Output
-OUTPUT_DIR = "/mnt/gemini/data2/jiaxuanluo/offline_eval_recall10_text_tts_intersection_compare"
+OUTPUT_DIR = "/mnt/gemini/data2/jiaxuanluo/offline_eval_text_recall_v1_vs_ttsw0.0_epoch5"
 GLOSSARY_JSON_NAME = "gigaspeech_dev_terms_glossary.json"
 RESULT_TSV_NAME = "model_compare_recall10_text_tts_intersection.tsv"
 PLOT_PNG_NAME = "model_compare_recall10_text_tts_intersection.png"

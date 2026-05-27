@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T1745__speech_llm_train__new_v5_no_gt_zero_oldnewv3_zh_r32a64_tp2_aries2",
+  "event_type": "speech_llm_train",
+  "family": "speech_llm_tcm_termmap",
+  "variant": "new_v5_no_gt_zero_oldnewv3_zh_r32a64_tp2_aries2",
+  "status": "failed",
+  "project": "sst_omni",
+  "wandb_run_id": "cg5qisu9",
+  "slurm_job_id": "direct_aries01_new_v5_train",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__speech_llm_new_v5_no_gt_zero_oldnewv3_zh_aries2_r32a64_tp2.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__speech_llm_new_v5_no_gt_zero_oldnewv3_zh_r32a64_tp2.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "HOST_GPU_DEVICES_OVERRIDE=0,1 MASTER_PORT=30651 bash documents/code/train/sst_omni_train/launchers/2026/05/20260522__speech_llm_new_v5_no_gt_zero_oldnewv3_zh_aries2_r32a64_tp2.sh",
+  "parent_run_ids": [
+    "rf17uw7x"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__speech_llm_new_v5_no_gt_zero_oldnewv3_zh_aries2_r32a64_tp2.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__speech_llm_new_v5_no_gt_zero_oldnewv3_zh_r32a64_tp2.md"
+    },
+    {
+      "role": "data_prepare_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/train/sst_omni_train/manifests/2026/05/20260522T1740__data_prepare__new_v5_no_gt_zero_oldnewv3_llmvariant_zh.json"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_20260522/train_s_zh_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_cacheonly.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_20260522/dev_s_zh_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_cacheonly.jsonl"
+    },
+    {
+      "role": "mcore_model",
+      "type": "checkpoint_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/Qwen3-Omni-30B-A3B-Instruct-v2/"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_r32a64_tp2_aries2"
+    },
+    {
+      "role": "mcore_checkpoint",
+      "type": "checkpoint_dir",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_r32a64_tp2_aries2/keep1.0_r32/v0-20260523-050346"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_train/20260522_new_v5_no_gt_zero_oldnewv3_r32a64_tp2_aries01.out"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_train/20260522_new_v5_no_gt_zero_oldnewv3_r32a64_tp2_aries01.err"
+    },
+    {
+      "role": "pid",
+      "type": "text",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_train/20260522_new_v5_no_gt_zero_oldnewv3_r32a64_tp2_aries01.pid"
+    }
+  ],
+  "metadata": {
+    "data_prepare_event_id": "20260522T1740__data_prepare__new_v5_no_gt_zero_oldnewv3_llmvariant_zh",
+    "gpu_devices": "0,1",
+    "lora_rank": 32,
+    "lora_alpha": 64,
+    "tensor_model_parallel_size": 2,
+    "sequence_parallel": true,
+    "max_length": 3072,
+    "iterations_per_epoch": 1000,
+    "pid": 3108010,
+    "failure_reason": "No space left on device while writing TensorBoard event file on data7 after iteration-1000 checkpoint was saved.",
+    "usable_checkpoint_iteration": 1000
+  }
+}

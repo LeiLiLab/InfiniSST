@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T2135__simuleval__tagged_acl_tmv4_de_lm2_hn1024_batch",
+  "event_type": "simuleval",
+  "family": "tagged_acl_de_lm2_hn1024_batch_cmp",
+  "variant": "tmv4_hn1024_raw_lm2_batch",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": "40i1fl5v",
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_de_lm2_origin_tmv4_hn1024_batch.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_de_lm2_tmv4_hn1024_batch.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries \"cd /mnt/taurus/home/jiaxuanluo/InfiniSST && setsid env METHOD_KEY=tmv4_hn1024 RUN_STAMP=20260524T2135_tagacl_de_lm2_tmv4_hn1024_batch GPU_PAIR=2,3 bash documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_de_lm2_origin_tmv4_hn1024_batch.sh > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_lm2_tmv4_hn1024_batch_20260524T2135_tagacl_de_lm2_tmv4_hn1024_batch/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_lm2_tmv4_hn1024_batch_20260524T2135_tagacl_de_lm2_tmv4_hn1024_batch/top.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_lm2_tmv4_hn1024_batch_20260524T2135_tagacl_de_lm2_tmv4_hn1024_batch/top.pid\"",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_de_lm2_origin_tmv4_hn1024_batch.sh"
+    },
+    {
+      "role": "delegate_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_de_lm2_tmv4_hn1024_batch.md"
+    },
+    {
+      "role": "speech_llm_model",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-de-s_v4_ner_baseline_aligned_rate1.0_k20_final-bsz4"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "eval_input_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_lm2_tmv4_hn1024_batch_20260524T2135_tagacl_de_lm2_tmv4_hn1024_batch"
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_lm2_tmv4_hn1024_batch_20260524T2135_tagacl_de_lm2_tmv4_hn1024_batch"
+    },
+    {
+      "role": "eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_lm2_tmv4_hn1024_batch_20260524T2135_tagacl_de_lm2_tmv4_hn1024_batch/tmv4_de_bsz4_hn1024_tau078_batch_lm2/de/dtagacl_bv1_tmv4_hn1024_hn1024_tau078_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    {
+      "role": "eval_summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_lm2_tmv4_hn1024_batch_20260524T2135_tagacl_de_lm2_tmv4_hn1024_batch/tmv4_de_bsz4_hn1024_tau078_batch_lm2/__summary__/summary_de_lm2.tsv"
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "latency_multipliers": [2],
+    "runtime_glossary": "acl6060_tagged_gt_raw_min_norm2",
+    "retriever_id": "lh1b88kw",
+    "rag_tau": 0.78,
+    "rag_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "same_lm_batch": true,
+    "talks_per_lm": 5,
+    "max_new_tokens": 80,
+    "gpu_pair": "2,3",
+    "launched_utc": "2026-05-24T21:39:50Z",
+    "launcher_pid": 3232612,
+    "batch_launcher_pid": null,
+    "batch_eval_pid": null,
+    "vllm_engine_pid": null,
+    "startup_status": "vllm_engine_initializing_on_nvlink_pair",
+    "startup_observation_utc": "2026-05-24T21:47:24Z",
+    "startup_evidence": {
+      "gpu_pair": "2,3",
+      "gpu2_memory_mib": 592,
+      "gpu3_memory_mib": 592,
+      "log_markers": [
+        "[INDEX] reusing maxsim_acl6060_tagged_gt_raw_min_norm2_ebc26806ed693f1a_tr128_ta256.pt",
+        "[LOAD] vLLM model=/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-de-s_v4_ner_baseline_aligned_rate1.0_k20_final-bsz4",
+        "Initializing a V1 LLM engine",
+        "rank 0 in world size 2 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank 0"
+      ]
+    },
+    "prelaunch_retry_reasons": [
+      "first detached command wrote pid before log dir creation because shell '&' backgrounded the whole mkdir/cd/setsid chain",
+      "batch launcher required ROOT_DIR_OVERRIDE=/mnt/taurus/home/jiaxuanluo/InfiniSST on aries",
+      "tagged ACL source.list used node-local /mnt/data audio paths; wrapper now writes a portable /mnt/taurus source list",
+      "GPU pair 2,7 reached vLLM/NCCL init but did not load weights; topology was SYS between GPUs",
+      "GPU pair 3,4 also stopped after NCCL init; topology was SYS between GPUs",
+      "restarted on NV4 GPU pair 2,3 after archiving the 3,4 launcher logs with .bad_sys_pair_3_4 suffixes"
+    ],
+    "completed_utc": "2026-05-24T22:13:27Z",
+    "metrics": {
+      "BLEU": 31.121069182103,
+      "StreamLAAL": 1618.238646949542,
+      "StreamLAAL_CA": 1350.2295169961255,
+      "TERM_ACC": 0.8353,
+      "TERM_CORRECT": 781,
+      "TERM_TOTAL": 935
+    },
+    "completion_evidence": {
+      "eval_results_rows": 1,
+      "instances_log_rows": 5,
+      "instances_strip_term_log_rows": 5,
+      "wandb_run_id": "40i1fl5v",
+      "wandb_status": "success",
+      "wandb_local_cache_warning": "/mnt/data7/jiaxuanluo/.cache/wandb/cache/wandb/logs/core-debug-20260524_221221.log: no space left on device"
+    },
+    "strip_validation": {
+      "status": "ok",
+      "raw_rows": 5,
+      "strip_rows": 5,
+      "tags_before": 0,
+      "changed_rows": 0,
+      "source_reference_unchanged": true,
+      "delay_count_matches_stripped_prediction_words": true
+    }
+  }
+}

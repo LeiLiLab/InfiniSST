@@ -25,7 +25,7 @@ FORCE_PHYSICAL_GPUS=${FORCE_PHYSICAL_GPUS:-1}
 
 export CUDA_DEVICE_ORDER=PCI_BUS_ID
 
-# 运行模式: all (默认), stage0, merge0, stage1, merge1, stage2, merge2
+# 运行模式: all (默认), stage0, merge0, stage1, merge1, stage2, merge2, stage2_isct, merge2_isct, all_isct
 MODE=${1:-"all"}
 
 # ==========================================
@@ -90,7 +90,7 @@ BATCH_SIZE=4096
 SPACY_MODEL="en_core_web_trf"
 MAX_TERMS_PER_UTTER=20
 MODEL="Qwen/Qwen3-30B-A3B-Instruct-2507-FP8"
-MAX_NEG_PER_SEC=4.5
+MAX_NEG_PER_SEC=9
 OLD_SYSTEM_PROMPT="You are a professional simultaneous interpreter. You will be given chunks of English audio and you need to translate the audio into Chinese text."
 NEW_SYSTEM_PROMPT="You are a professional simultaneous interpreter. You will be given chunks of English audio and you need to translate the audio into Chinese text. Use the ‘term_map’ as a reference for terminology if provided."
 
@@ -125,6 +125,13 @@ RAG_TTS_EMBEDDINGS_CACHE="/mnt/gemini/data/jiaxuanluo/tts_bank_from_term_train_v
 RAG_TTS_EMBEDDING_BATCH_SIZE=512
 RAG_TTS_MAX_PROTOTYPES_PER_TERM=8
 RAG_TTS_SIMILARITY_TOP_K=20
+
+# ======Configuration=====
+# Intersection hard-negative stage: text top-k & tts top-k both use 10, no random neg count.
+ISCT_TOP_K=10
+ISCT_TTS_SIMILARITY_TOP_K=10
+ISCT_STAGE2_OUTPUT_BASE="/mnt/gemini/data/jiaxuanluo/train_s_zh_v4_ner_baseline_aligned_${SAMPLING_STR}_isct_top${ISCT_TOP_K}_final"
+# ======Configuration=====
 
 VLLM_ENV="spaCyEnv"
 SPACY_GPU_ENV="spacy_gpu_env"
@@ -422,6 +429,110 @@ fi
 if [[ "$MODE" == "all" || "$MODE" == "merge2" ]]; then
     merge_shards "${STAGE2_OUTPUT_BASE}.jsonl"
     normalize_system_prompt_in_jsonl "${STAGE2_OUTPUT_BASE}.jsonl" "${OLD_SYSTEM_PROMPT}" "${NEW_SYSTEM_PROMPT}"
+fi
+
+# --- STAGE 2 ISCT: Intersection hard negatives (top-k=10, no random neg) ---
+if [[ "$MODE" == "all_isct" || "$MODE" == "stage2_isct" ]]; then
+    conda activate "${VLLM_ENV_PATH}"
+    for d in "$CONDA_PREFIX"/lib/python*/site-packages/nvidia/*/lib; do
+        if [ -d "$d" ]; then
+            export LD_LIBRARY_PATH="$d:${LD_LIBRARY_PATH:-}"
+        fi
+    done
+    preflight_vllm_env
+
+    ZH_GLOSSARY_JSON="/mnt/gemini/data1/jiaxuanluo/glossary_for_zh_${SAMPLING_STR}.json"
+    RAG_MODEL_TAG="$(basename "${RAG_MODEL_PATH}" .pt)"
+    ZH_INDEX_PKL="/mnt/gemini/data2/jiaxuanluo/index_cache_v4/${RAG_MODEL_TAG}__glossary_for_zh_${SAMPLING_STR}.pkl"
+
+    # Reuse the glossary + index from Stage 2 if already built; rebuild otherwise.
+    if [ ! -f "${ZH_GLOSSARY_JSON}" ]; then
+        echo "[STAGE 2 ISCT] Extracting ZH glossary from ${STAGE1_OUTPUT} -> ${ZH_GLOSSARY_JSON}"
+        python retriever/gigaspeech/extract_glossary_from_aligned_jsonl.py \
+          --input-jsonl "${STAGE1_OUTPUT}" \
+          --output-json "${ZH_GLOSSARY_JSON}" \
+          --target-lang-code "${TARGET_LANG_CODE}"
+    else
+        echo "[STAGE 2 ISCT] Reusing existing glossary: ${ZH_GLOSSARY_JSON}"
+    fi
+
+    if [ ! -f "${ZH_INDEX_PKL}" ]; then
+        echo "[STAGE 2 ISCT] Building FAISS index -> ${ZH_INDEX_PKL}"
+        MODEL_PATH="${RAG_MODEL_PATH}" \
+        GLOSSARY_PATH="${ZH_GLOSSARY_JSON}" \
+        OUTPUT_PATH="${ZH_INDEX_PKL}" \
+        TARGET_LANG_CODE="${TARGET_LANG_CODE}" \
+        bash retriever/gigaspeech/run_build_index_v4.sh
+    else
+        echo "[STAGE 2 ISCT] Reusing existing index: ${ZH_INDEX_PKL}"
+    fi
+
+    if [ -n "${RAG_TTS_EMBEDDINGS_CACHE}" ] && [ ! -f "${RAG_TTS_EMBEDDINGS_CACHE}" ]; then
+        echo "[STAGE 2 ISCT] Pre-computing TTS embeddings -> ${RAG_TTS_EMBEDDINGS_CACHE}"
+        CUDA_VISIBLE_DEVICES="${LOGICAL_GPUS[0]}" python \
+          /home/jiaxuanluo/InfiniSST/documents/code/data_pre/data_convert/precompute_tts_embeddings.py \
+          --terms-npy "${RAG_TTS_TERMS_NPY_PATH}" \
+          --wav-dir "${RAG_TTS_WAV_DIR}" \
+          --model-path "${RAG_MODEL_PATH}" \
+          --glossary-json "${ZH_GLOSSARY_JSON}" \
+          --output-npz "${RAG_TTS_EMBEDDINGS_CACHE}" \
+          --target-lang-code "${TARGET_LANG_CODE}" \
+          --batch-size "${RAG_TTS_EMBEDDING_BATCH_SIZE}" \
+          --max-prototypes-per-term "${RAG_TTS_MAX_PROTOTYPES_PER_TERM}"
+        echo "[STAGE 2 ISCT] TTS embeddings cache ready."
+    else
+        echo "[STAGE 2 ISCT] TTS embeddings cache already exists: ${RAG_TTS_EMBEDDINGS_CACHE}"
+    fi
+
+    ISCT_SHARD_DIR="$(dirname "${ISCT_STAGE2_OUTPUT_BASE}")/.stage2_isct_shards_$$"
+    mkdir -p "${ISCT_SHARD_DIR}"
+    echo "[STAGE 2 ISCT] Splitting ${STAGE1_OUTPUT} into ${TOTAL_SHARDS} shards -> ${ISCT_SHARD_DIR}/"
+    python3 - "${STAGE1_OUTPUT}" "${ISCT_SHARD_DIR}" "${TOTAL_SHARDS}" <<'SPLIT_PY'
+import sys, os
+input_path, shard_dir, n_shards = sys.argv[1], sys.argv[2], int(sys.argv[3])
+handles = [open(os.path.join(shard_dir, f"shard_{i}.jsonl"), "w") for i in range(n_shards)]
+with open(input_path) as f:
+    for idx, line in enumerate(f):
+        handles[idx % n_shards].write(line)
+for h in handles:
+    h.close()
+for i in range(n_shards):
+    path = os.path.join(shard_dir, f"shard_{i}.jsonl")
+    n = sum(1 for _ in open(path))
+    print(f"  shard_{i}.jsonl: {n} lines")
+SPLIT_PY
+
+    for i in "${!LOGICAL_GPUS[@]}"; do
+        CUR_GPU="${LOGICAL_GPUS[$i]}"
+        SHARD_INPUT="${ISCT_SHARD_DIR}/shard_${i}.jsonl"
+        CUDA_VISIBLE_DEVICES="${CUR_GPU}" python /home/jiaxuanluo/InfiniSST/documents/code/data_pre/hard_negative_jsonl_for_speech_llm/enrich_qwen3_rag_with_negatives_v2.py \
+          --input-gt-jsonl "${SHARD_INPUT}" --output-base "${ISCT_STAGE2_OUTPUT_BASE}" \
+          --index-path "${ZH_INDEX_PKL}" \
+          --model-path "${RAG_MODEL_PATH}" \
+          --target-lang-code "${TARGET_LANG_CODE}" \
+          --rag-eval-mode "intersection" \
+          --tts-terms-npy-path "${RAG_TTS_TERMS_NPY_PATH}" \
+          --tts-wav-dir "${RAG_TTS_WAV_DIR}" \
+          --tts-embeddings-cache "${RAG_TTS_EMBEDDINGS_CACHE}" \
+          --tts-embedding-batch-size "${RAG_TTS_EMBEDDING_BATCH_SIZE}" \
+          --tts-max-prototypes-per-term "${RAG_TTS_MAX_PROTOTYPES_PER_TERM}" \
+          --tts-similarity-top-k "${ISCT_TTS_SIMILARITY_TOP_K}" \
+          --gpu-id "$i" --total-gpus 1 \
+          --window-batch-size 4096 \
+          --top-k "${ISCT_TOP_K}" \
+          --score-threshold 0.0 \
+          --max-neg-per-sec "${MAX_NEG_PER_SEC}" \
+          --no-random-neg &
+        sleep 2
+    done
+    monitor_progress "Stage 2 ISCT"
+    rm -rf "${ISCT_SHARD_DIR}"
+    echo "[STAGE 2 ISCT] Cleaned up shard dir: ${ISCT_SHARD_DIR}"
+fi
+
+if [[ "$MODE" == "all_isct" || "$MODE" == "merge2_isct" ]]; then
+    merge_shards "${ISCT_STAGE2_OUTPUT_BASE}.jsonl"
+    normalize_system_prompt_in_jsonl "${ISCT_STAGE2_OUTPUT_BASE}.jsonl" "${OLD_SYSTEM_PROMPT}" "${NEW_SYSTEM_PROMPT}"
 fi
 
 echo "[SUCCESS] Finished on Taurus."

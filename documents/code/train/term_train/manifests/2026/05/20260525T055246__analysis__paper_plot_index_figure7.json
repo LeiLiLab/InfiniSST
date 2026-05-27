@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T055246__analysis__paper_plot_index_figure7",
+  "event_type": "analysis",
+  "family": "paper_plot_assets",
+  "variant": "figure7_glossary_bank_ablation_local_plot_package",
+  "status": "complete",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_07_glossary_bank_ablation/plot_figure_07_glossary_bank_ablation.py",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260525__paper_plot_index_figure7.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_07_glossary_bank_ablation/plot_figure_07_glossary_bank_ablation.py",
+  "parent_run_ids": [
+    "20260525T0122__analysis__glossary_bank_ablation_zh_fixedraw"
+  ],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260525__paper_plot_index_figure7.md"
+    },
+    {
+      "role": "paper_plot_index",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/README.md"
+    },
+    {
+      "role": "paper_figure_plot_readme",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_07_glossary_bank_ablation/README.md"
+    },
+    {
+      "role": "paper_figure_plot_script",
+      "type": "script",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_07_glossary_bank_ablation/plot_figure_07_glossary_bank_ablation.py"
+    },
+    {
+      "role": "paper_figure_plot_data_snapshot",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_07_glossary_bank_ablation/data.tsv"
+    },
+    {
+      "role": "canonical_ablation_data",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260525_glossary_bank_ablation_zh_fixedraw_data.tsv"
+    },
+    {
+      "role": "canonical_ablation_build_script",
+      "type": "script",
+      "direction": "input",
+      "path": "documents/code/simuleval/src/build_glossary_bank_ablation_20260525.py"
+    },
+    {
+      "role": "paper_figure",
+      "type": "figure",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/glossary_bank_ablation_zh_fixedraw.pdf"
+    },
+    {
+      "role": "paper_figure_png",
+      "type": "figure",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/glossary_bank_ablation_zh_fixedraw.png"
+    }
+  ],
+  "metadata": {
+    "paper_figure_number": 7,
+    "paper_label": "fig:ablation_glossary_bank",
+    "latex_source": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/sections/results.tex",
+    "local_plot_dir": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_07_glossary_bank_ablation",
+    "plotted_rows": "Tagged ACL zh rows only; medicine rows remain in data.tsv for appendix-table provenance",
+    "validation": "paper-local script regenerated PDF and PNG successfully on 2026-05-25T05:52:46Z"
+  }
+}

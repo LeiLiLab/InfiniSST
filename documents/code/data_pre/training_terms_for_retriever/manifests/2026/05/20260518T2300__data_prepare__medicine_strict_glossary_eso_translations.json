@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "event_id": "20260518T2300__data_prepare__medicine_strict_glossary_eso_translations",
+  "event_type": "data_prepare",
+  "family": "medicine_varctx_eval_data",
+  "variant": "strict_mfa_glossary_eso_wiki_target_translations",
+  "status": "success",
+  "project": null,
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/data_pre/training_terms_for_retriever/launchers/2026/05/20260518__enrich_medicine_strict_glossary_eso_translations.sh",
+  "notes_path": "documents/code/data_pre/training_terms_for_retriever/notes/2026/05/20260518__enrich_medicine_strict_glossary_eso_translations.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "bash documents/code/data_pre/training_terms_for_retriever/launchers/2026/05/20260518__enrich_medicine_strict_glossary_eso_translations.sh",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/data_pre/training_terms_for_retriever/launchers/2026/05/20260518__enrich_medicine_strict_glossary_eso_translations.sh",
+      "metadata": {}
+    },
+    {
+      "role": "prepare_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/data_pre/training_terms_for_retriever/src/enrich_medicine_glossary_translations_from_eso.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/data_pre/training_terms_for_retriever/notes/2026/05/20260518__enrich_medicine_strict_glossary_eso_translations.md",
+      "metadata": {}
+    },
+    {
+      "role": "parent_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/data_pre/training_terms_for_retriever/manifests/2026/05/20260518T1812__data_prepare__medicine_varctx_clean_mfa_exact_only.json",
+      "metadata": {}
+    },
+    {
+      "role": "raw_input_dir",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/home/jiaxingxu/rag-sst/eso-dataset/outputs_v2/test",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_eval_wiki_glossary_enriched",
+      "type": "glossary",
+      "direction": "input",
+      "path": "documents/code/data_pre/glossary_scale/wiki_glossary_medicine_enriched.json",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000.json",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_eval_wiki_glossary_translated",
+      "type": "glossary",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000_translated.json",
+      "metadata": {}
+    },
+    {
+      "role": "stats",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000_translated_stats.json",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "translation_source": "ESO v2 sentence terms first; wiki_glossary_medicine_enriched fallback",
+    "languages": ["zh", "de", "ja"],
+    "match_rule": "casefolded whitespace-normalized exact source-term match",
+    "preserve_untranslated_entries": true,
+    "previous_eso_only_translated_entries": 571,
+    "total_entries": 10000,
+    "translated_entries": 10000,
+    "untranslated_entries": 0,
+    "entries_filled_by_eso": 571,
+    "entries_filled_by_wiki": 9429,
+    "unique_eso_terms_with_translation": 820,
+    "unique_wiki_terms_with_translation": 10000
+  }
+}

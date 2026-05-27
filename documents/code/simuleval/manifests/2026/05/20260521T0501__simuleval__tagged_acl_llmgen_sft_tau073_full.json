@@ -1,0 +1,230 @@
+{
+  "schema_version": 1,
+  "event_id": "20260521T0501__simuleval__tagged_acl_llmgen_sft_tau073_full",
+  "event_type": "simuleval",
+  "family": "tagged_acl_llmgen_bsz4_tau073",
+  "variant": "llm_generated_termmap_sft_full_grid",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "45269",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260521__tagged_acl_llmgen_sft_tau073_full_taurus45269.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260521__tagged_acl_llmgen_sft_tau073_full.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "setsid srun --jobid=45269 --overlap --nodes=1 --ntasks=1 --cpus-per-task=4 --chdir=/mnt/taurus/home/jiaxuanluo/InfiniSST env INSIDE_HOLD_STEP=1 HOLD_JOB_ID=0 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 CUDA_VISIBLE_DEVICES_PHYSICAL_OVERRIDE=0,1,2,3,4,5,6,7 RUN_STAMP=20260521T050150 MAX_PARALLEL_SETTINGS_OVERRIDE=4 SKIP_COMPLETED_OVERRIDE=1 bash documents/code/simuleval/launchers/2026/05/20260521__tagged_acl_llmgen_sft_tau073_full_taurus45269.sh",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260521__tagged_acl_llmgen_sft_tau073_full_taurus45269.sh"
+    },
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "agents/infinisst_omni_vllm_maxsim_rag.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260521__tagged_acl_llmgen_sft_tau073_full.md"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-zh-s_v4_ner_baseline_aligned_rate1.0_k20_final-bsz4"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-ja-s_v4_ner_baseline_aligned_rate1.0_k20_final-bsz4"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-de-s_v4_ner_baseline_aligned_rate1.0_k20_final-bsz4"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs1000_min_norm2_backfill.json"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs10000_min_norm2_backfill.json"
+    },
+    {
+      "role": "checkpoint",
+      "type": "retriever_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_llmgen_sft_tau073_full_20260521T050150"
+    },
+    {
+      "role": "report",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_llmgen_sft_tau073_full_20260521T050150/__summary__/summary_metrics_llmgen_sft_full.tsv"
+    },
+    {
+      "role": "report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_llmgen_sft_tau073_full_20260521T050150/__summary__/summary_metrics_llmgen_sft_full.md"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_llmgen_sft_tau073_full_20260521T050150"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_file",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_llmgen_sft_tau073_full_20260521T050150.out"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_file",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_llmgen_sft_tau073_full_20260521T050150.err"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_file",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_llmgen_sft_tau073_full_queue_resume_20260521T050150_20260521T055643.out"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_file",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_llmgen_sft_tau073_full_queue_resume_20260521T050150_20260521T055643.err"
+    }
+  ],
+  "metadata": {
+    "langs": ["zh", "ja", "de"],
+    "latency_multipliers": [1, 2, 3, 4],
+    "glossary_kinds": ["raw", "gs1k", "gs10k"],
+    "max_parallel_settings": 4,
+    "term_fcr_policy": "term_map_source_ref_negative_sentence",
+    "rag_score_threshold": 0.73,
+    "rag_timeline_lookback_sec": 1.92,
+    "wandb_family": "tagged_acl_llmgen_bsz4_tau073",
+    "preflight_wandb_baseline_family_queried": "tagged_acl_origin_bsz4_tau073",
+    "pid": 2374843,
+    "run_stamp": "20260521T050150",
+    "result_tsv_count": 36,
+    "wandb_run_count": 36,
+    "sqlite_synced": true,
+    "wandb_run_ids": [
+      "83vgtvp3",
+      "kk0czuab",
+      "z87zgvpf",
+      "12c8cnyi",
+      "ito6h2ca",
+      "d4a3govm",
+      "rvhei0ax",
+      "0s17k479",
+      "9soezbks",
+      "kkg4sypl",
+      "4j69hkl6",
+      "8y8bors9",
+      "uhvj6e6h",
+      "epmbt0ah",
+      "g0898rk4",
+      "vnbcvjam",
+      "9441qd90",
+      "92sit2s8",
+      "6gc4ub0c",
+      "z054atz6",
+      "vjp0a5v9",
+      "efiy8459",
+      "1fvl67qg",
+      "hj45q85g",
+      "w701dvt2",
+      "l26c756h",
+      "3hz5n0mq",
+      "9kyr5hr3",
+      "umaurxml",
+      "hdv23bl8",
+      "yag1cmc2",
+      "yajaxcn0",
+      "fw85hx98",
+      "z8niz2if",
+      "3az3f1gw",
+      "c0818g3a"
+    ],
+    "wandb_backfills": [
+      {
+        "setting": "zh lm2 gs10k",
+        "run_id": "c0818g3a",
+        "source": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_llmgen_sft_tau073_full_20260521T050150/zh/dtagacl_llmgen_sft_tau073_lm2_k10_th0.73_gacl6060_tagged_gt_union_gs10000_min_norm2_backfill/eval_results.tsv",
+        "reason": "The original wrapper produced a complete local eval_results.tsv but no W&B run; metrics were logged using wandb_eval_logger.py."
+      }
+    ],
+    "startup_attempts": [
+      {
+        "pid": 1475404,
+        "stdout": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_llmgen_sft_tau073_full_20260521T050150.out",
+        "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_llmgen_sft_tau073_full_20260521T050150.err",
+        "status": "cancelled_after_partial_success",
+        "reason": "Initial launcher used old wait_for_slot semantics; a manual sentinel supplement caused GPU collision and two vLLM init failures. Four completed TSVs were preserved."
+      },
+      {
+        "pid": 2284770,
+        "stdout": "/mnt/gemini/data1/jiaxuanluo/logs/direct_nosrun_tagged_acl_llmgen_sft_tau073_full_supp_sentinels_20260521T050150_20260521T053855.out",
+        "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/direct_nosrun_tagged_acl_llmgen_sft_tau073_full_supp_sentinels_20260521T050150_20260521T053855.err",
+        "status": "cancelled",
+        "reason": "Supplemental sentinel run was stopped to avoid GPU collision with the parent full-grid wrapper."
+      },
+      {
+        "pid": 2300754,
+        "stdout": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_llmgen_sft_tau073_full_resume_20260521T050150_20260521T054121.out",
+        "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_llmgen_sft_tau073_full_resume_20260521T050150_20260521T054121.err",
+        "status": "cancelled_after_partial_success",
+        "reason": "Restarted with patched wait_for_slot=wait -n and SKIP_COMPLETED=1, but round-robin GPU assignment still allowed collisions after earlier workers finished. Seven completed TSVs were preserved."
+      },
+      {
+        "pid": 2374843,
+        "stdout": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_llmgen_sft_tau073_full_queue_resume_20260521T050150_20260521T055643.out",
+        "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_llmgen_sft_tau073_full_queue_resume_20260521T050150_20260521T055643.err",
+        "status": "success",
+        "reason": "Restarted with fixed per-GPU-pair worker queues and SKIP_COMPLETED=1 over the same output root; completed the remaining settings."
+      }
+    ]
+  }
+}

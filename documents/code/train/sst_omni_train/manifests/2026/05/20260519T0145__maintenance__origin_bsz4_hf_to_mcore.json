@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "event_id": "20260519T0145__maintenance__origin_bsz4_hf_to_mcore",
+  "event_type": "maintenance",
+  "family": "speech_llm_baseline_conversion",
+  "variant": "origin_bsz4_hf_to_mcore",
+  "status": "deprecated",
+  "project": null,
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__export_origin_bsz4_hf_to_mcore_taurus1.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260519__export_origin_bsz4_hf_to_mcore.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "python3 documents/code/general/experiment_event.py launch documents/code/train/sst_omni_train/manifests/2026/05/20260519T0145__maintenance__origin_bsz4_hf_to_mcore.json -- sbatch --parsable documents/code/train/sst_omni_train/launchers/2026/05/20260519__export_origin_bsz4_hf_to_mcore_taurus1.sh",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__export_origin_bsz4_hf_to_mcore_taurus1.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260519__export_origin_bsz4_hf_to_mcore.md",
+      "metadata": {}
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/auto_train_sampling_docker.sh",
+      "metadata": {}
+    },
+    {
+      "role": "conversion_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/export_hf_to_mcore.sh",
+      "metadata": {}
+    },
+    {
+      "role": "hf_checkpoint",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-zh-s_origin-bsz4",
+      "metadata": {}
+    },
+    {
+      "role": "mcore_model",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/data2/jiaxuanluo/gigaspeech_zh_s_origin_bsz4_mcore",
+      "metadata": {}
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs",
+      "metadata": {
+        "output_pattern": "%j_hf2mc_origin_bsz4.out",
+        "error_pattern": "%j_hf2mc_origin_bsz4.err"
+      }
+    }
+  ],
+  "metadata": {
+    "purpose": "convert pure streaming Speech LLM baseline from HF to mcore for all-GT SFT initialization",
+    "deprecated_reason": "User decided not to convert or further SFT the pure-streaming HF baseline; it should be evaluated zero-shot with oracle term maps instead.",
+    "torch_dtype": "bfloat16",
+    "compute": "taurus1",
+    "input_format": "hf",
+    "output_format": "mcore"
+  }
+}

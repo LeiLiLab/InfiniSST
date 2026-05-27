@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "event_id": "20260521T0136__simuleval__tagged_acl_v3_speech_llm_3x3",
+  "event_type": "simuleval",
+  "family": "speech_llm_termmap_retriever",
+  "variant": "tagged_acl_v3_speech_llm_3x3",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "45269",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260521__tagged_acl_v3_speech_llm_3x3_taurus45269.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260521__tagged_acl_v3_speech_llm_3x3.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "setsid srun --jobid=45269 --overlap --nodes=1 --ntasks=1 --cpus-per-task=4 --chdir=/mnt/taurus/home/jiaxuanluo/InfiniSST env INSIDE_HOLD_STEP=1 HOLD_JOB_ID=0 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 CUDA_VISIBLE_DEVICES_PHYSICAL_OVERRIDE=0,1,2,3,4,5,6,7 MAX_PARALLEL_SETTINGS_OVERRIDE=4 bash documents/code/simuleval/launchers/2026/05/20260521__tagged_acl_v3_speech_llm_3x3_taurus45269.sh",
+  "parent_run_ids": [
+    "k2xo8quk",
+    "891gnubx",
+    "2st6uspm"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260521__tagged_acl_v3_speech_llm_3x3_taurus45269.sh"
+    },
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "agents/infinisst_omni_vllm_maxsim_rag.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260521__tagged_acl_v3_speech_llm_3x3.md"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/v3_speech_llm"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs10000_min_norm2_backfill.json"
+    },
+    {
+      "role": "checkpoint",
+      "type": "retriever_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_v3_speech_llm_3x3_20260521T024609"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_v3_speech_llm_3x3_20260521T024609"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_v3_speech_llm_3x3_20260521T024609_missing"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_v3_speech_llm_3x3_20260521T024609_adv_de_ja"
+    },
+    {
+      "role": "report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260521_tagged_acl_v3_speech_llm_3x3_summary.md"
+    }
+  ],
+  "metadata": {
+    "settings": [
+      {
+        "lang": "zh",
+        "lm": 2,
+        "glossary": "raw"
+      },
+      {
+        "lang": "de",
+        "lm": 3,
+        "glossary": "raw"
+      },
+      {
+        "lang": "ja",
+        "lm": 1,
+        "glossary": "gs10k"
+      }
+    ],
+    "max_parallel_settings_default": 4,
+    "term_fcr_policy": "term_map_source_ref_negative_sentence",
+    "pid": 176090,
+    "stdout": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_v3_speech_llm_3x3_20260521T024609.out",
+    "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_v3_speech_llm_3x3_20260521T024609.err",
+    "failed_startup_attempt": {
+      "pid": 161533,
+      "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_v3_speech_llm_3x3_20260521T023852.err",
+      "reason": "srun rejected --cpus-per-task=16 for hold job 45269"
+    },
+    "cancelled_attempt": {
+      "pid": 162472,
+      "stdout": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_v3_speech_llm_3x3_20260521T023945.out",
+      "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_v3_speech_llm_3x3_20260521T023945.err",
+      "reason": "cancelled before eval because multiple workers raced to build the same missing index path"
+    },
+    "cancelled_attempt_2": {
+      "pid": 166395,
+      "stdout": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_v3_speech_llm_3x3_20260521T024141.out",
+      "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_v3_speech_llm_3x3_20260521T024141.err",
+      "reason": "cancelled after vLLM TCPStore port collision; launcher patched to set per-setting VLLM_PORT"
+    },
+    "run_stamp": "20260521T024609",
+    "output_root": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_v3_speech_llm_3x3_20260521T024609",
+    "result_tsv_count": 9,
+    "wandb_run_ids": {
+      "v3_real_zh_lm2_raw": "0mjv1k4g",
+      "v3_real_de_lm3_raw": "3n4pz80k",
+      "v3_real_ja_lm1_gs10k": "93ibu1d5",
+      "v3_tagged_zh_lm2_raw": "d23qtuy1",
+      "v3_tagged_de_lm3_raw": "e1x87ce2",
+      "v3_tagged_ja_lm1_gs10k": "bzkxz3ph",
+      "v3_adv_zh_lm2_raw": "hq0l9nmh",
+      "v3_adv_de_lm3_raw": "ft5rzerh",
+      "v3_adv_ja_lm1_gs10k": "j7dmvgbr"
+    },
+    "execution_notes": [
+      "HF exports were read from /mnt/aries/data7/jiaxuanluo/slm/v3_speech_llm.",
+      "Initial all-8 run produced valid real/tagged partial results but wrapper GPU-pair reuse caused tagged-ja startup OOM; launcher was patched with RUN_TAGS_OVERRIDE and SKIP_COMPLETED_OVERRIDE.",
+      "Stopped stale wrapper parents to prevent duplicate launches, then used direct filtered no-srun launches on free GPU pairs to complete missing settings."
+    ],
+    "supplemental_commands": [
+      {
+        "purpose": "complete tagged-ja and adv-zh after GPU-pair fix",
+        "pid": 406477,
+        "stdout": "/mnt/gemini/data1/jiaxuanluo/logs/direct_nosrun_tagged_acl_v3_speech_llm_3x3_missing_20260521T024609_20260521T033600.out",
+        "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/direct_nosrun_tagged_acl_v3_speech_llm_3x3_missing_20260521T024609_20260521T033600.err"
+      },
+      {
+        "purpose": "complete adv-de and adv-ja on free GPU pairs",
+        "pid": 539466,
+        "stdout": "/mnt/gemini/data1/jiaxuanluo/logs/direct_nosrun_tagged_acl_v3_speech_llm_3x3_adv_de_ja_20260521T024609_20260521T040017.out",
+        "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/direct_nosrun_tagged_acl_v3_speech_llm_3x3_adv_de_ja_20260521T024609_20260521T040017.err"
+      }
+    ]
+  }
+}

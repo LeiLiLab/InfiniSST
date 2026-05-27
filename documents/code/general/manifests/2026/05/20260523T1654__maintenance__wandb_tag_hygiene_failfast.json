@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T1654__maintenance__wandb_tag_hygiene_failfast",
+  "event_type": "maintenance",
+  "family": "experiment_control",
+  "variant": "wandb_tag_hygiene_failfast",
+  "status": "success",
+  "project": null,
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/general/notes/2026/05/20260523__wandb_tag_hygiene_failfast.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "edit experiment_event.py and qwen3_glossary_neg_train.py; validate with py_compile, manifest register, and synthetic overlong data_tag check",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/general/notes/2026/05/20260523__wandb_tag_hygiene_failfast.md"
+    },
+    {
+      "role": "experiment_event_tool",
+      "type": "python",
+      "direction": "output",
+      "path": "documents/code/general/experiment_event.py"
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "output",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py"
+    },
+    {
+      "role": "wandb_tag_helper",
+      "type": "python",
+      "direction": "input",
+      "path": "documents/code/general/wandb_tags.py"
+    }
+  ],
+  "metadata": {
+    "wandb_tag_max_len": 64,
+    "policy": "fail fast in experiment_event register/launch for static manifest or launcher tags; shorten deterministically inside qwen3_glossary_neg_train and record changes in W&B config",
+    "validated": [
+      "python -m py_compile documents/code/general/experiment_event.py documents/code/train/term_train/qwen3_glossary_neg_train.py",
+      "python documents/code/general/experiment_event.py register documents/code/train/term_train/manifests/2026/05/20260523T1618__retriever_eval__hn256_gsjheh6r_latest_fixeddenom_dev100k_heldout_taurus1.json",
+      "synthetic manifest metadata data_tag length 70 raises ValueError"
+    ]
+  }
+}

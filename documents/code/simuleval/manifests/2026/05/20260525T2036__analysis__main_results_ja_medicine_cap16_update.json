@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T2036__analysis__main_results_ja_medicine_cap16_update",
+  "event_type": "analysis",
+  "family": "main_results",
+  "variant": "ja_medicine_cap16_denoise_update",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_02_medicine_main_result/plot_figure_02_medicine_main_result.py",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__main_results_ja_medicine_cap16_update.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "Update JA medicine RASST rows in canonical and paper-local TSVs from verified eval summary, then run `python plot_figure_02_medicine_main_result.py --update-paper` from the Figure 2 plot directory.",
+  "parent_run_ids": [
+    "20260525T1840__simuleval__medicine_ja_cap16_denoise_lm1234_batch_taurus",
+    "20260525T1550__speech_llm_train__ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4_retry1",
+    "wkoonqux"
+  ],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__main_results_ja_medicine_cap16_update.md",
+      "metadata": {}
+    },
+    {
+      "role": "parent_eval_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260525T1840__simuleval__medicine_ja_cap16_denoise_lm1234_batch_taurus.json",
+      "metadata": {}
+    },
+    {
+      "role": "ja_medicine_summary",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_20260525T184043_ja_med_cap16den_lm1234_taurus/__summary__/summary_medicine_hardraw_ja_lm1_lm2_lm3_lm4.tsv",
+      "metadata": {
+        "lms": [1, 2, 3, 4]
+      }
+    },
+    {
+      "role": "canonical_builder",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/build_main_result_tables_and_figures_20260524.py",
+      "metadata": {
+        "updated": "medicine RASST De/Ja sources now point to current cap16-denoise verified artifacts"
+      }
+    },
+    {
+      "role": "canonical_main_result_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv",
+      "metadata": {
+        "updated_rows": "medicine_hardraw/RASST/ja/lm1..4"
+      }
+    },
+    {
+      "role": "figure_01_data_snapshot",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_01_main_result_tagged/data.tsv",
+      "metadata": {
+        "updated_rows": "medicine_hardraw/RASST/ja/lm1..4"
+      }
+    },
+    {
+      "role": "figure_02_data_snapshot",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_02_medicine_main_result/data.tsv",
+      "metadata": {
+        "updated_rows": "medicine_hardraw/RASST/ja/lm1..4"
+      }
+    },
+    {
+      "role": "figure_02_plot_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_02_medicine_main_result/plot_figure_02_medicine_main_result.py",
+      "metadata": {}
+    },
+    {
+      "role": "figure_02_local_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_02_medicine_main_result/medicine_main_result.pdf",
+      "metadata": {}
+    },
+    {
+      "role": "figure_02_local_png",
+      "type": "png",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_02_medicine_main_result/medicine_main_result.png",
+      "metadata": {}
+    },
+    {
+      "role": "paper_figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/medicine_main_result.pdf",
+      "metadata": {}
+    },
+    {
+      "role": "paper_figure_png",
+      "type": "png",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/medicine_main_result.png",
+      "metadata": {}
+    },
+    {
+      "role": "results_text",
+      "type": "tex",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/sections/results.tex",
+      "metadata": {
+        "updated": "removed outdated En-Ja medicine unavailable warning"
+      }
+    }
+  ],
+  "metadata": {
+    "completed_utc": "2026-05-25T20:36:10Z",
+    "ja_medicine_results_by_lm": {
+      "1": {"BLEU": 18.4229, "StreamLAAL": 1474.4801, "StreamLAAL_CA": 1650.9138, "TERM_ACC": 0.7577, "TERM_CORRECT": 491, "TERM_TOTAL": 648},
+      "2": {"BLEU": 24.6735, "StreamLAAL": 2186.5425, "StreamLAAL_CA": 1767.1576, "TERM_ACC": 0.8102, "TERM_CORRECT": 525, "TERM_TOTAL": 648},
+      "3": {"BLEU": 26.8288, "StreamLAAL": 2781.0621, "StreamLAAL_CA": 1782.7240, "TERM_ACC": 0.8380, "TERM_CORRECT": 543, "TERM_TOTAL": 648},
+      "4": {"BLEU": 28.6781, "StreamLAAL": 3199.2583, "StreamLAAL_CA": 1708.7238, "TERM_ACC": 0.8349, "TERM_CORRECT": 541, "TERM_TOTAL": 648}
+    },
+    "validation": {
+      "all_ja_eval_instances_rows": 5,
+      "paper_plot_command": "python plot_figure_02_medicine_main_result.py --update-paper",
+      "temporary_full_build_check": "/tmp/jx_main_result_build_check/20260524_main_result_data.tsv"
+    }
+  }
+}

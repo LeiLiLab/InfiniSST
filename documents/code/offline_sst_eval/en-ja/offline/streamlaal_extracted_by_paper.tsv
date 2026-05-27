@@ -1,0 +1,2 @@
+mode	lang_code	BLEU	StreamLAAL	StreamLAAL_CA	TERM_ACC	TERM_CORRECT	TERM_TOTAL	instances_log
+extracted_by_paper	ja	32.93276601577909	362953.85614273505	492114.187762336	0.762264	202	265	/home/jiaxuanluo/InfiniSST/documents/code/offline_sst_eval/en-ja/offline/instances.log

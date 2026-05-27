@@ -1,0 +1,222 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T1618__retriever_eval__hn256_gsjheh6r_latest_fixeddenom_dev100k_heldout_taurus1",
+  "event_type": "retriever_eval",
+  "family": "sst_ood_hardneg_eval_compare",
+  "variant": "hn256_gsjheh6r_latest_fixeddenom_dev100k_heldout_taurus1",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": "8h9q0v4t",
+  "slurm_job_id": "45300",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260523__hn256_gsjheh6r_latest_fixeddenom_dev100k_taurus1_eval.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260523__hn256_gsjheh6r_latest_fixeddenom_dev100k_heldout_taurus1_eval.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && CUDA_DEVICE_LIST=6 NUM_GPUS=1 bash documents/code/train/term_train/launchers/2026/05/20260523__hn256_gsjheh6r_latest_fixeddenom_dev100k_taurus1_eval.sh' > /mnt/gemini/data1/jiaxuanluo/logs/hn256_gsjheh6r_latest_fixeddenom_dev100k_taurus_gpu6_20260523T1622Z.direct.log 2>&1 < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/hn256_gsjheh6r_latest_fixeddenom_dev100k_taurus_gpu6_20260523T1622Z.direct.pid",
+  "parent_run_ids": [
+    "gsjheh6r",
+    "lrdx14pm",
+    "e981df6j",
+    "lh1b88kw",
+    "40fgbr2y",
+    "zji769ve",
+    "ry8osg4u",
+    "e8t8zdtd",
+    "31xmxmdp",
+    "9esujv2w",
+    "ykwbip03"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260523__hn256_gsjheh6r_latest_fixeddenom_dev100k_taurus1_eval.sh"
+    },
+    {
+      "role": "eval_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260522__tau_delta_dev_acl_tagacl_medstrict_compare_aries1_eval.sh"
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh"
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py"
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260523__hn256_gsjheh6r_latest_fixeddenom_dev100k_heldout_taurus1_eval.md"
+    },
+    {
+      "role": "checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8190_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8190_gc256_wr1000k_m0.0_maxsim_mfa_variantE_hn256_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu012367_taurus_step1200_aclmetric_reset_latest.pt",
+      "metadata": {
+        "source_run_id": "gsjheh6r",
+        "checkpoint_kind": "latest",
+        "checkpoint_step": 1440
+      }
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_varctx2p88_3p84_4p80_5p76_new_version.jsonl",
+      "metadata": {
+        "usage": "tau selection"
+      }
+    },
+    {
+      "role": "acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_extracted_paper_glossary_varctx2p88_3p84_4p80_5p76/acl6060_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout only"
+      }
+    },
+    {
+      "role": "tagged_acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_tagged_glossary_varctx2p88_3p84_4p80_5p76/acl6060_tagged_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout only"
+      }
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout only"
+      }
+    },
+    {
+      "role": "eval_retriever_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample1000000.json",
+      "metadata": {
+        "retriever_glossary_sizes": [10000, 100000]
+      }
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_gt_union_gs10000_min_norm2_backfill.json",
+      "metadata": {
+        "retriever_glossary_sizes": [1000, 10000]
+      }
+    },
+    {
+      "role": "tagged_acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs10000_min_norm2_backfill.json",
+      "metadata": {
+        "retriever_glossary_sizes": [1000, 10000]
+      }
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000.json",
+      "metadata": {
+        "retriever_glossary_sizes": [1000, 10000]
+      }
+    },
+    {
+      "role": "direct_launch_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/hn256_gsjheh6r_latest_fixeddenom_dev100k_taurus_gpu6_20260523T1622Z.direct.log"
+    },
+    {
+      "role": "pid_file",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/hn256_gsjheh6r_latest_fixeddenom_dev100k_taurus_gpu6_20260523T1622Z.direct.pid"
+    },
+    {
+      "role": "report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/20260522_nohn_vs_hn1024_fixeddenom_eval_report.md"
+    },
+    {
+      "role": "wandb_summary_export",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tmp/retriever_eval_fixeddenom_20260522/report_summaries/8h9q0v4t.json"
+    }
+  ],
+  "metadata": {
+    "schema_version": 1,
+    "host": "taurus",
+    "cuda_device_list": "6",
+    "slurm_allocation_job_id": "45300",
+    "tau_grid": "0.50..0.90 stride 0.01",
+    "eval_metric_denominator": "fixed_raw",
+    "metrics_glossary_policy": "raw/base eval bank is fixed denominator; retriever glossary changes with gs size",
+    "selection_policy": "dev tau selection first using raw/base, gs10k, and gs100k only; ACL6060, tagged ACL6060, and strict medicine are readout-only",
+    "eval_score_query_chunk": 256,
+    "eval_score_text_chunk": 4096,
+    "dev1m": false,
+    "prepared_at_utc": "2026-05-23T16:18:00Z",
+    "started_at_utc": "2026-05-23T16:19:30Z",
+    "completed_at_utc": "2026-05-23T16:30:13Z",
+    "runtime_s": 650.37,
+    "direct_launch_pid": 1855147,
+    "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/8h9q0v4t",
+    "selected_taus": {
+      "strict_raw_included": {
+        "lt0p5": {"tau": 0.70, "max_drop_pp": 0.4378},
+        "lt1p0": {"tau": 0.76, "max_drop_pp": 0.9233},
+        "lt1p5": {"tau": 0.80, "max_drop_pp": 1.4088}
+      },
+      "expanded_bank_only": {
+        "lt0p5": {"tau": 0.73, "max_drop_pp": 0.4696},
+        "lt1p0": {"tau": 0.78, "max_drop_pp": 0.9472},
+        "lt1p5": {"tau": 0.81, "max_drop_pp": 1.3212}
+      }
+    },
+    "strict_raw_included_heldout_gs10k": {
+      "lt0p5_tau0p70": {
+        "acl_rp": [93.23, 9.48],
+        "tagged_acl_rp": [98.30, 10.03],
+        "medicine_rp": [93.81, 11.22]
+      },
+      "lt1p0_tau0p76": {
+        "acl_rp": [91.89, 12.33],
+        "tagged_acl_rp": [97.64, 12.62],
+        "medicine_rp": [90.61, 15.56]
+      },
+      "lt1p5_tau0p80": {
+        "acl_rp": [87.97, 20.94],
+        "tagged_acl_rp": [95.89, 19.35],
+        "medicine_rp": [86.71, 22.56]
+      }
+    },
+    "failed_attempts": [
+      {
+        "started_at_utc": "2026-05-23T16:15:00Z",
+        "direct_launch_pid": 1852042,
+        "reason": "W&B init rejected data tag longer than 64 chars; stopped before using outputs"
+      }
+    ]
+  }
+}

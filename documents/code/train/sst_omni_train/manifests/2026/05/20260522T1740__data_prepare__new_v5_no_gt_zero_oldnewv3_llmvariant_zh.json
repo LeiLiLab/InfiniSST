@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T1740__data_prepare__new_v5_no_gt_zero_oldnewv3_llmvariant_zh",
+  "event_type": "data_prepare",
+  "family": "speech_llm_tcm_termmap",
+  "variant": "new_v5_no_gt_zero_oldnewv3_llmvariant_zh",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__new_v5_no_gt_zero_oldnewv3_llmvariant_data.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/train/sst_omni_train/src/zero_no_gt_termmap_chunks.py --missing-gt-policy keep_unchanged on New V4 train/dev JSONL",
+  "parent_run_ids": [
+    "rf17uw7x"
+  ],
+  "artifacts": [
+    {
+      "role": "data_prep_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/zero_no_gt_termmap_chunks.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__new_v5_no_gt_zero_oldnewv3_llmvariant_data.md"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v4_llm_variant_aug_newv3_zh_20260522/train_s_zh_new_v4_llm_variant_aug_newv3_cacheonly.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v4_llm_variant_aug_newv3_zh_20260522/dev_s_zh_new_v4_llm_variant_aug_newv3_cacheonly.jsonl"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_20260522/train_s_zh_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_cacheonly.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_20260522/dev_s_zh_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_cacheonly.jsonl"
+    },
+    {
+      "role": "report",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_20260522/train_s_zh_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_cacheonly_stats.json"
+    },
+    {
+      "role": "report",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_20260522/dev_s_zh_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_cacheonly_stats.json"
+    }
+  ],
+  "metadata": {
+    "rule": "set chunk term_map to NONE iff gt_terms_by_chunk is present and empty; rows missing gt_terms_by_chunk are kept unchanged and counted",
+    "missing_gt_policy": "keep_unchanged",
+    "train_rows": 12500,
+    "train_chunks": 68705,
+    "train_gt_chunks": 51635,
+    "train_no_gt_chunks": 16815,
+    "train_rows_missing_gt_terms_by_chunk": 182,
+    "train_entries_before": 996422,
+    "train_entries_after": 861411,
+    "train_removed_entries": 135011,
+    "train_avg_entries_per_chunk_before": 14.502903718797759,
+    "train_avg_entries_per_chunk_after": 12.537821119278073,
+    "train_no_gt_nonempty_rate_before": 0.847517097829319,
+    "train_no_gt_nonempty_rate_after": 0.0,
+    "dev_rows": 355,
+    "dev_rows_missing_gt_terms_by_chunk": 355
+  }
+}

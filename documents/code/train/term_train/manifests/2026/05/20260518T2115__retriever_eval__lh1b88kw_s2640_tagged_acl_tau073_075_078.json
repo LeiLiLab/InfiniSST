@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "event_id": "20260518T2115__retriever_eval__lh1b88kw_s2640_tagged_acl_tau073_075_078",
+  "event_type": "retriever_eval",
+  "family": "sst_ood_hardneg",
+  "variant": "lh1b88kw_s2640_tagged_acl_tau073_075_078",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": "nrxiasfm",
+  "slurm_job_id": "45269",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260518__lh1b88kw_s2640_tagged_acl_tau073_075_078_aries1_eval.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260518__lh1b88kw_s2640_tagged_acl_tau073_075_078_eval.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "srun --jobid=45269 --nodes=1 --ntasks=1 --cpus-per-task=8 --gres=gpu:1 --chdir=/mnt/taurus/home/jiaxuanluo/InfiniSST env RUN_STAMP=direct_lh1b88kw_tagged_acl_tau3_taurus45269_20260518T211619 MASTER_PORT=30385 LOCAL_TMP_DIR=/mnt/gemini/data1/jiaxuanluo/tmp/direct_lh1b88kw_tagged_acl_tau3_taurus45269_20260518T211619 NUM_WORKERS=0 SELECT_CLEAN_GPUS=true TCM_SWEEP_THRESHOLDS='0.73 0.75 0.78' bash documents/code/train/term_train/launchers/2026/05/20260518__lh1b88kw_s2640_tagged_acl_tau073_075_078_aries1_eval.sh",
+  "parent_run_ids": [
+    "lh1b88kw",
+    "4g108a3w",
+    "qjy4m1x9"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260518__lh1b88kw_s2640_tagged_acl_tau073_075_078_aries1_eval.sh",
+      "metadata": {}
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh",
+      "metadata": {}
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260518__lh1b88kw_s2640_tagged_acl_tau073_075_078_eval.md",
+      "metadata": {}
+    },
+    {
+      "role": "tagged_acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_tagged_glossary_varctx2p88_3p84_4p80_5p76/acl6060_tagged_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout"
+      }
+    },
+    {
+      "role": "tagged_acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs10000_min_norm2_backfill.json",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "trained_from_run": "lh1b88kw",
+        "checkpoint_step": 2640
+      }
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs",
+      "metadata": {}
+    },
+    {
+      "role": "stdout_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_lh1b88kw_tagged_acl_tau3_taurus45269_20260518T211619.out",
+      "metadata": {}
+    },
+    {
+      "role": "stderr_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_lh1b88kw_tagged_acl_tau3_taurus45269_20260518T211619.err",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "direct_run_id": "direct_lh1b88kw_tagged_acl_tau3_taurus45269_20260518T211619",
+    "hold_job_id": "45269",
+    "slurm_step_id": "45269.5",
+    "checkpoint_step": 2640,
+    "tau_grid": "0.73 0.75 0.78",
+    "selection_data": "prior dev calibration reused",
+    "readout": "tagged ACL only",
+    "tagged_acl_tau_metrics": {
+      "0.73": {
+        "base": 0.9792,
+        "gs1000": 0.9795,
+        "gs10000": 0.979
+      },
+      "0.75": {
+        "base": 0.9752,
+        "gs1000": 0.9754,
+        "gs10000": 0.9767
+      },
+      "0.78": {
+        "base": 0.966,
+        "gs1000": 0.9663,
+        "gs10000": 0.9719
+      }
+    },
+    "tagged_acl_tau_micro_precision": {
+      "0.73": {
+        "base": 0.1908,
+        "gs1000": 0.1496,
+        "gs10000": 0.1015
+      },
+      "0.75": {
+        "base": 0.2131,
+        "gs1000": 0.1738,
+        "gs10000": 0.1068
+      },
+      "0.78": {
+        "base": 0.2508,
+        "gs1000": 0.2203,
+        "gs10000": 0.1288
+      }
+    },
+    "tagged_acl_tau_noterm_noise": {
+      "0.73": {
+        "base": 1.0129,
+        "gs1000": 1.8833,
+        "gs10000": 7.1918
+      },
+      "0.75": {
+        "base": 0.7286,
+        "gs1000": 1.2561,
+        "gs10000": 5.4863
+      },
+      "0.78": {
+        "base": 0.4588,
+        "gs1000": 0.7034,
+        "gs10000": 3.0388
+      }
+    },
+    "eval_glossary_match_min_norm_chars": 2,
+    "hard_neg_k_per_sample": 0,
+    "num_workers": 0
+  }
+}

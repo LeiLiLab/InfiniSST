@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T2100__analysis__multiscale_inference_ablation_report",
+  "event_type": "analysis",
+  "family": "sst_ood_multiscale_inference_ablation",
+  "variant": "devraw_report",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260525__multiscale_inference_ablation_report.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "manual Codex analysis from verified W&B runs and event manifests",
+  "parent_run_ids": [
+    "q2fus6f1",
+    "y454004y",
+    "740c7y40",
+    "r5l4780c",
+    "g3iayem1"
+  ],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260525__multiscale_inference_ablation_report.md",
+      "metadata": {}
+    },
+    {
+      "role": "report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/20260525_multiscale_inference_ablation_devraw.md",
+      "metadata": {}
+    },
+    {
+      "role": "report_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260525_multiscale_inference_ablation_devraw.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "multiscale_reference_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/train/term_train/manifests/2026/05/20260525T013600__retriever_eval__context_ablation_varctx_perctxraw_100k.json",
+      "metadata": {
+        "wandb_run_id": "q2fus6f1"
+      }
+    },
+    {
+      "role": "only_largest_window_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/train/term_train/manifests/2026/05/20260525T204630__retriever_eval__maxsim_w24_lh1b88kw_varctx_devraw_100k.json",
+      "metadata": {
+        "wandb_run_id": "y454004y"
+      }
+    },
+    {
+      "role": "dense_eval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/train/term_train/manifests/2026/05/20260525T205627__retriever_eval__dense_ctx192_r5l4780c_devraw_100k.json",
+      "metadata": {
+        "wandb_run_id": "740c7y40"
+      }
+    },
+    {
+      "role": "dense_training_backfill_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/train/term_train/manifests/2026/04/20260404T201553__retriever_train__dense_ctx192_r5l4780c_backfill.json",
+      "metadata": {
+        "wandb_run_id": "r5l4780c"
+      }
+    },
+    {
+      "role": "auxiliary_ctx5p76_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/train/term_train/manifests/2026/05/20260525T204006__retriever_eval__multiscale_largest_only_ctx5p76_main.json",
+      "metadata": {
+        "wandb_run_id": "g3iayem1",
+        "usage": "auxiliary only"
+      }
+    }
+  ],
+  "metadata": {
+    "source": "verified W&B show outputs and event manifests",
+    "primary_runs": [
+      "q2fus6f1",
+      "y454004y",
+      "740c7y40"
+    ],
+    "auxiliary_runs": [
+      "g3iayem1"
+    ],
+    "historical_debt_runs": [
+      "r5l4780c"
+    ],
+    "metrics_policy": "eval-only runs use W&B summary/history plus registered manifests; no hand-written metric truth beyond this report artifact."
+  }
+}

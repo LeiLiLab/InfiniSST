@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T185309__simuleval__medicine_de_cap16_denoise_lm1_serial_cache30_max40_taurus",
+  "event_type": "simuleval",
+  "family": "medicine_hardraw_de_cap16_denoise_ttag_hn1024_tau078",
+  "variant": "lm1_serial_cache30_max40_taurus",
+  "status": "running",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__medicine_de_cap16_denoise_lm1_serial_cache30_max40_taurus.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__medicine_de_cap16_denoise_lm1_serial_cache30_max40_taurus.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && RUN_STAMP=20260525T185309_medicine_de_cap16_denoise_lm1_serial_cache30_max40_taurus GPU_SET=2,3,4 bash documents/code/simuleval/launchers/2026/05/20260525__medicine_de_cap16_denoise_lm1_serial_cache30_max40_taurus.sh' > /mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_de_cap16_denoise_lm1_serial_cache30_max40_taurus_20260525T185309_medicine_de_cap16_denoise_lm1_serial_cache30_max40_taurus/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_de_cap16_denoise_lm1_serial_cache30_max40_taurus_20260525T185309_medicine_de_cap16_denoise_lm1_serial_cache30_max40_taurus/top.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_de_cap16_denoise_lm1_serial_cache30_max40_taurus_20260525T185309_medicine_de_cap16_denoise_lm1_serial_cache30_max40_taurus/top.pid",
+  "parent_run_ids": [
+    "20260525T1236__speech_llm_train__de_cap16_denoise_budget_ttag_r32a32_ep1_taurus6",
+    "20260525T1225__data_prepare__de_cap16_denoise_budget_ttag",
+    "20260525T165125__simuleval__de_cap16_denoise_medicine_acl_batch_taurus"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__medicine_de_cap16_denoise_lm1_serial_cache30_max40_taurus.sh",
+      "metadata": {}
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__medicine_de_cap16_denoise_lm1_serial_cache30_max40_taurus.md",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/data1/jiaxuanluo/slm_local_cache/de_tagged_acl_20260525/cap16_denoise_ttag/v0-20260525-203735-hf",
+      "metadata": {
+        "source_manifest": "20260525T1236__speech_llm_train__de_cap16_denoise_budget_ttag_r32a32_ep1_taurus6",
+        "expected_safetensor_shards": 15
+      }
+    },
+    {
+      "role": "checkpoint",
+      "type": "retriever_pt",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "nickname": "HN1024"
+      }
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/de_cap16_denoise_medicine_acl_batch_taurus_20260525T165125_de_cap16_denoise_med_acl_batch_taurus/medicine_hardraw_de_cap16_denoise_ttag_hn1024_tau078_batch_chunks30/de/__medicine_inputs__/lists/hard_medicine_raw__medicine5.json",
+      "metadata": {
+        "source_event": "20260525T165125__simuleval__de_cap16_denoise_medicine_acl_batch_taurus"
+      }
+    },
+    {
+      "role": "eval_input_lists",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/de_cap16_denoise_medicine_acl_batch_taurus_20260525T165125_de_cap16_denoise_med_acl_batch_taurus/medicine_hardraw_de_cap16_denoise_ttag_hn1024_tau078_batch_chunks30/de/__medicine_inputs__/lists",
+      "metadata": {
+        "samples": [
+          "404",
+          "545006",
+          "596001",
+          "605000",
+          "606"
+        ]
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_de_cap16_denoise_lm1_serial_cache30_max40_taurus_20260525T185309_medicine_de_cap16_denoise_lm1_serial_cache30_max40_taurus/de_cap16_denoise_ttag_hn1024_tau078_omit_serial_medicine_lm1_cache30_max40",
+      "metadata": {}
+    },
+    {
+      "role": "summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_de_cap16_denoise_lm1_serial_cache30_max40_taurus_20260525T185309_medicine_de_cap16_denoise_lm1_serial_cache30_max40_taurus/de_cap16_denoise_ttag_hn1024_tau078_omit_serial_medicine_lm1_cache30_max40/__summary__/summary_medicine_hardraw_de_lm1_serial.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "slurm_logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_de_cap16_denoise_lm1_serial_cache30_max40_taurus_20260525T185309_medicine_de_cap16_denoise_lm1_serial_cache30_max40_taurus",
+      "metadata": {
+        "launch_method": "setsid"
+      }
+    }
+  ],
+  "metadata": {
+    "requested_by_user": "serial de lm=1 medicine max_cache_chunks=30 keep_cache_chunks=30 empty_term_map_policy=omit max_new_tokens=40 on Taurus",
+    "host": "taurus",
+    "launched_pid": 3395667,
+    "gpu_set": "2,3,4",
+    "batch_eval": false,
+    "lang": "de",
+    "lm": 1,
+    "max_new_tokens": 40,
+    "max_cache_chunks": 30,
+    "keep_cache_chunks": 30,
+    "empty_term_map_policy": "omit",
+    "system_prompt_style": "given_chunks",
+    "strip_output_tags": "term_t",
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 12288
+  }
+}

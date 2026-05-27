@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T1733__simuleval__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_de_lm1to4",
+  "event_type": "simuleval",
+  "family": "tagged_acl_new_v9_hn1024_tau078",
+  "variant": "de_raw_lm1to4_new_v9_mfa_npfilter_lexexact_hn1024_tau078_same_lm_batch_v1",
+  "status": "cancelled",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_de_lm1to4_taurus.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_de_lm1to4_taurus.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && RUN_STAMP=20260524T1733_tagacl_newv9_mfa_npfilter_de_batch bash documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_de_lm1to4_taurus.sh'",
+  "parent_run_ids": [
+    "6l7ncy2v"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_de_lm1to4_taurus.sh"
+    },
+    {
+      "role": "delegate_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_de_lm1to4_taurus.md"
+    },
+    {
+      "role": "speech_llm_model",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_r32a64_tp2_taurus8/keep1.0_r32/v0-20260525-001708-hf"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_same_lm_batch_v1_mfa_npfilter_hn1024_tau078_raw_de_lm1to4_20260524T1733_tagacl_newv9_mfa_npfilter_de_batch"
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_same_lm_batch_v1_mfa_npfilter_hn1024_tau078_raw_de_lm1to4_20260524T1733_tagacl_newv9_mfa_npfilter_de_batch"
+    },
+    {
+      "role": "watch_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_same_lm_batch_v1_mfa_npfilter_hn1024_tau078_raw_de_lm1to4_20260524T1733_tagacl_newv9_mfa_npfilter_de_batch/watch_submit.out"
+    },
+    {
+      "role": "watch_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_same_lm_batch_v1_mfa_npfilter_hn1024_tau078_raw_de_lm1to4_20260524T1733_tagacl_newv9_mfa_npfilter_de_batch/watch_submit.err"
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "latency_multipliers": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "runtime_glossary": "acl6060_tagged_gt_raw_min_norm2",
+    "metric_glossary_policy": "fixed_raw_tagged_acl",
+    "retriever_id": "lh1b88kw",
+    "rag_tau": 0.78,
+    "rag_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "strip_output_tags": [
+      "term"
+    ],
+    "hf_wait_policy": "wait for 15 safetensor shards plus model index and tokenizer_config before eval",
+    "eval_mode": "same_lm_batch_v1",
+    "talks_per_lm": 5,
+    "scheduler_batch_size": 5,
+    "max_num_seqs": 5,
+    "launch_time_utc": "2026-05-24T17:33:00Z",
+    "cancel_reason": "stopped before summary because max_new_tokens was 40; rerun with max_new_tokens=80",
+    "cancel_time_utc": "2026-05-24T17:38:27Z"
+  },
+  "pid": 3845446
+}

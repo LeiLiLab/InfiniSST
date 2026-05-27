@@ -1,0 +1,172 @@
+{
+  "schema_version": "1.0",
+  "event_id": "20260525T0340__simuleval__tagged_acl_oldzh_v2_lm2_hn1024_tau078_batch",
+  "event_type": "simuleval",
+  "family": "tagged_acl_oldzh_v2_hn1024_tau078",
+  "variant": "zh_raw_lm2_tp2_maxseq5_max80_taurus56_v1mp0_sharedretriever_retry",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": "v1lguaw6",
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_oldzh_v2_lm2_hn1024_tau078_batch.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_oldzh_v2_lm2_hn1024_tau078_batch.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "mkdir -p /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_oldzh_v2_lm2_hn1024_tau078_batch_20260525T0430_tagacl_oldzh_v2_lm2_hn1024_tau078_batch_taurus56_v1mp0 && tmux new-session -d -s zh_oldv2_lm2_probe \"cd /home/jiaxuanluo/InfiniSST && exec env CUDA_VISIBLE_DEVICES_PHYSICAL_OVERRIDE=5,6 VLLM_TP_SIZE_OVERRIDE=2 RAG_DEVICE_OVERRIDE=cuda:0 INDEX_BUILD_DEVICE_OVERRIDE=cuda:0 ROOT_DIR_OVERRIDE=/home/jiaxuanluo/InfiniSST DRY_RUN_OVERRIDE=0 WANDB_LOG_OVERRIDE=1 RUN_TAG_OVERRIDE=20260525T0430_tagacl_oldzh_v2_lm2_hn1024_tau078_batch_taurus56_v1mp0 bash -x /home/jiaxuanluo/InfiniSST/documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_oldzh_v2_lm2_hn1024_tau078_batch.sh > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_oldzh_v2_lm2_hn1024_tau078_batch_20260525T0430_tagacl_oldzh_v2_lm2_hn1024_tau078_batch_taurus56_v1mp0/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_oldzh_v2_lm2_hn1024_tau078_batch_20260525T0430_tagacl_oldzh_v2_lm2_hn1024_tau078_batch_taurus56_v1mp0/top.err\"",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "bash",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_oldzh_v2_lm2_hn1024_tau078_batch.sh",
+      "metadata": {}
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py",
+      "metadata": {
+        "rag_batch_retrieval": true,
+        "max_new_tokens_policy": "fixed",
+        "launcher_nccl_defaults": "NCCL_P2P_DISABLE=1,NCCL_IB_DISABLE=1",
+        "vllm_v1_multiprocessing": false
+      }
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_oldzh_v2_lm2_hn1024_tau078_batch.md",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint",
+      "type": "hf_model",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/speech_llm_tcm_filtered_wiki100kgt_tau075_v2_sourcefinal_gtzh/keep1.0_r32/v0-20260507-103419-hf",
+      "metadata": {
+        "model_label": "oldzh_v2_sourcefinal_gtzh"
+      }
+    },
+    {
+      "role": "checkpoint",
+      "type": "pt",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever": "HN1024",
+        "tau": 0.78
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "glossary_kind": "raw",
+        "fixed_denominator": true
+      }
+    },
+    {
+      "role": "eval_input",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_zh_lm1_20260524T0507_tagacl_newv9_hn1024_tau078_raw_zh_lm1_aries01/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/zh/all",
+      "metadata": {
+        "source": "tagged_acl_full_all_input_bundle"
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_oldzh_v2_lm2_hn1024_tau078_batch_20260525T0430_tagacl_oldzh_v2_lm2_hn1024_tau078_batch_taurus56_v1mp0/oldzh_v2_sourcefinal_gtzh_hn1024_tau078_batch_max80",
+      "metadata": {}
+    },
+    {
+      "role": "eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_oldzh_v2_lm2_hn1024_tau078_batch_20260525T0430_tagacl_oldzh_v2_lm2_hn1024_tau078_batch_taurus56_v1mp0/oldzh_v2_sourcefinal_gtzh_hn1024_tau078_batch_max80/zh/dtagacl_oldzh_v2_hn1024_tau078_m80_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {
+        "BLEU": 47.70210572281075,
+        "StreamLAAL": 1711.9045477718923,
+        "StreamLAAL_CA": 1214.7829369904052,
+        "TERM_ACC": 0.8719,
+        "TERM_CORRECT": 776,
+        "TERM_TOTAL": 890
+      }
+    },
+    {
+      "role": "instances_log",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_oldzh_v2_lm2_hn1024_tau078_batch_20260525T0430_tagacl_oldzh_v2_lm2_hn1024_tau078_batch_taurus56_v1mp0/oldzh_v2_sourcefinal_gtzh_hn1024_tau078_batch_max80/zh/dtagacl_oldzh_v2_hn1024_tau078_m80_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+      "metadata": {
+        "line_count": 5
+      }
+    },
+    {
+      "role": "instances_strip_term_log",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_oldzh_v2_lm2_hn1024_tau078_batch_20260525T0430_tagacl_oldzh_v2_lm2_hn1024_tau078_batch_taurus56_v1mp0/oldzh_v2_sourcefinal_gtzh_hn1024_tau078_batch_max80/zh/dtagacl_oldzh_v2_hn1024_tau078_m80_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.strip_term.log",
+      "metadata": {
+        "line_count": 5,
+        "strip_output_tags": "term"
+      }
+    },
+    {
+      "role": "slurm_logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_oldzh_v2_lm2_hn1024_tau078_batch_20260525T0430_tagacl_oldzh_v2_lm2_hn1024_tau078_batch_taurus56_v1mp0",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "lm": 2,
+    "glossary_kind": "raw",
+    "retriever": "HN1024",
+    "tau": 0.78,
+    "same_lm_batch": true,
+    "mixed_lm": false,
+    "vllm_tp_size": 2,
+    "max_num_seqs": 5,
+    "scheduler_batch_size": 5,
+    "rag_batch_retrieval": true,
+    "max_new_tokens": 80,
+    "max_new_tokens_policy": "fixed",
+    "max_cache_seconds": 80,
+    "keep_cache_seconds": 60,
+    "physical_gpus": "5,6",
+    "rag_device": "cuda:0",
+    "retriever_gpu_sharing": "retriever and index share visible cuda:0 with one TP shard",
+    "host": "taurus",
+    "direct_pid": 981807,
+    "tmux_session": "zh_oldv2_lm2_probe",
+    "retry_reason": "2-GPU attempts before NCCL transport defaults stayed in vLLM/NCCL init. A 3-GPU NCCL-safe diagnostic crossed model-loading, then was stopped by user request. The first 2-GPU NCCL-safe run loaded all 15 shards but failed in vLLM V1 shared-memory EngineCore startup. Current retry uses exactly two GPUs, TP on 5,6, retriever/index sharing visible cuda:0, launcher defaults NCCL_P2P_DISABLE=1,NCCL_IB_DISABLE=1, and VLLM_ENABLE_V1_MULTIPROCESSING=0",
+    "validation": {
+      "instances_log_lines": 5,
+      "instances_strip_term_log_lines": 5,
+      "eval_results_exists": true,
+      "wandb_eval_logged": true
+    },
+    "metrics": {
+      "BLEU": 47.70210572281075,
+      "StreamLAAL": 1711.9045477718923,
+      "StreamLAAL_CA": 1214.7829369904052,
+      "TERM_ACC": 0.8719,
+      "TERM_CORRECT": 776,
+      "TERM_TOTAL": 890,
+      "TERM_ADOPTION": 0.864473,
+      "REAL_TERM_ADOPT": 0.882258,
+      "TERM_FCR": 0.092199,
+      "SOURCE_TERM_SENT_FCR": 0.245726
+    },
+    "verdict": "success"
+  }
+}

@@ -1,0 +1,273 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T1143__simuleval__tagged_acl_de_cap16_lm12_mt80_shortcache",
+  "event_type": "simuleval",
+  "family": "tagged_acl_de_cap16_shortcache",
+  "variant": "lm12_fixed_maxnew80_cache40_20_chunks8_4",
+  "status": "completed_eval_valid",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_cap16_lm4_decode_cache_probe.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_de_cap16_lm12_mt80_shortcache.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "detached Taurus launches: lm1 on GPUs 3,7 pid 1777615; lm2 on GPUs 4,5 pid 1777617; fixed max_new_tokens=80",
+  "parent_run_ids": [
+    "wtkgnf8k"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_cap16_lm4_decode_cache_probe.sh",
+      "metadata": {
+        "supports_lm_value_override": true
+      }
+    },
+    {
+      "role": "delegate_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_de_cap16_lm12_mt80_shortcache.md",
+      "metadata": {}
+    },
+    {
+      "role": "speech_llm_model",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_de_retriever_cap16_exactboundary_r32a32_ep4_taurus8/keep1.0_r32/v1-20260525-141908-hf",
+      "metadata": {
+        "parent_wandb_run_id": "wtkgnf8k",
+        "train_event_id": "20260525T0620__speech_llm_train__de_retriever_cap16_exactboundary_r32a32_ep4_taurus8"
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_deja_termmap_ablation_cap16_exactboundary_20260525/de/retriever_hn1024_tau078_cap16_exactboundary/train_s_de_retriever_hn1024_tau078_cap16_gttermwrap_exactboundary.jsonl",
+      "metadata": {
+        "rows": 12500,
+        "chunks": 71730,
+        "max_termmap_entries": 16
+      }
+    },
+    {
+      "role": "eval_input_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all",
+      "metadata": {
+        "lang": "de",
+        "talk_count": 5
+      }
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "dataset": "acl_tagged_raw"
+      }
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever": "HN1024",
+        "tau": 0.78
+      }
+    },
+    {
+      "role": "eval_output_root",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm12_mt80_shortcache_20260525T1143",
+      "metadata": {}
+    },
+    {
+      "role": "log_root",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_lm12_mt80_shortcache_20260525T1143",
+      "metadata": {}
+    },
+    {
+      "role": "lm1_log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_lm12_mt80_shortcache_20260525T1143/full5_lm1_mt80_c40k20_ch8k4",
+      "metadata": {
+        "lm": 1,
+        "pid": 1777615
+      }
+    },
+    {
+      "role": "lm2_log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_lm12_mt80_shortcache_20260525T1143/full5_lm2_mt80_c40k20_ch8k4",
+      "metadata": {
+        "lm": 2,
+        "pid": 1777617
+      }
+    },
+    {
+      "role": "lm1_output_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm12_mt80_shortcache_20260525T1143/full5_lm1_mt80_c40k20_ch8k4",
+      "metadata": {
+        "lm": 1
+      }
+    },
+    {
+      "role": "lm2_output_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm12_mt80_shortcache_20260525T1143/full5_lm2_mt80_c40k20_ch8k4",
+      "metadata": {
+        "lm": 2
+      }
+    },
+    {
+      "role": "lm2_summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm12_mt80_shortcache_20260525T1143/full5_lm2_mt80_c40k20_ch8k4/de_retriever_cap16_shortcache_lm2_mt80/__summary__/summary_de_lm2.tsv",
+      "metadata": {
+        "lm": 2
+      }
+    },
+    {
+      "role": "lm2_eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm12_mt80_shortcache_20260525T1143/full5_lm2_mt80_c40k20_ch8k4/de_retriever_cap16_shortcache_lm2_mt80/de/dtagacl_bv1_decap16_full5_lm2_mt80_c40k20_ch8k4_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {
+        "lm": 2
+      }
+    },
+    {
+      "role": "lm2_instances_log",
+      "type": "log",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm12_mt80_shortcache_20260525T1143/full5_lm2_mt80_c40k20_ch8k4/de_retriever_cap16_shortcache_lm2_mt80/de/dtagacl_bv1_decap16_full5_lm2_mt80_c40k20_ch8k4_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+      "metadata": {
+        "lm": 2
+      }
+    },
+    {
+      "role": "lm2_instances_strip_term_log",
+      "type": "log",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm12_mt80_shortcache_20260525T1143/full5_lm2_mt80_c40k20_ch8k4/de_retriever_cap16_shortcache_lm2_mt80/de/dtagacl_bv1_decap16_full5_lm2_mt80_c40k20_ch8k4_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.strip_term.log",
+      "metadata": {
+        "lm": 2
+      }
+    },
+    {
+      "role": "lm1_summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm12_mt80_shortcache_20260525T1143/full5_lm1_mt80_c40k20_ch8k4/de_retriever_cap16_shortcache_lm1_mt80/__summary__/summary_de_lm1.tsv",
+      "metadata": {
+        "lm": 1
+      }
+    },
+    {
+      "role": "lm1_eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm12_mt80_shortcache_20260525T1143/full5_lm1_mt80_c40k20_ch8k4/de_retriever_cap16_shortcache_lm1_mt80/de/dtagacl_bv1_decap16_full5_lm1_mt80_c40k20_ch8k4_lm1_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {
+        "lm": 1
+      }
+    },
+    {
+      "role": "lm1_instances_log",
+      "type": "log",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm12_mt80_shortcache_20260525T1143/full5_lm1_mt80_c40k20_ch8k4/de_retriever_cap16_shortcache_lm1_mt80/de/dtagacl_bv1_decap16_full5_lm1_mt80_c40k20_ch8k4_lm1_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+      "metadata": {
+        "lm": 1
+      }
+    },
+    {
+      "role": "lm1_instances_strip_term_log",
+      "type": "log",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm12_mt80_shortcache_20260525T1143/full5_lm1_mt80_c40k20_ch8k4/de_retriever_cap16_shortcache_lm1_mt80/de/dtagacl_bv1_decap16_full5_lm1_mt80_c40k20_ch8k4_lm1_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.strip_term.log",
+      "metadata": {
+        "lm": 1
+      }
+    }
+  ],
+  "metadata": {
+    "dataset": "acl_tagged_raw",
+    "language": "de",
+    "method": "RASST",
+    "runtime_glossary": "acl6060_tagged_gt_raw_min_norm2",
+    "host": "taurus",
+    "planned_gpu_pairs": {
+      "lm1": "3,7",
+      "lm2": "4,5"
+    },
+    "latency_multipliers": [
+      1,
+      2
+    ],
+    "max_new_tokens": 80,
+    "max_new_tokens_policy": "fixed",
+    "max_cache_seconds": 40,
+    "keep_cache_seconds": 20,
+    "max_cache_chunks": 8,
+    "keep_cache_chunks": 4,
+    "empty_term_map_policy": "omit",
+    "rag_tau": 0.78,
+    "rag_top_k": 10,
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 12288,
+    "launcher_pids": {
+      "lm1": 1777615,
+      "lm2": 1777617
+    },
+    "result_summary": {
+      "lm2": {
+        "BLEU": 30.421246267524513,
+        "StreamLAAL": 1645.9134138348236,
+        "StreamLAAL_CA": 962.727169383405,
+        "TERM_ACC": 0.8503,
+        "TERM_CORRECT": 795,
+        "TERM_TOTAL": 935,
+        "REAL_TERM_ADOPT": 0.8598,
+        "TERM_FCR": 0.166213,
+        "instances_log_rows": 5,
+        "instances_strip_term_log_rows": 5
+      },
+      "lm1": {
+        "BLEU": 23.647842874521444,
+        "StreamLAAL": 1045.2277607248177,
+        "StreamLAAL_CA": 1039.1913030444994,
+        "TERM_ACC": 0.8321,
+        "TERM_CORRECT": 778,
+        "TERM_TOTAL": 935,
+        "REAL_TERM_ADOPT": 0.870383,
+        "TERM_FCR": 0.183673,
+        "instances_log_rows": 5,
+        "instances_strip_term_log_rows": 5
+      }
+    }
+  }
+}

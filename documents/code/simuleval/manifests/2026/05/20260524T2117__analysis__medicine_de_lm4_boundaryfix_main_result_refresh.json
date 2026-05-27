@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T2117__analysis__medicine_de_lm4_boundaryfix_main_result_refresh",
+  "event_type": "analysis",
+  "family": "main_results_aclraw_medicine",
+  "variant": "medicine_de_lm4_boundaryfix_refresh",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/src/build_main_result_tables_and_figures_20260524.py",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__medicine_de_lm4_boundaryfix_main_result_refresh.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "PYTHONDONTWRITEBYTECODE=1 python documents/code/simuleval/src/build_main_result_tables_and_figures_20260524.py && cd documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src && TEXINPUTS=latex//: BIBINPUTS=latex//: BSTINPUTS=latex//: latexmk -pdf -g -interaction=nonstopmode -outdir=. latex/acl_latex.tex",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "analysis_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/build_main_result_tables_and_figures_20260524.py",
+      "metadata": {
+        "change": "uses boundaryfix TSV for medicine_hardraw InfiniSST de lm4 and keeps dirty/provisional rows marked"
+      }
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__medicine_de_lm4_boundaryfix_main_result_refresh.md"
+    },
+    {
+      "role": "source_simuleval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T175015__simuleval__medicine_norag_de_lm4_baseline_batch_max80_aries67.json",
+      "metadata": {
+        "source": "same-lm batch rerun on aries GPU 6,7 with max_new_tokens=80"
+      }
+    },
+    {
+      "role": "source_eval_results_boundaryfix",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_de_lm4_batch_max80_aries67_20260524T175015_medicine_norag_de_lm4_batch_max80_aries67/batch_eval/de/dmedicine_norag_baseline_batch_max80_lm4_k0_th0.0_ghard_llm_manual_check/eval_results_streamlaal_term.hard_llm_manual_check.boundaryfix.tsv",
+      "metadata": {
+        "preferred_for_metrics": true,
+        "BLEU": 27.81957520314305,
+        "StreamLAAL": 2827.5546192535794,
+        "StreamLAAL_CA": 826.5603601106437,
+        "TERM_ACC": 0.4735,
+        "TERM_CORRECT": 340,
+        "TERM_TOTAL": 718
+      }
+    },
+    {
+      "role": "source_instances_boundaryfix",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_de_lm4_batch_max80_aries67_20260524T175015_medicine_norag_de_lm4_batch_max80_aries67/batch_eval/de/dmedicine_norag_baseline_batch_max80_lm4_k0_th0.0_ghard_llm_manual_check/instances.boundaryfix.log"
+    },
+    {
+      "role": "source_instances_boundaryfix_strip_term",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_de_lm4_batch_max80_aries67_20260524T175015_medicine_norag_de_lm4_batch_max80_aries67/batch_eval/de/dmedicine_norag_baseline_batch_max80_lm4_k0_th0.0_ghard_llm_manual_check/instances.boundaryfix.strip_term.log"
+    },
+    {
+      "role": "invalid_eval_results_audit_copy",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_de_lm4_batch_max80_aries67_20260524T175015_medicine_norag_de_lm4_batch_max80_aries67/batch_eval/de/dmedicine_norag_baseline_batch_max80_lm4_k0_th0.0_ghard_llm_manual_check/eval_results_streamlaal_term.hard_llm_manual_check.invalid_boundary_bug.tsv",
+      "metadata": {
+        "invalid_for_metrics": true,
+        "reason": "negative StreamLAAL from missing German chunk-boundary spaces"
+      }
+    },
+    {
+      "role": "deleted_superseded_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_norag_de_lm4_baseline_aries67_rerun_after_taurus_shmfail.sh",
+      "metadata": {
+        "deleted": true,
+        "reason": "superseded serial/max_new_tokens=40 launcher for the same medicine de lm4 row"
+      }
+    },
+    {
+      "role": "main_result_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv",
+      "metadata": {
+        "updated_key": ["medicine_hardraw", "InfiniSST", "de", "4"]
+      }
+    },
+    {
+      "role": "figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/medicine_main_result.pdf",
+      "metadata": {
+        "dataset": "medicine_hardraw"
+      }
+    },
+    {
+      "role": "figure_png",
+      "type": "image",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/medicine_main_result.png",
+      "metadata": {
+        "dataset": "medicine_hardraw"
+      }
+    },
+    {
+      "role": "figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.pdf",
+      "metadata": {
+        "dataset": "acl_tagged_raw"
+      }
+    },
+    {
+      "role": "figure_png",
+      "type": "image",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.png",
+      "metadata": {
+        "dataset": "acl_tagged_raw"
+      }
+    },
+    {
+      "role": "paper_results_section",
+      "type": "latex",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/sections/results.tex",
+      "metadata": {
+        "change": "medicine de RASST remains explicitly provisional and abnormal/missing rows are marked red"
+      }
+    },
+    {
+      "role": "paper_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/acl_latex.pdf"
+    },
+    {
+      "role": "paper_build_log",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/acl_latex.log"
+    }
+  ],
+  "metadata": {
+    "updated_row": {
+      "dataset": "medicine_hardraw",
+      "method": "InfiniSST",
+      "lang": "de",
+      "lm": 4,
+      "BLEU": 27.8196,
+      "StreamLAAL": 2827.5546,
+      "StreamLAAL_CA": 826.5604,
+      "TERM_ACC": 0.4735,
+      "TERM_CORRECT": 340,
+      "TERM_TOTAL": 718,
+      "source": "boundaryfix_tsv"
+    },
+    "invalid_original_row": {
+      "BLEU": 27.538561959014395,
+      "StreamLAAL": -3538.119780461579,
+      "StreamLAAL_CA": -3599.416813837647,
+      "TERM_ACC": 0.4805,
+      "TERM_CORRECT": 345,
+      "TERM_TOTAL": 718
+    },
+    "validation": {
+      "tsv_unique_keys": true,
+      "tsv_numeric_fields_parse": true,
+      "boundaryfix_instances_log_lines": 5,
+      "boundaryfix_instances_strip_term_log_lines": 5,
+      "paper_build": "success"
+    },
+    "generated_at_utc": "2026-05-24T21:17:51Z"
+  }
+}

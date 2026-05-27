@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T1717__analysis__main_result_tagged_de_lm4_infinisst_point_refresh",
+  "event_type": "analysis",
+  "family": "main_results_aclraw_medicine",
+  "variant": "refresh_tagged_acl_de_lm4_infinisst_rerun_point",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/src/build_main_result_tables_and_figures_20260524.py",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__main_result_tagged_de_lm4_infinisst_point_refresh.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "TMP_FIG_DIR=/tmp/jx_main_result_fig_20260524_de_lm4_fix; rm -rf \"$TMP_FIG_DIR\"; mkdir -p \"$TMP_FIG_DIR\"; python documents/code/simuleval/src/build_main_result_tables_and_figures_20260524.py --output-tsv documents/code/simuleval/reports/20260524_main_result_data.tsv --figure-dir \"$TMP_FIG_DIR\"; install -m 664 \"$TMP_FIG_DIR/new_main_result_tagged.pdf\" documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.pdf; install -m 664 \"$TMP_FIG_DIR/new_main_result_tagged.png\" documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.png",
+  "parent_run_ids": [
+    "3upoqej5"
+  ],
+  "artifacts": [
+    {
+      "role": "analysis_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/build_main_result_tables_and_figures_20260524.py",
+      "metadata": {
+        "change": "adds verified override for acl_tagged_raw InfiniSST de lm4"
+      }
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__main_result_tagged_de_lm4_infinisst_point_refresh.md",
+      "metadata": {}
+    },
+    {
+      "role": "source_simuleval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T160830__simuleval__tagged_acl_origin_norag_de_lm4_raw_rerun.json",
+      "metadata": {
+        "source": "verified no-TM-SFT/no-RAG InfiniSST de raw lm4 rerun",
+        "wandb_run_id": "3upoqej5"
+      }
+    },
+    {
+      "role": "source_eval_results",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_raw_rerun_20260524T160830_tagacl_origin_norag_de_lm4_raw_rerun/origin_norag/de/gigaspeech-de-s_origin-bsz4_gacl6060_tagged_gt_raw_min_norm2_cs3.84_hs0.48_lm4_k210_k110_th0p0/eval_results.tsv",
+      "metadata": {
+        "BLEU": 33.30075964509326,
+        "TERM_ACC": 0.6909,
+        "StreamLAAL": 2824.4372171749956,
+        "StreamLAAL_CA": 4100.570443638962
+      }
+    },
+    {
+      "role": "plot_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv",
+      "metadata": {
+        "updated_key": ["acl_tagged_raw", "InfiniSST", "de", "4"]
+      }
+    },
+    {
+      "role": "figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.pdf",
+      "metadata": {
+        "dataset": "acl_tagged_raw"
+      }
+    },
+    {
+      "role": "figure_png",
+      "type": "image",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.png",
+      "metadata": {
+        "dataset": "acl_tagged_raw"
+      }
+    }
+  ],
+  "metadata": {
+    "acl_usage": "held-out readout only",
+    "metric_denominator": "fixed tagged raw glossary",
+    "updated_row": {
+      "dataset": "acl_tagged_raw",
+      "method": "InfiniSST",
+      "lang": "de",
+      "lm": 4,
+      "BLEU": 33.3008,
+      "TERM_ACC": 0.6909,
+      "StreamLAAL": 2824.4372,
+      "StreamLAAL_CA": 4100.5704
+    },
+    "previous_abnormal_row": {
+      "BLEU": 28.6382,
+      "TERM_ACC": 0.6592,
+      "StreamLAAL": 2719.0,
+      "StreamLAAL_CA": 3618.0
+    },
+    "generated_at_utc": "2026-05-24T17:17:00Z"
+  }
+}

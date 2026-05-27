@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "event_id": "20260519T1011__analysis__medicine_panelB_legacy_sentence_terms_rescored_fixedgt",
+  "event_type": "analysis",
+  "family": "speech_llm_oracle_gt_sft_readout",
+  "variant": "panelB_legacy_sentence_terms_rescored_fixedgt",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260519__medicine_panelB_legacy_sentence_terms_rescored_fixedgt.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/simuleval/rescore_medicine_panelB_legacy.py --allow-partial",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "analysis_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/rescore_medicine_panelB_legacy.py"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/prepare_medicine_one_talk_inputs.py"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/offline_sst_eval/offline_streamlaal_eval.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260519__medicine_panelB_legacy_sentence_terms_rescored_fixedgt.md"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/medicine_onetalk_oracle_gt_sft_oraclegt_r32a64_20260519"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/medicine_remaining_oracle_gt_sft_oraclegt_r32a64_20260519"
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000_translated.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data2/jiaxuanluo/medicine_panelB_legacy_sentence_terms_rescored_fixedgt_20260519"
+    },
+    {
+      "role": "report",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data2/jiaxuanluo/medicine_panelB_legacy_sentence_terms_rescored_fixedgt_20260519/zh/summary_lm_sweep.tsv"
+    },
+    {
+      "role": "report",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data2/jiaxuanluo/medicine_panelB_legacy_sentence_terms_rescored_fixedgt_20260519/zh/missing_outputs.tsv"
+    }
+  ],
+  "metadata": {
+    "panel": "B",
+    "prompt_policy": "legacy sentence_terms oracle",
+    "metric_policy": "glossary_match over translated medicine_gt source/ref terms",
+    "term_fcr_policy": "source_ref_negative_sentence",
+    "fixed_denominator_policy": "All term-related metrics are rescored against translated medicine_gt entries only; false copy is source lacks term and reference lacks translation but hypothesis contains translation.",
+    "samples": [
+      "404",
+      "596001",
+      "606",
+      "545006"
+    ],
+    "latency_multipliers": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "incomplete": [
+      {
+        "lm": 4,
+        "missing_sample": "545006"
+      }
+    ]
+  }
+}

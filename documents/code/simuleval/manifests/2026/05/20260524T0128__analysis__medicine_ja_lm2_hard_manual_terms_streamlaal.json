@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T0128__analysis__medicine_ja_lm2_hard_manual_terms_streamlaal",
+  "event_type": "analysis",
+  "family": "medicine_norag_baseline_abbrev_restored",
+  "variant": "ja_lm2_streamlaal_rescore_hard_manual_terms",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__medicine_ja_lm2_hard_manual_terms_streamlaal.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc '<offline_streamlaal_eval.py and export_streamlaal_term_misses.py with hard_llm_manual_check outputs>' > /mnt/gemini/data1/jiaxuanluo/logs/20260524T0128_medicine_ja_lm2_hard_manual_terms_streamlaal.log 2>&1 < /dev/null &",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__medicine_ja_lm2_hard_manual_terms_streamlaal.md"
+    },
+    {
+      "role": "source_hard_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/home/jiaxingxu/rag-sst/eso-dataset/outputs_hard_terms_llm_judge_with_hypothesis_v2/hard_medicine_glossary.from_outputs_v2_terms.llm_judge_with_hypothesis_manual_check.json"
+    },
+    {
+      "role": "extracted_hard_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260523_ja_lm2_aries45/hard_medicine_glossary.from_outputs_v2_terms.llm_judge_manual_check.extracted_terms.json"
+    },
+    {
+      "role": "extracted_hard_glossary_stats",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260523_ja_lm2_aries45/hard_medicine_glossary.from_outputs_v2_terms.llm_judge_manual_check.extracted_terms.stats.json"
+    },
+    {
+      "role": "instances_log",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260523_ja_lm2_aries45/ja/gigaspeech-ja-s_origin-bsz4_gstrict_fixed_medicine_glossary_abbrev_restored__medicine5_cs1.92_hs0.48_lm2_k210_k110_th0p0/instances.log"
+    },
+    {
+      "role": "streamlaal_term_metrics",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260523_ja_lm2_aries45/ja/gigaspeech-ja-s_origin-bsz4_gstrict_fixed_medicine_glossary_abbrev_restored__medicine5_cs1.92_hs0.48_lm2_k210_k110_th0p0/eval_results_streamlaal_term.hard_llm_manual_check.tsv"
+    },
+    {
+      "role": "term_misses",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260523_ja_lm2_aries45/ja/gigaspeech-ja-s_origin-bsz4_gstrict_fixed_medicine_glossary_abbrev_restored__medicine5_cs1.92_hs0.48_lm2_k210_k110_th0p0/term_misses.hard_llm_manual_check.ja_lm2.tsv"
+    },
+    {
+      "role": "term_miss_summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260523_ja_lm2_aries45/ja/gigaspeech-ja-s_origin-bsz4_gstrict_fixed_medicine_glossary_abbrev_restored__medicine5_cs1.92_hs0.48_lm2_k210_k110_th0p0/term_miss_summary.hard_llm_manual_check.ja_lm2.tsv"
+    }
+  ],
+  "metadata": {
+    "target_lang": "ja",
+    "target_lm": 2,
+    "hard_glossary_entries": 215,
+    "hard_glossary_unique_term_casefold": 212,
+    "overwrite_policy": "Do not overwrite previous full-term StreamLAAL results; all outputs use hard_llm_manual_check suffix.",
+    "finished_utc": "2026-05-24T01:29:04Z",
+    "metrics": {
+      "BLEU": 23.873078936857027,
+      "StreamLAAL": 2143.4045808755745,
+      "StreamLAAL_CA": 2923.8756229031774,
+      "TERM_ACC": 0.3604,
+      "TERM_CORRECT": 262,
+      "TERM_TOTAL": 727,
+      "miss_occurrences": 465,
+      "unique_missed_term_translations": 188
+    }
+  }
+}

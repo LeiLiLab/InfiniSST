@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T0120__analysis__offline_llm_upper_reference_main_results",
+  "event_type": "analysis",
+  "family": "main_result_refresh",
+  "variant": "offline_llm_acl_tagged_medicine_horizontal_references",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__offline_llm_upper_reference_main_results.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "PYTHONDONTWRITEBYTECODE=1 python documents/code/simuleval/src/build_main_result_tables_and_figures_20260524.py",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__offline_llm_upper_reference_main_results.md"
+    },
+    {
+      "role": "analysis_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/build_main_result_tables_and_figures_20260524.py"
+    },
+    {
+      "role": "offline_llm_outputs",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/data/siqiouyang/runs/infinisst_rag/offline"
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_hard_terms_llm_judge_manual_20260524/hard_medicine_glossary_raw_llm_judge_manual_zh215_unique212.json"
+    },
+    {
+      "role": "main_result_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv"
+    },
+    {
+      "role": "figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.pdf"
+    },
+    {
+      "role": "figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/medicine_main_result.pdf"
+    },
+    {
+      "role": "paper_section",
+      "type": "tex",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/sections/results.tex"
+    }
+  ],
+  "metadata": {
+    "completed_utc": "2026-05-25T01:20:00Z",
+    "datasets": [
+      "acl_tagged_raw",
+      "medicine_hardraw"
+    ],
+    "offline_methods_added": [
+      "Offline ST",
+      "Offline + GT terms"
+    ],
+    "offline_source_root": "/mnt/data/siqiouyang/runs/infinisst_rag/offline",
+    "validation": {
+      "tsv_unique_key": [
+        "dataset",
+        "method",
+        "lang",
+        "lm"
+      ],
+      "figures_regenerated": true,
+      "paper_latexmk_pdf_success": true,
+      "offline_streamlaal_policy": "NA because full-context offline rows are plotted as horizontal references"
+    }
+  }
+}

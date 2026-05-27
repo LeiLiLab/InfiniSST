@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T135847__simuleval__tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67",
+  "event_type": "simuleval",
+  "family": "tagged_acl_origin_norag",
+  "variant": "de_lm4_batch_max40_serial33_setting_aries67",
+  "status": "completed_success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_origin_norag_de_lm4_batch_max40_aries23.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries \"cd /mnt/taurus/home/jiaxuanluo/InfiniSST && mkdir -p /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67_20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67 && setsid env RUN_STAMP=20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67 GPU_PAIR=6,7 OUT_ROOT=/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67_20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67 LOG_ROOT=/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67_20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67 CACHE_BASE=/mnt/gemini/data1/jiaxuanluo/cache/tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67_20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67 NOTES_FILE=/mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/simuleval/notes/2026/05/20260525__tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67.md WANDB_LOG_OVERRIDE=0 bash documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_origin_norag_de_lm4_batch_max40_aries23.sh > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67_20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67_20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67/top.err < /dev/null &\"",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_origin_norag_de_lm4_batch_max40_aries23.sh"
+    },
+    {
+      "role": "batch_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67.md"
+    },
+    {
+      "role": "speech_llm_checkpoint",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-de-s_origin-bsz4"
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "input_bundle",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67_20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67"
+    },
+    {
+      "role": "summary_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67_20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67/origin_norag_de_lm4_batch_max40/__summary__/summary_de_lm4.tsv"
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67_20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67"
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "latency_multiplier": 4,
+    "runtime_rag": false,
+    "protocol": "same_lm_batch_v1",
+    "comparison_target": "validated serial lm4 BLEU 33.3 setting",
+    "old_validated_serial_lm4_max_new_tokens": 40,
+    "max_new_tokens": 40,
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 16384,
+    "max_cache_seconds": 80,
+    "keep_cache_seconds": 60,
+    "gpu_pair": "6,7",
+    "wandb_logging": false,
+    "reason": "Fresh batch max40 rerun to test whether the batch driver can reproduce the old validated serial lm4 setting.",
+    "submitted_utc": "2026-05-25T13:59:00Z",
+    "remote_wrapper_pid": 3732876,
+    "launcher_pid": 3732878,
+    "batch_launcher_pid": 3732911,
+    "python_pid": 3732916,
+    "worker_pids": [
+      3733433,
+      3733435
+    ],
+    "pid_file": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67_20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67/top.pid",
+    "top_stdout": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67_20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67/top.out",
+    "top_stderr": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67_20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67/top.err",
+    "monitor_pid": 2102807,
+    "monitor_stdout": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67_20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67/monitor.out",
+    "monitor_stderr": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67_20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67/monitor.err",
+    "startup_status": "vLLM batch eval started on Aries GPU pair 6,7 with max_new_tokens=40 and max_model_len=16384.",
+    "completed_utc": "2026-05-25T14:23:46Z",
+    "summary_path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67_20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67/origin_norag_de_lm4_batch_max40/__summary__/summary_de_lm4.tsv",
+    "metrics": {
+      "BLEU": "29.699028000726432",
+      "StreamLAAL": "2621.429078342665",
+      "StreamLAAL_CA": "1084.5613006977226",
+      "TERM_ACC": "0.6695",
+      "TERM_CORRECT": "626",
+      "TERM_TOTAL": "935",
+      "REAL_TERM_ADOPT": "N/A",
+      "TERM_FCR": "N/A"
+    },
+    "eval_results": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67_20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67/origin_norag_de_lm4_batch_max40/de/dtagacl_origin_norag_batch_max40_lm4_k0_th0.0_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+    "instances_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67_20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67/origin_norag_de_lm4_batch_max40/de/dtagacl_origin_norag_batch_max40_lm4_k0_th0.0_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+    "instances_strip_term_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67_20260525T135847_tagacl_origin_norag_de_lm4_batch_max40_serial33_setting_aries67/origin_norag_de_lm4_batch_max40/de/dtagacl_origin_norag_batch_max40_lm4_k0_th0.0_gacl6060_tagged_gt_raw_min_norm2/instances.strip_term.log",
+    "instances_log_rows": "5",
+    "instances_strip_term_log_rows": "5",
+    "completion_status_note": "Eval artifacts were complete; recovered summary TSV after launcher summary step failed because bare python was unavailable on Aries."
+  }
+}

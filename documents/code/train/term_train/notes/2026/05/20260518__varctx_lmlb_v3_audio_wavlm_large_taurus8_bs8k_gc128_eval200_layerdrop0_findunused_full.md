@@ -48,4 +48,5 @@ is enabled, fallback is `gc64` before reducing global batch.
 
 ## Verdict
 
-PENDING: fill after run completion or cancellation.
+Cancelled by user on 2026-05-18 after Slurm job `45265` was handed off for a
+rerun on other resources. Treat this W&B run as partial and non-final.

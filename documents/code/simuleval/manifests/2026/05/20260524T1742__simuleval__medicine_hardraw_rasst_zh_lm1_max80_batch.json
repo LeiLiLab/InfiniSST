@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T1742__simuleval__medicine_hardraw_rasst_zh_lm1_max80_batch",
+  "event_type": "simuleval",
+  "family": "medicine_hardraw",
+  "variant": "rasst_zh_lm1_5samples_hn1024_tau078_max80",
+  "status": "failed",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_hardraw_rasst_zh_lm1_max80_batch.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__medicine_hardraw_rasst_zh_lm1_max80_batch.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && RUN_STAMP=20260524T1742_medicine_rasst_zh_lm1_max80_batch GPU_PAIR=3,4 bash documents/code/simuleval/launchers/2026/05/20260524__medicine_hardraw_rasst_zh_lm1_max80_batch.sh'",
+  "parent_run_ids": [
+    "lh1b88kw",
+    "20260524T0242__simuleval__medicine_hardraw_hn1024_tau078_new_v9_batch"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_hardraw_rasst_zh_lm1_max80_batch.sh"
+    },
+    {
+      "role": "delegate_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_hardraw_lm1to4_5samples_hn1024_tau078_new_v9_batch.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__medicine_hardraw_rasst_zh_lm1_max80_batch.md"
+    },
+    {
+      "role": "speech_llm_checkpoint",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm_exports/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8/keep1.0_r32/v0-20260524-062743-hf"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "medicine_hard_raw_glossary",
+      "type": "glossary_json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_hard_terms_llm_judge_manual_20260524/hard_medicine_glossary_raw_llm_judge_manual_zh215_unique212.json"
+    },
+    {
+      "role": "prepared_inputs",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_hn1024_tau078_new_v9_batch_20260524T0242/zh/__medicine_inputs__/lists"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_hn1024_tau078_new_v9_batch_20260524T1742_medicine_rasst_zh_lm1_max80_batch"
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_hn1024_tau078_new_v9_batch_20260524T1742_medicine_rasst_zh_lm1_max80_batch"
+    }
+  ],
+  "metadata": {
+    "lang_code": "zh",
+    "samples": [
+      "404",
+      "545006",
+      "596001",
+      "605000",
+      "606"
+    ],
+    "lms": [
+      1
+    ],
+    "max_new_tokens": 80,
+    "rag_score_threshold": 0.78,
+    "rag_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "strip_output_tags": "term",
+    "term_fcr_policy": "term_map_source_ref_negative_sentence",
+    "launch_policy": "detached ssh to aries, one combined five-sample process for lm=1",
+    "launch_host": "aries",
+    "gpu_pair": "3,4",
+    "startup_pid_recorded_utc": "2026-05-24T17:42:00Z",
+    "failure_reason": "aries could not read original /home/jiaxingxu ESO wav paths from copied prepared inputs",
+    "failure_time_utc": "2026-05-24T17:46:00Z"
+  },
+  "pid": 2745321
+}

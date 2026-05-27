@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "event_id": "20260404T201553__retriever_train__dense_ctx192_r5l4780c_backfill",
+  "event_type": "retriever_train",
+  "family": "sst_ood_multiscale_inference_ablation",
+  "variant": "dense_ctx192_r5l4780c_backfill",
+  "status": "backfilled_historical_debt",
+  "project": "qwen3_rag",
+  "wandb_run_id": "r5l4780c",
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/term_train/sweep_text_pooling_aries.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/04/20260404__dense_ctx192_r5l4780c_backfill.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "sbatch documents/code/train/term_train/sweep_text_pooling_aries.sh # backfilled from W&B config and launcher; exact submission id unknown",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/sweep_text_pooling_aries.sh",
+      "metadata": {
+        "evidence": "W&B run name sweep_tpool_sweep_tp_cls_tfpool_bs12k and matching save_path"
+      }
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/04/20260404__dense_ctx192_r5l4780c_backfill.md",
+      "metadata": {}
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/term_train_3variant_1m.jsonl",
+      "metadata": {
+        "source": "W&B config"
+      }
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/term_dev_with_wiki_synth_normalized.jsonl",
+      "metadata": {
+        "source": "W&B config"
+      }
+    },
+    {
+      "role": "acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/acl6060_dev_offline_eval_extracted_paper_glossary/acl6060_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "historical held-out readout only",
+        "source": "W&B config"
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "documents/code/data_pre/glossary_scale/wiki_glossary_nlp_ai_cs.json",
+      "metadata": {
+        "source": "W&B config"
+      }
+    },
+    {
+      "role": "checkpoint",
+      "type": "model",
+      "direction": "output",
+      "path": "/mnt/aries/data4/jiaxuanluo/train_outputs/sweep_text_pooling/sweep_tp_cls_tfpool_bs12k_best.pt",
+      "metadata": {
+        "source_wandb_config_save_path": "/mnt/data4/jiaxuanluo/train_outputs/sweep_text_pooling/sweep_tp_cls_tfpool_bs12k.pt",
+        "best_metric": "eval_acl6060/recall@10_gs1000",
+        "best_metric_value": 0.8248,
+        "best_step": 198
+      }
+    },
+    {
+      "role": "checkpoint_secondary",
+      "type": "model",
+      "direction": "output",
+      "path": "/mnt/aries/data4/jiaxuanluo/train_outputs/sweep_text_pooling/sweep_tp_cls_tfpool_bs12k_best_acl6060_gs10000.pt",
+      "metadata": {
+        "best_secondary_metric": "eval_acl6060/recall@10_gs10000",
+        "best_secondary_metric_value": 0.6605,
+        "best_secondary_step": 198
+      }
+    },
+    {
+      "role": "wandb_run",
+      "type": "wandb_run",
+      "direction": "output",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/r5l4780c",
+      "metadata": {
+        "state": "crashed",
+        "runtime_seconds": 3319.8701
+      }
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs",
+      "metadata": {
+        "exact_log_file": "unknown",
+        "launcher_pattern": "%j_sw_tpool.out / %j_sw_tpool.err"
+      }
+    }
+  ],
+  "metadata": {
+    "backfill": true,
+    "backfill_basis": [
+      "W&B run r5l4780c config and summary",
+      "local launcher sweep_text_pooling_aries.sh",
+      "existing checkpoint files under /mnt/aries/data4"
+    ],
+    "source_training_run_id": "r5l4780c",
+    "source_training_created_at_utc": "2026-04-04T20:15:53Z",
+    "source_training_state": "crashed",
+    "source_training_step": 198,
+    "use_maxsim": false,
+    "pooling_type": "transformer",
+    "text_pooling": "cls",
+    "fixed_audio_seconds": 1.92,
+    "eval_glossary_sizes": [
+      1000,
+      10000
+    ],
+    "best_metric": "eval_acl6060/recall@10_gs1000",
+    "best_metric_value": 0.8248,
+    "best_secondary_metric": "eval_acl6060/recall@10_gs10000",
+    "best_secondary_metric_value": 0.6605,
+    "missing_fields": [
+      "slurm_job_id",
+      "exact_original_log_path"
+    ],
+    "historical_debt_warning": "Use as evidence-derived ablation source only; not a fully completed modern-schema training run."
+  }
+}

@@ -1,0 +1,181 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T1504__simuleval__tagged_acl_de_cap16_lm14_serial_chunks30_aries",
+  "event_type": "simuleval",
+  "family": "tagged_acl_de_cap16_vs_denoise_lm14_chunks30",
+  "variant": "tagged_acl_de_cap16_lm14_serial_chunks30_aries",
+  "status": "partial_failed",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_lm14_serial_chunks30.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_de_cap16_vs_denoise_lm14_chunks30.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries 'bash -lc '\"'\"'set -e; mkdir -p /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_lm14_serial_chunks30_aries_20260525T1504_tagged_acl_de_cap16_lm14_serial_chunks30_aries; cd /mnt/taurus/home/jiaxuanluo/InfiniSST; setsid bash -lc '\"'\"'\"'\"'\"'\"'\"'\"'RUN_STAMP=20260525T1504_tagged_acl_de_cap16_lm14_serial_chunks30_aries ROOT_DIR=/mnt/taurus/home/jiaxuanluo/InfiniSST LMS=\"1 4\" GPU_PAIR=\"4,5\" MODEL_NAME=/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_de_retriever_cap16_exactboundary_r32a32_ep4_taurus8/keep1.0_r32/v1-20260525-141908-hf MODEL_LABEL=de_cap16_hn1024_tau078_omit_serial_chunks30 DENSITY_TAG=tagacl_serial_decap16_hn1024_tau078_omit_chunks30 TRAIN_EVENT_ID=20260525T0620__speech_llm_train__de_retriever_cap16_exactboundary_r32a32_ep4_taurus8 STRIP_OUTPUT_TAGS=term EMPTY_TERM_MAP_POLICY=omit SYSTEM_PROMPT_STYLE=given_chunks MAX_CACHE_CHUNKS=30 KEEP_CACHE_CHUNKS=30 OUT_ROOT=/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm14_serial_chunks30_aries_20260525T1504_tagged_acl_de_cap16_lm14_serial_chunks30_aries LOG_ROOT=/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_lm14_serial_chunks30_aries_20260525T1504_tagged_acl_de_cap16_lm14_serial_chunks30_aries EVAL_TMPDIR=/tmp/jx_caps30 bash documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_lm14_serial_chunks30.sh'\"'\"'\"'\"'\"'\"'\"'\"' > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_lm14_serial_chunks30_aries_20260525T1504_tagged_acl_de_cap16_lm14_serial_chunks30_aries/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_lm14_serial_chunks30_aries_20260525T1504_tagged_acl_de_cap16_lm14_serial_chunks30_aries/top.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_lm14_serial_chunks30_aries_20260525T1504_tagged_acl_de_cap16_lm14_serial_chunks30_aries/top.pid'\"'\"''",
+  "parent_run_ids": [
+    "20260525T0620__speech_llm_train__de_retriever_cap16_exactboundary_r32a32_ep4_taurus8"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_lm14_serial_chunks30.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_de_cap16_vs_denoise_lm14_chunks30.md"
+    },
+    {
+      "role": "train_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/train/sst_omni_train/manifests/2026/05/20260525T0620__speech_llm_train__de_retriever_cap16_exactboundary_r32a32_ep4_taurus8.json",
+      "metadata": {
+        "event_id": "20260525T0620__speech_llm_train__de_retriever_cap16_exactboundary_r32a32_ep4_taurus8"
+      }
+    },
+    {
+      "role": "speech_llm_hf_model",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_de_retriever_cap16_exactboundary_r32a32_ep4_taurus8/keep1.0_r32/v1-20260525-141908-hf"
+    },
+    {
+      "role": "agent_script",
+      "type": "python",
+      "direction": "control",
+      "path": "agents/infinisst_omni_vllm_maxsim_rag.py"
+    },
+    {
+      "role": "runtime_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "gs10k_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs10000_min_norm2_backfill.json"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "eval_input_dir",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all"
+    },
+    {
+      "role": "eval_output_root",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm14_serial_chunks30_aries_20260525T1504_tagged_acl_de_cap16_lm14_serial_chunks30_aries"
+    },
+    {
+      "role": "eval_output_base",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm14_serial_chunks30_aries_20260525T1504_tagged_acl_de_cap16_lm14_serial_chunks30_aries/de_cap16_hn1024_tau078_omit_serial_chunks30"
+    },
+    {
+      "role": "summary_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm14_serial_chunks30_aries_20260525T1504_tagged_acl_de_cap16_lm14_serial_chunks30_aries/de_cap16_hn1024_tau078_omit_serial_chunks30/__summary__/summary_de_lm1_lm4.tsv"
+    },
+    {
+      "role": "log_root",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_lm14_serial_chunks30_aries_20260525T1504_tagged_acl_de_cap16_lm14_serial_chunks30_aries"
+    },
+    {
+      "role": "top_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_lm14_serial_chunks30_aries_20260525T1504_tagged_acl_de_cap16_lm14_serial_chunks30_aries/top.out"
+    },
+    {
+      "role": "top_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_lm14_serial_chunks30_aries_20260525T1504_tagged_acl_de_cap16_lm14_serial_chunks30_aries/top.err"
+    },
+    {
+      "role": "pid_file",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_lm14_serial_chunks30_aries_20260525T1504_tagged_acl_de_cap16_lm14_serial_chunks30_aries/top.pid"
+    },
+    {
+      "role": "serial_base_launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh"
+    }
+  ],
+  "metadata": {
+    "host": "aries",
+    "mode": "serial",
+    "lang": "de",
+    "dataset": "tagged_acl_raw",
+    "lms": [
+      1,
+      4
+    ],
+    "gpu_pairs": null,
+    "gpu_pair": "4,5",
+    "model_key": "cap16",
+    "model_label": "de_cap16_hn1024_tau078_omit_serial_chunks30",
+    "density_tag": "tagacl_serial_decap16_hn1024_tau078_omit_chunks30",
+    "empty_term_map_policy": "omit",
+    "rag_prompt_policy": null,
+    "system_prompt_style": "given_chunks",
+    "max_cache_chunks": 30,
+    "keep_cache_chunks": 30,
+    "max_cache_seconds": 0,
+    "keep_cache_seconds": 0,
+    "max_new_tokens_policy": "20*lm",
+    "strip_output_tags": "term",
+    "rag_top_k": 10,
+    "rag_score_threshold": 0.78,
+    "rag_timeline_lookback_sec": 1.92,
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 12288,
+    "submitted_utc": "2026-05-25T15:04:00Z",
+    "retry_reason": "first aries submit used /home/jiaxuanluo/InfiniSST, which is root-owned on aries; synced files to /mnt/taurus/home/jiaxuanluo/InfiniSST and relaunched there",
+    "startup_verified_utc": "2026-05-25T15:10:00Z",
+    "completed_utc": "2026-05-25T16:30:58Z",
+    "partial_failure_reason": "Serial launcher completed lm=1 eval, then failed before lm=4 because Aries shell environment did not provide python; use python3 or conda python in summary step.",
+    "completed_lms": [
+      1
+    ],
+    "missing_lms": [
+      4
+    ],
+    "result_summary": {
+      "lm1": {
+        "BLEU": 24.2587,
+        "StreamLAAL": 1029.9,
+        "StreamLAAL_CA": 1744.1,
+        "TERM_ACC": 0.8182,
+        "TERM_CORRECT": 765,
+        "TERM_TOTAL": 935
+      }
+    },
+    "lm1_eval_results": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm14_serial_chunks30_aries_20260525T1504_tagged_acl_de_cap16_lm14_serial_chunks30_aries/de_cap16_hn1024_tau078_omit_serial_chunks30/de/dtagacl_serial_decap16_hn1024_tau078_omit_chunks30_lm1_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+    "validation": {
+      "lm1_eval_results_tsv_count": 1,
+      "lm1_instances_log_rows": 5,
+      "lm1_instances_strip_term_log_rows": 5
+    }
+  }
+}

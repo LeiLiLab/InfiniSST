@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "event_id": "20260519T1235__data_prepare__retriever_timeline_termmap_zh_lh1b88kw_tau073_srcmatch100k",
+  "event_type": "data_prepare",
+  "family": "speech_llm_termmap_retriever",
+  "variant": "zh_lh1b88kw_tau073_timeline_v2_srcmatch100k",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": "45269",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__build_retriever_timeline_termmap_zh_lh1b88kw_tau073_srcmatch100k.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260519__retriever_timeline_termmap_zh_lh1b88kw_tau073_srcmatch100k_data.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "setsid /usr/bin/env CUDA_VISIBLE_DEVICES=4,5,6,7 GPU_DEVICES_CSV_OVERRIDE=4,5,6,7 bash -lc 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && bash documents/code/train/sst_omni_train/launchers/2026/05/20260519__build_retriever_timeline_termmap_zh_lh1b88kw_tau073_srcmatch100k.sh' > /mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v2_srcmatch100k_data_20260519T1235.out 2> /mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v2_srcmatch100k_data_20260519T1235.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v2_srcmatch100k_data_20260519T1235.pid",
+  "parent_run_ids": [
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__build_retriever_timeline_termmap_zh_lh1b88kw_tau073_srcmatch100k.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260519__retriever_timeline_termmap_zh_lh1b88kw_tau073_srcmatch100k_data.md",
+      "metadata": {}
+    },
+    {
+      "role": "source_match_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_source_glossary_exact_gt_terms.py",
+      "metadata": {}
+    },
+    {
+      "role": "retriever_termmap_builder",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_retriever_timeline_termmap_sft.py",
+      "metadata": {}
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__build_retriever_timeline_termmap_zh_lh1b88kw_tau073.sh",
+      "metadata": {}
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/train_s_zh_v4_ner_baseline_aligned_rate1.0_k20_final.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/dev_s_zh_v4_ner_baseline_aligned_freq_k20.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "train_tsv",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/train_xl_case_robust_asr-filtered_zh_metricx-qe3.0_align.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "dev_tsv",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/dev_case_robust_asr-filtered_zh_metricx-qe3.0_align.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample100000_zh100k_train_gt.json",
+      "metadata": {}
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "wandb_run_id": "lh1b88kw",
+        "tau": 0.73
+      }
+    },
+    {
+      "role": "output_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260519",
+      "metadata": {}
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "compute": "taurus_hold45269",
+    "allocation_job_id": "45269",
+    "gpu_csv": "4,5,6,7",
+    "term_map_policy": "source trajectory exact GT from imported zh100k glossary; timeline MaxSim retriever tau=0.73 top_k=10 lookback=1.92s no GT backfill",
+    "source_match_max_words": 6,
+    "source_match_min_norm_chars": 2,
+    "train_rows": 12500,
+    "train_audio_user_chunks": 68705,
+    "train_exact_gt_terms_total": 172726,
+    "train_gt_term_recall": 0.7705151511642717,
+    "train_nonempty_term_map_rate": 0.9817626082526745,
+    "train_no_gt_nonempty_term_map_rate": 0.9175761633746233,
+    "train_avg_term_map_entries_per_chunk": 9.638061276471873,
+    "dev_rows": 355,
+    "dev_audio_user_chunks": 891,
+    "dev_exact_gt_terms_total": 1902,
+    "dev_gt_term_recall": 0.7439537329127235,
+    "dev_nonempty_term_map_rate": 0.9797979797979798,
+    "dev_no_gt_nonempty_term_map_rate": 0.9217391304347826,
+    "dev_avg_term_map_entries_per_chunk": 9.5331088664422,
+    "validation": "wc matched expected train/dev rows; no .tmp or .partial files found; dropped_rows=0 in source-match and retriever-termmap stats.",
+    "launch_note": "Initial srun-overlap attempt did not create a second step because the hold allocation has only 8 CPUs already used by the V1b training step. The duplicate direct run was stopped, the output directory was cleaned, and the final success run used one detached direct execution on the same Taurus node with CUDA_VISIBLE_DEVICES=4,5,6,7."
+  }
+}

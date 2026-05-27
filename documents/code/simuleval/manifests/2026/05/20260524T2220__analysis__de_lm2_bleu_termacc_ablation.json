@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T2220__analysis__de_lm2_bleu_termacc_ablation",
+  "event_type": "analysis",
+  "family": "tagged_acl_de_lm2_setting_ablation",
+  "variant": "bleu_vs_term_acc",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__de_lm2_bleu_termacc_ablation.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/simuleval/src/plot_de_lm2_bleu_termacc_ablation_20260524.py",
+  "parent_run_ids": [
+    "gb313iyk",
+    "p21ne026",
+    "40i1fl5v"
+  ],
+  "artifacts": [
+    {
+      "role": "analysis_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/plot_de_lm2_bleu_termacc_ablation_20260524.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__de_lm2_bleu_termacc_ablation.md"
+    },
+    {
+      "role": "main_result_data",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv"
+    },
+    {
+      "role": "origin_norag_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T2200__simuleval__tagged_acl_origin_norag_de_lm2_batch_max80_aries01.json"
+    },
+    {
+      "role": "origin_hn1024_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T2135__simuleval__tagged_acl_origin_de_lm2_hn1024_batch.json"
+    },
+    {
+      "role": "tmv4_hn1024_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T2135__simuleval__tagged_acl_tmv4_de_lm2_hn1024_batch.json"
+    },
+    {
+      "role": "analysis_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260524_de_lm2_bleu_termacc_ablation.tsv"
+    },
+    {
+      "role": "figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/de_lm2_bleu_termacc_ablation.pdf"
+    },
+    {
+      "role": "figure_png",
+      "type": "png",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/de_lm2_bleu_termacc_ablation.png"
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "latency_multiplier": 2,
+    "dataset": "acl_tagged_raw",
+    "x_axis": "TERM_ACC",
+    "y_axis": "BLEU",
+    "completed_utc": "2026-05-24T22:28:25Z",
+    "validation": {
+      "row_count": 6,
+      "unique_setting_ids": true,
+      "numeric_fields_checked": [
+        "BLEU",
+        "TERM_ACC"
+      ],
+      "figure_pdf_exists": true,
+      "figure_png_exists": true
+    },
+    "included_settings": [
+      "offline_st_reference",
+      "old_infinisst_prompt_row",
+      "origin_norag_rerun",
+      "origin_slm_hn1024",
+      "tm_sft_slm_hn1024",
+      "clean_newv9_slm_hn1024"
+    ]
+  }
+}

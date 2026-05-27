@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T1410__speech_llm_train__new_v10_sourceexact_de_r32a64_tp2",
+  "event_type": "speech_llm_train",
+  "family": "speech_llm_tcm_termmap",
+  "variant": "new_v10_sourceexact_de_r32a64_tp2",
+  "status": "canceled",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__speech_llm_new_v10_sourceexact_de_ja_taurus4_r32a64_tp2.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260524__speech_llm_new_v10_sourceexact_de_r32a64_tp2.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "LANG_CODE_OVERRIDE=de HOST_GPU_DEVICES_OVERRIDE_CSV=0,1,6,7 bash documents/code/train/sst_omni_train/launchers/2026/05/20260524__speech_llm_new_v10_sourceexact_de_ja_taurus4_r32a64_tp2.sh",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__speech_llm_new_v10_sourceexact_de_ja_taurus4_r32a64_tp2.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260524__speech_llm_new_v10_sourceexact_de_r32a64_tp2.md"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v10_sourceexact_de_20260524/train_s_de_new_v10_sourceexact_llmvariant_no_gt_zero_termtag_boundary.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v10_sourceexact_de_20260524/dev_s_de_new_v10_sourceexact_llmvariant_no_gt_zero_termtag_boundary_first355.jsonl"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/speech_llm_new_v10_sourceexact_de_r32a64_tp2_taurus4"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_new_v10_sourceexact_de_r32a64_tp2_taurus4"
+    }
+  ],
+  "metadata": {
+    "rank": 32,
+    "alpha": 64,
+    "tp": 2,
+    "ep": 4,
+    "source_data_event": "20260524T1400__data_prepare__speech_llm_new_v10_sourceexact_de_ja",
+    "canceled_reason": "Wrong lineage: do not train sourceexact/v13-style branch. Use old new_v3 r32 lineage instead.",
+    "do_not_use_for_mainline": true
+  }
+}

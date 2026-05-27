@@ -1,0 +1,5 @@
+variant	threshold_role	pos_threshold	neg_threshold	pos_weight	neg_weight
+ntcm_t0p85_p1n2	noterm	0.8700	0.8000	1	2
+ntcm_t0p85_p1n4	noterm	0.8700	0.8000	1	4
+ntcm_t0p85_p2n4	noterm	0.8700	0.8000	2	4
+ntcm_t0p85_p1n1	noterm	0.8700	0.8000	1	1

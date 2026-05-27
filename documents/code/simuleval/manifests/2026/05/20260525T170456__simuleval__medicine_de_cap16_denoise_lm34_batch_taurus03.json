@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T170456__simuleval__medicine_de_cap16_denoise_lm34_batch_taurus03",
+  "event_type": "simuleval",
+  "family": "medicine_hardraw_de_cap16_denoise_batch_vllm",
+  "variant": "lm3_lm4_taurus_gpu0to3_acceleration",
+  "status": "running",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__medicine_de_cap16_denoise_lm34_batch_taurus03.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__medicine_de_cap16_denoise_lm34_batch_taurus03.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && RUN_STAMP=20260525T170456_medicine_de_cap16_denoise_lm34_batch_taurus03 GPU_PAIRS_CSV=\"0,1;2,3\" bash documents/code/simuleval/launchers/2026/05/20260525__medicine_de_cap16_denoise_lm34_batch_taurus03.sh' > /mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_de_cap16_denoise_lm34_batch_taurus03_20260525T170456_medicine_de_cap16_denoise_lm34_batch_taurus03/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_de_cap16_denoise_lm34_batch_taurus03_20260525T170456_medicine_de_cap16_denoise_lm34_batch_taurus03/top.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_de_cap16_denoise_lm34_batch_taurus03_20260525T170456_medicine_de_cap16_denoise_lm34_batch_taurus03/top.pid",
+  "parent_run_ids": [
+    "20260525T165125__simuleval__de_cap16_denoise_medicine_acl_batch_taurus",
+    "20260525T1236__speech_llm_train__de_cap16_denoise_budget_ttag_r32a32_ep1_taurus6"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__medicine_de_cap16_denoise_lm34_batch_taurus03.sh"
+    },
+    {
+      "role": "batch_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__medicine_de_cap16_denoise_lm34_batch_taurus03.md"
+    },
+    {
+      "role": "speech_llm_checkpoint",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/data1/jiaxuanluo/slm_local_cache/de_tagged_acl_20260525/cap16_denoise_ttag/v0-20260525-203735-hf"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "medicine_hard_raw_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_hard_terms_llm_judge_manual_20260524/hard_medicine_glossary_raw_llm_judge_manual_zh215_unique212.json"
+    },
+    {
+      "role": "medicine_inputs",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/de_cap16_denoise_medicine_acl_batch_taurus_20260525T165125_de_cap16_denoise_med_acl_batch_taurus/medicine_hardraw_de_cap16_denoise_ttag_hn1024_tau078_batch_chunks30/de/__medicine_inputs__/lists"
+    },
+    {
+      "role": "output_root",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_de_cap16_denoise_lm34_batch_taurus03_20260525T170456_medicine_de_cap16_denoise_lm34_batch_taurus03"
+    },
+    {
+      "role": "summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_de_cap16_denoise_lm34_batch_taurus03_20260525T170456_medicine_de_cap16_denoise_lm34_batch_taurus03/__summary__/summary_medicine_hardraw_de_lm3_lm4.tsv"
+    },
+    {
+      "role": "log_root",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_de_cap16_denoise_lm34_batch_taurus03_20260525T170456_medicine_de_cap16_denoise_lm34_batch_taurus03"
+    }
+  ],
+  "metadata": {
+    "host": "taurus",
+    "top_pid": 2443553,
+    "startup_verified_at": "2026-05-25T17:09:20Z",
+    "startup_verified_stage": "lm3 and lm4 vLLM processes loaded model and retriever on Taurus GPU pairs 0,1 and 2,3",
+    "gpu_pairs": "0,1;2,3",
+    "lms": [3, 4],
+    "batch_eval": "same-lm five-stream batch-vLLM",
+    "max_new_tokens_policy": "20*lm",
+    "empty_term_map_policy": "omit",
+    "rag_prompt_policy": "given_chunks",
+    "strip_output_tags": "term_t",
+    "max_cache_chunks": 30,
+    "keep_cache_chunks": 30,
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 12288,
+    "old_combined_parent_pid_paused": 2395386,
+    "pause_reason": "prevent duplicate lm3/lm4 launch and shared memory cleanup conflict while running acceleration job"
+  }
+}

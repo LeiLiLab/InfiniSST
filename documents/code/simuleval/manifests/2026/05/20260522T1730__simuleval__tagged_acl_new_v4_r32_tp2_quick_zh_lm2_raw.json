@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T1730__simuleval__tagged_acl_new_v4_r32_tp2_quick_zh_lm2_raw",
+  "event_type": "simuleval",
+  "family": "tagged_acl_speech_llm_quick",
+  "variant": "new_v4_r32_tp2_zh_lm2_raw",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": "1fyl431k",
+  "slurm_job_id": "direct_aries67_new_v4_r32_tp2_quick",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260522__tagged_acl_speech_llm_quick_zh_lm2_raw_wait_hf.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260522__tagged_acl_quick_new_v4_r32_tp2_zh_lm2_raw.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "MODEL_ROOT=/mnt/aries/data7/jiaxuanluo/slm/speech_llm_new_v4_llm_variant_aug_oldnewv3_zh_r32a64_tp2_aries2/keep1.0_r32 MODEL_LABEL=new_v4_r32_tp2 GPU_PAIR=6,7 RUN_STAMP=20260522T1730_new_v4_r32_tp2 bash documents/code/simuleval/launchers/2026/05/20260522__tagged_acl_speech_llm_quick_zh_lm2_raw_wait_hf.sh",
+  "parent_run_ids": [
+    "rf17uw7x"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260522__tagged_acl_speech_llm_quick_zh_lm2_raw_wait_hf.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260522__tagged_acl_quick_new_v4_r32_tp2_zh_lm2_raw.md"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/speech_llm_new_v4_llm_variant_aug_oldnewv3_zh_r32a64_tp2_aries2/keep1.0_r32"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_new_v4_r32_tp2_quick_zh_lm2_raw_20260522T1730_new_v4_r32_tp2"
+    },
+    {
+      "role": "eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_new_v4_r32_tp2_quick_zh_lm2_raw_20260522T1730_new_v4_r32_tp2/new_v4_r32_tp2/zh/dtagacl_new_v4_r32_tp2_quick_tau073_lm2_k10_th0.73_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260522_tagged_acl_new_v4_r32_tp2_quick_zh_lm2_raw_aries67.out"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260522_tagged_acl_new_v4_r32_tp2_quick_zh_lm2_raw_aries67.err"
+    },
+    {
+      "role": "pid",
+      "type": "text",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260522_tagged_acl_new_v4_r32_tp2_quick_zh_lm2_raw_aries67.pid"
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "lm": 2,
+    "glossary": "raw",
+    "gpu_pair": "6,7",
+    "wait_for_hf_secs": 60,
+    "waiter_pid": 3107072,
+    "simuleval_pid": 3107210,
+    "metrics": {
+      "BLEU": 48.33441,
+      "TERM_ACC": 0.8899,
+      "REAL_TERM_ADOPT": 0.89055,
+      "TERM_FCR": 0.09351,
+      "StreamLAAL": 1705.81964
+    }
+  }
+}

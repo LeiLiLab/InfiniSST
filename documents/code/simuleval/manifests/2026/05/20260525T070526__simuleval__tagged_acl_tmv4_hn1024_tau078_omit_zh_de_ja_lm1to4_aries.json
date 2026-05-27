@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T070526__simuleval__tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_aries",
+  "event_type": "simuleval",
+  "family": "tagged_acl_tmv4_hn1024_tau078_omit",
+  "variant": "zh_de_ja_lm1to4_same_lm_batch_aries",
+  "status": "waiting_for_gpus",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_aries.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_aries.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries \"mkdir -p /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_20260525T070526_tmv4_hn1024_tau078_omit_zhdeja_lm1to4_aries && cd /mnt/taurus/home/jiaxuanluo/InfiniSST && setsid bash -lc 'RUN_STAMP=20260525T070526_tmv4_hn1024_tau078_omit_zhdeja_lm1to4_aries LANGS=\\\"zh de ja\\\" LMS=\\\"1 2 3 4\\\" GPU_PAIRS_CSV=\\\"0,1;2,3;4,5;6,7\\\" EMPTY_TERM_MAP_POLICY=omit WANDB_LOG_OVERRIDE=0 bash documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_aries.sh' > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_20260525T070526_tmv4_hn1024_tau078_omit_zhdeja_lm1to4_aries/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_20260525T070526_tmv4_hn1024_tau078_omit_zhdeja_lm1to4_aries/top.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_20260525T070526_tmv4_hn1024_tau078_omit_zhdeja_lm1to4_aries/top.pid && cat /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_20260525T070526_tmv4_hn1024_tau078_omit_zhdeja_lm1to4_aries/top.pid\"",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_aries.sh",
+      "metadata": {
+        "sha256": "3aca635112f744ba4a5a7fd0c37b0701be22aa09e63952f20abff668681de320"
+      }
+    },
+    {
+      "role": "delegate_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_aries.md",
+      "metadata": {
+        "sha256": "84188bbea5dfc325aebabc03eed9fda5738e535b2b2658b3e3ba5d6d2b04286d"
+      }
+    },
+    {
+      "role": "speech_llm_model_zh",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-zh-s_v4_ner_baseline_aligned_rate1.0_k20_final-bsz4"
+    },
+    {
+      "role": "speech_llm_model_de",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-de-s_v4_ner_baseline_aligned_rate1.0_k20_final-bsz4"
+    },
+    {
+      "role": "speech_llm_model_ja",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-ja-s_v4_ner_baseline_aligned_rate1.0_k20_final-bsz4"
+    },
+    {
+      "role": "eval_input_zh",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_zh_lm1_20260524T0507_tagacl_newv9_hn1024_tau078_raw_zh_lm1_aries01/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/zh/all"
+    },
+    {
+      "role": "eval_input_de",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all"
+    },
+    {
+      "role": "eval_input_ja",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_20260524T0933_tagacl_newv9_hn1024_tau078_raw_ja_taurus8/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/ja/all"
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever_id": "HN1024"
+      }
+    },
+    {
+      "role": "prior_non_omit_de_lm2_reference",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T2135__simuleval__tagged_acl_tmv4_de_lm2_hn1024_batch.json",
+      "metadata": {
+        "limitation": "Only de/lm=2 and older empty term-map behavior; not used as omit-policy final row."
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_20260525T070526_tmv4_hn1024_tau078_omit_zhdeja_lm1to4_aries"
+    },
+    {
+      "role": "eval_summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_20260525T070526_tmv4_hn1024_tau078_omit_zhdeja_lm1to4_aries/summary_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4.tsv"
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_20260525T070526_tmv4_hn1024_tau078_omit_zhdeja_lm1to4_aries"
+    }
+  ],
+  "metadata": {
+    "languages": [
+      "zh",
+      "de",
+      "ja"
+    ],
+    "latency_multipliers": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "missing_coverage_before_launch": "No complete zh/de/ja lm1-4 tagged ACL summary was found for historical TM-SFT+HN1024 under empty_term_map_policy=omit. Existing old-TM-SFT coverage was de/lm=2 only with older none_block behavior.",
+    "runtime_glossary": "acl6060_tagged_gt_raw_min_norm2",
+    "retriever": "HN1024",
+    "rag_top_k": 10,
+    "rag_tau": 0.78,
+    "rag_timeline_lookback_sec": 1.92,
+    "same_lm_batch": true,
+    "talks_per_lm": 5,
+    "max_new_tokens": 80,
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 12288,
+    "empty_term_map_policy": "omit",
+    "wandb_log_override": 0,
+    "run_stamp": "20260525T070526_tmv4_hn1024_tau078_omit_zhdeja_lm1to4_aries",
+    "expected_output_root": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_20260525T070526_tmv4_hn1024_tau078_omit_zhdeja_lm1to4_aries",
+    "expected_log_root": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_20260525T070526_tmv4_hn1024_tau078_omit_zhdeja_lm1to4_aries",
+    "launcher_pid": 3670958,
+    "top_pid": 3670956,
+    "pid_file": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_20260525T070526_tmv4_hn1024_tau078_omit_zhdeja_lm1to4_aries/top.pid",
+    "submitted_utc": "2026-05-25T07:09:00Z",
+    "startup_status": "submitted_waiting_for_aries_gpus",
+    "startup_evidence": {
+      "dry_run": "passed for zh/de/ja inputs and model/checkpoint paths",
+      "top_out": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_20260525T070526_tmv4_hn1024_tau078_omit_zhdeja_lm1to4_aries/top.out",
+      "top_err": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_20260525T070526_tmv4_hn1024_tau078_omit_zhdeja_lm1to4_aries/top.err",
+      "observed": "top.out reached LANG_START zh; top.err reports all four GPU pairs waiting because current memory/utilization exceeded idle thresholds"
+    },
+    "operational_note": "The first ssh wrapper used the same shell-precedence pattern as older ad hoc launches, so the top.pid write raced directory creation. The launched Aries process is alive and top.pid was backfilled to the observed top_pid."
+  }
+}

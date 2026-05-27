@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T1843__simuleval__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_ja_after_train",
+  "event_type": "simuleval",
+  "family": "tagged_acl_same_lm_batch_v1_hn1024_tau078",
+  "variant": "new_v9_mfa_npfilter_lexexact_raw_ja_lm1to4_after_train",
+  "status": "failed_train_incomplete",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__watch_ja_new_v9_train_then_submit_tagged_acl_lm1to4.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_ja_after_train.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'RUN_STAMP_OVERRIDE=20260524T1843_tagacl_newv9_mfa_npfilter_ja_aftertrain bash documents/code/simuleval/launchers/2026/05/20260524__watch_ja_new_v9_train_then_submit_tagged_acl_lm1to4.sh' > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_ja_lm1to4_20260524T1843_tagacl_newv9_mfa_npfilter_ja_aftertrain/watcher.detached.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_ja_lm1to4_20260524T1843_tagacl_newv9_mfa_npfilter_ja_aftertrain/watcher.detached.err < /dev/null &",
+  "parent_run_ids": [
+    "332v0v6n"
+  ],
+  "artifacts": [
+    {
+      "role": "watcher_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__watch_ja_new_v9_train_then_submit_tagged_acl_lm1to4.sh"
+    },
+    {
+      "role": "per_lm_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_ja_same_lm_batch.sh"
+    },
+    {
+      "role": "batch_eval_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_ja_after_train.md"
+    },
+    {
+      "role": "speech_llm_train_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/train/sst_omni_train/manifests/2026/05/20260524T1806__speech_llm_train__new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_ja_r32a64_tp2_aries4.json"
+    },
+    {
+      "role": "speech_llm_hf_checkpoint",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_ja_r32a64_tp2_aries4/keep1.0_r32/v0-20260525-020815-hf"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "eval_input_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_20260524T0933_tagacl_newv9_hn1024_tau078_raw_ja_taurus8/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/ja/all"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_ja_lm1to4_20260524T1843_tagacl_newv9_mfa_npfilter_ja_aftertrain"
+    },
+    {
+      "role": "summary",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_ja_lm1to4_20260524T1843_tagacl_newv9_mfa_npfilter_ja_aftertrain/new_v9_mfa_npfilter_lexexact_oldnewv3_ja_r32a64_hn1024_tau078_same_lm_batch_v1/__summary__"
+    },
+    {
+      "role": "logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_ja_lm1to4_20260524T1843_tagacl_newv9_mfa_npfilter_ja_aftertrain"
+    }
+  ],
+  "metadata": {
+    "language": "ja",
+    "lms": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "talks_per_lm": 5,
+    "retriever": "HN1024",
+    "tau": 0.78,
+    "lookback_sec": 1.92,
+    "max_new_tokens": 80,
+    "vllm_limit_audio": 128,
+    "gpu_policy": "poll every 15 minutes; submit one lm when any two GPUs are idle on taurus or aries",
+    "train_wandb_run_id": "332v0v6n",
+    "run_stamp": "20260524T1843_tagacl_newv9_mfa_npfilter_ja_aftertrain",
+    "watcher_pid": 4105855,
+    "watcher_log": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_ja_lm1to4_20260524T1843_tagacl_newv9_mfa_npfilter_ja_aftertrain/watcher.log",
+    "poll_secs": 900,
+    "watcher_restarted_after_patch": "2026-05-24T18:47:31Z",
+    "watcher_status": "failed_train_incomplete",
+    "output_base": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_ja_lm1to4_20260524T1843_tagacl_newv9_mfa_npfilter_ja_aftertrain/new_v9_mfa_npfilter_lexexact_oldnewv3_ja_r32a64_hn1024_tau078_same_lm_batch_v1",
+    "summary_dir": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_ja_lm1to4_20260524T1843_tagacl_newv9_mfa_npfilter_ja_aftertrain/new_v9_mfa_npfilter_lexexact_oldnewv3_ja_r32a64_hn1024_tau078_same_lm_batch_v1/__summary__"
+  }
+}

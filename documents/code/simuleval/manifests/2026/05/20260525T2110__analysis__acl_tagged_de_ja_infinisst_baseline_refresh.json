@@ -1,0 +1,177 @@
+{
+  "schema_version": "1.0",
+  "event_id": "20260525T2110__analysis__acl_tagged_de_ja_infinisst_baseline_refresh",
+  "event_type": "analysis",
+  "family": "main_results",
+  "variant": "acl_tagged_de_ja_infinisst_baseline_refresh",
+  "status": "completed",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__acl_tagged_de_ja_infinisst_baseline_refresh.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/simuleval/src/update_acl_tagged_baseline_from_acl6060_de_ja_20260525.py --update-main-tsv && cd documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src && python plot/figure_01_main_result_tagged/plot_figure_01_main_result_tagged.py --update-paper",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "input_eval_outputs",
+      "type": "directory",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/figures/acl6060_de_ja_results",
+      "metadata": {
+        "langs": [
+          "de",
+          "ja"
+        ],
+        "segments_to_lm": {
+          "seg960": 1,
+          "seg1920": 2,
+          "seg2880": 3,
+          "seg3840": 4
+        }
+      }
+    },
+    {
+      "role": "acl_eval_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "usage": "tagged ACL raw TERM_ACC denominator"
+      }
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "input",
+      "path": "documents/code/offline_sst_eval/offline_streamlaal_eval.py",
+      "metadata": {
+        "mode": "acl6060"
+      }
+    },
+    {
+      "role": "analysis_script",
+      "type": "script",
+      "direction": "input",
+      "path": "documents/code/simuleval/src/update_acl_tagged_baseline_from_acl6060_de_ja_20260525.py",
+      "metadata": {}
+    },
+    {
+      "role": "canonical_main_result_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv",
+      "metadata": {
+        "updated_rows": "acl_tagged_raw/InfiniSST/de-ja/lm1-4"
+      }
+    },
+    {
+      "role": "posteval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_acl6060_de_ja_baseline_posteval",
+      "metadata": {}
+    },
+    {
+      "role": "summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_acl6060_de_ja_baseline_posteval/summary_acl6060_de_ja_infinisst_baseline.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "figure_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_01_main_result_tagged/data.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "paper_figure",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.pdf",
+      "metadata": {}
+    },
+    {
+      "role": "paper_figure_png",
+      "type": "png",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.png",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "updated_metrics": {
+      "de": {
+        "lm1": {
+          "BLEU": 27.1215,
+          "StreamLAAL": 1121.0093,
+          "StreamLAAL_CA": 1535.2811,
+          "TERM_ACC": 0.6075,
+          "TERM_CORRECT": 568,
+          "TERM_TOTAL": 935
+        },
+        "lm2": {
+          "BLEU": 30.2516,
+          "StreamLAAL": 1759.0611,
+          "StreamLAAL_CA": 2138.9597,
+          "TERM_ACC": 0.6759,
+          "TERM_CORRECT": 632,
+          "TERM_TOTAL": 935
+        },
+        "lm3": {
+          "BLEU": 31.4666,
+          "StreamLAAL": 2390.0315,
+          "StreamLAAL_CA": 2830.7192,
+          "TERM_ACC": 0.6513,
+          "TERM_CORRECT": 609,
+          "TERM_TOTAL": 935
+        },
+        "lm4": {
+          "BLEU": 33.1867,
+          "StreamLAAL": 2826.7227,
+          "StreamLAAL_CA": 3329.3659,
+          "TERM_ACC": 0.6684,
+          "TERM_CORRECT": 625,
+          "TERM_TOTAL": 935
+        }
+      },
+      "ja": {
+        "lm1": {
+          "BLEU": 24.4002,
+          "StreamLAAL": 1613.012,
+          "StreamLAAL_CA": 2058.9259,
+          "TERM_ACC": 0.6245,
+          "TERM_CORRECT": 587,
+          "TERM_TOTAL": 940
+        },
+        "lm2": {
+          "BLEU": 27.7202,
+          "StreamLAAL": 2291.1649,
+          "StreamLAAL_CA": 2779.2009,
+          "TERM_ACC": 0.6596,
+          "TERM_CORRECT": 620,
+          "TERM_TOTAL": 940
+        },
+        "lm3": {
+          "BLEU": 28.9684,
+          "StreamLAAL": 2912.9811,
+          "StreamLAAL_CA": 3329.6177,
+          "TERM_ACC": 0.6617,
+          "TERM_CORRECT": 622,
+          "TERM_TOTAL": 940
+        },
+        "lm4": {
+          "BLEU": 30.7506,
+          "StreamLAAL": 3400.4659,
+          "StreamLAAL_CA": 3912.3631,
+          "TERM_ACC": 0.683,
+          "TERM_CORRECT": 642,
+          "TERM_TOTAL": 940
+        }
+      }
+    }
+  }
+}

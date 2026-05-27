@@ -1,0 +1,728 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T2030__simuleval__medicine_norag_baseline_abbrev_restored_psc_remaining",
+  "event_type": "simuleval",
+  "family": "medicine_norag_baseline_abbrev_restored",
+  "variant": "psc_remaining_cache80_tp4_zh_apptainer_model_smoke",
+  "status": "canceled_psc_zh_moved_to_aries",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260523__psc_medicine_norag_baseline_abbrev_restored.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260523__medicine_norag_baseline_abbrev_restored_psc_remaining.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "PSC de/ja/zh canceled per user because medicine baselines moved to Aries; Apptainer MoE-op smoke 40970887 passed on V100, but model-level zh smoke 40970896 was canceled while pending before producing outputs.",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__psc_medicine_norag_baseline_abbrev_restored.sh"
+    },
+    {
+      "role": "submission_watcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__watch_hf_and_submit_psc_medicine_norag.sh"
+    },
+    {
+      "role": "direct_transfer_submit_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__transfer_origin_models_to_psc_and_submit_medicine_norag.sh"
+    },
+    {
+      "role": "batched_medicine_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260522__medicine_abbrev_restored_norag_streaming_batched_aries67.sh"
+    },
+    {
+      "role": "base_no_rag_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/rank16/baseline/bypass_simuleval_rank32_iter_0000452_hf_baseline_no_rag_sweep.sh"
+    },
+    {
+      "role": "agent",
+      "type": "python",
+      "direction": "control",
+      "path": "agents/infinisst_omni_vllm_rag_v4.py"
+    },
+    {
+      "role": "prep_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/prepare_medicine_one_talk_inputs.py"
+    },
+    {
+      "role": "post_eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/offline_sst_eval/offline_streamlaal_eval.py"
+    },
+    {
+      "role": "miss_export_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/export_streamlaal_term_misses.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260523__medicine_norag_baseline_abbrev_restored_psc_remaining.md"
+    },
+    {
+      "role": "medicine_eso_samples",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/home/jiaxingxu/rag-sst/eso-dataset/outputs_v2_abbrev_exact_match_abbrev_restored/test/sample_{404,545006,596001,605000,606}_v2"
+    },
+    {
+      "role": "origin_models_local_source",
+      "type": "model_dir_set",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-{zh,de,ja}-s_origin-bsz4"
+    },
+    {
+      "role": "origin_models_hf_public",
+      "type": "hf_model_repo_set",
+      "direction": "input",
+      "path": "gavinlaw/infinisst-no-tmsft-origin-bsz4-{zh,de,ja}"
+    },
+    {
+      "role": "psc_output_root",
+      "type": "directory",
+      "direction": "output",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_norag_baseline_abbrev_restored"
+    },
+    {
+      "role": "taurus_import_zh_lm4_sample605000",
+      "type": "directory",
+      "direction": "output",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_norag_baseline_abbrev_restored/taurus_imports/20260523T2110_zh_lm4_sample605000"
+    },
+    {
+      "role": "psc_log_root",
+      "type": "directory",
+      "direction": "log",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_norag_baseline_abbrev_restored"
+    },
+    {
+      "role": "hf_upload_logs",
+      "type": "file_pair",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_origin_models_hf_upload_20260523T2030.{out,err}"
+    },
+    {
+      "role": "vllm_moe_topk_patch",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/tools/patch_vllm_moe_topk_softmax_fallback.py",
+      "metadata": {
+        "purpose": "PSC V100 compatibility fallback when vLLM _moe_C.topk_softmax is absent",
+        "quality_sensitive_generation_params_changed": false
+      }
+    },
+    {
+      "role": "vllm_moe_ops_smoke_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__psc_vllm_moe_ops_smoke.sh",
+      "metadata": {
+        "purpose": "PSC V100 no-model runtime check for vLLM _moe_C op registration before model-load smoke"
+      }
+    },
+    {
+      "role": "psc_job_monitor",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/tools/monitor_psc_job_notify.sh",
+      "metadata": {
+        "purpose": "Detached local monitor that polls PSC Slurm/log state and sends codex-notify messages"
+      }
+    }
+  ],
+  "metadata": {
+    "psc_account": "cis260009p",
+    "psc_partition": "GPU-shared",
+    "gres": "gpu:v100-32:2 initial smoke, gpu:v100-32:4 active rerun",
+    "cpus_per_gpu": 4,
+    "requested_grid": {
+      "zh": [
+        "1",
+        "3",
+        "4"
+      ],
+      "de": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "ja": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ]
+    },
+    "samples": [
+      "404",
+      "545006",
+      "596001",
+      "605000",
+      "606"
+    ],
+    "baseline_mode": "no_rag",
+    "term_metric_denominator": "strict fixed medicine glossary generated from restored ESO outputs_v2 terms",
+    "origin_model_upload_pid": "2384569",
+    "origin_model_upload_command": "ONLY_MODELS='no_tmsft_zh no_tmsft_de no_tmsft_ja' bash documents/code/simuleval/launchers/2026/05/20260523__upload_acl_paper_extracted_models_to_hf.sh",
+    "public_hf_upload_pid": "2446776",
+    "public_hf_upload_stdout": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_origin_models_hf_public_upload_20260523T2058.out",
+    "public_hf_upload_stderr": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_origin_models_hf_public_upload_20260523T2058.err",
+    "public_hf_de_upload_pid": "2743806",
+    "public_hf_de_upload_stdout": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_origin_model_de_hf_public_upload_20260523T2120.out",
+    "public_hf_de_upload_stderr": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_origin_model_de_hf_public_upload_20260523T2120.err",
+    "public_hf_ja_upload_pid": "2732320",
+    "public_hf_ja_upload_stdout": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_origin_model_ja_hf_public_upload_20260523T2119.out",
+    "public_hf_ja_upload_stderr": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_origin_model_ja_hf_public_upload_20260523T2119.err",
+    "submission_watcher_state_dir": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_norag_psc_submit_20260523T2030",
+    "hf_transfer_status": "blocked_private_storage_limit",
+    "hf_transfer_error": "Private repository storage limit reached during zh origin commit; upload process group 2384569 terminated.",
+    "fallback_policy": "direct_scp_model_files_to_psc_with_file_size_checks_then_submit_each_language_job",
+    "direct_transfer_status": "blocked_slow_reverse_tunnel",
+    "direct_transfer_observation": "PSC alias uses Taurus localhost:22222 reverse tunnel through Mac; model shard transfer reached only about 61M of a 4.7G shard after roughly a minute-scale test, which is not viable for 66G per model.",
+    "http_transfer_status": "blocked_no_route_from_psc_to_taurus",
+    "http_transfer_observation": "Temporary token HTTP server worked locally on Taurus, but PSC urllib to taurus.cs.ucsb.edu:18080 failed with No route to host. The server was stopped.",
+    "public_hf_authorized_by_user": true,
+    "public_hf_upload_status": "complete",
+    "public_hf_repos": [
+      "gavinlaw/infinisst-no-tmsft-origin-bsz4-zh",
+      "gavinlaw/infinisst-no-tmsft-origin-bsz4-de",
+      "gavinlaw/infinisst-no-tmsft-origin-bsz4-ja"
+    ],
+    "psc_jobs_submitted": [
+      {
+        "lang": "zh",
+        "target_lms": [
+          "1",
+          "3",
+          "4"
+        ],
+        "job_id": "40968103",
+        "status_at_record": "FAILED",
+        "time_limit": "12:00:00",
+        "failure_reason": "Initial watcher SSH argument quoting bug split TARGET_LMS and corrupted the sbatch command."
+      },
+      {
+        "lang": "zh",
+        "target_lms": [
+          "1",
+          "3",
+          "4"
+        ],
+        "job_id": "40968124",
+        "status_at_record": "FAILED",
+        "time_limit": "12:00:00",
+        "failure_reason": "2xV100 TP=2 OOM during vLLM engine initialization after loading 14/15 shards; each V100 had about 432 MiB free and a 442 MiB allocation failed."
+      },
+      {
+        "lang": "de",
+        "target_lms": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "job_id": "40968239",
+        "status_at_record": "CANCELLED",
+        "time_limit": "12:00:00",
+        "failure_reason": "Cancelled after zh TP=2 smoke OOM showed 2xV100 is insufficient for this model."
+      },
+      {
+        "lang": "ja",
+        "target_lms": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "job_id": "40968241",
+        "status_at_record": "CANCELLED",
+        "time_limit": "12:00:00",
+        "failure_reason": "Cancelled after zh TP=2 smoke OOM showed 2xV100 is insufficient for this model."
+      },
+      {
+        "lang": "zh",
+        "target_lms": [
+          "1",
+          "3",
+          "4"
+        ],
+        "job_id": "40968295",
+        "status_at_record": "CANCELLED",
+        "time_limit": "12:00:00",
+        "gres": "gpu:v100-32:4",
+        "vllm_tp_size": 4,
+        "run_stamp": "20260523T2200_psc_medicine_norag_tp4_zh",
+        "failure_reason": "Cancelled before start because queued command still used GPU_MEMORY_UTILIZATION_OVERRIDE=0.75 and would rerun zh lm=4 sample 605000."
+      },
+      {
+        "lang": "de",
+        "target_lms": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "job_id": "40968296",
+        "status_at_record": "CANCELLED",
+        "time_limit": "12:00:00",
+        "gres": "gpu:v100-32:4",
+        "vllm_tp_size": 4,
+        "run_stamp": "20260523T2200_psc_medicine_norag_tp4_de",
+        "failure_reason": "Cancelled before start to resubmit with cache80 wrapper defaults and no arbitrary GPU memory utilization override."
+      },
+      {
+        "lang": "ja",
+        "target_lms": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "job_id": "40968297",
+        "status_at_record": "CANCELLED",
+        "time_limit": "12:00:00",
+        "gres": "gpu:v100-32:4",
+        "vllm_tp_size": 4,
+        "run_stamp": "20260523T2200_psc_medicine_norag_tp4_ja",
+        "failure_reason": "Cancelled before start to resubmit with cache80 wrapper defaults and no arbitrary GPU memory utilization override."
+      },
+      {
+        "lang": "zh",
+        "target_lms": [
+          "1",
+          "3"
+        ],
+        "target_samples": [
+          "404",
+          "545006",
+          "596001",
+          "605000",
+          "606"
+        ],
+        "job_id": "40968578",
+        "status_at_record": "FAILED",
+        "time_limit": "05:00:00",
+        "gres": "gpu:v100-32:4",
+        "vllm_tp_size": 4,
+        "run_stamp": "20260523T2240_psc_medicine_norag_tp4_cache80_zh_lm13",
+        "observed_elapsed": "00:54:52",
+        "exit_code": "1:0",
+        "failure_reason": "vLLM TP=4 model loaded on V100-32, but simuleval failed before decoding because source audio paths pointed to /home/jiaxingxu/rag-sst/... and were missing on PSC.",
+        "failed_source_path_example": "/home/jiaxingxu/rag-sst/eso-dataset/outputs_v2_abbrev_exact_match_abbrev_restored/test/sample_404_v2/404_v2.wav"
+      },
+      {
+        "lang": "zh",
+        "target_lms": [
+          "4"
+        ],
+        "target_samples": [
+          "404",
+          "545006",
+          "596001",
+          "606"
+        ],
+        "excluded_samples": [
+          "605000"
+        ],
+        "job_id": "40968579",
+        "status_at_record": "CANCELLED_AFTER_INVALID_INPUT_PATH_CONFIRMED",
+        "time_limit": "01:00:00",
+        "gres": "gpu:v100-32:4",
+        "vllm_tp_size": 4,
+        "run_stamp": "20260523T2240_psc_medicine_norag_tp4_cache80_zh_lm4_no605000",
+        "observed_elapsed": "00:30:31",
+        "canceled_at_utc": "2026-05-24T00:21:27Z",
+        "cancel_reason": "Combined source file used /home/jiaxingxu/rag-sst/... audio paths missing on PSC; canceled before predictable failure after model load.",
+        "failed_source_path_example": "/home/jiaxingxu/rag-sst/eso-dataset/outputs_v2_abbrev_exact_match_abbrev_restored/test/sample_404_v2/404_v2.wav"
+      },
+      {
+        "lang": "de",
+        "target_lms": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "target_samples": [
+          "404",
+          "545006",
+          "596001",
+          "605000",
+          "606"
+        ],
+        "job_id": "40968580",
+        "status_at_record": "CANCELLED_AFTER_INVALID_INPUT_PATH_AND_QUOTA_ERROR",
+        "time_limit": "05:00:00",
+        "gres": "gpu:v100-32:4",
+        "vllm_tp_size": 4,
+        "run_stamp": "20260523T2240_psc_medicine_norag_tp4_cache80_de_lm1234",
+        "observed_elapsed": "00:28:10",
+        "canceled_at_utc": "2026-05-24T00:23:02Z",
+        "cancel_reason": "Combined source file used /home/jiaxingxu/rag-sst/... audio paths missing on PSC; vLLM startup also hit Triton cache Disk quota exceeded.",
+        "failed_source_path_example": "/home/jiaxingxu/rag-sst/eso-dataset/outputs_v2_abbrev_exact_match_abbrev_restored/test/sample_404_v2/404_v2.wav",
+        "quota_error": "OSError: [Errno 122] Disk quota exceeded from triton/runtime/cache.py"
+      },
+      {
+        "lang": "ja",
+        "target_lms": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "target_samples": [
+          "404",
+          "545006",
+          "596001",
+          "605000",
+          "606"
+        ],
+        "job_id": "40968581",
+        "status_at_record": "CANCELED_BEFORE_START",
+        "time_limit": "05:00:00",
+        "gres": "gpu:v100-32:4",
+        "vllm_tp_size": 4,
+        "run_stamp": "20260523T2240_psc_medicine_norag_tp4_cache80_ja_lm1234",
+        "canceled_at_utc": "2026-05-23T23:48:21Z",
+        "cancel_reason": "User moved ja baseline execution to Aries.",
+        "deleted_psc_model_path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/models/owaski/gigaspeech-ja-s_origin-bsz4"
+      }
+    ],
+    "canceled_bad_submission_jobs": [
+      {
+        "job_id": "40968238",
+        "lang": "de",
+        "reason": "Corrupted SSH quoting produced /jet/home/jluo7/4 paths and a 3-minute time limit."
+      },
+      {
+        "job_id": "40968240",
+        "lang": "ja",
+        "reason": "Corrupted SSH quoting produced /jet/home/jluo7/4 paths and a 3-minute time limit."
+      }
+    ],
+    "scheduler_start_estimates_utc": {
+      "40968578": "2026-05-23T23:16:38 after TimeLimit update to 05:00:00",
+      "40968579": "2026-05-23T23:16:38 after TimeLimit update to 01:00:00",
+      "40968580": "2026-05-24T04:00:00 after TimeLimit update to 05:00:00",
+      "40968581": "CANCELED before start at 2026-05-23T23:48:21Z after ja moved to Aries"
+    },
+    "canceled_user_requested_jobs": [
+      {
+        "job_id": "40968581",
+        "lang": "ja",
+        "applied_at_utc": "2026-05-23T23:48:21Z",
+        "reason": "ja baseline is now running on Aries",
+        "deleted_psc_model_path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/models/owaski/gigaspeech-ja-s_origin-bsz4",
+        "deleted_model_size": "37G"
+      }
+    ],
+    "failed_or_canceled_invalid_input_path_jobs": [
+      {
+        "job_id": "40968578",
+        "lang": "zh",
+        "target_lms": [
+          "1",
+          "3"
+        ],
+        "observed_state": "FAILED",
+        "observed_elapsed": "00:54:52",
+        "reason": "source audio paths were Taurus/local /home/jiaxingxu paths absent on PSC"
+      },
+      {
+        "job_id": "40968579",
+        "lang": "zh",
+        "target_lms": [
+          "4"
+        ],
+        "observed_state": "CANCELLED",
+        "observed_elapsed": "00:30:31",
+        "reason": "same invalid PSC source audio paths confirmed before model load completed"
+      },
+      {
+        "job_id": "40968580",
+        "lang": "de",
+        "target_lms": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "observed_state": "CANCELLED",
+        "observed_elapsed": "00:28:10",
+        "reason": "same invalid PSC source audio paths confirmed; vLLM startup also hit Triton compile cache disk quota"
+      }
+    ],
+    "portable_audio_and_cache_fix": {
+      "applied_at_utc": "2026-05-24T01:24:18Z",
+      "audio_stage_path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/data/eso_medicine_abbrev_restored/test",
+      "staged_samples": [
+        "404",
+        "545006",
+        "596001",
+        "605000",
+        "606"
+      ],
+      "staged_size": "410M",
+      "prepare_script_change": "prefer sample-local <sample>_v2.wav under --eso-test-root before stale metadata converted_audio_path",
+      "batched_launcher_change": "validate combined source wav paths before vLLM/model load",
+      "psc_wrapper_cache_change": "set HF_HOME, XDG_CACHE_HOME, TRITON_CACHE_DIR, TORCHINDUCTOR_CACHE_DIR, VLLM_CACHE_ROOT, NUMBA_CACHE_DIR under PSC project cache root",
+      "psc_prepare_smoke_source": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/data/eso_medicine_abbrev_restored/test/sample_404_v2/404_v2.wav"
+    },
+    "resubmitted_after_audio_cache_fix_jobs": [
+      {
+        "job_id": "40970222",
+        "lang": "zh",
+        "target_lms": [
+          "1",
+          "3"
+        ],
+        "target_samples": [
+          "404",
+          "545006",
+          "596001",
+          "605000",
+          "606"
+        ],
+        "status_at_submit": "PENDING",
+        "reason_at_submit": "Priority",
+        "time_limit": "05:00:00",
+        "gres": "gpu:v100-32:4",
+        "vllm_tp_size": 4,
+        "run_stamp": "20260524T0124_psc_medicine_norag_tp4_cache80_fixaudio_zh_lm13"
+      },
+      {
+        "job_id": "40970223",
+        "lang": "zh",
+        "target_lms": [
+          "4"
+        ],
+        "target_samples": [
+          "404",
+          "545006",
+          "596001",
+          "606"
+        ],
+        "excluded_samples": [
+          "605000"
+        ],
+        "status_at_submit": "PENDING",
+        "reason_at_submit": "Priority",
+        "time_limit": "02:00:00",
+        "gres": "gpu:v100-32:4",
+        "vllm_tp_size": 4,
+        "run_stamp": "20260524T0124_psc_medicine_norag_tp4_cache80_fixaudio_zh_lm4_no605000"
+      },
+      {
+        "job_id": "40970224",
+        "lang": "de",
+        "target_lms": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "target_samples": [
+          "404",
+          "545006",
+          "596001",
+          "605000",
+          "606"
+        ],
+        "status_at_submit": "PENDING",
+        "reason_at_submit": "Priority",
+        "time_limit": "05:00:00",
+        "gres": "gpu:v100-32:4",
+        "vllm_tp_size": 4,
+        "run_stamp": "20260524T0124_psc_medicine_norag_tp4_cache80_fixaudio_de_lm1234"
+      }
+    ],
+    "active_time_limit_update": {
+      "applied_at_utc": "2026-05-23T22:48:47",
+      "old_time_limit": "12:00:00",
+      "new_time_limit": "05:00:00",
+      "reason": "User estimated actual runtime 4-5h; shorter TimeLimit improves Slurm backfill eligibility and avoids over-reserving."
+    },
+    "single_job_time_limit_updates": [
+      {
+        "job_id": "40968579",
+        "applied_at_utc": "2026-05-23T22:52:00",
+        "old_time_limit": "05:00:00",
+        "new_time_limit": "01:00:00",
+        "reason": "zh lm=4 excludes long sample 605000, which already completed on Taurus, so a 1-hour limit is sufficient and improves backfill eligibility."
+      }
+    ],
+    "alternative_resource_test_only": {
+      "gpu:h100-80:2_4h": "2026-05-24T16:29:26",
+      "gpu:l40s-48:2_4h": "2026-05-25T06:09:52",
+      "gpu:v100-32:4_4h": "2026-05-24T12:56:21",
+      "gpu:v100-32:3_4h": "2026-05-24T12:56:21",
+      "decision": "Keep active 4xV100 TP=4 jobs; 2xH100 and 2xL40S are not faster by Slurm test-only estimates, and TP=3 is riskier."
+    },
+    "vllm_quality_probe_policy": {
+      "source_manifest": "documents/code/simuleval/manifests/2026/05/20260523T2110__simuleval__medicine_norag_vllm_override_probe_taurus.json",
+      "decision": "Do not use 4.0/4.0 cache for medicine baseline; use max_model_len=8192, limit_audio=8, disable_custom_all_reduce=1, cache=80.0/60.0, GPU_MEMORY_UTILIZATION=0.80, with TP=4 only as a V100 fit requirement.",
+      "taurus_import_path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_norag_baseline_abbrev_restored/taurus_imports/20260523T2110_zh_lm4_sample605000/psc_limit8_keep80"
+    },
+    "psc_model_policy": "download one public HF origin model per language job after repo validates config.json plus 15 shards",
+    "paper_extracted_workflow_status": "paused_before_full_model_upload",
+    "psc_de_status": "canceled_per_user_de_running_on_aries",
+    "psc_ja_status": "running_on_aries_not_psc",
+    "psc_vllm_moe_topk_failure": {
+      "failed_jobs": [
+        "40970222",
+        "40970223"
+      ],
+      "canceled_jobs": [
+        "40970224"
+      ],
+      "environment": "vllm==0.13.0 torch==2.9.0 on PSC V100",
+      "root_error": "AttributeError: '_OpNamespace' '_moe_C' object has no attribute 'topk_softmax'",
+      "source_path_fix_verified": true
+    },
+    "psc_vllm_moe_topk_patch": {
+      "script": "documents/code/simuleval/tools/patch_vllm_moe_topk_softmax_fallback.py",
+      "psc_target": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/envs/spaCyEnv_20260518/lib/python3.10/site-packages/vllm/_custom_ops.py",
+      "backup_suffix": ".pre_infinisst_topk_fallback.bak",
+      "fallback": "torch softmax + topk only if native _moe_C.topk_softmax is missing",
+      "generation_or_cache_params_changed": false,
+      "current_policy": "disabled by default; do not rely on patch-first runtime compatibility for PSC zh baseline"
+    },
+    "psc_zh_smoke_job": {
+      "job_id": "40970552",
+      "name": "med_zh_smoke_topk",
+      "lang": "zh",
+      "target_lms": [
+        "4"
+      ],
+      "target_samples": [
+        "545006"
+      ],
+      "gres": "gpu:v100-32:4",
+      "time_limit": "01:00:00",
+      "run_stamp": "20260524T0305_zh_smoke_topk",
+      "status_at_record": "CANCELLED",
+      "cancel_reason": "Slurm --export comma parsing left GPU_PAIR=0 while VLLM_TP_SIZE_OVERRIDE=4; canceled before using it as a runtime verdict.",
+      "purpose": "superseded by corrected TP=4 smoke 40970683"
+    },
+    "psc_zh_smoke_job_after_export_fix": {
+      "job_id": "40970683",
+      "name": "med_zh_smoke_tp4",
+      "lang": "zh",
+      "target_lms": [
+        "4"
+      ],
+      "target_samples": [
+        "545006"
+      ],
+      "gres": "gpu:v100-32:4",
+      "time_limit": "01:00:00",
+      "run_stamp": "20260524T0324_zh_smoke_topk_tp4",
+      "status_at_record": "FAILED",
+      "observed_elapsed": "00:23:24",
+      "failure_reason": "After loading all 15 model shards on 4xV100, vLLM failed during profile/kv-cache init with missing _moe_C.moe_align_block_size; this showed one-op patching is not a robust PSC path."
+    },
+    "psc_runtime_strategy_pivot": {
+      "applied_at_utc": "2026-05-24T04:08:00Z",
+      "reason": "PSC and Taurus vLLM native .so hashes match, but PSC host userspace does not reliably register _moe_C ops; prior container probe showed Ubuntu 22.04 Apptainer can load vLLM._moe_C and register topk_softmax.",
+      "wrapper_change": "PSC medicine wrapper now defaults to USE_APPTAINER=1 and ENABLE_VLLM_MOE_TOPK_PATCH=0.",
+      "host_smoke_job": {
+        "job_id": "40970818",
+        "status_at_record": "CANCELLED",
+        "reason": "Host path already known-bad and queue ETA was about 2026-05-25T19:57Z."
+      },
+      "apptainer_op_smoke_job": {
+        "job_id": "40970819",
+        "status_at_record": "FAILED",
+        "observed_elapsed": "00:00:43",
+        "failure_reason": "Apptainer re-entry tried to execute Slurm spool path /var/spool/slurm/.../slurm_script inside the container; this was a wrapper path bug, not a vLLM op verdict.",
+        "gres": "gpu:v100-32:1",
+        "time_limit": "00:05:00",
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/vllm_moe_ops_smoke/20260524T0000",
+        "purpose": "Verify topk_softmax, moe_align_block_size, batched_moe_align_block_size, and moe_sum without loading a model."
+      },
+      "stable_apptainer_reentry_fix": {
+        "applied_at_utc": "2026-05-24T04:28:00Z",
+        "launcher_change": "Both PSC wrappers now re-enter Apptainer via stable ROOT_DIR script paths instead of $0.",
+        "sample_control_change": "PSC medicine wrapper now passes TARGET_SAMPLES_OVERRIDE through to the batched launcher."
+      },
+      "apptainer_op_smoke_job_after_reentry_fix": {
+        "job_id": "40970887",
+        "status_at_record": "COMPLETED",
+        "observed_elapsed": "00:02:30",
+        "node": "v002",
+        "gpu": "Tesla V100-SXM2-32GB",
+        "container_glibc": "2.35",
+        "torch": "2.9.0+cu128",
+        "vllm": "0.13.0",
+        "verified_ops": [
+          "topk_softmax",
+          "moe_align_block_size",
+          "batched_moe_align_block_size",
+          "moe_sum"
+        ],
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/vllm_moe_ops_smoke/20260524T0430"
+      },
+      "zh_model_smoke_after_op_success": {
+        "job_id": "40970896",
+        "status_at_record": "CANCELLED",
+        "reason_at_record": "Priority",
+        "estimated_start_utc": "2026-05-24T04:52:03",
+        "estimated_node": "v007",
+        "lang": "zh",
+        "target_lms": [
+          "4"
+        ],
+        "target_samples": [
+          "545006"
+        ],
+        "gres": "gpu:v100-32:4",
+        "vllm_tp_size": 4,
+        "time_limit": "01:00:00",
+        "run_stamp": "20260524T0435_psc_medicine_zh_lm4_sample545006_appsmoke",
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_norag_baseline_abbrev_restored/20260524T0435_psc_medicine_zh_lm4_sample545006_appsmoke/slurm",
+        "cancel_reason": "User moved zh baseline execution to Aries.",
+        "canceled_at_utc": "2026-05-24T02:49:41",
+        "observed_elapsed": "00:00:00",
+        "output_produced": false
+      },
+      "detached_monitor": {
+        "started_at_utc": "2026-05-24T04:56:12Z",
+        "job_id": "40970896",
+        "pid": "1543373",
+        "interval_seconds": 1800,
+        "max_seconds": 43200,
+        "state_dir": "/mnt/gemini/data1/jiaxuanluo/logs/psc_job_monitors/40970896_20260524T_monitor_v2",
+        "notification_path": "~/bin/codex-notify",
+        "notify_on": [
+          "state_change",
+          "first_nonempty_log",
+          "terminal_state"
+        ],
+        "status_at_record": "STOPPED",
+        "stopped_at_utc": "2026-05-24T06:49:41Z",
+        "stop_reason": "Monitored PSC job 40970896 was canceled because zh moved to Aries."
+      },
+      "latest_test_only_utc": {
+        "v100_32_1_5min_default": "2026-05-25T19:58:59",
+        "v100_32_1_5min_gpuinteract": "2026-05-25T19:57:25"
+      },
+      "psc_zh_status": "canceled_per_user_zh_running_on_aries"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+method	lang	lm	glossary	bleu	streamlaal_ms	term_acc_pct	source	note
+Offline ST	zh		tagged_raw	49.6625		79.12	user_supplied_offline_table	horizontal reference line
+InfiniSST	zh	1	tagged_raw	40.6663	1181.1470	74.31	user_supplied_infinisst_table	
+InfiniSST	zh	2	tagged_raw	45.8268	1765.7196	76.55	user_supplied_infinisst_table	
+InfiniSST	zh	3	tagged_raw	46.7119	2232.6733	76.75	user_supplied_infinisst_table	
+InfiniSST	zh	4	tagged_raw	47.3897	2616.3493	77.54	user_supplied_infinisst_table	
+SLLM+RAG (no TM-SFT)	zh	1	tagged_raw	38.6065	989.4100	86.63	parsed_current_eval_results_raw_glossary	
+SLLM+RAG (no TM-SFT)	zh	2	tagged_raw	45.3029	1559.9494	87.19	parsed_current_eval_results_raw_glossary	
+SLLM+RAG (no TM-SFT)	zh	3	tagged_raw	49.5891	2079.1262	87.42	parsed_current_eval_results_raw_glossary	
+SLLM+RAG (no TM-SFT)	zh	4	tagged_raw	49.9861	2507.4362	87.98	parsed_current_eval_results_raw_glossary	
+RASST	zh	1	tagged_raw	44.2272	1225.8638	82.41	user_supplied_previous_rasst_table_pending_update	
+RASST	zh	2	tagged_raw	48.7556	1781.0892	83.93	user_supplied_previous_rasst_table_pending_update	
+RASST	zh	3	tagged_raw	49.1509	2258.0696	85.77	user_supplied_previous_rasst_table_pending_update	
+RASST	zh	4	tagged_raw	49.6847	2664.1809	85.51	user_supplied_previous_rasst_table_pending_update	
+Offline ST	de		tagged_raw	35.7641		70.57	user_supplied_offline_table	horizontal reference line
+InfiniSST	de	1	tagged_raw	27.4672	1124.0000	64.96	user_supplied_infinisst_table	
+InfiniSST	de	2	tagged_raw	31.6370	1773.0000	67.44	user_supplied_infinisst_table	
+InfiniSST	de	3	tagged_raw	31.7033	2383.0000	68.64	user_supplied_infinisst_table	
+InfiniSST	de	4	tagged_raw	32.6733	2808.0000	68.81	user_supplied_infinisst_table	
+SLLM+RAG (no TM-SFT)	de	1	tagged_raw	26.8311	1012.7922	78.50	parsed_current_eval_results_raw_glossary	
+SLLM+RAG (no TM-SFT)	de	2	tagged_raw	31.3302	1605.7605	83.96	parsed_current_eval_results_raw_glossary	
+SLLM+RAG (no TM-SFT)	de	3	tagged_raw	25.8440	2072.1714	71.87	parsed_current_eval_results_raw_glossary	
+SLLM+RAG (no TM-SFT)	de	4	tagged_raw	32.9821	2622.3082	81.82	parsed_current_eval_results_raw_glossary	
+RASST	de	1	tagged_raw	27.4309	1055.0000	73.78	user_supplied_previous_rasst_table_pending_update	
+RASST	de	2	tagged_raw	32.1915	1698.0000	80.03	user_supplied_previous_rasst_table_pending_update	
+RASST	de	3	tagged_raw	33.1950	2233.0000	78.51	user_supplied_previous_rasst_table_pending_update	
+RASST	de	4	tagged_raw	34.5998	2744.0000	80.75	user_supplied_previous_rasst_table_pending_update	
+Offline ST	ja		tagged_raw	32.9328		66.24	user_supplied_offline_table	horizontal reference line
+InfiniSST	ja	1	tagged_raw	22.0137	1571.0000	63.31	user_supplied_infinisst_table	
+InfiniSST	ja	2	tagged_raw	27.8786	2300.0000	65.64	user_supplied_infinisst_table	
+InfiniSST	ja	3	tagged_raw	29.3039	2707.0000	67.24	user_supplied_infinisst_table	
+InfiniSST	ja	4	tagged_raw	30.6042	3252.0000	67.51	user_supplied_infinisst_table	
+SLLM+RAG (no TM-SFT)	ja	1	tagged_raw	14.4970	1471.1555	85.43	parsed_current_eval_results_raw_glossary	
+SLLM+RAG (no TM-SFT)	ja	2	tagged_raw	26.0790	1827.0041	84.57	parsed_current_eval_results_raw_glossary	
+SLLM+RAG (no TM-SFT)	ja	3	tagged_raw	29.4410	2423.1695	85.00	parsed_current_eval_results_raw_glossary	
+SLLM+RAG (no TM-SFT)	ja	4	tagged_raw	30.1374	2835.5626	85.64	parsed_current_eval_results_raw_glossary	
+RASST	ja	1	tagged_raw	20.1920	1309.0000	77.05	user_supplied_previous_rasst_table_pending_update	
+RASST	ja	2	tagged_raw	28.2989	2092.0000	79.19	user_supplied_previous_rasst_table_pending_update	
+RASST	ja	3	tagged_raw	31.8029	2592.0000	82.39	user_supplied_previous_rasst_table_pending_update	
+RASST	ja	4	tagged_raw	32.5395	3071.0000	82.66	user_supplied_previous_rasst_table_pending_update	

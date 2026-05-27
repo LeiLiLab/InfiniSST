@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "event_id": "20260526T033545__simuleval__tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_aries4567_parallel",
+  "event_type": "simuleval",
+  "family": "tagged_acl_new_v9_hn1024_tau000",
+  "variant": "zh_raw_lm2_lm3_new_v9_termtag_delay_hn1024_tau000_aries4567_parallel_lm4_split",
+  "status": "completed_verified_lm2_lm3_lm4_split",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "direct_pid_4069240_parent_scheduler_stopped",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260526T033545__tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_aries4567_parallel.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260526T033545__tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_aries4567_parallel.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && mkdir -p documents/logs/simuleval && nohup setsid bash -lc '\\''RUN_STAMP=20260526T033545_tagacl_newv9_hn1024_tau000_raw_zh_lm234_aries4567_parallel bash documents/code/simuleval/launchers/2026/05/20260526T033545__tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_aries4567_parallel.sh'\\'' > documents/logs/simuleval/20260526T033545_tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_aries4567_parallel.out 2> documents/logs/simuleval/20260526T033545_tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_aries4567_parallel.err < /dev/null & pid=$!; echo $pid > documents/logs/simuleval/20260526T033545_tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_aries4567_parallel.pid; echo $pid'",
+  "parent_run_ids": [
+    "lh1b88kw",
+    "2g6kan5y"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260526T033545__tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_aries4567_parallel.sh"
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "wandb_logger",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/offline_evaluation/wandb_eval_logger.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260526T033545__tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_aries4567_parallel.md"
+    },
+    {
+      "role": "speech_llm_hf_model",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm_exports/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8/keep1.0_r32/v0-20260524-062743-hf"
+    },
+    {
+      "role": "hn1024_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "source_run_id": "lh1b88kw"
+      }
+    },
+    {
+      "role": "acl6060_data",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/mnt/taurus/data/siqiouyang/datasets/acl6060"
+    },
+    {
+      "role": "tagged_raw_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "maxsim_index_cache",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/maxsim_index_cache/lh1b88kw_3ed0568d44__acl6060_tagged_gt_raw_min_norm2__171822e20b__maxsim.pt"
+    },
+    {
+      "role": "main_result_tsv",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/taurus/data2/jiaxuanluo/tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_20260526T033545_tagacl_newv9_hn1024_tau000_raw_zh_lm234_aries4567_parallel"
+    },
+    {
+      "role": "logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/taurus/data2/jiaxuanluo/logs/tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_20260526T033545_tagacl_newv9_hn1024_tau000_raw_zh_lm234_aries4567_parallel"
+    },
+    {
+      "role": "temp_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/taurus/data2/jiaxuanluo/tmp/jx_tacl0p"
+    },
+    {
+      "role": "outer_log_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260526T033545_tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_aries4567_parallel.out"
+    },
+    {
+      "role": "outer_log_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260526T033545_tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_aries4567_parallel.err"
+    },
+    {
+      "role": "outer_pid_file",
+      "type": "text",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260526T033545_tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_aries4567_parallel.pid"
+    }
+  ],
+  "metadata": {
+    "host": "aries",
+    "gpu_pairs_csv": "4,5;6,7",
+    "max_parallel": 2,
+    "lang": "zh",
+    "lms": [
+      2,
+      3
+    ],
+    "glossary_kind": "raw",
+    "metric_denominator": "fixed raw tagged ACL glossary acl6060_tagged_gt_raw_min_norm2.json",
+    "runtime_glossary": "raw tagged ACL glossary",
+    "retriever_run_id": "lh1b88kw",
+    "retriever_variant": "HN1024",
+    "retriever_tau": 0.0,
+    "retriever_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "speech_llm_training_run_id": "2g6kan5y",
+    "speech_llm_model": "new_v9_termtag_delay_oldnewv3_r32a64",
+    "strip_output_tags": "term",
+    "vllm_tp_size": 2,
+    "vllm_disable_custom_all_reduce": true,
+    "vllm_moe_use_deep_gemm": false,
+    "vllm_use_fused_moe_grouped_topk": false,
+    "rag_gpu_override": "cuda:1",
+    "run_stamp": "20260526T033545_tagacl_newv9_hn1024_tau000_raw_zh_lm234_aries4567_parallel",
+    "direct_pid": 4069240,
+    "launched_at_utc": "2026-05-26T03:37:00Z",
+    "startup_state": "running_lm2_lm3_generation_verified",
+    "startup_verified_at_utc": "2026-05-26T03:56:00Z",
+    "startup_observed": {
+      "lm2_simuleval_pid": 4069514,
+      "lm2_gpu_pair": "4,5",
+      "lm3_simuleval_pid": 4069513,
+      "lm3_gpu_pair": "6,7",
+      "generation_log_pattern": "[VLLM] Output Translation"
+    },
+    "lm4_split_event": "20260526T034148__simuleval__tagged_acl_new_v9_hn1024_tau000_raw_zh_lm4_aries23_parallel",
+    "parent_scheduler_stopped_pid": 4069328,
+    "parent_scheduler_stopped_at_utc": "2026-05-26T03:57:00Z",
+    "parent_scheduler_stop_reason": "Prevent the already-running lm2/lm3 wrapper from launching a duplicate lm4 after lm4 was split to idle GPU pair 2,3.",
+    "completed_at_utc": "2026-05-26T04:13:00Z",
+    "verified_outputs": {
+      "lm2_eval_results_tsv": "/mnt/taurus/data2/jiaxuanluo/tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_20260526T033545_tagacl_newv9_hn1024_tau000_raw_zh_lm234_aries4567_parallel/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau000_readout_parallel/zh/dtagacl_new_v9_hn1024_tau000_lm2_k10_th0.0_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "lm2_instances_log": "/mnt/taurus/data2/jiaxuanluo/tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_20260526T033545_tagacl_newv9_hn1024_tau000_raw_zh_lm234_aries4567_parallel/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau000_readout_parallel/zh/dtagacl_new_v9_hn1024_tau000_lm2_k10_th0.0_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+      "lm2_term_adoption_json": "/mnt/taurus/data2/jiaxuanluo/tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_20260526T033545_tagacl_newv9_hn1024_tau000_raw_zh_lm234_aries4567_parallel/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau000_readout_parallel/zh/dtagacl_new_v9_hn1024_tau000_lm2_k10_th0.0_gacl6060_tagged_gt_raw_min_norm2/term_adoption.json",
+      "lm3_eval_results_tsv": "/mnt/taurus/data2/jiaxuanluo/tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_20260526T033545_tagacl_newv9_hn1024_tau000_raw_zh_lm234_aries4567_parallel/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau000_readout_parallel/zh/dtagacl_new_v9_hn1024_tau000_lm3_k10_th0.0_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "lm3_instances_log": "/mnt/taurus/data2/jiaxuanluo/tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_20260526T033545_tagacl_newv9_hn1024_tau000_raw_zh_lm234_aries4567_parallel/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau000_readout_parallel/zh/dtagacl_new_v9_hn1024_tau000_lm3_k10_th0.0_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+      "lm3_term_adoption_json": "/mnt/taurus/data2/jiaxuanluo/tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_20260526T033545_tagacl_newv9_hn1024_tau000_raw_zh_lm234_aries4567_parallel/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau000_readout_parallel/zh/dtagacl_new_v9_hn1024_tau000_lm3_k10_th0.0_gacl6060_tagged_gt_raw_min_norm2/term_adoption.json"
+    },
+    "parallelization_reason": "User requested parallel execution after the lm1 sequential readout proved too slow; Aries GPU pairs 4,5 and 6,7 were verified idle, and RAG is placed on the VLLM GPU within each pair.",
+    "depends_on_event": "20260526T0210__simuleval__tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_aries01_seq",
+    "launch_mode": "detached_ssh_setsid_no_slurm",
+    "launch_order": "lm2_lm3_parallel_lm4_split_to_aries23",
+    "storage_root": "/mnt/taurus/data2",
+    "storage_reason": "/mnt/gemini/data1 had only about 91G free at planning time; /mnt/taurus/data2 had about 747G free",
+    "eval_tmpdir_reason": "Aries /tmp had only about 2.3GB free during the preceding preflight, so the launcher uses short /mnt/taurus/data2/jiaxuanluo/tmp/jx_tacl0p; path length stays far below the vLLM Unix-domain IPC limit",
+    "main_result_reference": "documents/code/simuleval/reports/20260524_main_result_data.tsv"
+  }
+}

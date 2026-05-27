@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T0239__analysis__retriever_hn_tau_figure5_description_refresh",
+  "event_type": "analysis",
+  "family": "paper_figure_refresh",
+  "variant": "retriever_hn_tau_figure5_description",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260525__retriever_hn_tau_figure5_description_refresh.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "manual LaTeX edit to latex/sections/results.tex followed by TEXINPUTS=latex//: BIBINPUTS=latex//: BSTINPUTS=latex//: latexmk -pdf -interaction=nonstopmode latex/acl_latex.tex",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260525__retriever_hn_tau_figure5_description_refresh.md"
+    },
+    {
+      "role": "paper_section",
+      "type": "tex",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/sections/results.tex"
+    },
+    {
+      "role": "paper_figure_pdf",
+      "type": "pdf",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/retriever_dev_pr_fixedraw_hn_comparison.pdf"
+    },
+    {
+      "role": "figure_data",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/figures/20260523_dev_multibank_pr_fixedraw_commonbase_nohn_hn256_hn1024.tsv"
+    },
+    {
+      "role": "threshold_selection_data",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/figures/20260523_dev_pr_fixedraw_commonbase_hn1024_drop1_points.tsv"
+    },
+    {
+      "role": "paper_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/acl_latex.pdf"
+    }
+  ],
+  "metadata": {
+    "completed_utc": "2026-05-25T02:39:35Z",
+    "metric_change": false,
+    "figure_pixel_change": false,
+    "paper_latexmk_pdf_success": true,
+    "description_change": "removed HN512 placeholder wording and explained the dashed tau-selection line as the HN1024 1pp recall-drop point near tau=0.78"
+  }
+}

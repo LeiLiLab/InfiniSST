@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T0259__data_prepare__new_v9_de_ja_variant_no_gt_zero_termtag",
+  "event_type": "data_prepare",
+  "family": "speech_llm_tcm_termmap",
+  "variant": "new_v9_de_ja_variant_no_gt_zero_termtag",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__continue_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_de_ja.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260524__new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_de_ja_data.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries via localhost:20042; export OPENAI_API_KEY from local ~/.bash_history without logging it; run continuation launcher with FORCE_OVERWRITE=1 LANGS_OVERRIDE='de ja'",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__continue_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_de_ja.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260524__new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_de_ja_data.md"
+    },
+    {
+      "role": "augment_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/augment_term_translation_llm_variants.py"
+    },
+    {
+      "role": "zero_no_gt_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/zero_no_gt_termmap_chunks.py"
+    },
+    {
+      "role": "assistant_tag_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/wrap_assistant_term_targets.py"
+    },
+    {
+      "role": "oldnewv3_equiv_train_jsonl_de",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_de_20260524/stage2_train_s_de_oldnewv3_equiv_tcmwiki_termmap_gtbackfill.jsonl"
+    },
+    {
+      "role": "oldnewv3_equiv_train_jsonl_ja",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_ja_20260524/stage2_train_s_ja_oldnewv3_equiv_tcmwiki_termmap_gtbackfill.jsonl"
+    },
+    {
+      "role": "final_train_jsonl_de",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_de_20260524/train_s_de_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3.jsonl"
+    },
+    {
+      "role": "final_train_jsonl_ja",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_ja_20260524/train_s_ja_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3.jsonl"
+    },
+    {
+      "role": "stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524_new_v9_de_ja_continue_variant_no_gt_zero_termtag.out"
+    },
+    {
+      "role": "stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524_new_v9_de_ja_continue_variant_no_gt_zero_termtag.err"
+    },
+    {
+      "role": "pid_file",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/20260524_new_v9_de_ja_continue_variant_no_gt_zero_termtag.pid"
+    }
+  ],
+  "metadata": {
+    "host": "aries.cs.ucsb.edu",
+    "ssh_port": 20042,
+    "langs": [
+      "de",
+      "ja"
+    ],
+    "starts_from_stage": 3,
+    "uses_openai_api": true,
+    "openai_key_handling": "read from ~/.bash_history into environment on aries shell; full key is not written to manifest, command, or logs",
+    "policy": "New V4 LLM variant augmentation, New V5 no-GT-zero, then New V9 assistant-side <term> tags"
+    ,
+    "remote_wrapper_pid": 473395,
+    "remote_launcher_pid": 473400,
+    "started_at_utc": "2026-05-24T03:01:00Z",
+    "watcher": {
+      "host": "taurus",
+      "pid": 750430,
+      "poll_sec": 300,
+      "stdout": "/mnt/gemini/data1/jiaxuanluo/logs/20260524_watch_new_v9_de_ja_data_notify.out",
+      "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/20260524_watch_new_v9_de_ja_data_notify.err",
+      "pid_file": "/mnt/gemini/data1/jiaxuanluo/logs/20260524_watch_new_v9_de_ja_data_notify.pid",
+      "completion_notification": "codex-notify"
+    },
+    "cache_only_rebuild_ja": {
+      "reason": "first ja wrap was launched before rewrite_require_text_boundaries was added; rebuilt from completed OpenAI cache without new API calls",
+      "pid": 1508207,
+      "stdout": "/mnt/gemini/data1/jiaxuanluo/logs/20260524_new_v9_ja_cacheonly_rebuild_20260524T043448.out",
+      "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/20260524_new_v9_ja_cacheonly_rebuild_20260524T043448.err"
+    },
+    "completed_at_utc": "2026-05-24T04:35:00Z",
+    "validation": {
+      "de": {
+        "train_rows": 12500,
+        "train_chunks": 71730,
+        "train_bad_count": 0,
+        "train_nested_count": 0,
+        "train_tag_rows": 11916,
+        "train_tag_count": 65697,
+        "dev_rows": 355,
+        "dev_chunks": 2036,
+        "dev_bad_count": 0,
+        "dev_nested_count": 0,
+        "dev_tag_rows": 334,
+        "dev_tag_count": 1887
+      },
+      "ja": {
+        "train_rows": 12500,
+        "train_chunks": 53352,
+        "train_bad_count": 0,
+        "train_nested_count": 0,
+        "train_tag_rows": 11003,
+        "train_tag_count": 51119,
+        "dev_rows": 355,
+        "dev_chunks": 1555,
+        "dev_bad_count": 0,
+        "dev_nested_count": 0,
+        "dev_tag_rows": 311,
+        "dev_tag_count": 1500,
+        "rewrite_require_text_boundaries": true
+      }
+    }
+  }
+}

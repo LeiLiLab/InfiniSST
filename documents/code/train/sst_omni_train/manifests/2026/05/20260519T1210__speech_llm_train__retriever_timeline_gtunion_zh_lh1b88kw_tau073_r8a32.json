@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "event_id": "20260519T1210__speech_llm_train__retriever_timeline_gtunion_zh_lh1b88kw_tau073_r8a32",
+  "event_type": "speech_llm_train",
+  "family": "speech_llm_termmap_retriever",
+  "variant": "zh_lh1b88kw_tau073_timeline_v1b_gtunion_r8a32",
+  "status": "failed",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": "45269",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__speech_llm_retriever_timeline_gtunion_zh_lh1b88kw_tau073_taurus4_r8a32.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260519__speech_llm_retriever_timeline_gtunion_zh_lh1b88kw_tau073_r8a32.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "tmux new-session -d -s rettm_v1b_r8a32_train \"srun --jobid=45269 --overlap --ntasks=1 --cpus-per-task=8 bash -lc 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && bash documents/code/train/sst_omni_train/launchers/2026/05/20260519__speech_llm_retriever_timeline_gtunion_zh_lh1b88kw_tau073_taurus4_r8a32.sh' > /mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v1b_gtunion_r8a32_train_20260519T1210.out 2> /mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v1b_gtunion_r8a32_train_20260519T1210.err\"",
+  "parent_run_ids": [
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__speech_llm_retriever_timeline_gtunion_zh_lh1b88kw_tau073_taurus4_r8a32.sh"
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260519__speech_llm_retriever_timeline_gtunion_zh_lh1b88kw_tau073_r8a32.md"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_gtunion_20260519/train_s_zh_retriever_timeline_lh1b88kw_tau073_gtunion_k10_lb1p92.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_gtunion_20260519/dev_s_zh_retriever_timeline_lh1b88kw_tau073_gtunion_k10_lb1p92.jsonl"
+    },
+    {
+      "role": "data_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/train/sst_omni_train/manifests/2026/05/20260519T1150__data_prepare__retriever_timeline_termmap_zh_lh1b88kw_tau073_gtunion.json"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/Qwen3-Omni-30B-A3B-Instruct-v2"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/data2/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_gtunion_r8a32_taurus4"
+    },
+    {
+      "role": "direct_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v1b_gtunion_r8a32_train_20260519T1210.out",
+      "metadata": {
+        "stream": "stdout"
+      }
+    },
+    {
+      "role": "direct_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v1b_gtunion_r8a32_train_20260519T1210.err",
+      "metadata": {
+        "stream": "stderr"
+      }
+    }
+  ],
+  "metadata": {
+    "compute": "taurus_hold45269",
+    "tmux_session": "rettm_v1b_r8a32_train",
+    "lora_rank": 8,
+    "lora_alpha": 32,
+    "max_epochs": 1,
+    "iterations_per_epoch": 500,
+    "global_batch_size": 4,
+    "launch_retry": "Initial direct srun used cpus-per-task=16 and failed before container/W&B; relaunched with cpus-per-task=8.",
+    "tensor_model_parallel_size": 2,
+    "expert_model_parallel_size": 4,
+    "data_policy": "V1b GT-union high-noise retriever timeline term_map; no GT backfill."
+    ,
+    "failure_reason": "Duplicate waiting srun/tmux launch was cancelled before container/W&B startup. The actual running launch is event 20260519T1209__speech_llm_train__retriever_timeline_zh_lh1b88kw_tau073_gtunion_r8a32 with W&B run v92usa69.",
+    "superseded_by_event_id": "20260519T1209__speech_llm_train__retriever_timeline_zh_lh1b88kw_tau073_gtunion_r8a32",
+    "superseded_by_wandb_run_id": "v92usa69"
+  }
+}

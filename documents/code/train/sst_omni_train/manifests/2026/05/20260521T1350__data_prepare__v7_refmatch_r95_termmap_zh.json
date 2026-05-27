@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "event_id": "20260521T1350__data_prepare__v7_refmatch_r95_termmap_zh",
+  "event_type": "data_prepare",
+  "family": "speech_llm_termmap_sft",
+  "variant": "zh_retriever_refmatch_r95_lh1b88kw_tau073_srcmatch100k",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260521__build_v7_refmatch_r95_termmap_zh.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260521__v7_refmatch_r95_termmap_zh_data.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "bash documents/code/train/sst_omni_train/launchers/2026/05/20260521__build_v7_refmatch_r95_termmap_zh.sh",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260521__build_v7_refmatch_r95_termmap_zh.sh"
+    },
+    {
+      "role": "data_prep_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_robust_termmap_sft.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260521__v7_refmatch_r95_termmap_zh_data.md"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260519/train_s_zh_retriever_timeline_lh1b88kw_tau073_srcmatch100k_k10_lb1p92.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260519/dev_s_zh_retriever_timeline_lh1b88kw_tau073_srcmatch100k_k10_lb1p92.jsonl"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v7_refmatch_r95_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260521/train_s_zh_v7_refmatch_r95_termmap_lh1b88kw_tau073_srcmatch100k.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v7_refmatch_r95_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260521/dev_s_zh_v7_refmatch_r95_termmap_lh1b88kw_tau073_srcmatch100k.jsonl"
+    },
+    {
+      "role": "report",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v7_refmatch_r95_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260521/v7_refmatch_r95_termmap_summary.json"
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "source_policy": "srcmatch100k retriever timeline lh1b88kw tau=0.73",
+    "new_policy": "refmatch r95 curriculum with gt_target_match_policy=full_ref",
+    "target_gt_term_in_term_map_rate_low": 0.94,
+    "target_gt_term_in_term_map_rate_high": 0.965,
+    "train_rows": 12500,
+    "train_chunks": 68705,
+    "train_raw_gt_terms_total": 172726,
+    "train_target_match_kept_gt_terms": 82068,
+    "train_target_match_dropped_gt_terms": 90658,
+    "train_target_match_kept_gt_term_rate": 0.4751340273033591,
+    "train_target_match_kept_gt_chunk_rate": 0.7402640877812907,
+    "train_gt_term_in_term_map_rate": 0.9483233416191451,
+    "train_gt_chunk_any_term_in_map_rate": 1.0,
+    "train_gt_chunk_all_terms_in_map_rate": 0.8934529193045925,
+    "train_no_gt_nonempty_term_map_rate": 0.17480364001245632,
+    "train_avg_term_map_entries_per_chunk": 1.6418892365912234,
+    "train_avg_non_gt_entries_per_chunk": 0.5091186958736628,
+    "dev_rows": 355,
+    "dev_chunks": 891,
+    "dev_raw_gt_terms_total": 1902,
+    "dev_target_match_kept_gt_terms": 818,
+    "dev_target_match_dropped_gt_terms": 1084,
+    "dev_target_match_kept_gt_term_rate": 0.43007360672975814,
+    "dev_target_match_kept_gt_chunk_rate": 0.6838124054462935,
+    "dev_gt_term_in_term_map_rate": 0.9547677261613692,
+    "dev_gt_chunk_any_term_in_map_rate": 1.0,
+    "dev_gt_chunk_all_terms_in_map_rate": 0.918141592920354,
+    "dev_no_gt_nonempty_term_map_rate": 0.16856492027334852,
+    "dev_avg_term_map_entries_per_chunk": 1.3479236812570146,
+    "dev_avg_non_gt_entries_per_chunk": 0.4713804713804714
+  }
+}

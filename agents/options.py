@@ -1,3 +1,13 @@
+"""
+Argument helpers for InfiniSST agents.
+
+All user-facing strings are in English.
+"""
+
+# ======Configuration=====
+DEFAULT_GEN_SEED = 998244353
+# ======Configuration=====
+
 def add_speech_encoder_args(parser):
     parser.add_argument(
         "--w2v2-path",
@@ -105,6 +115,12 @@ def add_gen_args(parser):
         "--temperature",
         type=float,
         default=1.0,
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=DEFAULT_GEN_SEED,
+        help="Random seed for generation (controls vLLM sampling and Transformers RNGs).",
     )
 
 def add_simuleval_args(parser):

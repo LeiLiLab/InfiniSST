@@ -1,0 +1,243 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T102941__simuleval__tagged_acl_tmv4_de_lm4_hn1024_tau078_omit_batch_taurus45",
+  "event_type": "simuleval",
+  "family": "tagged_acl_tmv4_hn1024_tau078_omit",
+  "variant": "de_lm4_same_lm_batch_taurus45",
+  "status": "completed_eval_valid",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_aries.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_taurus45.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "mkdir -p /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45 && cd /mnt/taurus/home/jiaxuanluo/InfiniSST && (setsid bash -lc 'RUN_STAMP=20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45 LANGS=\"de\" LMS=\"4\" GPU_PAIRS_CSV=\"4,5\" OUT_ROOT=/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45 LOG_ROOT=/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45 EVAL_TMPDIR_ROOT=/tmp/jx_tmv4d4t EMPTY_TERM_MAP_POLICY=omit WANDB_LOG_OVERRIDE=0 bash documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_aries.sh' > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/top.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/top.pid) && cat /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/top.pid",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4_aries.sh",
+      "metadata": {
+        "sha256": "4b811a12a07623b687d0104779bf0a75ba7630c7684769bfe69c439c63724261"
+      }
+    },
+    {
+      "role": "delegate_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_taurus45.md",
+      "metadata": {
+        "sha256": "a71d96919261982ca6eb31da8fd9d5138dbff999509ef58243c700b93874a7fe"
+      }
+    },
+    {
+      "role": "speech_llm_model",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-de-s_v4_ner_baseline_aligned_rate1.0_k20_final-bsz4"
+    },
+    {
+      "role": "eval_input",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all"
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever_id": "HN1024"
+      }
+    },
+    {
+      "role": "prior_lm2_omit_reference",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260525T100614__simuleval__tagged_acl_tmv4_de_lm2_hn1024_tau078_omit_batch_taurus45.json"
+    },
+    {
+      "role": "prior_non_omit_de_lm2_reference",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T2135__simuleval__tagged_acl_tmv4_de_lm2_hn1024_batch.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45"
+    },
+    {
+      "role": "eval_summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/tmv4_de_bsz4_hn1024_tau078_omit_batch_max80/__summary__/summary_de_lm4.tsv"
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45"
+    },
+    {
+      "role": "eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/tmv4_de_bsz4_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_tmv4_hn1024_tau078_omit_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    {
+      "role": "instances_log",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/tmv4_de_bsz4_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_tmv4_hn1024_tau078_omit_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+      "metadata": {
+        "row_count": 5
+      }
+    },
+    {
+      "role": "instances_strip_term_log",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/tmv4_de_bsz4_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_tmv4_hn1024_tau078_omit_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.strip_term.log",
+      "metadata": {
+        "row_count": 5
+      }
+    },
+    {
+      "role": "runtime_log",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/tmv4_de_bsz4_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_tmv4_hn1024_tau078_omit_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/runtime_omni_vllm_maxsim_rag_batched_lm4.jsonl"
+    },
+    {
+      "role": "eval_summary_merged_single_lm",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/tmv4_de_bsz4_hn1024_tau078_omit_batch_max80/__summary__/summary_de_lm1to4.tsv"
+    },
+    {
+      "role": "eval_summary_all_single_lm",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/summary_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4.tsv"
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "latency_multipliers": [
+      4
+    ],
+    "runtime_glossary": "acl6060_tagged_gt_raw_min_norm2",
+    "retriever": "HN1024",
+    "rag_top_k": 10,
+    "rag_tau": 0.78,
+    "rag_timeline_lookback_sec": 1.92,
+    "same_lm_batch": true,
+    "talks_per_lm": 5,
+    "max_new_tokens": 80,
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 12288,
+    "empty_term_map_policy": "omit",
+    "wandb_log_override": 0,
+    "gpu_pair": "4,5",
+    "gpu_pair_policy": "wait_until_idle_no_preemption",
+    "run_stamp": "20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45",
+    "expected_output_root": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45",
+    "expected_log_root": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45",
+    "storage_check_utc": "2026-05-25T10:29:41Z",
+    "storage_check": {
+      "/mnt/gemini/data1": {
+        "available": "304G",
+        "use_percent": "98%"
+      },
+      "/tmp": {
+        "available": "1.5T",
+        "use_percent": "90%"
+      }
+    },
+    "prelaunch_gpu_status": "all Taurus GPUs busy; pair 4,5 occupied by user-owned de_cap16_lm4_decode_cache_probe, launch will wait",
+    "submitted_utc": "2026-05-25T10:29:55Z",
+    "launcher_pid": 1667885,
+    "pid_file": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/top.pid",
+    "top_out": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/top.out",
+    "top_err": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/top.err",
+    "submission_observation_utc": "2026-05-25T10:30:06Z",
+    "submission_status": "launcher alive and waiting for Taurus GPU pair 4,5 to become idle",
+    "submission_evidence": {
+      "log_marker": "[WAIT] gpu_pair=4,5 not idle; retry in 30s",
+      "current_holder": "user-owned de_cap16_lm4_decode_cache_probe"
+    },
+    "startup_observation_utc": "2026-05-25T10:32:20Z",
+    "startup_status": "vllm_loading_model_on_taurus_gpu_pair_4_5",
+    "eval_process_pid": 1669703,
+    "vllm_worker_pids": [
+      1670189,
+      1670191
+    ],
+    "startup_evidence": {
+      "gpu_pair": "4,5",
+      "gpu4_memory_mib": 31782,
+      "gpu5_memory_mib": 31782,
+      "log_markers": [
+        "[RUN] term_map_format=plain empty_term_map_policy=omit",
+        "[LOAD] vLLM model=/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-de-s_v4_ner_baseline_aligned_rate1.0_k20_final-bsz4",
+        "Initializing a V1 LLM engine",
+        "rank 0 in world size 2 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank 0",
+        "Loading safetensors checkpoint shards"
+      ],
+      "lm4_launcher_out": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/de/lm4/launcher.out",
+      "lm4_launcher_err": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/de/lm4/launcher.err"
+    },
+    "decode_observation_utc": "2026-05-25T10:34:22Z",
+    "decode_status": "running with five active samples",
+    "decode_evidence": "[STEP] 57 ready=5 active=5",
+    "completed_utc": "2026-05-25T10:37:31Z",
+    "final_status_note": "launcher completed successfully and wrote [ALL DONE]; eval_results.tsv and summary TSVs validated",
+    "metrics": {
+      "BLEU": 32.53319716625566,
+      "StreamLAAL": 2671.063522107094,
+      "StreamLAAL_CA": 541.2869462211081,
+      "TERM_ACC": 0.8406,
+      "TERM_CORRECT": 786,
+      "TERM_TOTAL": 935,
+      "TERM_ADOPTION": 0.84317,
+      "REAL_TERM_ADOPT": 0.859628,
+      "TERM_FCR": 0.110831
+    },
+    "validation": {
+      "eval_results_rows": 1,
+      "instances_log_rows": 5,
+      "instances_strip_term_log_rows": 5,
+      "strip_output_tags": "term",
+      "term_fcr_policy": "term_map_source_ref_negative_sentence",
+      "launcher_all_done": true
+    },
+    "summary_paths": {
+      "summary_de_lm4": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/tmv4_de_bsz4_hn1024_tau078_omit_batch_max80/__summary__/summary_de_lm4.tsv",
+      "summary_de_lm1to4_single_lm": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/tmv4_de_bsz4_hn1024_tau078_omit_batch_max80/__summary__/summary_de_lm1to4.tsv",
+      "summary_all_single_lm": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmv4_hn1024_tau078_omit_de_lm4_20260525T102941_tmv4_hn1024_tau078_omit_de_lm4_taurus45/summary_tmv4_hn1024_tau078_omit_zh_de_ja_lm1to4.tsv"
+    }
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T2225__data_prepare__new_v8_assistant_termtag_rewrite_clean_no_gt_zero_oldnewv3_zh",
+  "event_type": "data_prepare",
+  "family": "speech_llm_tcm_termmap",
+  "variant": "new_v8_assistant_termtag_rewrite_clean_no_gt_zero_oldnewv3_zh",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260523__build_new_v8_assistant_termtag_rewrite_clean_no_gt_zero_oldnewv3_zh.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260523__speech_llm_new_v8_assistant_termtag_rewrite_clean_no_gt_zero_oldnewv3_zh.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "bash documents/code/train/sst_omni_train/launchers/2026/05/20260523__build_new_v8_assistant_termtag_rewrite_clean_no_gt_zero_oldnewv3_zh.sh",
+  "parent_run_ids": [
+    "cg5qisu9"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260523__build_new_v8_assistant_termtag_rewrite_clean_no_gt_zero_oldnewv3_zh.sh"
+    },
+    {
+      "role": "data_prepare_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/wrap_assistant_term_targets.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260523__speech_llm_new_v8_assistant_termtag_rewrite_clean_no_gt_zero_oldnewv3_zh.md"
+    },
+    {
+      "role": "base_train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_20260522/train_s_zh_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_cacheonly.jsonl"
+    },
+    {
+      "role": "base_dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_20260522/dev_s_zh_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_cacheonly.jsonl"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v8_assistant_termtag_rewrite_clean_no_gt_zero_oldnewv3_zh_20260523/train_s_zh_new_v8_assistant_termtag_rewrite_clean_no_gt_zero_oldnewv3.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v8_assistant_termtag_rewrite_clean_no_gt_zero_oldnewv3_zh_20260523/dev_s_zh_new_v8_assistant_termtag_rewrite_clean_no_gt_zero_oldnewv3.jsonl"
+    },
+    {
+      "role": "summary",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v8_assistant_termtag_rewrite_clean_no_gt_zero_oldnewv3_zh_20260523/new_v8_assistant_termtag_rewrite_clean_no_gt_zero_oldnewv3_summary.json"
+    }
+  ],
+  "metadata": {
+    "base_data": "new_v5_no_gt_zero_llm_variant_aug_oldnewv3",
+    "source_term_token_filter": true,
+    "rewrite_avoid_boundary_overlap": true,
+    "local_rewrite_fallback": true,
+    "tag_template": "<term>{translation}</term>",
+    "raw_gt_terms": 124843,
+    "skipped_excluded_source_token": 29354,
+    "candidate_gt_terms_after_min_len": 93332,
+    "assistant_tag_replacements": 80947,
+    "assistant_tag_exact_replacements": 78386,
+    "assistant_tag_rewrite_replacements": 2561,
+    "assistant_tag_rate_after_min_len": 0.8673016757382248,
+    "skipped_missing_rewrite_span": 12160
+  }
+}

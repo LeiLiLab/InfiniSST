@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T1944__analysis__speechllm_ablation_ja_figure6_companion",
+  "event_type": "analysis",
+  "family": "paper_plot_speechllm_ablation",
+  "variant": "ja_companion_llm_generated_tm_sft_vs_current_rasst",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_06_speechllm_placeholder/plot_figure_06_speechllm_ablation.py",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260525__speechllm_ablation_ja_figure6_companion.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_06_speechllm_placeholder/plot_figure_06_speechllm_ablation.py --data documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_06_speechllm_placeholder/data_ja.tsv --out-prefix documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_06_speechllm_placeholder/speechllm_ablation_ja --paper-stem speechllm_ablation_ja --update-paper",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "analysis_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_06_speechllm_placeholder/plot_figure_06_speechllm_ablation.py",
+      "metadata": {
+        "figure": "fig:ablation_speechllm",
+        "language": "ja"
+      }
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260525__speechllm_ablation_ja_figure6_companion.md",
+      "metadata": {}
+    },
+    {
+      "role": "plot_registry",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/README.md",
+      "metadata": {
+        "updated_figure": "6",
+        "companion_language": "ja"
+      }
+    },
+    {
+      "role": "figure_package_readme",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_06_speechllm_placeholder/README.md",
+      "metadata": {}
+    },
+    {
+      "role": "legacy_plot_data",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260521_tagged_acl_main_results_fourline_llmgen_rasst_data.tsv",
+      "metadata": {
+        "source_figure": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/main_result_tagged.pdf",
+        "selected_language": "ja",
+        "renamed_method": "RASST (LLM-generated TM SFT)"
+      }
+    },
+    {
+      "role": "current_main_result_data",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_01_main_result_tagged/data.tsv",
+      "metadata": {
+        "source_figure": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.pdf",
+        "dataset": "acl_tagged_raw",
+        "selected_language": "ja",
+        "used_rows": [
+          "RASST",
+          "Offline + GT terms"
+        ]
+      }
+    },
+    {
+      "role": "legacy_source_figure",
+      "type": "pdf",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/main_result_tagged.pdf",
+      "metadata": {}
+    },
+    {
+      "role": "current_source_figure",
+      "type": "pdf",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.pdf",
+      "metadata": {}
+    },
+    {
+      "role": "plot_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_06_speechllm_placeholder/data_ja.tsv",
+      "metadata": {
+        "selected_language": "ja",
+        "term_acc_unit": "fraction"
+      }
+    },
+    {
+      "role": "figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_06_speechllm_placeholder/speechllm_ablation_ja.pdf",
+      "metadata": {
+        "scope": "local_snapshot"
+      }
+    },
+    {
+      "role": "figure_png",
+      "type": "image",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_06_speechllm_placeholder/speechllm_ablation_ja.png",
+      "metadata": {
+        "scope": "local_snapshot"
+      }
+    },
+    {
+      "role": "paper_figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/speechllm_ablation_ja.pdf",
+      "metadata": {
+        "scope": "paper"
+      }
+    },
+    {
+      "role": "paper_figure_png",
+      "type": "image",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/speechllm_ablation_ja.png",
+      "metadata": {
+        "scope": "paper"
+      }
+    }
+  ],
+  "metadata": {
+    "acl_usage": "held-out readout only",
+    "language": "ja",
+    "x_axis": "StreamLAAL",
+    "metrics": [
+      "TERM_ACC",
+      "BLEU"
+    ],
+    "oracle_line": "Offline full-context LLM with oracle/GT terms from current main-result TSV",
+    "legacy_rasst_label": "RASST (LLM-generated TM SFT)",
+    "current_rasst_source": "new_main_result_tagged En-Ja acl_tagged_raw rows",
+    "paper_latex_reference_changed": false
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T051617__analysis__medicine_offline_gt_vs_rasst_denominator_check",
+  "event_type": "analysis",
+  "family": "medicine_hardraw",
+  "variant": "offline_gt_vs_rasst_denominator_check",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/reports/20260525_medicine_offline_gt_vs_rasst_denominator_check.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "manual filesystem analysis of main TSV, medicine offline outputs, RASST manifests, and hard glossary/reference files",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_medicine_offline_gt_vs_rasst_denominator_check.md",
+      "metadata": {}
+    },
+    {
+      "role": "main_result_tsv",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "analysis_script",
+      "type": "script",
+      "direction": "input",
+      "path": "documents/code/simuleval/src/build_main_result_tables_and_figures_20260524.py",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_hard_raw_glossary",
+      "type": "glossary_json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_hard_terms_llm_judge_manual_20260524/hard_medicine_glossary_raw_llm_judge_manual_zh215_unique212.json",
+      "metadata": {
+        "entries": 212
+      }
+    },
+    {
+      "role": "offline_eso_outputs",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/data/siqiouyang/runs/infinisst_rag/offline/eso",
+      "metadata": {}
+    },
+    {
+      "role": "zh_rasst_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T0242__simuleval__medicine_hardraw_hn1024_tau078_new_v9_batch.json",
+      "metadata": {}
+    },
+    {
+      "role": "zh_rasst_inputs",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_hn1024_tau078_new_v9_batch_20260524T0242/zh/__medicine_inputs__/lists",
+      "metadata": {}
+    },
+    {
+      "role": "de_rasst_inputs",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_de_hn1024_tau078_new_v9_lm1to4_5samples_20260524T0645_de_hardraw_newv9_hn1024_tau078/de/__medicine_inputs__/lists",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "finding": "medicine offline+GT and RASST are not denominator-matched because their target reference files differ",
+    "denominators": {
+      "zh": {
+        "rasst_reference": 673,
+        "offline_glossary_reference": 744
+      },
+      "de": {
+        "rasst_reference": 647,
+        "offline_glossary_reference": 718
+      },
+      "ja": {
+        "norag_reference": 727,
+        "offline_glossary_reference": 736
+      }
+    },
+    "recommendation": "do not treat current medicine offline+GT horizontal line as a strict upper bound unless it is rerun/rescored on the exact RASST/no-RAG reference files with auditable oracle term-map inputs"
+  }
+}

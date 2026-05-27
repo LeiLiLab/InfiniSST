@@ -1,0 +1,197 @@
+{
+  "schema_version": "1.0",
+  "event_id": "20260524T182901__simuleval__medicine_hardraw_de_mfa_npfilter_hn1024_tau078_lm1to4_max80_audio128",
+  "event_type": "simuleval",
+  "family": "medicine_hardraw",
+  "variant": "de_mfa_npfilter_new_v9_hn1024_tau078_lm1to4_same_lm_batch_5samples_max80_audio128",
+  "status": "cancelled_interrupted_for_aries8_training",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "local_pid:4034959",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__submit_medicine_hardraw_de_mfa_npfilter_hn1024_tau078_lm1to4_taurus8_max80_audio128.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__medicine_hardraw_de_mfa_npfilter_hn1024_tau078_lm1to4_taurus8_max80_audio128.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && RUN_STAMP=20260524T182901_de_medhard_mfa_npfilter_max80_audio128 bash documents/code/simuleval/launchers/2026/05/20260524__submit_medicine_hardraw_de_mfa_npfilter_hn1024_tau078_lm1to4_taurus8_max80_audio128.sh'",
+  "parent_run_ids": [
+    "20260524T1738__simuleval__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_de_lm1to4_max80"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__submit_medicine_hardraw_de_mfa_npfilter_hn1024_tau078_lm1to4_taurus8_max80_audio128.sh",
+      "metadata": {}
+    },
+    {
+      "role": "batch_launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_hardraw_lm1to4_5samples_hn1024_tau078_new_v9_batch.sh",
+      "metadata": {}
+    },
+    {
+      "role": "batch_eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__medicine_hardraw_de_mfa_npfilter_hn1024_tau078_lm1to4_taurus8_max80_audio128.md",
+      "metadata": {}
+    },
+    {
+      "role": "speech_llm_checkpoint",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_r32a64_tp2_taurus8/keep1.0_r32/v0-20260525-001708-hf",
+      "metadata": {}
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "pt",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "tau": 0.78
+      }
+    },
+    {
+      "role": "medicine_hard_raw_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hard_manual_glossary_streamlaal_20260524.json",
+      "metadata": {}
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_de_mfa_npfilter_hn1024_tau078_lm1to4_5samples_max80_audio128_20260524T182901_de_medhard_mfa_npfilter_max80_audio128",
+      "metadata": {}
+    },
+    {
+      "role": "slurm_logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_de_mfa_npfilter_hn1024_tau078_lm1to4_5samples_max80_audio128_20260524T182901_de_medhard_mfa_npfilter_max80_audio128",
+      "metadata": {}
+    },
+    {
+      "role": "monitor_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_de_mfa_npfilter_hn1024_tau078_lm1to4_5samples_max80_audio128_20260524T182901_de_medhard_mfa_npfilter_max80_audio128/monitor.out",
+      "metadata": {
+        "pid": 4041086,
+        "notify_on_completion": true
+      }
+    },
+    {
+      "role": "post_eval_monitor_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_de_mfa_npfilter_hn1024_tau078_lm1to4_5samples_max80_audio128_20260524T182901_de_medhard_mfa_npfilter_max80_audio128/monitor_lm1_aries_pathfix_update_paper.log",
+      "metadata": {
+        "pid": 222326,
+        "host": "local",
+        "waits_for": "lm1 Aries TSV then rebuilds TSV/figures/pdf"
+      }
+    }
+  ],
+  "metadata": {
+    "lang_code": "de",
+    "domain": "medicine",
+    "target_samples": [
+      "404",
+      "545006",
+      "596001",
+      "605000",
+      "606"
+    ],
+    "latency_multipliers": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "same_lm_batch": true,
+    "scheduler_batch_size": 5,
+    "max_new_tokens": 80,
+    "max_new_tokens_policy": "fixed",
+    "vllm_limit_audio": 128,
+    "gpu_plan": {
+      "lm1": "0,1",
+      "lm2": "2,3",
+      "lm3": "4,5",
+      "lm4": "6,7"
+    },
+    "eval_tmpdir": "/tmp/jxmdde_20260524T182901",
+    "startup_status": "active_generation_all_lms",
+    "top_pid": 4034959,
+    "lm_pids": {
+      "lm1": 4035144,
+      "lm2": 4035147,
+      "lm3": 4035151,
+      "lm4": 4035158
+    },
+    "startup_checks": {
+      "max_new_tokens_override": 80,
+      "vllm_limit_audio_override": 128,
+      "scheduler_batch_size_override": 5,
+      "gpu_memory_after_vllm_start": "all 8 GPUs allocated by four TP=2 vLLM processes"
+    },
+    "lm1_retry": {
+      "reason": "initial lm1 failed with vLLM decoder prompt length 8255 > max_model_len 8192",
+      "pid": 160429,
+      "vllm_max_model_len": 12288,
+      "max_new_tokens": 80,
+      "vllm_limit_audio": 128,
+      "log_root": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_de_mfa_npfilter_hn1024_tau078_lm1to4_5samples_max80_audio128_20260524T182901_de_medhard_mfa_npfilter_max80_audio128/lm1_retry_mlen12288"
+    },
+    "lm1_retry_aries": {
+      "reason": "user requested Aries, not Taurus; retry initial lm1 failure from prompt length 8255 > 8192",
+      "host": "aries",
+      "gpu_pair": "5,6",
+      "pid": 3083531,
+      "vllm_max_model_len": 12288,
+      "max_new_tokens": 80,
+      "vllm_limit_audio": 128,
+      "clean_output_dir": true,
+      "log_root": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_de_mfa_npfilter_hn1024_tau078_lm1to4_5samples_max80_audio128_20260524T182901_de_medhard_mfa_npfilter_max80_audio128/lm1_retry_aries_mlen12288"
+    },
+    "lm1_retry_aries_pathfix": {
+      "reason": "Aries cannot read /home/jiaxingxu medicine audio paths; regenerated medicine input lists with /mnt/taurus/home/jiaxingxu and reran lm1 on Aries",
+      "host": "aries",
+      "pid": 3139142,
+      "gpu_pair": "5,6",
+      "vllm_max_model_len": 12288,
+      "max_new_tokens": 80,
+      "vllm_limit_audio": 128,
+      "eso_test_root": "/mnt/taurus/home/jiaxingxu/rag-sst/eso-dataset/outputs_v2/test",
+      "log_root": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_de_mfa_npfilter_hn1024_tau078_lm1to4_5samples_max80_audio128_20260524T182901_de_medhard_mfa_npfilter_max80_audio128/lm1_retry_aries_mlen12288_pathfix"
+    },
+        "post_eval_monitor": {
+            "pid": 222326,
+            "log": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_de_mfa_npfilter_hn1024_tau078_lm1to4_5samples_max80_audio128_20260524T182901_de_medhard_mfa_npfilter_max80_audio128/monitor_lm1_aries_pathfix_update_paper.log",
+            "updates": [
+                "documents/code/simuleval/reports/20260524_main_result_data.tsv",
+                "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/medicine_main_result.pdf",
+                "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/acl_latex.pdf"
+            ]
+        },
+        "cancellation": {
+            "cancelled_utc": "2026-05-25T00:43:29Z",
+            "reason": "User requested freeing Aries GPUs for urgent TM-SFT exact GT term-wrap training.",
+            "killed_process_groups": {
+                "aries_lm1_pathfix_retry": 3139142,
+                "local_post_eval_monitor": 222326
+            },
+            "do_not_use_as_complete_result": true
+        }
+    }
+}

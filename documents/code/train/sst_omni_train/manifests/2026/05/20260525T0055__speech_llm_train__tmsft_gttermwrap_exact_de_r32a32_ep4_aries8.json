@@ -1,0 +1,139 @@
+{
+    "schema_version": 1,
+    "event_id": "20260525T0045__data_prepare__tmsft_gttermwrap_exact_de",
+    "event_type": "data_prepare",
+    "family": "speech_llm_tcm_termmap",
+    "variant": "tmsft_gttermwrap_exact_de",
+    "status": "success",
+    "project": "sst_omni",
+    "wandb_run_id": null,
+    "slurm_job_id": null,
+    "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260525__build_tmsft_gttermwrap_exact_de.sh",
+    "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260525__tmsft_gttermwrap_exact_de_data.md",
+    "cwd": "/home/jiaxuanluo/InfiniSST",
+    "command": "setsid bash -lc 'RUN_STAMP=20260525T0045 FORCE_OVERWRITE=0 bash documents/code/train/sst_omni_train/launchers/2026/05/20260525__build_tmsft_gttermwrap_exact_de.sh' > /mnt/gemini/data1/jiaxuanluo/logs/build_tmsft_gttermwrap_exact_de_20260525T0045.out 2> /mnt/gemini/data1/jiaxuanluo/logs/build_tmsft_gttermwrap_exact_de_20260525T0045.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/build_tmsft_gttermwrap_exact_de_20260525T0045.pid",
+    "parent_run_ids": [],
+    "artifacts": [
+        {
+            "role": "launcher",
+            "type": "shell",
+            "direction": "control",
+            "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260525__build_tmsft_gttermwrap_exact_de.sh",
+            "metadata": {}
+        },
+        {
+            "role": "notes",
+            "type": "markdown",
+            "direction": "control",
+            "path": "documents/code/train/sst_omni_train/notes/2026/05/20260525__tmsft_gttermwrap_exact_de_data.md",
+            "metadata": {}
+        },
+        {
+            "role": "source_train_jsonl",
+            "type": "jsonl",
+            "direction": "input",
+            "path": "/mnt/gemini/data1/jiaxuanluo/train_s_de_v4_ner_baseline_aligned_rate1.0_k20_final.jsonl",
+            "metadata": {
+                "lineage": "historical German TM-SFT training JSONL with embedded user term_map"
+            }
+        },
+        {
+            "role": "derive_gt_script",
+            "type": "python",
+            "direction": "control",
+            "path": "documents/code/train/sst_omni_train/src/derive_gt_terms_from_termmap_matches.py",
+            "metadata": {
+                "fuzzy_match": false
+            }
+        },
+        {
+            "role": "wrap_script",
+            "type": "python",
+            "direction": "control",
+            "path": "documents/code/train/sst_omni_train/src/wrap_assistant_term_targets.py",
+            "metadata": {
+                "enable_local_rewrite": false,
+                "exact_require_text_boundaries": true
+            }
+        },
+        {
+            "role": "stage0_train_jsonl",
+            "type": "jsonl",
+            "direction": "output",
+            "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_tmsft_gttermwrap_exact_de_20260525/stage0_train_s_de_tmsft_exact_gt_from_termmap.jsonl",
+            "metadata": {}
+        },
+        {
+            "role": "train_jsonl",
+            "type": "jsonl",
+            "direction": "output",
+            "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_tmsft_gttermwrap_exact_de_20260525/train_s_de_tmsft_gttermwrap_exact.jsonl",
+            "metadata": {}
+        },
+        {
+            "role": "dev_jsonl",
+            "type": "jsonl",
+            "direction": "output",
+            "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_tmsft_gttermwrap_exact_de_20260525/dev_s_de_tmsft_gttermwrap_exact_first355.jsonl",
+            "metadata": {
+                "max_rows": 355
+            }
+        },
+        {
+            "role": "summary",
+            "type": "json",
+            "direction": "output",
+            "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_tmsft_gttermwrap_exact_de_20260525/tmsft_gttermwrap_exact_de_summary.json",
+            "metadata": {}
+        },
+        {
+            "role": "detached_stdout",
+            "type": "log",
+            "direction": "log",
+            "path": "/mnt/gemini/data1/jiaxuanluo/logs/build_tmsft_gttermwrap_exact_de_20260525T0045.out",
+            "metadata": {}
+        },
+        {
+            "role": "detached_stderr",
+            "type": "log",
+            "direction": "log",
+            "path": "/mnt/gemini/data1/jiaxuanluo/logs/build_tmsft_gttermwrap_exact_de_20260525T0045.err",
+            "metadata": {}
+        },
+        {
+            "role": "pid_file",
+            "type": "text",
+            "direction": "log",
+            "path": "/mnt/gemini/data1/jiaxuanluo/logs/build_tmsft_gttermwrap_exact_de_20260525T0045.pid",
+            "metadata": {}
+        }
+    ],
+    "metadata": {
+        "language": "de",
+        "source_dataset": "historical_tmsft",
+        "target_wrapping": "exact",
+        "fuzzy_gt_derivation": false,
+        "local_rewrite": false,
+        "tag_template": "<term>{translation}</term>",
+        "exact_require_text_boundaries": true,
+        "dev_rows": 355,
+        "storage_root": "/mnt/gemini/data1",
+        "validation": {
+            "train_rows": 12500,
+            "train_chunks": 71730,
+            "train_termmap_entries": 400416,
+            "train_exact_gt_terms": 86516,
+            "train_assistant_tag_replacements": 77821,
+            "train_assistant_tag_exact_replacements": 77821,
+            "train_rows_with_assistant_tags": 11968,
+            "train_tagged_assistant_messages": 39665,
+            "dev_rows": 355,
+            "dev_chunks": 1946,
+            "dev_exact_gt_terms": 2449,
+            "dev_assistant_tag_replacements": 2199,
+            "malformed_tag_assistant_messages": 0,
+            "latin_word_cut_tag_messages": 0,
+            "notes": "Some exact GT terms are not wrapped after prior longer-span wrapping or boundary checks; this is counted explicitly, not silently dropped."
+        }
+    }
+}

@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T2151__speech_llm_train__new_v6_assistant_termtag_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus6",
+  "event_type": "speech_llm_train",
+  "family": "speech_llm_tcm_termmap",
+  "variant": "new_v6_assistant_termtag_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus6",
+  "status": "running",
+  "project": "sst_omni",
+  "wandb_run_id": "jdaicbuf",
+  "slurm_job_id": "direct_new_v6_assistant_termtag_taurus6_ep2",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260523__speech_llm_new_v6_assistant_termtag_no_gt_zero_oldnewv3_zh_taurus6_r32a64_tp2.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260523__speech_llm_new_v6_assistant_termtag_no_gt_zero_oldnewv3_zh_r32a64_tp2.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && HOST_GPU_DEVICES_OVERRIDE=0,1,2,3,4,5 SLURM_JOB_PARTITION=taurus SLURM_JOB_ID=direct_new_v6_assistant_termtag_taurus6_ep2 MASTER_PORT=30727 bash documents/code/train/sst_omni_train/launchers/2026/05/20260523__speech_llm_new_v6_assistant_termtag_no_gt_zero_oldnewv3_zh_taurus6_r32a64_tp2.sh' > /mnt/gemini/data1/jiaxuanluo/logs/direct_new_v6_assistant_termtag_taurus6_ep2_20260523T215134.out 2> /mnt/gemini/data1/jiaxuanluo/logs/direct_new_v6_assistant_termtag_taurus6_ep2_20260523T215134.err < /dev/null &",
+  "parent_run_ids": [
+    "cg5qisu9"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260523__speech_llm_new_v6_assistant_termtag_no_gt_zero_oldnewv3_zh_taurus6_r32a64_tp2.sh"
+    },
+    {
+      "role": "data_prepare_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260523__build_new_v6_assistant_termtag_no_gt_zero_oldnewv3_zh.sh"
+    },
+    {
+      "role": "data_prepare_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/wrap_assistant_term_targets.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260523__speech_llm_new_v6_assistant_termtag_no_gt_zero_oldnewv3_zh_r32a64_tp2.md"
+    },
+    {
+      "role": "base_train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_20260522/train_s_zh_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_cacheonly.jsonl"
+    },
+    {
+      "role": "base_dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_20260522/dev_s_zh_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_cacheonly.jsonl"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v6_assistant_termtag_no_gt_zero_oldnewv3_zh_20260523/train_s_zh_new_v6_assistant_termtag_no_gt_zero_oldnewv3.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v6_assistant_termtag_no_gt_zero_oldnewv3_zh_20260523/dev_s_zh_new_v6_assistant_termtag_no_gt_zero_oldnewv3.jsonl"
+    },
+    {
+      "role": "data_summary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v6_assistant_termtag_no_gt_zero_oldnewv3_zh_20260523/new_v6_assistant_termtag_no_gt_zero_oldnewv3_summary.json"
+    },
+    {
+      "role": "mcore_model",
+      "type": "checkpoint_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/Qwen3-Omni-30B-A3B-Instruct-v2/"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/speech_llm_new_v6_assistant_termtag_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus6"
+    },
+    {
+      "role": "active_mcore_checkpoint",
+      "type": "checkpoint_dir",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/speech_llm_new_v6_assistant_termtag_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus6/keep1.0_r32/v1-20260524-055147"
+    },
+    {
+      "role": "direct_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_new_v6_assistant_termtag_taurus6_ep2_20260523T215134.out"
+    },
+    {
+      "role": "direct_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_new_v6_assistant_termtag_taurus6_ep2_20260523T215134.err"
+    },
+    {
+      "role": "direct_pid",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_new_v6_assistant_termtag_taurus6_ep2_20260523T215134.pid"
+    },
+    {
+      "role": "train_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_new_v6_assistant_termtag_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus6/train_keep1.0_r32_20260524_055134.log"
+    }
+  ],
+  "metadata": {
+    "backfill_reason": "Training was relaunched quickly after cancelling the wrong-base V17 run; manifest was created after WandB init.",
+    "base_setting": "new_v5_no_gt_zero_llm_variant_aug_oldnewv3",
+    "cancelled_wrong_base": "v17_assistant_termtag_v16_llmvariant",
+    "pid": 2837510,
+    "gpu_devices": "0,1,2,3,4,5",
+    "lora_rank": 32,
+    "lora_alpha": 64,
+    "nproc_per_node": 6,
+    "expert_model_parallel_size": 2,
+    "tensor_model_parallel_size": 2,
+    "sequence_parallel": true,
+    "global_batch_size": 6,
+    "micro_batch_size": 1,
+    "max_length": 3072,
+    "iterations_per_epoch": 1000,
+    "effective_max_steps_observed": 617,
+    "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/sst_omni/runs/jdaicbuf"
+  }
+}

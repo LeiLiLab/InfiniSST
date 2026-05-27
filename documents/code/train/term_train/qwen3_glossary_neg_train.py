@@ -25,6 +25,7 @@ import random
 import re
 import shutil
 import subprocess
+import sys
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
@@ -54,6 +55,13 @@ from peft import LoraConfig, get_peft_model
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.benchmark = True
+
+_GENERAL_CODE_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "general")
+)
+if _GENERAL_CODE_DIR not in sys.path:
+    sys.path.append(_GENERAL_CODE_DIR)
+from wandb_tags import prepare_wandb_tags
 
 
 # ==================== Experiment tracking helpers ====================
@@ -111,7 +119,7 @@ def load_and_validate_run_notes(notes_path: str) -> str:
     return text
 
 
-def build_wandb_tags(args: argparse.Namespace) -> List[str]:
+def build_wandb_tags(args: argparse.Namespace) -> Tuple[List[str], List[Tuple[str, str]]]:
     """Assemble the mandatory structured tags for this run."""
     tags: List[str] = []
     if not getattr(args, "experiment_family", ""):
@@ -132,7 +140,7 @@ def build_wandb_tags(args: argparse.Namespace) -> List[str]:
     for extra in getattr(args, "extra_wandb_tags", []) or []:
         if extra and extra not in tags:
             tags.append(extra)
-    return tags
+    return prepare_wandb_tags(tags)
 
 
 def finalize_wandb_run(
@@ -451,6 +459,7 @@ DEFAULT_HARD_NEG_MINE_CHUNK = 32768
 DEFAULT_EVAL_GLOSSARY_SIZES: List[int] = []
 DEFAULT_EVAL_WIKI_GLOSSARY = ""
 DEFAULT_ACL_DEV_JSONL = ""
+DEFAULT_TAGGED_ACL_DEV_JSONL = ""
 DEFAULT_MEDICINE_DEV_JSONL = ""
 DEFAULT_BEST_METRIC = ""
 DEFAULT_EVAL_TERM_ENCODE_BATCH = 512
@@ -1360,7 +1369,18 @@ class TermRAGDataset(Dataset):
         term_text = _sample_term_key(sample)
         phonemes = (sample.get("phonemes", "") or "").strip()
         passthrough_meta = {
+            "term": str(sample.get("term", "") or ""),
+            "term_key": str(sample.get("term_key", "") or ""),
             "chunk_src_text": str(sample.get("chunk_src_text", "") or ""),
+            "domain": str(sample.get("domain", "") or ""),
+            "sample_id": str(sample.get("sample_id", "") or ""),
+            "context_duration_tag": str(sample.get("context_duration_tag", "") or ""),
+            "chunk_duration_sec": sample.get("chunk_duration_sec", ""),
+            "context_duration_sec": sample.get("context_duration_sec", ""),
+            "mfa_term_start_in_chunk": sample.get("mfa_term_start_in_chunk", ""),
+            "mfa_term_end_in_chunk": sample.get("mfa_term_end_in_chunk", ""),
+            "mfa_term_duration": sample.get("mfa_term_duration", ""),
+            "mfa_locate_method": str(sample.get("mfa_locate_method", "") or ""),
             "source_seg_id": str(sample.get("source_seg_id", "") or ""),
             "source_audio": str(sample.get("source_audio", "") or ""),
             "source_start_sample": str(sample.get("source_start_sample", "") or ""),
@@ -2185,6 +2205,7 @@ DEFAULT_MFA_POSITIVE_SCOPE = "auto"
 def _maxsim_score(
     speech_embs: torch.Tensor, text_embs: torch.Tensor,
     agg_mode: str = "hard_max", softmax_tau: float = 1.0,
+    text_chunk_size: int = 1024,
 ) -> torch.Tensor:
     """Compute Max-Sim between multi-scale speech and (optionally multi-vector) text.
 
@@ -2200,7 +2221,7 @@ def _maxsim_score(
     if text_embs.ndim == 2:
         # Standard: audio multi-window vs text single-vector. Chunk over the
         # text bank so large glossary evals do not materialize [B, W, N].
-        TEXT_CHUNK = 1024
+        TEXT_CHUNK = max(1, int(text_chunk_size or 1024))
         result_chunks = []
         for j in range(0, text_embs.size(0), TEXT_CHUNK):
             text_chunk = text_embs[j : j + TEXT_CHUNK]
@@ -2297,9 +2318,11 @@ def _score_eval_logits(
                     score_device, non_blocking=True
                 )
                 if q.ndim == 3:
-                    scores = _maxsim_score(q, t)
+                    scores = _maxsim_score(q, t, text_chunk_size=text_chunk)
                 elif t.ndim == 3:
-                    scores = _maxsim_score(q.unsqueeze(1), t)
+                    scores = _maxsim_score(
+                        q.unsqueeze(1), t, text_chunk_size=text_chunk
+                    )
                 else:
                     scores = q @ t.T
                 row_chunks.append(scores.float().cpu())
@@ -3259,6 +3282,15 @@ def _metric_key_to_checkpoint_suffix(metric_key: str) -> str:
     return suffix or "secondary"
 
 
+def _atomic_torch_save(payload: Dict[str, Any], path: str) -> None:
+    out_dir = os.path.dirname(os.path.abspath(path))
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    tmp_path = f"{path}.tmp.{os.getpid()}"
+    torch.save(payload, tmp_path)
+    os.replace(tmp_path, path)
+
+
 # ======Configuration=====
 THRESHOLD_SWEEP_STEPS = 200
 F_BETA_SQUARED = 4  # beta=2 => beta^2=4, for F2-score
@@ -3381,6 +3413,34 @@ def _positive_indices_to_mask(
         if indices:
             mask[row_idx, torch.tensor(list(indices), dtype=torch.long)] = True
     return mask
+
+
+def _map_positive_terms_to_bank_indices(
+    positive_terms: Sequence[Sequence[str]],
+    bank_terms: Sequence[str],
+) -> List[List[int]]:
+    """Map fixed-denominator positive term strings into a retriever bank.
+
+    The metrics denominator is allowed to be fixed while the retriever bank
+    changes with glossary size.  This helper keeps the positive universe fixed
+    by first deciding positives as term strings, then asking which of those
+    strings are present in the current candidate bank.
+    """
+    term_to_indices: Dict[str, List[int]] = {}
+    for idx, term in enumerate(bank_terms):
+        key = str(term or "").strip().lower()
+        if key:
+            term_to_indices.setdefault(key, []).append(idx)
+
+    mapped: List[List[int]] = []
+    for row_terms in positive_terms:
+        row: set[int] = set()
+        for term in row_terms:
+            key = str(term or "").strip().lower()
+            for idx in term_to_indices.get(key, []):
+                row.add(idx)
+        mapped.append(sorted(row))
+    return mapped
 
 
 def _topk_recall_from_positive_mask(
@@ -3979,6 +4039,241 @@ def _dump_noterm_topk_scores(
     }
 
 
+def _split_cli_tokens(values: Any) -> List[str]:
+    if values is None:
+        return []
+    if isinstance(values, str):
+        values = [values]
+    out: List[str] = []
+    for value in values:
+        for part in str(value).replace(",", " ").split():
+            part = part.strip()
+            if part:
+                out.append(part)
+    return out
+
+
+def _safe_dump_name(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_.-]+", "_", str(value or "")).strip("_") or "unknown"
+
+
+def _should_dump_eval_misses(args: argparse.Namespace, eval_name: str, bank_label: str) -> bool:
+    out_dir = getattr(args, "dump_eval_misses_dir", "") or ""
+    if not out_dir:
+        return False
+    names = {x.lower() for x in _split_cli_tokens(getattr(args, "dump_eval_misses_eval_names", []))}
+    eval_keys = {eval_name.lower(), f"eval_{eval_name.lower()}"}
+    if names and not (names & eval_keys):
+        return False
+    banks = {x.lower() for x in _split_cli_tokens(getattr(args, "dump_eval_misses_banks", []))}
+    if banks and bank_label.lower() not in banks:
+        return False
+    return True
+
+
+def _sample_text_excerpt(text: Any, max_chars: int = 320) -> str:
+    excerpt = re.sub(r"\s+", " ", str(text or "")).strip()
+    if len(excerpt) <= max_chars:
+        return excerpt
+    return excerpt[: max_chars - 3] + "..."
+
+
+def _dump_eval_miss_cases(
+    args: argparse.Namespace,
+    eval_name: str,
+    bank_label: str,
+    logits: torch.Tensor,
+    positive_indices: List[List[int]],
+    sample_indices: List[int],
+    sample_list: List[Dict],
+    term_names: List[str],
+    topk: int,
+    global_step: int,
+    epoch: int,
+) -> None:
+    if not _should_dump_eval_misses(args, eval_name, bank_label):
+        return
+    if logits.numel() == 0 or logits.size(0) != len(positive_indices):
+        logger.warning(
+            f"[MISS_DUMP][{eval_name}][{bank_label}] skip: "
+            f"logits_shape={tuple(logits.shape)} positives={len(positive_indices)}"
+        )
+        return
+
+    logits_f = logits.detach().float().cpu()
+    bank_size = logits_f.size(1)
+    k = min(max(int(topk), 1), bank_size)
+    top_vals, top_idx = torch.topk(logits_f, k=k, dim=1)
+    term_name_by_idx = list(term_names)
+    term_to_idx = {str(term).strip().lower(): i for i, term in enumerate(term_name_by_idx)}
+
+    rows: List[Dict[str, Any]] = []
+    for row_idx, pos_raw in enumerate(positive_indices):
+        pos_set = {
+            int(idx)
+            for idx in pos_raw
+            if 0 <= int(idx) < bank_size
+        }
+        if not pos_set:
+            continue
+        retrieved = [int(idx) for idx in top_idx[row_idx].tolist()]
+        if any(idx in pos_set for idx in retrieved):
+            continue
+
+        row_scores = logits_f[row_idx]
+        pos_infos: List[Dict[str, Any]] = []
+        for pos_idx in sorted(pos_set):
+            score = float(row_scores[pos_idx].item())
+            rank = int((row_scores > score).sum().item()) + 1
+            pos_infos.append(
+                {
+                    "term": term_name_by_idx[pos_idx] if pos_idx < len(term_name_by_idx) else "",
+                    "index": pos_idx,
+                    "rank": rank,
+                    "score": score,
+                }
+            )
+        pos_infos.sort(key=lambda item: (item["rank"], -item["score"]))
+        best_pos = pos_infos[0]
+
+        sample_idx = sample_indices[row_idx] if row_idx < len(sample_indices) else -1
+        sample = sample_list[sample_idx] if 0 <= sample_idx < len(sample_list) else {}
+        target_terms = [
+            str(sample.get("term_text", "") or "").strip().lower(),
+            str(sample.get("term_key", "") or "").strip().lower(),
+            str(sample.get("term", "") or "").strip().lower(),
+        ]
+        target_terms = [t for t in target_terms if t]
+        target_idx = None
+        for target_term in target_terms:
+            if target_term in term_to_idx:
+                target_idx = term_to_idx[target_term]
+                break
+        target_rank = None
+        target_score = None
+        if target_idx is not None:
+            target_score = float(row_scores[target_idx].item())
+            target_rank = int((row_scores > target_score).sum().item()) + 1
+
+        predictions: List[Dict[str, Any]] = []
+        for rank, (idx, score) in enumerate(
+            zip(top_idx[row_idx].tolist(), top_vals[row_idx].tolist()), 1
+        ):
+            idx_i = int(idx)
+            predictions.append(
+                {
+                    "rank": rank,
+                    "term": term_name_by_idx[idx_i] if idx_i < len(term_name_by_idx) else "",
+                    "index": idx_i,
+                    "score": float(score),
+                    "is_positive": idx_i in pos_set,
+                }
+            )
+
+        top1_score = predictions[0]["score"] if predictions else float("nan")
+        row = {
+            "eval_name": eval_name,
+            "bank_label": bank_label,
+            "global_step": int(global_step),
+            "epoch": int(epoch),
+            "row_idx": row_idx,
+            "sample_idx": int(sample_idx),
+            "bank_size": int(bank_size),
+            "topk": int(k),
+            "utter_id": sample.get("utter_id", ""),
+            "sample_id": sample.get("sample_id", ""),
+            "domain": sample.get("domain", ""),
+            "chunk_idx": sample.get("chunk_idx", ""),
+            "context_duration_tag": sample.get("context_duration_tag", ""),
+            "chunk_duration_sec": sample.get("chunk_duration_sec", ""),
+            "context_duration_sec": sample.get("context_duration_sec", ""),
+            "chunk_audio_path": sample.get("chunk_audio_path", ""),
+            "term": sample.get("term", sample.get("term_text", "")),
+            "term_key": sample.get("term_key", ""),
+            "term_text": sample.get("term_text", ""),
+            "mfa_term_start_in_chunk": sample.get("mfa_term_start_in_chunk", ""),
+            "mfa_term_end_in_chunk": sample.get("mfa_term_end_in_chunk", ""),
+            "mfa_term_duration": sample.get("mfa_term_duration", ""),
+            "mfa_locate_method": sample.get("mfa_locate_method", ""),
+            "chunk_src_text": sample.get("chunk_src_text", ""),
+            "chunk_src_text_excerpt": _sample_text_excerpt(sample.get("chunk_src_text", "")),
+            "positive_terms": pos_infos,
+            "best_positive_term": best_pos["term"],
+            "best_positive_rank": best_pos["rank"],
+            "best_positive_score": best_pos["score"],
+            "target_rank": target_rank,
+            "target_score": target_score,
+            "top_predictions": predictions,
+            "top1_term": predictions[0]["term"] if predictions else "",
+            "top1_score": top1_score,
+            "top1_minus_best_positive_score": float(top1_score - best_pos["score"]),
+        }
+        rows.append(row)
+
+    rows.sort(
+        key=lambda item: (
+            int(item.get("best_positive_rank") or 0),
+            float(item.get("top1_minus_best_positive_score") or 0.0),
+        ),
+        reverse=True,
+    )
+
+    out_dir = getattr(args, "dump_eval_misses_dir", "") or ""
+    os.makedirs(out_dir, exist_ok=True)
+    stem = f"{_safe_dump_name(eval_name)}_{_safe_dump_name(bank_label)}"
+    jsonl_path = os.path.join(out_dir, f"{stem}_misses.jsonl")
+    md_path = os.path.join(out_dir, f"{stem}_misses.md")
+    with open(jsonl_path, "w", encoding="utf-8") as f:
+        for row in rows:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+    total = len(positive_indices)
+    miss_count = len(rows)
+    recall = 1.0 - (miss_count / total if total else 0.0)
+    topn = max(int(getattr(args, "dump_eval_misses_topn", 80) or 0), 0)
+    md_lines = [
+        f"# {eval_name} {bank_label} miss cases",
+        "",
+        f"- step: {global_step}",
+        f"- epoch: {epoch}",
+        f"- bank_size: {bank_size}",
+        f"- recall@{k}: {recall:.6f}",
+        f"- misses: {miss_count}/{total}",
+        f"- jsonl: `{jsonl_path}`",
+        "",
+    ]
+    for i, row in enumerate(rows[:topn], 1):
+        top_terms = ", ".join(
+            f"#{p['rank']} {p['term']} ({p['score']:.4f})"
+            for p in row["top_predictions"]
+        )
+        positives = ", ".join(
+            f"{p['term']}@{p['rank']} ({p['score']:.4f})"
+            for p in row["positive_terms"][:8]
+        )
+        md_lines.extend(
+            [
+                f"## {i}. {row.get('utter_id') or row.get('sample_id')}",
+                "",
+                f"- term: `{row.get('term') or row.get('term_text')}` / key `{row.get('term_key')}`",
+                f"- best_positive: {positives}",
+                f"- top1_minus_best_positive_score: {row['top1_minus_best_positive_score']:.4f}",
+                f"- chunk_idx/context: {row.get('chunk_idx')} / {row.get('context_duration_tag')}",
+                f"- mfa: {row.get('mfa_term_start_in_chunk')} - {row.get('mfa_term_end_in_chunk')} ({row.get('mfa_locate_method')})",
+                f"- text: {row.get('chunk_src_text_excerpt')}",
+                f"- top{len(row['top_predictions'])}: {top_terms}",
+                "",
+            ]
+        )
+    with open(md_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(md_lines).rstrip() + "\n")
+    logger.info(
+        f"[MISS_DUMP][{eval_name}][{bank_label}] "
+        f"misses={miss_count}/{total} recall@{k}={recall:.4f} "
+        f"-> {jsonl_path} / {md_path}"
+    )
+
+
 def run_sample_eval(
     retriever: nn.Module,
     text_encoder: nn.Module,
@@ -3992,6 +4287,7 @@ def run_sample_eval(
     eval_name: str = "dev",
     wiki_terms: Optional[List[str]] = None,
     glossary_sizes: Optional[List[int]] = None,
+    metrics_terms: Optional[List[str]] = None,
     threshold_from_dev: Optional[Dict[str, float]] = None,
 ) -> Dict[str, float]:
     retriever.eval()
@@ -4128,12 +4424,32 @@ def run_sample_eval(
             bank_term_names[bank_idx] = term
     base_positive_indices, _, base_label_stats = _build_glossary_positive_indices(
         sample_list,
-        bank_term_names,
+        metrics_terms or bank_term_names,
         min_norm_chars=args.eval_glossary_match_min_norm_chars,
     )
+    if metrics_terms:
+        _, base_positive_terms, base_label_stats = _build_glossary_positive_indices(
+            sample_list,
+            metrics_terms,
+            min_norm_chars=args.eval_glossary_match_min_norm_chars,
+        )
+        base_positive_indices = _map_positive_terms_to_bank_indices(
+            base_positive_terms,
+            bank_term_names,
+        )
+    else:
+        _, base_positive_terms, _ = _build_glossary_positive_indices(
+            sample_list,
+            bank_term_names,
+            min_norm_chars=args.eval_glossary_match_min_norm_chars,
+        )
     base_has_term_mask = torch.tensor(
-        [bool(indices) for indices in base_positive_indices],
+        [bool(terms) for terms in base_positive_terms],
         dtype=torch.bool,
+    )
+    fixed_metric_denominator = (
+        str(getattr(args, "eval_metric_denominator", "fixed_raw")).strip().lower()
+        == "fixed_raw"
     )
     speech_valid = speech_embs[valid_indices]
     recall_logits = _score_eval_logits(
@@ -4161,6 +4477,7 @@ def run_sample_eval(
     targets_t = torch.tensor(targets, dtype=torch.long)
     recall_sample_indices = [valid_indices[i] for i in row_keep]
     recall_positive_indices = [base_positive_indices[i] for i in recall_sample_indices]
+    recall_positive_terms = [base_positive_terms[i] for i in recall_sample_indices]
     recall_positive_mask = _positive_indices_to_mask(
         recall_positive_indices,
         recall_logits.size(1),
@@ -4188,6 +4505,8 @@ def run_sample_eval(
         f"{prefix}/base_label_text_match_terms_skipped_short": base_label_stats[
             "n_text_match_terms_skipped_short"
         ],
+        f"{prefix}/fixed_metric_denominator": 1.0 if fixed_metric_denominator else 0.0,
+        f"{prefix}/metrics_bank_terms": float(len(metrics_terms or bank_term_names)),
         f"{prefix}/glossary_match_min_norm_chars": float(
             args.eval_glossary_match_min_norm_chars
         ),
@@ -4215,6 +4534,20 @@ def run_sample_eval(
             f"gap mean={summary['gap_mean']:.3f} p10={summary['gap_p10']:.3f}  "
             f"-> {base_out}"
         )
+
+    _dump_eval_miss_cases(
+        args=args,
+        eval_name=eval_name,
+        bank_label="base",
+        logits=recall_logits,
+        positive_indices=recall_positive_indices,
+        sample_indices=recall_sample_indices,
+        sample_list=sample_list,
+        term_names=bank_term_names,
+        topk=k_primary,
+        global_step=global_step,
+        epoch=epoch,
+    )
 
     # ---- Threshold-based precision / F2 / score-gap (base bank) ----
     eval_minimal = bool(getattr(args, "eval_minimal_metrics", False))
@@ -4262,10 +4595,16 @@ def run_sample_eval(
     det_labels_base = None
     speech_det = None
     if int(det_select.sum().item()) > 0 and int(has_term_mask[det_select].sum().item()) > 0:
-        # Compute full_logits_base whenever we'll need it: full mode (for
-        # detection AUCs), minimal mode with a sweep configured (for no-term
-        # noise), or raw no-term top-K dump for offline tau calibration.
-        need_full_logits = (not eval_minimal) or bool(tcm_sweep) or bool(dump_base)
+        # Compute full_logits_base only when needed. In minimal mode, a tau
+        # sweep needs full audio-ok logits only for no-term noise; all-positive
+        # dev sets can skip this duplicate pass over the bank.
+        det_labels_candidate = has_term_mask[det_select]
+        has_noterm_for_noise = int((~det_labels_candidate).sum().item()) > 0
+        need_full_logits = (
+            (not eval_minimal)
+            or bool(dump_base)
+            or (bool(tcm_sweep) and has_noterm_for_noise)
+        )
         if need_full_logits:
             speech_det = speech_embs[det_select]
             det_samples = [
@@ -4276,7 +4615,7 @@ def run_sample_eval(
             full_logits_base = _score_eval_logits(
                 speech_det, bank_embs, args, device, score_device=score_device
             )
-            det_labels_base = has_term_mask[det_select]
+            det_labels_base = det_labels_candidate
             if not eval_minimal:
                 det_target_tau_base = (
                     base_tau if base_tau is not None else tm_base.get("opt_threshold")
@@ -4436,22 +4775,37 @@ def run_sample_eval(
             expanded_bank = _pad_and_cat_3d(
                 [bank_embs, wiki_embs[:n_wiki_add]], dim=0
             )
-            expanded_positive_indices, _, expanded_label_stats = _build_glossary_positive_indices(
-                sample_list,
-                expanded_term_names,
-                min_norm_chars=args.eval_glossary_match_min_norm_chars,
-            )
+            if fixed_metric_denominator:
+                expanded_label_stats = base_label_stats
+                expanded_positive_indices = _map_positive_terms_to_bank_indices(
+                    base_positive_terms,
+                    expanded_term_names,
+                )
+            else:
+                expanded_positive_indices, _, expanded_label_stats = _build_glossary_positive_indices(
+                    sample_list,
+                    expanded_term_names,
+                    min_norm_chars=args.eval_glossary_match_min_norm_chars,
+                )
             expanded_has_term_mask = torch.tensor(
-                [bool(indices) for indices in expanded_positive_indices],
+                [bool(terms) for terms in base_positive_terms]
+                if fixed_metric_denominator
+                else [bool(indices) for indices in expanded_positive_indices],
                 dtype=torch.bool,
             )
             expanded_logits = _score_eval_logits(
                 speech_valid, expanded_bank, args, device, score_device=score_device
             )
             expanded_recall_logits = expanded_logits[row_keep]
-            expanded_recall_positive_indices = [
-                expanded_positive_indices[i] for i in recall_sample_indices
-            ]
+            if fixed_metric_denominator:
+                expanded_recall_positive_indices = _map_positive_terms_to_bank_indices(
+                    recall_positive_terms,
+                    expanded_term_names,
+                )
+            else:
+                expanded_recall_positive_indices = [
+                    expanded_positive_indices[i] for i in recall_sample_indices
+                ]
             expanded_recall_positive_mask = _positive_indices_to_mask(
                 expanded_recall_positive_indices,
                 expanded_recall_logits.size(1),
@@ -4474,6 +4828,20 @@ def run_sample_eval(
             ]
             metrics[f"{prefix}/{gs_key}_label_text_match_terms_skipped_short"] = (
                 expanded_label_stats["n_text_match_terms_skipped_short"]
+            )
+
+            _dump_eval_miss_cases(
+                args=args,
+                eval_name=eval_name,
+                bank_label=gs_key,
+                logits=expanded_recall_logits,
+                positive_indices=expanded_recall_positive_indices,
+                sample_indices=recall_sample_indices,
+                sample_list=sample_list,
+                term_names=expanded_term_names,
+                topk=gs_kp,
+                global_step=global_step,
+                epoch=epoch,
             )
 
             # ---- Optional: dump pos/neg sim distributions for this glossary size ----
@@ -4529,8 +4897,11 @@ def run_sample_eval(
                 # In minimal mode: skip detection AUCs but still compute
                 # no-term noise below if a sweep is requested, or raw no-term
                 # top-K dumps for offline tau calibration.
+                has_noterm_for_noise_gs = int(
+                    (~expanded_has_term_mask[det_select]).sum().item()
+                ) > 0
                 if (
-                    (tcm_sweep or dump_base)
+                    ((tcm_sweep and has_noterm_for_noise_gs) or dump_base)
                     and int(det_select.sum().item()) > 0
                     and int(expanded_has_term_mask[det_select].sum().item()) > 0
                     and speech_det is not None
@@ -5078,7 +5449,7 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
                 args.eval_fixed_audio_samples,
                 args.audio_encoder_type,
             ),
-            num_workers=4,
+            num_workers=args.num_workers,
             pin_memory=True,
         )
 
@@ -5117,7 +5488,46 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
                 args.eval_fixed_audio_samples,
                 args.audio_encoder_type,
             ),
-            num_workers=4,
+            num_workers=args.num_workers,
+            pin_memory=True,
+        )
+
+    # ---- Tagged ACL6060 dev data (cross-domain eval) ----
+    tagged_acl_dev_samples: List[Dict] = []
+    if args.tagged_acl_dev_jsonl and os.path.isfile(args.tagged_acl_dev_jsonl):
+        with open(args.tagged_acl_dev_jsonl, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    tagged_acl_dev_samples.append(json.loads(line))
+                except Exception:
+                    continue
+    tagged_acl_dev_samples = _limit_eval_samples(
+        tagged_acl_dev_samples,
+        args.tagged_acl_eval_sample_limit,
+        args.eval_sample_seed + 1511,
+        "tagged_acl",
+        is_main=is_main,
+    )
+
+    tagged_acl_eval_loader: Optional[DataLoader] = None
+    if tagged_acl_dev_samples:
+        tagged_acl_eval_dataset = TermRAGDataset(
+            tagged_acl_dev_samples,
+            force_dummy_audio=args.force_dummy_audio,
+            fixed_audio_samples=args.eval_fixed_audio_samples,
+        )
+        tagged_acl_eval_loader = DataLoader(
+            tagged_acl_eval_dataset,
+            batch_size=args.eval_batch_size,
+            shuffle=False,
+            collate_fn=lambda b: collate_fn(
+                b,
+                feature_extractor,
+                args.use_phoneme_append,
+                args.eval_fixed_audio_samples,
+                args.audio_encoder_type,
+            ),
+            num_workers=args.num_workers,
             pin_memory=True,
         )
 
@@ -5156,7 +5566,7 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
                 args.eval_fixed_audio_samples,
                 args.audio_encoder_type,
             ),
-            num_workers=4,
+            num_workers=args.num_workers,
             pin_memory=True,
         )
 
@@ -5170,8 +5580,17 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
                 f"[EVAL] Wiki glossary loaded: {len(eval_wiki_terms)} terms, "
                 f"glossary_sizes={eval_glossary_sizes}"
             )
+    eval_metrics_terms: Optional[List[str]] = None
+    if args.eval_metrics_glossary:
+        eval_metrics_terms = _load_eval_wiki_terms(args.eval_metrics_glossary)
+        if is_main:
+            logger.info(
+                f"[EVAL] Dev fixed metrics glossary loaded: "
+                f"{len(eval_metrics_terms)} terms, source={args.eval_metrics_glossary}"
+            )
     acl_eval_wiki_terms: Optional[List[str]] = eval_wiki_terms
     acl_eval_glossary_sizes: List[int] = eval_glossary_sizes
+    acl_eval_metrics_terms: Optional[List[str]] = eval_metrics_terms
     if args.acl_eval_wiki_glossary:
         acl_eval_wiki_terms = _load_eval_wiki_terms(args.acl_eval_wiki_glossary)
         acl_eval_glossary_sizes = (
@@ -5190,8 +5609,52 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
                 f"[EVAL] ACL glossary sizes override: "
                 f"{acl_eval_glossary_sizes}"
             )
+    if args.acl_eval_metrics_glossary:
+        acl_eval_metrics_terms = _load_eval_wiki_terms(args.acl_eval_metrics_glossary)
+        if is_main:
+            logger.info(
+                f"[EVAL] ACL fixed metrics glossary loaded: "
+                f"{len(acl_eval_metrics_terms)} terms, "
+                f"source={args.acl_eval_metrics_glossary}"
+            )
+    tagged_acl_eval_wiki_terms: Optional[List[str]] = acl_eval_wiki_terms
+    tagged_acl_eval_glossary_sizes: List[int] = acl_eval_glossary_sizes
+    tagged_acl_eval_metrics_terms: Optional[List[str]] = acl_eval_metrics_terms
+    if args.tagged_acl_eval_wiki_glossary:
+        tagged_acl_eval_wiki_terms = _load_eval_wiki_terms(
+            args.tagged_acl_eval_wiki_glossary
+        )
+        tagged_acl_eval_glossary_sizes = (
+            args.tagged_acl_eval_glossary_sizes
+            or args.acl_eval_glossary_sizes
+            or eval_glossary_sizes
+        )
+        if is_main:
+            logger.info(
+                f"[EVAL] Tagged ACL wiki glossary loaded: "
+                f"{len(tagged_acl_eval_wiki_terms)} terms, "
+                f"glossary_sizes={tagged_acl_eval_glossary_sizes}"
+            )
+    elif args.tagged_acl_eval_glossary_sizes:
+        tagged_acl_eval_glossary_sizes = args.tagged_acl_eval_glossary_sizes
+        if is_main:
+            logger.info(
+                f"[EVAL] Tagged ACL glossary sizes override: "
+                f"{tagged_acl_eval_glossary_sizes}"
+            )
+    if args.tagged_acl_eval_metrics_glossary:
+        tagged_acl_eval_metrics_terms = _load_eval_wiki_terms(
+            args.tagged_acl_eval_metrics_glossary
+        )
+        if is_main:
+            logger.info(
+                f"[EVAL] Tagged ACL fixed metrics glossary loaded: "
+                f"{len(tagged_acl_eval_metrics_terms)} terms, "
+                f"source={args.tagged_acl_eval_metrics_glossary}"
+            )
     medicine_eval_wiki_terms: Optional[List[str]] = eval_wiki_terms
     medicine_eval_glossary_sizes: List[int] = eval_glossary_sizes
+    medicine_eval_metrics_terms: Optional[List[str]] = eval_metrics_terms
     if args.medicine_eval_wiki_glossary:
         medicine_eval_wiki_terms = _load_eval_wiki_terms(args.medicine_eval_wiki_glossary)
         medicine_eval_glossary_sizes = (
@@ -5209,6 +5672,16 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
             logger.info(
                 f"[EVAL] Medicine glossary sizes override: "
                 f"{medicine_eval_glossary_sizes}"
+            )
+    if args.medicine_eval_metrics_glossary:
+        medicine_eval_metrics_terms = _load_eval_wiki_terms(
+            args.medicine_eval_metrics_glossary
+        )
+        if is_main:
+            logger.info(
+                f"[EVAL] Medicine fixed metrics glossary loaded: "
+                f"{len(medicine_eval_metrics_terms)} terms, "
+                f"source={args.medicine_eval_metrics_glossary}"
             )
     full_eval_glossary_sizes: List[int] = args.full_eval_glossary_sizes or []
     full_eval_max_terms = max(full_eval_glossary_sizes) if full_eval_glossary_sizes else 0
@@ -5376,7 +5849,12 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
         try:
             import wandb
 
-            run_tags = build_wandb_tags(args)
+            run_tags, tag_changes = build_wandb_tags(args)
+            if tag_changes:
+                logger.warning(
+                    "[WANDB] shortened overlong tags before init: %s",
+                    "; ".join(f"{old} -> {new}" for old, new in tag_changes),
+                )
             run_notes = load_and_validate_run_notes(args.notes_file)
             wandb_run = wandb.init(
                 project=args.wandb_project,
@@ -5386,6 +5864,16 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
                 notes=run_notes,
                 save_code=True,
             )
+            if tag_changes:
+                wandb_run.config.update(
+                    {
+                        "wandb_tag_shortening": [
+                            {"original": old, "safe": new}
+                            for old, new in tag_changes
+                        ]
+                    },
+                    allow_val_change=True,
+                )
             if args.baseline_run_ids:
                 wandb_run.config.update(
                     {"baseline_run_ids": list(args.baseline_run_ids)},
@@ -5397,10 +5885,16 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
             wandb.define_metric("eval_dev/*", step_metric="eval_dev/step")
             wandb.define_metric("eval_acl6060/step")
             wandb.define_metric("eval_acl6060/*", step_metric="eval_acl6060/step")
+            wandb.define_metric("eval_tagged_acl/step")
+            wandb.define_metric("eval_tagged_acl/*", step_metric="eval_tagged_acl/step")
             wandb.define_metric("eval_medicine/step")
             wandb.define_metric("eval_medicine/*", step_metric="eval_medicine/step")
         except Exception as exc:
-            logger.warning(f"[WANDB] init failed: {exc}")
+            logger.error(f"[WANDB] init failed: {exc}")
+            raise RuntimeError(
+                "W&B init failed while --enable_wandb is set; aborting per "
+                "experiment tracking rules."
+            ) from exc
 
     recent_ckpts: List[str] = []
     best_metric_value = float("-inf")
@@ -5408,6 +5902,23 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
     best_metric_secondary_value = float("-inf")
     best_metric_secondary_key = args.best_metric_secondary or ""
     last_auto_full_eval_step = -1
+    last_latest_checkpoint_step = -1
+
+    def latest_checkpoint_payload(epoch_value: int, step_value: int) -> Dict:
+        return {
+            "model_state_dict": raw_retriever.state_dict(),
+            "text_model_state_dict": raw_text_encoder.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "scheduler_state_dict": scheduler.state_dict(),
+            "scaler_state_dict": scaler.state_dict(),
+            "global_step": step_value,
+            "epoch": epoch_value,
+            "args": vars(args),
+            "best_metric_key": best_metric_key,
+            "best_metric_secondary_key": best_metric_secondary_key,
+            "best_metric_value": best_metric_value,
+            "best_metric_secondary_value": best_metric_secondary_value,
+        }
 
     should_restore_best_metric = (
         pending_best_metric_value is not None
@@ -5464,6 +5975,7 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
         logger.info(
             f"[SETUP] train={len(train_samples)} dev={len(dev_samples)} "
             f"acl_dev={len(acl_dev_samples)} "
+            f"tagged_acl_dev={len(tagged_acl_dev_samples)} "
             f"medicine_dev={len(medicine_dev_samples)} "
             f"world_size={world_size} per_rank_bs={per_rank_bs} "
             f"total_steps={total_steps} warmup_steps={warmup_steps} "
@@ -5474,6 +5986,11 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
             f"{'maxsim_win=' + str(args.maxsim_windows) + '_s' + str(args.maxsim_stride) + ' ' if args.use_maxsim else ''}"
             f"margin={args.margin} "
             f"o_hnm={ohnm_desc}"
+        )
+        logger.info(
+            f"[SETUP] eval_metric_denominator={args.eval_metric_denominator} "
+            "(fixed_raw keeps strict raw metrics denominator while retriever "
+            "glossary sizes change)"
         )
         # Sanity check for wall-time-capped runs.  The cosine schedule's warmup
         # fraction is tied to total_steps = steps_per_epoch * epochs, NOT to
@@ -5530,6 +6047,14 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
             logger.info(
                 f"[SETUP] ACL eval glossary sizes: {acl_eval_glossary_sizes}"
             )
+        if tagged_acl_eval_loader is not None and (
+            tagged_acl_eval_wiki_terms is not acl_eval_wiki_terms
+            or tagged_acl_eval_glossary_sizes != acl_eval_glossary_sizes
+        ):
+            logger.info(
+                f"[SETUP] Tagged ACL eval glossary sizes: "
+                f"{tagged_acl_eval_glossary_sizes}"
+            )
         if medicine_eval_loader is not None and (
             medicine_eval_wiki_terms is not eval_wiki_terms
             or medicine_eval_glossary_sizes != eval_glossary_sizes
@@ -5550,14 +6075,15 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
         assert (
             eval_loader is not None
             or acl_eval_loader is not None
+            or tagged_acl_eval_loader is not None
             or medicine_eval_loader is not None
         ), (
             "--eval_only requires at least one of --dev_jsonl / --acl_dev_jsonl "
-            "/ --medicine_dev_jsonl to be provided"
+            "/ --tagged_acl_dev_jsonl / --medicine_dev_jsonl to be provided"
         )
         if is_main:
             logger.info(
-                "[EVAL_ONLY] Running one-shot evaluation on configured dev/ACL/medicine sets, then exiting."
+                "[EVAL_ONLY] Running one-shot evaluation on configured dev/ACL/tagged-ACL/medicine sets, then exiting."
             )
             dev_metrics: Dict[str, float] = {}
             if eval_loader is not None:
@@ -5574,6 +6100,7 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
                     eval_name="dev",
                     wiki_terms=eval_wiki_terms,
                     glossary_sizes=eval_glossary_sizes,
+                    metrics_terms=eval_metrics_terms,
                 )
 
             dev_thresholds: Dict[str, float] = {}
@@ -5602,6 +6129,25 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
                     eval_name="acl6060",
                     wiki_terms=acl_eval_wiki_terms,
                     glossary_sizes=acl_eval_glossary_sizes,
+                    metrics_terms=acl_eval_metrics_terms,
+                    threshold_from_dev=dev_thresholds or None,
+                )
+
+            if tagged_acl_eval_loader is not None:
+                run_sample_eval(
+                    raw_retriever,
+                    raw_text_encoder,
+                    text_tokenizer,
+                    tagged_acl_eval_loader,
+                    device,
+                    args,
+                    global_step,
+                    start_epoch,
+                    wandb_run,
+                    eval_name="tagged_acl",
+                    wiki_terms=tagged_acl_eval_wiki_terms,
+                    glossary_sizes=tagged_acl_eval_glossary_sizes,
+                    metrics_terms=tagged_acl_eval_metrics_terms,
                     threshold_from_dev=dev_thresholds or None,
                 )
 
@@ -5619,6 +6165,7 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
                     eval_name="medicine",
                     wiki_terms=medicine_eval_wiki_terms,
                     glossary_sizes=medicine_eval_glossary_sizes,
+                    metrics_terms=medicine_eval_metrics_terms,
                     threshold_from_dev=dev_thresholds or None,
                 )
 
@@ -5782,6 +6329,7 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
                         eval_name="dev",
                         wiki_terms=eval_wiki_terms,
                         glossary_sizes=eval_glossary_sizes,
+                        metrics_terms=eval_metrics_terms,
                     )
                     all_eval_metrics.update(dev_metrics)
 
@@ -5824,6 +6372,7 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
                                 eval_name=args.full_eval_name,
                                 wiki_terms=full_eval_wiki_terms,
                                 glossary_sizes=full_eval_glossary_sizes,
+                                metrics_terms=eval_metrics_terms,
                             )
                         finally:
                             args.tcm_sweep_thresholds = original_tcm_sweep_thresholds
@@ -5858,9 +6407,29 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
                             eval_name="acl6060",
                             wiki_terms=acl_eval_wiki_terms,
                             glossary_sizes=acl_eval_glossary_sizes,
+                            metrics_terms=acl_eval_metrics_terms,
                             threshold_from_dev=dev_thresholds or None,
                         )
                         all_eval_metrics.update(acl_metrics)
+
+                    if tagged_acl_eval_loader is not None:
+                        tagged_acl_metrics = run_sample_eval(
+                            raw_retriever,
+                            raw_text_encoder,
+                            text_tokenizer,
+                            tagged_acl_eval_loader,
+                            device,
+                            args,
+                            global_step,
+                            epoch,
+                            wandb_run,
+                            eval_name="tagged_acl",
+                            wiki_terms=tagged_acl_eval_wiki_terms,
+                            glossary_sizes=tagged_acl_eval_glossary_sizes,
+                            metrics_terms=tagged_acl_eval_metrics_terms,
+                            threshold_from_dev=dev_thresholds or None,
+                        )
+                        all_eval_metrics.update(tagged_acl_metrics)
 
                     if medicine_eval_loader is not None:
                         medicine_metrics = run_sample_eval(
@@ -5876,6 +6445,7 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
                             eval_name="medicine",
                             wiki_terms=medicine_eval_wiki_terms,
                             glossary_sizes=medicine_eval_glossary_sizes,
+                            metrics_terms=medicine_eval_metrics_terms,
                             threshold_from_dev=dev_thresholds or None,
                         )
                         all_eval_metrics.update(medicine_metrics)
@@ -5994,9 +6564,25 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
                                         best_metric_secondary_value
                                     ),
                                     "best_secondary/step": global_step,
-                            },
-                            step=global_step,
+                                },
+                                step=global_step,
+                            )
+
+                    if getattr(args, "save_latest_on_eval", False):
+                        latest_path = args.save_path.replace(".pt", "_latest.pt")
+                        _atomic_torch_save(
+                            latest_checkpoint_payload(epoch, global_step),
+                            latest_path,
                         )
+                        last_latest_checkpoint_step = global_step
+                        logger.info(
+                            f"[LATEST] eval checkpoint step={global_step} -> {latest_path}"
+                        )
+                        if wandb_run is not None:
+                            wandb_run.log(
+                                {"latest_eval_checkpoint/step": global_step},
+                                step=global_step,
+                            )
 
                     if args.early_stop_best_patience_evals > 0:
                         if primary_metric_seen:
@@ -6048,20 +6634,7 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
             if is_main and global_step % args.save_steps == 0:
                 ckpt_path = args.save_path.replace(".pt", f"_step_{global_step}.pt")
                 torch.save(
-                    {
-                        "model_state_dict": raw_retriever.state_dict(),
-                        "text_model_state_dict": raw_text_encoder.state_dict(),
-                        "optimizer_state_dict": optimizer.state_dict(),
-                        "scheduler_state_dict": scheduler.state_dict(),
-                        "scaler_state_dict": scaler.state_dict(),
-                        "global_step": global_step,
-                        "epoch": epoch,
-                        "args": vars(args),
-                        "best_metric_key": best_metric_key,
-                        "best_metric_secondary_key": best_metric_secondary_key,
-                        "best_metric_value": best_metric_value,
-                        "best_metric_secondary_value": best_metric_secondary_value,
-                    },
+                    latest_checkpoint_payload(epoch, global_step),
                     ckpt_path,
                 )
                 recent_ckpts.append(ckpt_path)
@@ -6071,6 +6644,27 @@ def train(rank: int, world_size: int, args: argparse.Namespace) -> None:
                     if os.path.exists(old):
                         os.remove(old)
                         logger.info(f"[CHECKPOINT] removed_old={old}")
+
+            if (
+                is_main
+                and args.save_latest_steps > 0
+                and global_step % args.save_latest_steps == 0
+                and global_step != last_latest_checkpoint_step
+            ):
+                latest_path = args.save_path.replace(".pt", "_latest.pt")
+                _atomic_torch_save(
+                    latest_checkpoint_payload(epoch, global_step),
+                    latest_path,
+                )
+                last_latest_checkpoint_step = global_step
+                logger.info(
+                    f"[LATEST] step checkpoint step={global_step} -> {latest_path}"
+                )
+                if wandb_run is not None:
+                    wandb_run.log(
+                        {"latest_checkpoint/step": global_step},
+                        step=global_step,
+                    )
 
             # ---- Compute current easy_neg_weight (alpha) for soft O-HNM ----
             if args.online_hard_neg_k > 0 and args.hn_decay_steps > 0:
@@ -6869,6 +7463,12 @@ def parse_args() -> argparse.Namespace:
         help="Deterministically sample at most this many ACL6060 rows for inline eval. 0 = full ACL.",
     )
     p.add_argument(
+        "--tagged_acl_eval_sample_limit",
+        type=int,
+        default=0,
+        help="Deterministically sample at most this many tagged ACL6060 rows for inline eval. 0 = full tagged ACL.",
+    )
+    p.add_argument(
         "--medicine_eval_sample_limit",
         type=int,
         default=0,
@@ -6900,11 +7500,10 @@ def parse_args() -> argparse.Namespace:
         help="Text-bank chunk size for eval similarity scoring.",
     )
     p.add_argument(
-        "--eval_top100_samples", type=int, default=1,
+        "--eval_top100_samples", type=int, default=0,
         help="Number of random queries to log top-100 retrieved terms with GT rank "
              "during glossary-scale eval. 0 = disabled; each non-zero sample emits "
-             "a ~100-line qualitative dump per eval, which is noisy in long "
-             "training runs, so keep small by default.",
+             "a ~100-line qualitative dump per eval.",
     )
     p.add_argument(
         "--eval_glossary_match_min_norm_chars",
@@ -6918,6 +7517,24 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--save_steps", type=int, default=DEFAULT_SAVE_INTERVAL)
     p.add_argument("--keep_checkpoints", type=int, default=DEFAULT_KEEP_CHECKPOINTS)
+    p.add_argument(
+        "--save_latest_steps",
+        type=int,
+        default=0,
+        help=(
+            "If >0, overwrite <save_stem>_latest.pt every N train steps, "
+            "independent of best metrics and eval cadence."
+        ),
+    )
+    p.add_argument(
+        "--save_latest_on_eval",
+        action="store_true",
+        default=False,
+        help=(
+            "After every eval pass, overwrite <save_stem>_latest.pt with a "
+            "resumeable checkpoint even when best metrics do not improve."
+        ),
+    )
     p.add_argument("--force_dummy_audio", action="store_true", default=False)
     p.add_argument(
         "--augment_synth", action="store_true", default=False,
@@ -6954,6 +7571,12 @@ def parse_args() -> argparse.Namespace:
         help="Path to ACL6060 dev JSONL for cross-domain eval",
     )
     p.add_argument(
+        "--tagged_acl_dev_jsonl",
+        type=str,
+        default=DEFAULT_TAGGED_ACL_DEV_JSONL,
+        help="Path to tagged ACL6060 dev JSONL for cross-domain eval",
+    )
+    p.add_argument(
         "--medicine_dev_jsonl",
         type=str,
         default=DEFAULT_MEDICINE_DEV_JSONL,
@@ -6973,12 +7596,42 @@ def parse_args() -> argparse.Namespace:
         help="Glossary sizes to evaluate (e.g. 1000 10000)",
     )
     p.add_argument(
+        "--eval_metric_denominator",
+        type=str,
+        choices=("fixed_raw", "dynamic_retriever"),
+        default="fixed_raw",
+        help=(
+            "How to define positives for glossary-scale recall/precision. "
+            "fixed_raw keeps the raw/base metrics denominator fixed while "
+            "only the retriever candidate bank changes; dynamic_retriever is "
+            "the legacy behavior that rebuilds positives after bank expansion."
+        ),
+    )
+    p.add_argument(
+        "--eval_metrics_glossary",
+        type=str,
+        default="",
+        help=(
+            "Optional fixed metrics glossary for eval_dev. When empty, the "
+            "raw/base eval bank is used as the fixed metrics denominator."
+        ),
+    )
+    p.add_argument(
         "--acl_eval_wiki_glossary",
         type=str,
         default="",
         help=(
             "Optional ACL-specific wiki glossary JSON. When set, eval_dev "
             "uses --eval_wiki_glossary while eval_acl6060 uses this glossary."
+        ),
+    )
+    p.add_argument(
+        "--acl_eval_metrics_glossary",
+        type=str,
+        default="",
+        help=(
+            "Optional ACL-specific fixed metrics glossary. Defaults to "
+            "--eval_metrics_glossary, then the raw/base ACL bank."
         ),
     )
     p.add_argument(
@@ -6992,12 +7645,50 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     p.add_argument(
+        "--tagged_acl_eval_wiki_glossary",
+        type=str,
+        default="",
+        help=(
+            "Optional tagged-ACL-specific wiki glossary JSON. When set, "
+            "eval_tagged_acl uses this glossary."
+        ),
+    )
+    p.add_argument(
+        "--tagged_acl_eval_metrics_glossary",
+        type=str,
+        default="",
+        help=(
+            "Optional tagged-ACL-specific fixed metrics glossary. Defaults to "
+            "--acl_eval_metrics_glossary, then --eval_metrics_glossary, then "
+            "the raw/base tagged-ACL bank."
+        ),
+    )
+    p.add_argument(
+        "--tagged_acl_eval_glossary_sizes",
+        type=int,
+        nargs="*",
+        default=[],
+        help=(
+            "Optional tagged-ACL-specific glossary sizes. Defaults to "
+            "--acl_eval_glossary_sizes, then --eval_glossary_sizes."
+        ),
+    )
+    p.add_argument(
         "--medicine_eval_wiki_glossary",
         type=str,
         default="",
         help=(
             "Optional medicine-specific wiki glossary JSON. When set, "
             "eval_medicine uses this glossary."
+        ),
+    )
+    p.add_argument(
+        "--medicine_eval_metrics_glossary",
+        type=str,
+        default="",
+        help=(
+            "Optional medicine-specific fixed metrics glossary. Defaults to "
+            "--eval_metrics_glossary, then the raw/base medicine bank."
         ),
     )
     p.add_argument(
@@ -7052,7 +7743,7 @@ def parse_args() -> argparse.Namespace:
         default="",
         help=(
             "Optional second metric for another best checkpoint "
-            "(e.g. eval_dev/recall@10_gs10000); "
+            "(e.g. eval_acl6060/recall@10); "
             "saved as <save_stem>_best_<metric_key>.pt"
         ),
     )
@@ -7231,9 +7922,9 @@ def parse_args() -> argparse.Namespace:
         "--tcm_sweep_thresholds",
         type=float,
         nargs="*",
-        default=[0.85, 0.8, 0.75, 0.7],
+        default=[0.75],
         help="Absolute cos-sim thresholds to sweep during eval (default: "
-             "0.85 0.8 0.75 0.7).  Each tau produces tcm_precision / recall / "
+             "0.75).  Each tau produces tcm_precision / recall / "
              "f1 / pass_rate, plus the filter-after-retrieval metrics "
              "topk{k}_chunk_any_positive_filtered_recall@tau and "
              "topk{k}_filtered_precision_*@tau "
@@ -7269,6 +7960,35 @@ def parse_args() -> argparse.Namespace:
              "glossary size. Each NPZ contains: pos_sim[N], neg_top_sim[N,K], "
              "neg_sim_mean[N], neg_sim_max[N], bank_size, K_neg. "
              "Used for analyzing score distributions under a no-TCM baseline.",
+    )
+    p.add_argument(
+        "--dump_eval_misses_dir",
+        type=str,
+        default="",
+        help="If set, dump JSONL/Markdown miss cases for selected eval domains "
+             "and banks. A miss means no positive term appears in top eval_topk "
+             "under the same positive-mask recall definition used for metrics.",
+    )
+    p.add_argument(
+        "--dump_eval_misses_eval_names",
+        type=str,
+        nargs="*",
+        default=[],
+        help="Eval names to dump, e.g. medicine or eval_medicine. Empty means all.",
+    )
+    p.add_argument(
+        "--dump_eval_misses_banks",
+        type=str,
+        nargs="*",
+        default=[],
+        help="Bank labels to dump, e.g. base gs1000 gs10000. Empty means all.",
+    )
+    p.add_argument(
+        "--dump_eval_misses_topn",
+        type=int,
+        default=80,
+        help="Number of sorted miss cases to include in the Markdown preview. "
+             "The JSONL always contains all misses.",
     )
 
     # HCL (Robinson et al., ICLR 2021) hard-negative importance reweighting.

@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "event_id": "20260518T2037__retriever_eval__lh1b88kw_s2640_tau_delta_dev_acl_tagacl_medstrict",
+  "event_type": "retriever_eval",
+  "family": "sst_ood_hardneg",
+  "variant": "lh1b88kw_s2640_tau_delta_tagacl_medstrict",
+  "status": "planned",
+  "project": "qwen3_rag",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260518__lh1b88kw_s2640_tau_delta_dev_acl_tagged_acl_med_aries1_eval.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260518__lh1b88kw_s2640_tau_delta_dev_acl_tagacl_medstrict_eval.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "python - <<'PY' ... launch bash documents/code/train/term_train/launchers/2026/05/20260518__lh1b88kw_s2640_tau_delta_dev_acl_tagged_acl_med_aries1_eval.sh ... PY",
+  "parent_run_ids": [
+    "lh1b88kw",
+    "4g108a3w",
+    "614b3nbi"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260518__lh1b88kw_s2640_tau_delta_dev_acl_tagged_acl_med_aries1_eval.sh",
+      "metadata": {}
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh",
+      "metadata": {}
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260518__lh1b88kw_s2640_tau_delta_dev_acl_tagacl_medstrict_eval.md",
+      "metadata": {}
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_varctx2p88_3p84_4p80_5p76_new_version.jsonl",
+      "metadata": {
+        "usage": "tau calibration only"
+      }
+    },
+    {
+      "role": "acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_extracted_paper_glossary_varctx2p88_3p84_4p80_5p76/acl6060_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout"
+      }
+    },
+    {
+      "role": "tagged_acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_tagged_glossary_varctx2p88_3p84_4p80_5p76/acl6060_tagged_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout"
+      }
+    },
+    {
+      "role": "medicine_data_prepare_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/data_pre/training_terms_for_retriever/manifests/2026/05/20260518T1812__data_prepare__medicine_varctx_clean_mfa_exact_only.json",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout"
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample1000000.json",
+      "metadata": {}
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_gt_union_gs10000_min_norm2_backfill.json",
+      "metadata": {}
+    },
+    {
+      "role": "tagged_acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs10000_min_norm2_backfill.json",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000.json",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "trained_from_run": "lh1b88kw",
+        "checkpoint_step": 2640
+      }
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "checkpoint_step": 2640,
+    "tau_grid": "0.70..0.90 stride 0.01",
+    "tau_zero_metrics": {
+      "dev": {
+        "base": 0.992,
+        "gs1000": 0.9917,
+        "gs10000": 0.9897,
+        "gs100000": 0.9861
+      },
+      "acl6060_paper": {
+        "base": 0.9918,
+        "gs1000": 0.9743,
+        "gs10000": 0.9591
+      },
+      "tagged_acl": {
+        "base": 0.9921,
+        "gs1000": 0.9876,
+        "gs10000": 0.98
+      },
+      "medicine_strict_mfa": {
+        "base": 0.9522,
+        "gs1000": 0.9489,
+        "gs10000": 0.9348
+      }
+    },
+    "selection_data": "dev only",
+    "selection_rule": "choose tau by mean dev recall pp drop and max dev recall pp drop from tau=0.0 baseline",
+    "eval_glossary_match_min_norm_chars": 2,
+    "hard_neg_k_per_sample": 0
+  }
+}

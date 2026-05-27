@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T1240__speech_llm_train__new_v4_llm_variant_aug_newv3_zh_r64a128_aries4",
+  "event_type": "speech_llm_train",
+  "family": "speech_llm_tcm_termmap",
+  "variant": "new_v4_llm_variant_aug_newv3_zh_r64a128_aries4",
+  "status": "failed",
+  "project": "sst_omni",
+  "wandb_run_id": "n842mhkv",
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__speech_llm_new_v4_llm_variant_aug_newv3_zh_aries4_r64a128.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__speech_llm_new_v4_llm_variant_aug_newv3_zh_r64a128.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "ssh -p 20042 jiaxuanluo@localhost \"cd /mnt/taurus/home/jiaxuanluo/InfiniSST && setsid bash -lc 'HOST_GPU_DEVICES_OVERRIDE=2,3,4,5 MASTER_PORT=30617 bash documents/code/train/sst_omni_train/launchers/2026/05/20260522__speech_llm_new_v4_llm_variant_aug_newv3_zh_aries4_r64a128.sh' > documents/logs/speech_llm_train/20260522_new_v4_llm_variant_newv3_r64a128_aries2345.out 2> documents/logs/speech_llm_train/20260522_new_v4_llm_variant_newv3_r64a128_aries2345.err < /dev/null &\"",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__speech_llm_new_v4_llm_variant_aug_newv3_zh_aries4_r64a128.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__speech_llm_new_v4_llm_variant_aug_newv3_zh_r64a128.md"
+    },
+    {
+      "role": "train_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/auto_train_sampling_docker.sh"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v4_llm_variant_aug_newv3_zh_20260522/train_s_zh_new_v4_llm_variant_aug_newv3_cacheonly.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v4_llm_variant_aug_newv3_zh_20260522/dev_s_zh_new_v4_llm_variant_aug_newv3_cacheonly.jsonl"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/speech_llm_new_v4_llm_variant_aug_newv3_zh_r64a128_aries4"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_train/20260522_new_v4_llm_variant_newv3_r64a128_aries2345.out"
+    }
+  ],
+  "metadata": {
+    "data_prepare_event_id": "20260522T1235__data_prepare__new_v4_llm_variant_aug_newv3_cacheonly_zh",
+    "gpu_devices": "2,3,4,5",
+    "lora_rank": 64,
+    "lora_alpha": 128,
+    "max_length": 3072,
+    "iterations_per_epoch": 452,
+    "pid": 3036309,
+    "cancelled_at": "2026-05-22T15:31:28+00:00",
+    "cancel_reason": "user_cancelled_wrong_base_should_use_old_newv3_r32a64_2gpu_not_r64a128",
+    "stopped_processes": "docker container e2924d936adb and related launcher/waiter processes"
+  },
+  "updated_at": "2026-05-22T15:31:28+00:00"
+}

@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T1015__maintenance__medicine_default_strict_archive_legacy",
+  "event_type": "maintenance",
+  "family": "medicine_varctx_eval_data",
+  "variant": "default_strict_mfa_exact_archive_legacy_non_strict",
+  "status": "success",
+  "project": null,
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/data_pre/training_terms_for_retriever/notes/2026/05/20260522__medicine_default_strict_archive_legacy.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "manual maintenance: update retriever varctx medicine defaults to clean_mfa_exact_only and archive legacy non-strict medicine artifacts with compatibility symlinks",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/data_pre/training_terms_for_retriever/notes/2026/05/20260522__medicine_default_strict_archive_legacy.md"
+    },
+    {
+      "role": "updated_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn1024_gsv2full_gsdedup_varctx_lmlb_v3_tcmoff_ep6_8gpu_aries.sh",
+      "metadata": {
+        "change": "default MEDICINE_DEV_JSONL and MEDICINE_EVAL_WIKI_GLOSSARY now point to clean_mfa_exact_only"
+      }
+    },
+    {
+      "role": "strict_medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "control",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_dev_dataset.jsonl"
+    },
+    {
+      "role": "strict_medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "control",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000.json"
+    },
+    {
+      "role": "legacy_non_strict_medicine_dir",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76"
+    },
+    {
+      "role": "legacy_non_strict_archive_dir",
+      "type": "dataset_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76/archive/deprecated_non_strict_20260522T1015Z"
+    },
+    {
+      "role": "legacy_deprecation_marker",
+      "type": "text",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76/DEPRECATED_USE_clean_mfa_exact_only.txt"
+    }
+  ],
+  "metadata": {
+    "preferred_medicine_dev_jsonl": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_dev_dataset.jsonl",
+    "preferred_medicine_eval_wiki_glossary": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000.json",
+    "completed_at_utc": "2026-05-22T10:15:18Z",
+    "legacy_archive_policy": "move old non-strict top-level artifacts into archive while leaving compatibility symlinks at original paths",
+    "compatibility_symlinks_retained": true
+  }
+}

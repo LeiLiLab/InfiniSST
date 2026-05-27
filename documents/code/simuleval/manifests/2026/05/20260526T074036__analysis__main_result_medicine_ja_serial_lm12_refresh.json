@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "event_id": "20260526T074036__analysis__main_result_medicine_ja_serial_lm12_refresh",
+  "event_type": "analysis",
+  "family": "main_results",
+  "variant": "medicine_ja_serial_lm12_refresh",
+  "status": "completed",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260526__main_result_medicine_ja_serial_lm12_refresh.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "apply_patch canonical and paper-local TSV rows; python plot_figure_02_medicine_main_result.py --update-paper",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260526__main_result_medicine_ja_serial_lm12_refresh.md"
+    },
+    {
+      "role": "eval_output",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_ja_lm1_serial_promptfix_vllmaudio128_max40lm_20260526T045605_aries45/ja/dmedhard_ja_serial_promptfix_vllmaudio128_max40lm_lm1_k10_th0.78_ghard_medicine_raw__medicine5/eval_results.tsv",
+      "metadata": {
+        "dataset": "medicine_hardraw",
+        "method": "RASST",
+        "lang": "ja",
+        "lm": 1,
+        "instances_log_rows": 5,
+        "instances_strip_term_log_rows": 5
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_ja_lm2_serial_promptfix_vllmaudio128_max40lm_20260526T045605_aries67/ja/dmedhard_ja_serial_promptfix_vllmaudio128_max40lm_lm2_k10_th0.78_ghard_medicine_raw__medicine5/eval_results.tsv",
+      "metadata": {
+        "dataset": "medicine_hardraw",
+        "method": "RASST",
+        "lang": "ja",
+        "lm": 2,
+        "instances_log_rows": 5,
+        "instances_strip_term_log_rows": 5
+      }
+    },
+    {
+      "role": "report",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv"
+    },
+    {
+      "role": "report",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_02_medicine_main_result/data.tsv"
+    },
+    {
+      "role": "report",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_01_main_result_tagged/data.tsv"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_02_medicine_main_result/plot_figure_02_medicine_main_result.py"
+    },
+    {
+      "role": "report",
+      "type": "figure_pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/medicine_main_result.pdf"
+    },
+    {
+      "role": "report",
+      "type": "figure_png",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/medicine_main_result.png"
+    }
+  ],
+  "metadata": {
+    "updated_rows": [
+      {
+        "dataset": "medicine_hardraw",
+        "method": "RASST",
+        "lang": "ja",
+        "lm": 1,
+        "BLEU": 19.3213,
+        "StreamLAAL": 1558.089,
+        "StreamLAAL_CA": 2361.2328,
+        "TERM_ACC": 0.7515,
+        "TERM_CORRECT": 487,
+        "TERM_TOTAL": 648
+      },
+      {
+        "dataset": "medicine_hardraw",
+        "method": "RASST",
+        "lang": "ja",
+        "lm": 2,
+        "BLEU": 25.1412,
+        "StreamLAAL": 2231.1946,
+        "StreamLAAL_CA": 3272.8455,
+        "TERM_ACC": 0.8086,
+        "TERM_CORRECT": 524,
+        "TERM_TOTAL": 648
+      }
+    ],
+    "validation": {
+      "canonical_tsv_rows": 87,
+      "paper_local_tsv_rows": 87,
+      "duplicate_keys": 0,
+      "numeric_parse": "passed",
+      "pdf_regenerated": true,
+      "png_regenerated": true
+    },
+    "selection_rule": "Use verified serial promptfix vllm-audio-128/cache30/max40lm JA medicine rows for lm=1 and lm=2 only; keep lm=3 and lm=4 on existing verified batch rows until serial medicine artifacts exist."
+  }
+}

@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "event_id": "20260517T2136__retriever_train__varctx_audio_whisper_mid_en_taurus8_gc128_eval100_pad3000",
+  "event_type": "retriever_train",
+  "family": "sst_ood_hardneg",
+  "variant": "vctx576_aud_wmid_t8_d100_tau1_g128p3k",
+  "status": "failed",
+  "project": "qwen3_rag",
+  "wandb_run_id": "09p9rojy",
+  "slurm_job_id": "45253",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260517__varctx_lmlb_v3_audio_whisper_mid_en_taurus8_gc128_eval100_pad3000.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260517__varctx_lmlb_v3_audio_whisper_mid_en_taurus8_gc128_eval100_pad3000.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command_template": "cd /mnt/taurus/home/jiaxuanluo/InfiniSST && sbatch --parsable documents/code/train/term_train/launchers/2026/05/20260517__varctx_lmlb_v3_audio_whisper_mid_en_taurus8_gc128_eval100_pad3000.sh",
+  "parent_run_ids": [
+    "lh1b88kw",
+    "o0p64pr7",
+    "qft43kd9"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260517__varctx_lmlb_v3_audio_whisper_mid_en_taurus8_gc128_eval100_pad3000.sh"
+    },
+    {
+      "role": "parent_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260517__varctx_lmlb_v3_audio_whisper_mid_en_taurus8_gc256_eval100_pad3000.sh"
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py",
+      "metadata": {
+        "change": "Whisper mel pad/truncate to 3000 frames with valid-length mask preservation"
+      }
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260517__varctx_lmlb_v3_audio_whisper_mid_en_taurus8_gc128_eval100_pad3000.md"
+    },
+    {
+      "role": "source_control_run",
+      "type": "wandb_run",
+      "direction": "input",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/lh1b88kw"
+    },
+    {
+      "role": "failed_predecessor_run",
+      "type": "wandb_run",
+      "direction": "input",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/o0p64pr7"
+    },
+    {
+      "role": "failed_predecessor_run",
+      "type": "wandb_run",
+      "direction": "input",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/qft43kd9"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs"
+    }
+  ],
+  "metadata": {
+    "data_tag": "3variant_gsv2full_gsdedup_vctx576_wmid",
+    "extra_wandb_tags": [
+      "variant:vctx576_aud_wmid_t8_d100_tau1_g128p3k",
+      "compute:taurus-8gpu"
+    ],
+    "text_encoder_preset": "bge-m3",
+    "text_model_id": "BAAI/bge-m3",
+    "text_input_prefix": "",
+    "text_pooling": "cls",
+    "audio_encoder_preset": "whisper-mid-en",
+    "audio_encoder_type": "whisper",
+    "audio_model_id": "openai/whisper-medium.en",
+    "audio_feature_extractor_id": "openai/whisper-medium.en",
+    "audio_lora_target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "out_proj",
+      "fc1",
+      "fc2"
+    ],
+    "fixed_audio_seconds": 5.76,
+    "eval_fixed_audio_seconds": 5.76,
+    "whisper_expected_mel_frames": 3000,
+    "num_gpus": 8,
+    "per_gpu_batch": 1024,
+    "global_batch": 8192,
+    "grad_cache_chunk_size": 128,
+    "max_steps": 2000,
+    "eval_steps_sample": 100,
+    "eval_refresh_alignment": {
+      "negative_bank_refresh_steps": 50,
+      "policy": "eval interval is an integer multiple of refresh interval"
+    },
+    "eval_sample_limit": 100,
+    "acl_eval_sample_limit": 0,
+    "medicine_eval_sample_limit": 0,
+    "eval_sample_seed": 17,
+    "eval_score_device": "cuda",
+    "eval_score_query_chunk": 256,
+    "eval_score_text_chunk": 1024,
+    "eval_glossary_sizes": [
+      1000,
+      10000
+    ],
+    "acl_eval_glossary_sizes": [
+      10000
+    ],
+    "medicine_eval_glossary_sizes": [
+      10000
+    ],
+    "tcm_sweep_thresholds": [
+      0.75
+    ],
+    "eval_top100_samples": 0,
+    "eval_glossary_match_min_norm_chars": 2,
+    "strict_train_eval_term_filter": false,
+    "slurm_job_name": "q3_vctx_wmid_g128",
+    "slurm_partition": "taurus",
+    "best_metric": "eval_dev/recall@10_gs10000",
+    "best_metric_secondary": "eval_acl6060/recall@10",
+    "baseline_anchor": {
+      "run_id": "lh1b88kw",
+      "anchor": "secondary",
+      "step": 2640,
+      "metric": "eval_acl6060/recall@10"
+    },
+    "tcm_off": true,
+    "prepared_at_utc": "2026-05-17T21:35:52+00:00",
+    "submitted_at_utc": "2026-05-17T21:36:36+00:00",
+    "slurm_stdout": "/mnt/gemini/data1/jiaxuanluo/logs/45253_q3_vctx_wmid_g128_q3_vctx_wmid_g128.out",
+    "slurm_stderr": "/mnt/gemini/data1/jiaxuanluo/logs/45253_q3_vctx_wmid_g128_q3_vctx_wmid_g128.err",
+    "finished_at_utc": "2026-05-17T21:42:27+00:00",
+    "failure_reason": "Whisper gc128 passed encoder forward but OOMed when concatenating full-batch MaxSim speech windows; padded-tail windows from hidden length 1500 needed valid-length cropping."
+  }
+}

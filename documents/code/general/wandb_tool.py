@@ -57,6 +57,12 @@ except ImportError:
     ExperimentDB = None  # type: ignore[assignment]
     default_db_path = None  # type: ignore[assignment]
 
+try:
+    from wandb_tags import compress_wandb_tag, prepare_wandb_tags
+except ImportError as exc:
+    print(f"[wandb_tool] failed to import wandb_tags: {exc}", file=sys.stderr)
+    sys.exit(2)
+
 
 # ---------------------------------------------------------------------------
 # Metric presets — edited together with reference.md.
@@ -233,7 +239,12 @@ for _preset_name in ("retriever_eval", "retriever_eval_full"):
         for key in METRIC_PRESETS[_preset_name]
         if key.startswith("eval_acl6060/")
     ]
-    for _key in _medicine_keys:
+    _tagged_acl_keys = [
+        key.replace("eval_acl6060/", "eval_tagged_acl/")
+        for key in METRIC_PRESETS[_preset_name]
+        if key.startswith("eval_acl6060/")
+    ]
+    for _key in _medicine_keys + _tagged_acl_keys:
         if _key not in METRIC_PRESETS[_preset_name]:
             METRIC_PRESETS[_preset_name].append(_key)
 
@@ -1764,6 +1775,9 @@ def cmd_annotate(args: argparse.Namespace) -> int:
                 new_tags.append(t)
         for t in args.remove_tags or ():
             new_tags = [x for x in new_tags if x != t]
+    new_tags, tag_changes = prepare_wandb_tags(new_tags)
+    for old, new in tag_changes:
+        print(f"[wandb_tool] compressed WandB tag: {old!r} -> {new!r}")
     if tuple(new_tags) != tuple(current_tags):
         run.tags = new_tags
 
@@ -1832,6 +1846,9 @@ def cmd_flip_status(args: argparse.Namespace) -> int:
         raise SystemExit(f"[wandb_tool] unknown status '{new_status}'.")
     new_tags = [t for t in (run.tags or []) if not t.startswith("status:")]
     new_tags.append(f"status:{new_status}")
+    new_tags, tag_changes = prepare_wandb_tags(new_tags)
+    for old, new in tag_changes:
+        print(f"[wandb_tool] compressed WandB tag: {old!r} -> {new!r}")
     run.tags = new_tags
     run.update()
     print(f"[wandb_tool] {run.id} tags now: {list(run.tags or [])}")

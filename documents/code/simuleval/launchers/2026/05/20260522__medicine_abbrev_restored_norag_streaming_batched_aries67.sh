@@ -309,6 +309,27 @@ PY
   printf '%s\t%s\t%s\t%s\n' "${src_list}" "${tgt_list}" "${glossary_path}" "${glossary_tag}"
 }
 
+validate_source_paths() {
+  local combined_row="$1"
+  local src_list tgt_list glossary_path glossary_tag missing=0
+  IFS=$'\t' read -r src_list tgt_list glossary_path glossary_tag <<< "${combined_row}"
+  if [[ ! -s "${src_list}" ]]; then
+    echo "[ERROR] Missing source list: ${src_list}" >&2
+    return 3
+  fi
+  while IFS= read -r wav_path; do
+    [[ -n "${wav_path}" ]] || continue
+    if [[ ! -r "${wav_path}" ]]; then
+      echo "[ERROR] Source wav is not readable on this host: ${wav_path}" >&2
+      missing="$((missing + 1))"
+    fi
+  done < "${src_list}"
+  if (( missing > 0 )); then
+    echo "[ERROR] ${missing} source wav path(s) missing from ${src_list}" >&2
+    return 3
+  fi
+}
+
 append_hypotheses() {
   local lang="$1"
   local lm="$2"
@@ -402,6 +423,7 @@ run_one() {
   start="$(date +%s)"
   set +e
   ROOT_DIR_OVERRIDE="${ROOT_DIR}" \
+  DATA_ROOT_OVERRIDE="$(dirname "${src_list}")" \
   CONDA_PREFIX_OVERRIDE="${CONDA_PREFIX}" \
   GLOSSARY_PATHS_OVERRIDE="${glossary_path}" \
   SRC_LIST_OVERRIDE="${src_list}" \
@@ -412,6 +434,13 @@ run_one() {
   LATENCY_MULTIPLIERS_OVERRIDE="${lm}" \
   RAG_K2_VALUES_OVERRIDE="${RAG_K2_VALUE}" \
   CUDA_VISIBLE_DEVICES_PHYSICAL_OVERRIDE="${GPU_COMMA}" \
+  GPU_MEMORY_UTILIZATION_OVERRIDE="${GPU_MEMORY_UTILIZATION_OVERRIDE:-0.8}" \
+  MAX_CACHE_SECONDS_OVERRIDE="${MAX_CACHE_SECONDS_OVERRIDE:-80.0}" \
+  KEEP_CACHE_SECONDS_OVERRIDE="${KEEP_CACHE_SECONDS_OVERRIDE:-60.0}" \
+  VLLM_TP_SIZE_OVERRIDE="${VLLM_TP_SIZE_OVERRIDE:-2}" \
+  VLLM_MAX_MODEL_LEN_OVERRIDE="${VLLM_MAX_MODEL_LEN_OVERRIDE:-32768}" \
+  VLLM_LIMIT_AUDIO_OVERRIDE="${VLLM_LIMIT_AUDIO_OVERRIDE:-}" \
+  VLLM_DISABLE_CUSTOM_ALL_REDUCE="${VLLM_DISABLE_CUSTOM_ALL_REDUCE:-0}" \
   RESUME_MODE="${resume_mode}" \
   CLEAN_OUTPUT_DIR_OVERRIDE="${clean_output}" \
   BACKUP_PARTIAL_RUNS="1" \
@@ -478,6 +507,7 @@ main() {
       exit 3
     fi
     combined_row="$(prepare_combined_inputs "${lang}")"
+    validate_source_paths "${combined_row}"
     sample_map="${OUTPUT_BASE}/${lang}/__medicine_inputs__/combined/medicine5.sample_map.tsv"
     for lm in "${TARGET_LMS[@]}"; do
       run_one "${lang}" "${lm}" "${model}" "${combined_row}" "${sample_map}"

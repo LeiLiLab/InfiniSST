@@ -1,0 +1,254 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T113241__simuleval__tagged_acl_tmv4_de_lm4_old_protocol_compat_matrix_aries",
+  "event_type": "simuleval",
+  "family": "tagged_acl_tmv4_old_protocol_compat",
+  "variant": "de_lm4_hn1024_batch_protocol_matrix_aries",
+  "status": "completed_eval_valid",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmv4_de_lm4_old_protocol_compat_matrix_aries.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_tmv4_de_lm4_old_protocol_compat_matrix.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && bash documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmv4_de_lm4_old_protocol_compat_matrix_aries.sh'",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmv4_de_lm4_old_protocol_compat_matrix_aries.sh"
+    },
+    {
+      "role": "delegate_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_cap16_lm4_decode_cache_probe.sh"
+    },
+    {
+      "role": "batch_delegate_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_tmv4_de_lm4_old_protocol_compat_matrix.md"
+    },
+    {
+      "role": "speech_llm_model",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-de-s_v4_ner_baseline_aligned_rate1.0_k20_final-bsz4"
+    },
+    {
+      "role": "eval_input",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all"
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever_id": "HN1024"
+      }
+    },
+    {
+      "role": "reference_old_full_grid_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260521T0501__simuleval__tagged_acl_llmgen_sft_tau073_full.json"
+    },
+    {
+      "role": "reference_current_tmv4_tau078_lm4_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260525T102941__simuleval__tagged_acl_tmv4_de_lm4_hn1024_tau078_omit_batch_taurus45.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmv4_de_lm4_old_protocol_compat_20260525T113241"
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_de_lm4_old_protocol_compat_20260525T113241"
+    },
+    {
+      "role": "report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_de_lm4_tmv4_old_protocol_compat_matrix.md"
+    },
+    {
+      "role": "report_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_de_lm4_tmv4_old_protocol_compat_matrix.tsv"
+    },
+    {
+      "role": "result_inventory",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_de_tagged_acl_result_inventory.tsv"
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "latency_multipliers": [
+      4
+    ],
+    "runtime_glossary": "acl6060_tagged_gt_raw_min_norm2",
+    "retriever": "HN1024",
+    "rag_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "same_lm_batch": true,
+    "talks_per_lm": 5,
+    "wandb_log_override": 0,
+    "target_host": "aries",
+    "gpu_plan": {
+      "tmv4_tau073_oldcache_none_mt40_c80k60_ch20k15": "0,1",
+      "tmv4_tau073_oldcache_omit_mt40_c80k60_ch20k15": "2,3",
+      "tmv4_tau073_shortcache_omit_mt80_c40k20_ch8k4": "4,5",
+      "tmv4_tau078_oldcache_omit_mt80_c80k60_ch20k15": "6,7"
+    },
+    "configs": [
+      {
+        "config_id": "tmv4_tau073_oldcache_none_mt40_c80k60_ch20k15",
+        "rag_tau": 0.73,
+        "max_new_tokens": 40,
+        "max_cache_seconds": 80,
+        "keep_cache_seconds": 60,
+        "max_cache_chunks": 20,
+        "keep_cache_chunks": 15,
+        "empty_term_map_policy": "none_block"
+      },
+      {
+        "config_id": "tmv4_tau073_oldcache_omit_mt40_c80k60_ch20k15",
+        "rag_tau": 0.73,
+        "max_new_tokens": 40,
+        "max_cache_seconds": 80,
+        "keep_cache_seconds": 60,
+        "max_cache_chunks": 20,
+        "keep_cache_chunks": 15,
+        "empty_term_map_policy": "omit"
+      },
+      {
+        "config_id": "tmv4_tau073_shortcache_omit_mt80_c40k20_ch8k4",
+        "rag_tau": 0.73,
+        "max_new_tokens": 80,
+        "max_cache_seconds": 40,
+        "keep_cache_seconds": 20,
+        "max_cache_chunks": 8,
+        "keep_cache_chunks": 4,
+        "empty_term_map_policy": "omit"
+      },
+      {
+        "config_id": "tmv4_tau078_oldcache_omit_mt80_c80k60_ch20k15",
+        "rag_tau": 0.78,
+        "max_new_tokens": 80,
+        "max_cache_seconds": 80,
+        "keep_cache_seconds": 60,
+        "max_cache_chunks": 20,
+        "keep_cache_chunks": 15,
+        "empty_term_map_policy": "omit"
+      }
+    ],
+    "submitted_utc": "2026-05-25T11:36:16Z",
+    "submitter_log": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_de_lm4_old_protocol_compat_20260525T113241/submit.out",
+    "pid_table": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_de_lm4_old_protocol_compat_20260525T113241/pids.tsv",
+    "prelaunch_gpu_status": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmv4_de_lm4_old_protocol_compat_20260525T113241/prelaunch_gpus.csv",
+    "temp_dir_policy": "Use short /dev/shm/jxop* paths because Aries /tmp is on nearly-full root filesystem.",
+    "storage_check": {
+      "/mnt/gemini/data1": {
+        "available": "236G",
+        "use_percent": "99%"
+      },
+      "/dev/shm": {
+        "available": "504G",
+        "use_percent": "1%"
+      },
+      "/tmp": {
+        "available": "2.3G",
+        "use_percent": "100%"
+      }
+    },
+    "pids": {
+      "tmv4_tau073_oldcache_none_mt40_c80k60_ch20k15": 3704137,
+      "tmv4_tau073_oldcache_omit_mt40_c80k60_ch20k15": 3704147,
+      "tmv4_tau073_shortcache_omit_mt80_c40k20_ch8k4": 3704161,
+      "tmv4_tau078_oldcache_omit_mt80_c80k60_ch20k15": 3704177
+    },
+    "submission_observation_utc": "2026-05-25T11:36:24Z",
+    "submission_status": "four detached child launchers alive on Aries and validating inputs before vLLM model load",
+    "startup_observation_utc": "2026-05-25T11:36:54Z",
+    "startup_status": "all four child jobs entered vLLM model loading on Aries GPUs 0-7",
+    "decode_observation_utc": "2026-05-25T11:45:19Z",
+    "decode_status": "all four child jobs running with five active samples",
+    "completed_utc": "2026-05-25T11:50:37Z",
+    "final_status_note": "all four child jobs completed; eval_results.tsv, instances.log, and instances.strip_term.log validated with five rows per config",
+    "validation": {
+      "expected_instances_rows_per_config": 5,
+      "instances_log_rows_per_config": 5,
+      "instances_strip_term_log_rows_per_config": 5,
+      "term_total": 935,
+      "optional_adoption_fields": "N/A because optional compute_sentence_term_adoption.py post-hoc path was not found in the Aries child process; headline TERM_ACC is unaffected"
+    },
+    "metrics": {
+      "tmv4_tau073_oldcache_none_mt40_c80k60_ch20k15": {
+        "BLEU": 32.26133838514925,
+        "StreamLAAL": 2696.7883189614477,
+        "StreamLAAL_CA": 1370.5502990725274,
+        "TERM_ACC": 0.8396,
+        "TERM_CORRECT": 785,
+        "TERM_TOTAL": 935
+      },
+      "tmv4_tau073_oldcache_omit_mt40_c80k60_ch20k15": {
+        "BLEU": 32.038771057229326,
+        "StreamLAAL": 2669.6163905162334,
+        "StreamLAAL_CA": 1230.0559585672406,
+        "TERM_ACC": 0.8235,
+        "TERM_CORRECT": 770,
+        "TERM_TOTAL": 935
+      },
+      "tmv4_tau073_shortcache_omit_mt80_c40k20_ch8k4": {
+        "BLEU": 32.77016016945793,
+        "StreamLAAL": 2626.165928205123,
+        "StreamLAAL_CA": 1122.1644988886362,
+        "TERM_ACC": 0.8492,
+        "TERM_CORRECT": 794,
+        "TERM_TOTAL": 935
+      },
+      "tmv4_tau078_oldcache_omit_mt80_c80k60_ch20k15": {
+        "BLEU": 32.53319716625566,
+        "StreamLAAL": 2671.063522107094,
+        "StreamLAAL_CA": 1336.61022468371,
+        "TERM_ACC": 0.8406,
+        "TERM_CORRECT": 786,
+        "TERM_TOTAL": 935
+      }
+    },
+    "verdict": "Old tau/cache/max-token/empty-map protocol knobs do not reproduce the historical de/lm4 BLEU recovery in the current batch evaluator; best matrix BLEU is 32.7702, below verified no-RAG 33.3008."
+  }
+}

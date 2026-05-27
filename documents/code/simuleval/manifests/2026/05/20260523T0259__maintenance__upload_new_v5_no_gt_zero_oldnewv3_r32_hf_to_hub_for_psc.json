@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T0259__maintenance__upload_new_v5_no_gt_zero_oldnewv3_r32_hf_to_hub_for_psc",
+  "event_type": "maintenance",
+  "family": "psc_model_transfer",
+  "variant": "new_v5_no_gt_zero_oldnewv3_r32a64_hf_hub_private",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "40962330",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260523__upload_new_v5_no_gt_zero_oldnewv3_r32_hf_to_hub_for_psc.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260523__upload_new_v5_no_gt_zero_oldnewv3_r32_hf_to_hub_for_psc.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'bash documents/code/simuleval/launchers/2026/05/20260523__upload_new_v5_no_gt_zero_oldnewv3_r32_hf_to_hub_for_psc.sh' > /mnt/gemini/data1/jiaxuanluo/logs/hf_upload_new_v5_no_gt_zero_oldnewv3_r32_20260523T0259.out 2> /mnt/gemini/data1/jiaxuanluo/logs/hf_upload_new_v5_no_gt_zero_oldnewv3_r32_20260523T0259.err < /dev/null &",
+  "parent_run_ids": [
+    "cg5qisu9",
+    "342oxpmu"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__upload_new_v5_no_gt_zero_oldnewv3_r32_hf_to_hub_for_psc.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260523__upload_new_v5_no_gt_zero_oldnewv3_r32_hf_to_hub_for_psc.md"
+    },
+    {
+      "role": "hf_model_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/aries/data6/jiaxuanluo/slm/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_r32a64_tp2_aries2/keep1.0_r32/v0-20260523-050346-hf"
+    },
+    {
+      "role": "upload_stage_dir",
+      "type": "directory",
+      "direction": "control",
+      "path": "/mnt/aries/data6/jiaxuanluo/hf_upload_staging/new_v5_no_gt_zero_oldnewv3_r32_hf",
+      "metadata": {
+        "purpose": "writable symlink mirror for upload-large-folder resume metadata"
+      }
+    },
+    {
+      "role": "hf_model_repo",
+      "type": "huggingface_model_repo",
+      "direction": "output",
+      "path": "gavinlaw/infinisst-new-v5-no-gt-zero-oldnewv3-r32a64-keep1p0-r32-zh",
+      "metadata": {
+        "visibility": "private"
+      }
+    },
+    {
+      "role": "upload_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/hf_upload_new_v5_no_gt_zero_oldnewv3_r32_20260523T0259.out"
+    },
+    {
+      "role": "upload_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/hf_upload_new_v5_no_gt_zero_oldnewv3_r32_20260523T0259.err"
+    },
+    {
+      "role": "hf_pull_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/tools/hf_resolve_snapshot_download_curl.sh",
+      "metadata": {
+        "psc_path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/src/InfiniSST/documents/code/simuleval/tools/hf_resolve_snapshot_download_curl.sh"
+      }
+    },
+    {
+      "role": "hf_pull_manifest",
+      "type": "tsv",
+      "direction": "control",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/models/new_v5_no_gt_zero_oldnewv3_r32_hf_files.tsv"
+    },
+    {
+      "role": "psc_model_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/models/keep1.0_r32/v0-20260523-050346-hf"
+    },
+    {
+      "role": "psc_pull_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/hf_pull_newv5_40962330.out"
+    },
+    {
+      "role": "psc_pull_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/hf_pull_newv5_40962330.err"
+    }
+  ],
+  "metadata": {
+    "hf_repo_id": "gavinlaw/infinisst-new-v5-no-gt-zero-oldnewv3-r32a64-keep1p0-r32-zh",
+    "local_shard_count": 15,
+    "transfer_target": "psc",
+    "psc_account": "cis260009p",
+    "psc_pull_partition": "GPU-shared",
+    "psc_pull_gres": "gpu:v100-32:1",
+    "psc_pull_job_id": "40962330",
+    "psc_pull_elapsed": "00:22:43",
+    "psc_pull_exit_code": "0:0",
+    "psc_validation": {
+      "expected_files": 28,
+      "present_files": 28,
+      "safetensor_shards": 15,
+      "expected_total_bytes": 70541952230,
+      "actual_total_bytes": 70541952230,
+      "missing_files": [],
+      "wrong_size_files": [],
+      "part_files": []
+    }
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T1235__data_prepare__new_v4_llm_variant_aug_newv3_cacheonly_zh",
+  "event_type": "data_prepare",
+  "family": "speech_llm_termmap_retriever",
+  "variant": "new_v4_llm_variant_aug_newv3_cacheonly_zh",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_new_v4_llm_variant_aug_newv3_cacheonly_zh.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__build_new_v4_llm_variant_aug_newv3_cacheonly_zh.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'bash documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_new_v4_llm_variant_aug_newv3_cacheonly_zh.sh' > documents/logs/speech_llm_data/20260522_new_v4_llm_variant_aug_newv3_cacheonly_zh.out 2> documents/logs/speech_llm_data/20260522_new_v4_llm_variant_aug_newv3_cacheonly_zh.err < /dev/null &",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_new_v4_llm_variant_aug_newv3_cacheonly_zh.sh"
+    },
+    {
+      "role": "data_prep_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/augment_term_translation_llm_variants.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__build_new_v4_llm_variant_aug_newv3_cacheonly_zh.md"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tcm_wiki100k_gt_zh_tau075_d9_k20_postfiltercap_termmap_v2_sourcefinal_gtzh/train_s_zh_v4_ner_baseline_aligned_rate1.0_k20_sourcefinal_tcmwiki100kgt_tau075_d9_k20_postfiltercap_gtzhoverride.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/dev_s_zh_v4_ner_baseline_aligned_freq_k20_final.jsonl"
+    },
+    {
+      "role": "variant_cache",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v16_llm_variant_aug_retriever_timeline_zh_lh1b88kw_tau073_20260522/openai_term_variant_cache.json"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v4_llm_variant_aug_newv3_zh_20260522/train_s_zh_new_v4_llm_variant_aug_newv3_cacheonly.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v4_llm_variant_aug_newv3_zh_20260522/dev_s_zh_new_v4_llm_variant_aug_newv3_cacheonly.jsonl"
+    },
+    {
+      "role": "report",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v4_llm_variant_aug_newv3_zh_20260522/new_v4_llm_variant_aug_summary.json"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_data/20260522_new_v4_llm_variant_aug_newv3_cacheonly_zh.out"
+    }
+  ],
+  "metadata": {
+    "cache_only": true,
+    "missing_gt_policy": "keep_unchanged",
+    "input_family": "legacy_new_v3_retriever_sft",
+    "pid": 1529212,
+    "train_rows": 12500,
+    "dev_rows": 355,
+    "train_selected_terms": 50711,
+    "train_augmented_terms": 11429,
+    "train_augmented_over_selected_rate": 0.22537516515154504,
+    "train_rows_missing_gt_terms_by_chunk": 182,
+    "dev_rows_missing_gt_terms_by_chunk": 355
+  }
+}

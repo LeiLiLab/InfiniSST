@@ -1,0 +1,200 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T1203__retriever_eval__nohn_best_secondary_tau_delta_dev_acl_tagacl_medstrict",
+  "event_type": "retriever_eval",
+  "family": "sst_ood_hardneg_eval_compare",
+  "variant": "nohn_best_secondary_tau_delta_dev_acl_tagacl_medstrict",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": "vj0z7xdv",
+  "slurm_job_id": "45269",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260522__tau_delta_dev_acl_tagacl_medstrict_compare_aries1_eval.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260522__nohn_best_secondary_tau_delta_dev_acl_tagacl_medstrict_eval.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "setsid env SLURM_JOB_ID=45269 SLURM_JOB_PARTITION=taurus RUN_STAMP=nohn_best_secondary_tau_delta_taurus_gpu6_20260522T1210Z MODEL_TAG=nohn_best_secondary CUDA_DEVICE_LIST=6 NUM_GPUS=1 PER_GPU_BATCH=1 BATCH_SIZE=1 MASTER_PORT=30420 RESUME=/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8192_gc256_wr1000k_m0.0_maxsim_mfa_variantE_nohn_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu01234567_taurus_best_eval_acl6060_recallat10.pt NOTES_FILE=/mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/train/term_train/notes/2026/05/20260522__nohn_best_secondary_tau_delta_dev_acl_tagacl_medstrict_eval.md bash documents/code/train/term_train/launchers/2026/05/20260522__tau_delta_dev_acl_tagacl_medstrict_compare_aries1_eval.sh > /mnt/gemini/data1/jiaxuanluo/logs/nohn_best_secondary_tau_delta_dev_acl_tagacl_medstrict_taurus_gpu6_20260522T1210Z.direct.log 2>&1 < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/nohn_best_secondary_tau_delta_dev_acl_tagacl_medstrict_taurus_gpu6_20260522T1210Z.direct.pid",
+  "parent_run_ids": [
+    "40fgbr2y",
+    "lh1b88kw",
+    "4g108a3w",
+    "nrxiasfm",
+    "qjy4m1x9"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260522__tau_delta_dev_acl_tagacl_medstrict_compare_aries1_eval.sh"
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh"
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260522__nohn_best_secondary_tau_delta_dev_acl_tagacl_medstrict_eval.md"
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py"
+    },
+    {
+      "role": "checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8192_gc256_wr1000k_m0.0_maxsim_mfa_variantE_nohn_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu01234567_taurus_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "source_run_id": "40fgbr2y",
+        "checkpoint_kind": "best_secondary",
+        "selected_by": "eval_acl6060/recall@10",
+        "checkpoint_step": 1600
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_varctx2p88_3p84_4p80_5p76.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_varctx2p88_3p84_4p80_5p76_new_version.jsonl",
+      "metadata": {
+        "usage": "tau selection only"
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample1000000.json",
+      "metadata": {
+        "eval_glossary_sizes": [
+          10000,
+          100000
+        ]
+      }
+    },
+    {
+      "role": "acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_extracted_paper_glossary_varctx2p88_3p84_4p80_5p76/acl6060_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout only"
+      }
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_gt_union_gs10000_min_norm2_backfill.json"
+    },
+    {
+      "role": "tagged_acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_tagged_glossary_varctx2p88_3p84_4p80_5p76/acl6060_tagged_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout only"
+      }
+    },
+    {
+      "role": "tagged_acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs10000_min_norm2_backfill.json"
+    },
+    {
+      "role": "medicine_data_prepare_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/data_pre/training_terms_for_retriever/manifests/2026/05/20260518T1812__data_prepare__medicine_varctx_clean_mfa_exact_only.json"
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout only"
+      }
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000.json"
+    },
+    {
+      "role": "direct_launch_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/nohn_best_secondary_tau_delta_dev_acl_tagacl_medstrict_taurus_gpu6_20260522T1210Z.direct.log"
+    },
+    {
+      "role": "pid_file",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/nohn_best_secondary_tau_delta_dev_acl_tagacl_medstrict_taurus_gpu6_20260522T1210Z.direct.pid"
+    }
+  ],
+  "metadata": {
+    "schema_version": 1,
+    "slurm_allocation_job_id": "45269",
+    "host": "taurus",
+    "cuda_device_list": "6",
+    "gpu_wait_policy": "taurus GPU 6 was already below wait threshold; eval launched directly",
+    "aborted_prior_attempt": "aries GPU-6 wait-only launcher was stopped before torchrun or WandB init",
+    "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/vj0z7xdv",
+    "started_at_utc": "2026-05-22T12:09:00Z",
+    "completed_at_utc": "2026-05-22T12:22:36Z",
+    "tau_grid": "0.70 0.71 0.72 0.73 0.74 0.75 0.76 0.77 0.78 0.79 0.80 0.81 0.82 0.83 0.84 0.85 0.86 0.87 0.88 0.89 0.90",
+    "tau_selection_rule": "for no-HN, choose the largest tau whose max dev recall drop across base, gs10000, and gs100000 satisfies the predeclared budget; checked budgets are 0.5pp, 1.0pp, and 1.5pp",
+    "dev_tau_budget_0p5": null,
+    "dev_tau_budget_1p0": null,
+    "dev_tau_budget_1p0_nearest": {
+      "tau": 0.7,
+      "max_drop_pp": 1.067
+    },
+    "dev_tau_budget_1p5": {
+      "tau": 0.73,
+      "max_drop_pp": 1.48
+    },
+    "heldout_policy": "ACL6060, tagged ACL6060, and strict medicine are readout-only",
+    "compare_against": "lh1b88kw at fixed tau=0.73",
+    "comparison_verdict": "Legacy diagnostic only. This run used the old single-glossary eval path rather than the upgraded metrics-glossary / retriever-glossary split, so expanded-bank recall is not measured against a fixed strict raw denominator.",
+    "validity": "legacy_diagnostic_not_paper_comparable",
+    "do_not_use_for_paper": true,
+    "metrics_glossary_retriever_glossary_split": false,
+    "invalidity_reason": "Old eval path rebuilds positives after bank expansion; gs1k/gs10k recall can exceed raw recall because the denominator / positive universe changes.",
+    "equal_dev_drop_pairs": [
+      {
+        "nohn_tau": 0.7,
+        "nohn_max_dev_drop_pp": 1.067,
+        "lh1b88kw_tau": 0.78,
+        "lh1b88kw_max_dev_drop_pp": 1.019
+      },
+      {
+        "nohn_tau": 0.73,
+        "nohn_max_dev_drop_pp": 1.48,
+        "lh1b88kw_tau": 0.82,
+        "lh1b88kw_max_dev_drop_pp": 1.417
+      }
+    ],
+    "launch_mode": "direct detached on taurus hold allocation",
+    "launcher_pid": "1495385",
+    "pid_file_value": "1495384",
+    "torchrun_pid": "1495429",
+    "worker_pid": "1495646",
+    "aborted_aries_wait_attempt": "aries GPU-6 wait-only launcher was stopped before torchrun or WandB init"
+  }
+}

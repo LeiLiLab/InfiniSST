@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T1119__analysis__psc_tagged_acl_new_v9_gs_fixedraw_strip_recheck",
+  "event_type": "analysis",
+  "family": "tagged_acl_new_v9_hn1024_tau078",
+  "variant": "zh_gs1k_gs10k_fixedraw_strip_recheck",
+  "status": "completed",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__psc_tagged_acl_new_v9_gs_fixedraw_strip_recheck.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__psc_tagged_acl_new_v9_gs_fixedraw_strip_recheck.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "ssh PSC setsid bash -lc 'cd /ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/src/InfiniSST && bash documents/code/simuleval/launchers/2026/05/20260524__psc_tagged_acl_new_v9_gs_fixedraw_strip_recheck.sh'",
+  "parent_run_ids": [
+    "20260524T0520__simuleval__psc_tagged_acl_new_v9_hn1024_tau078_gs1k_gs10k_fixedraw_zh"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__psc_tagged_acl_new_v9_gs_fixedraw_strip_recheck.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__psc_tagged_acl_new_v9_gs_fixedraw_strip_recheck.md"
+    },
+    {
+      "role": "psc_generation_outputs",
+      "type": "output_dir",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh"
+    },
+    {
+      "role": "metric_glossary_fixed_raw",
+      "type": "glossary_json",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "strip_recheck_summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/__summary__/strip_recheck_summary.tsv"
+    },
+    {
+      "role": "merged_zh_table_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260524_tagged_acl_new_v9_hn1024_tau078_zh_raw_gs_fixedraw_data.tsv"
+    },
+    {
+      "role": "merged_zh_table_md",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260524_tagged_acl_new_v9_hn1024_tau078_zh_raw_gs_fixedraw_summary.md"
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "runtime_glossaries": [
+      "gs1k",
+      "gs10k"
+    ],
+    "metric_denominator": "fixed raw tagged ACL glossary",
+    "strip_output_tags": "term",
+    "source_tree_fix": "PSC eval_density_unified.sh and offline_streamlaal_eval.py synced before recheck",
+    "remote_pid": "451914",
+    "remote_log_dir": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw_strip_recheck/20260524T1119",
+    "remote_stdout": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw_strip_recheck/20260524T1119/recheck.out",
+    "remote_stderr": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw_strip_recheck/20260524T1119/recheck.err",
+    "completed_at_utc": "2026-05-24T11:28:00Z",
+    "psc_strip_summary": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/__summary__/strip_recheck_summary.tsv",
+    "merged_report_tsv": "documents/code/simuleval/reports/20260524_tagged_acl_new_v9_hn1024_tau078_zh_raw_gs_fixedraw_data.tsv",
+    "merged_report_md": "documents/code/simuleval/reports/20260524_tagged_acl_new_v9_hn1024_tau078_zh_raw_gs_fixedraw_summary.md",
+    "updated_at_utc": "2026-05-24T15:18:29Z",
+    "update_note": "raw zh lm1 row updated to same-lm batch max256 readout from simuleval_eval/kolja8vr",
+    "wandb_posthoc_runs": {
+      "gs1k_lm1to4": "b6p445cl",
+      "gs10k_lm1to4": "lv8d2i9r"
+    },
+    "merged_results": [
+      {
+        "runtime_glossary": "tagged_raw",
+        "lm": 1,
+        "BLEU": 44.4102,
+        "StreamLAAL": 1236.7205,
+        "TERM_ACC_pct": 85.39,
+        "REAL_ADOPT_pct": 89.40,
+        "TERM_FCR_pct": 13.01,
+        "source_wandb_run_id": "kolja8vr",
+        "source_event_id": "20260524T1442__simuleval__tagged_acl_same_lm_batch_v1exact_hn1024_tau078_raw_zh_lm1_max256"
+      },
+      {
+        "runtime_glossary": "tagged_raw",
+        "lm": 2,
+        "BLEU": 49.6099,
+        "StreamLAAL": 1861.8699,
+        "TERM_ACC_pct": 88.88,
+        "REAL_ADOPT_pct": 90.37,
+        "TERM_FCR_pct": 12.41
+      },
+      {
+        "runtime_glossary": "tagged_raw",
+        "lm": 3,
+        "BLEU": 50.1545,
+        "StreamLAAL": 2342.6068,
+        "TERM_ACC_pct": 89.89,
+        "REAL_ADOPT_pct": 91.08,
+        "TERM_FCR_pct": 8.07
+      },
+      {
+        "runtime_glossary": "tagged_raw",
+        "lm": 4,
+        "BLEU": 50.8145,
+        "StreamLAAL": 2785.504,
+        "TERM_ACC_pct": 90.0,
+        "REAL_ADOPT_pct": 92.12,
+        "TERM_FCR_pct": 9.4
+      },
+      {
+        "runtime_glossary": "tagged_gs1k",
+        "lm": 1,
+        "BLEU": 46.9162,
+        "StreamLAAL": 1320.2466,
+        "TERM_ACC_pct": 86.29,
+        "REAL_ADOPT_pct": 89.84,
+        "TERM_FCR_pct": 10.32
+      },
+      {
+        "runtime_glossary": "tagged_gs1k",
+        "lm": 2,
+        "BLEU": 48.743,
+        "StreamLAAL": 1926.7497,
+        "TERM_ACC_pct": 89.1,
+        "REAL_ADOPT_pct": 90.48,
+        "TERM_FCR_pct": 12.76
+      },
+      {
+        "runtime_glossary": "tagged_gs1k",
+        "lm": 3,
+        "BLEU": 49.8246,
+        "StreamLAAL": 2427.2251,
+        "TERM_ACC_pct": 88.09,
+        "REAL_ADOPT_pct": 89.99,
+        "TERM_FCR_pct": 7.95
+      },
+      {
+        "runtime_glossary": "tagged_gs1k",
+        "lm": 4,
+        "BLEU": 50.2348,
+        "StreamLAAL": 2823.8464,
+        "TERM_ACC_pct": 89.1,
+        "REAL_ADOPT_pct": 91.36,
+        "TERM_FCR_pct": 9.33
+      },
+      {
+        "runtime_glossary": "tagged_gs10k",
+        "lm": 1,
+        "BLEU": 46.1979,
+        "StreamLAAL": 1373.0813,
+        "TERM_ACC_pct": 84.61,
+        "REAL_ADOPT_pct": 88.11,
+        "TERM_FCR_pct": 9.38
+      },
+      {
+        "runtime_glossary": "tagged_gs10k",
+        "lm": 2,
+        "BLEU": 49.0672,
+        "StreamLAAL": 1913.431,
+        "TERM_ACC_pct": 88.54,
+        "REAL_ADOPT_pct": 90.29,
+        "TERM_FCR_pct": 8.87
+      },
+      {
+        "runtime_glossary": "tagged_gs10k",
+        "lm": 3,
+        "BLEU": 49.8589,
+        "StreamLAAL": 2426.7215,
+        "TERM_ACC_pct": 88.99,
+        "REAL_ADOPT_pct": 91.25,
+        "TERM_FCR_pct": 8.32
+      },
+      {
+        "runtime_glossary": "tagged_gs10k",
+        "lm": 4,
+        "BLEU": 50.3517,
+        "StreamLAAL": 2828.4538,
+        "TERM_ACC_pct": 88.65,
+        "REAL_ADOPT_pct": 91.37,
+        "TERM_FCR_pct": 10.28
+      }
+    ]
+  }
+}

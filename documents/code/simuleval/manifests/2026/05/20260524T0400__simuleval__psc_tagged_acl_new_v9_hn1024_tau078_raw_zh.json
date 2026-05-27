@@ -1,0 +1,193 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T0400__simuleval__psc_tagged_acl_new_v9_hn1024_tau078_raw_zh",
+  "event_type": "simuleval",
+  "family": "tagged_acl_new_v9_hn1024_tau078",
+  "variant": "psc_zh_raw_lm1to4_new_v9_termtag_delay_hn1024_tau078",
+  "status": "superseded_cancelled_before_smoke",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__psc_tagged_acl_new_v9_hn1024_tau078_raw_zh.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__psc_tagged_acl_new_v9_hn1024_tau078_raw_zh.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "Upload New V9 HF export to public HF, wait for repo readiness, pull to PSC, run zh tagged ACL raw smoke, then submit lm=1..4 full jobs on PSC 4xV100-32 if smoke passes.",
+  "parent_run_ids": [
+    "4b86tuti",
+    "lh1b88kw",
+    "2g6kan5y"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__psc_tagged_acl_new_v9_hn1024_tau078_raw_zh.sh"
+    },
+    {
+      "role": "upload_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__upload_new_v9_termtag_delay_hf_to_hub_for_psc.sh"
+    },
+    {
+      "role": "watcher_submitter",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__watch_hf_submit_psc_tagged_acl_new_v9_hn1024_tau078_raw_zh.sh"
+    },
+    {
+      "role": "quick_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260522__tagged_acl_speech_llm_quick_zh_lm2_raw_wait_hf.sh"
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "wandb_logger",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/offline_evaluation/wandb_eval_logger.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__psc_tagged_acl_new_v9_hn1024_tau078_raw_zh.md"
+    },
+    {
+      "role": "speech_llm_hf_model_source",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm_exports/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8/keep1.0_r32/v0-20260524-062743-hf"
+    },
+    {
+      "role": "speech_llm_hf_model_public_repo",
+      "type": "hf_model_repo",
+      "direction": "input",
+      "path": "gavinlaw/infinisst-new-v9-termtag-delay-oldnewv3-r32a64-keep1p0-r32-zh"
+    },
+    {
+      "role": "psc_speech_llm_model_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/models/new_v9_termtag_delay_oldnewv3_r32a64/keep1.0_r32/v0-20260524-062743-hf"
+    },
+    {
+      "role": "hn1024_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/checkpoints/lh1b88kw_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "source_run_id": "lh1b88kw"
+      }
+    },
+    {
+      "role": "acl6060_data",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/data/acl6060"
+    },
+    {
+      "role": "tagged_raw_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "psc_output_root",
+      "type": "directory",
+      "direction": "output",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v9_hn1024_tau078_raw/20260524T0400_psc_tagacl_newv9_hn1024_tau078_raw_zh"
+    },
+    {
+      "role": "psc_log_root",
+      "type": "directory",
+      "direction": "log",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/tagged_acl_new_v9_hn1024_tau078_raw/20260524T0400_psc_tagacl_newv9_hn1024_tau078_raw_zh"
+    },
+    {
+      "role": "log_monitor",
+      "type": "script",
+      "artifact_type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__monitor_psc_tagged_acl_new_v9_hn1024_tau078_raw_zh_logs.sh",
+      "path_or_uri": "documents/code/simuleval/launchers/2026/05/20260524__monitor_psc_tagged_acl_new_v9_hn1024_tau078_raw_zh_logs.sh",
+      "metadata": {
+        "interval_seconds": 1800
+      }
+    }
+  ],
+  "metadata": {
+    "psc_account": "cis260009p",
+    "psc_partition": "GPU-shared",
+    "psc_full_gres": "gpu:v100-32:4",
+    "psc_smoke_time_limit": "01:30:00",
+    "psc_full_time_limit": "02:00:00",
+    "lang": "zh",
+    "lms": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "glossary_kinds": [
+      "raw"
+    ],
+    "metric_denominator": "fixed raw tagged ACL glossary acl6060_tagged_gt_raw_min_norm2.json",
+    "runtime_glossary": "raw tagged ACL glossary",
+    "retriever_run_id": "lh1b88kw",
+    "retriever_variant": "HN1024",
+    "retriever_tau": 0.78,
+    "retriever_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "speech_llm_model": "new_v9_termtag_delay_oldnewv3_r32a64",
+    "strip_output_tags": "term",
+    "vllm_tp_size": 4,
+    "vllm_max_model_len": 8192,
+    "gpu_memory_utilization": 0.7,
+    "apptainer_sif": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/containers/ubuntu_22_04_gcc.sif",
+    "hf_repo_public": true,
+    "run_stamp_base": "20260524T0400_psc_tagacl_newv9_hn1024_tau078_raw_zh",
+    "hf_upload_pid": "1387715",
+    "hf_upload_out": "/mnt/gemini/data1/jiaxuanluo/logs/new_v9_hf_upload_20260524T0400_retry1.out",
+    "hf_upload_err": "/mnt/gemini/data1/jiaxuanluo/logs/new_v9_hf_upload_20260524T0400_retry1.err",
+    "hf_repo_id": "gavinlaw/infinisst-new-v9-termtag-delay-oldnewv3-r32a64-keep1p0-r32-zh",
+    "psc_model_dir": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/models/new_v9_termtag_delay_oldnewv3_r32a64/keep1.0_r32/v0-20260524-062743-hf",
+    "watcher_pid": 1475503,
+    "hf_upload_first_pid": "1382595",
+    "hf_upload_first_status": "failed_source_cache_permission",
+    "hf_upload_staging_dir": "/mnt/gemini/data1/jiaxuanluo/hf_upload_staging/new_v9_termtag_delay_oldnewv3_r32_hf",
+    "hf_ready_at_utc": "2026-05-24T04:11:18Z",
+    "psc_model_pull_job_id": "40970851",
+    "psc_smoke_job_id": "40970853",
+    "psc_smoke_mode": "smoke",
+    "psc_smoke_lms": [
+      "2"
+    ],
+    "psc_log_monitor_pid": "1544848",
+    "psc_log_monitor_interval_seconds": 1800,
+    "psc_log_monitor_out": "/mnt/gemini/data1/jiaxuanluo/logs/psc_tagacl_new_v9_log_monitor_20260524T0400.out",
+    "psc_log_monitor_err": "/mnt/gemini/data1/jiaxuanluo/logs/psc_tagacl_new_v9_log_monitor_20260524T0400.err",
+    "psc_log_monitor_state_dir": "/mnt/gemini/data1/jiaxuanluo/logs/psc_tagacl_new_v9_monitor_20260524T0400_state",
+    "superseded_by_event_id": "20260524T0520__simuleval__psc_tagged_acl_new_v9_hn1024_tau078_gs1k_gs10k_fixedraw_zh",
+    "psc_smoke_job_cancelled": "40970853",
+    "old_watcher_pids_killed": [
+      "1475503",
+      "1523854",
+      "1544848"
+    ],
+    "superseded_reason": "target changed: run gs1k/gs10k fixed raw denominator only; raw glossary main result moved to Aries"
+  }
+}

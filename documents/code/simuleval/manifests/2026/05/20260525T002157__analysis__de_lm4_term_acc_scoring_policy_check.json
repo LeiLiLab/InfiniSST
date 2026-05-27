@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T002157__analysis__de_lm4_term_acc_scoring_policy_check",
+  "event_type": "analysis",
+  "family": "tagged_acl_origin_norag_batch_cmp",
+  "variant": "de_lm4_term_acc_scoring_policy_check",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__de_lm4_term_acc_scoring_policy_check.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python/json inspection of offline_streamlaal_eval.py, stream_laal_term.py, eval TSV/log artifacts, source/ref/audio/glossary hashes, and independent denominator count; see report",
+  "parent_run_ids": [
+    "3upoqej5",
+    "ixmu9jhv"
+  ],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__de_lm4_term_acc_scoring_policy_check.md"
+    },
+    {
+      "role": "report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_de_lm4_term_acc_scoring_policy_check.md"
+    },
+    {
+      "role": "offline_eval_script",
+      "type": "python",
+      "direction": "input",
+      "path": "documents/code/offline_sst_eval/offline_streamlaal_eval.py"
+    },
+    {
+      "role": "stream_laal_term_script",
+      "type": "python",
+      "direction": "input",
+      "path": "/mnt/taurus/home/jiaxuanluo/FBK-fairseq/examples/speech_to_text/simultaneous_translation/scripts/stream_laal_term.py"
+    },
+    {
+      "role": "serial_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T160830__simuleval__tagged_acl_origin_norag_de_lm4_raw_rerun.json"
+    },
+    {
+      "role": "batch_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T2338__simuleval__tagged_acl_origin_norag_de_lm4_batch_max40_aries23.json"
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "serial_eval_results",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_raw_rerun_20260524T160830_tagacl_origin_norag_de_lm4_raw_rerun/origin_norag/de/gigaspeech-de-s_origin-bsz4_gacl6060_tagged_gt_raw_min_norm2_cs3.84_hs0.48_lm4_k210_k110_th0p0/eval_results.tsv"
+    },
+    {
+      "role": "batch_eval_results",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_max40_aries23_20260524T2338_tagacl_origin_norag_de_lm4_batch_max40_aries23/origin_norag_de_lm4_batch_max40/de/dtagacl_origin_norag_batch_max40_lm4_k0_th0.0_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    {
+      "role": "serial_eval_log",
+      "type": "log",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_raw_rerun_20260524T160830_tagacl_origin_norag_de_lm4_raw_rerun/origin_norag/de/gigaspeech-de-s_origin-bsz4_gacl6060_tagged_gt_raw_min_norm2_cs3.84_hs0.48_lm4_k210_k110_th0p0/eval_results.log"
+    },
+    {
+      "role": "batch_eval_log",
+      "type": "log",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_max40_aries23_20260524T2338_tagacl_origin_norag_de_lm4_batch_max40_aries23/origin_norag_de_lm4_batch_max40/de/dtagacl_origin_norag_batch_max40_lm4_k0_th0.0_gacl6060_tagged_gt_raw_min_norm2/eval_results.log"
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "latency_multiplier": 4,
+    "dataset": "acl_tagged_raw",
+    "completed_utc": "2026-05-25T00:21:57Z",
+    "serial_event_id": "20260524T160830__simuleval__tagged_acl_origin_norag_de_lm4_raw_rerun",
+    "batch_event_id": "20260524T2338__simuleval__tagged_acl_origin_norag_de_lm4_batch_max40_aries23",
+    "term_acc_policy": "count denominator when source sentence contains source term and target reference contains target translation; numerator when prediction contains target translation",
+    "validation": {
+      "source_text_sha256": "aa37f443c0e1c6d23fac0ef285230c29e9a25e7941d45cb796c622a5c15452d1",
+      "source_text_equal": true,
+      "ref_text_sha256": "fd6b1de66cd0aa5a9219a79aebaedc15d5117dff5339cd9cf7613e951a311160",
+      "ref_text_equal": true,
+      "audio_yaml_equal_after_wav_basename_normalization": true,
+      "audio_yaml_normalized_sha256": "f31dbbc7c05b29a9880d3d70a9d4cd3d4255c5fb4e66a87d847b42d4b607feca",
+      "unique_target_translations_loaded": 230,
+      "source_reference_rows": 468,
+      "independent_gt_denominator_total": 935,
+      "sentences_with_counted_terms": 384,
+      "serial_term_total": 935,
+      "batch_term_total": 935
+    },
+    "metrics": {
+      "serial": {
+        "TERM_ACC": 0.6909,
+        "TERM_CORRECT": 646,
+        "TERM_TOTAL": 935
+      },
+      "batch": {
+        "TERM_ACC": 0.6738,
+        "TERM_CORRECT": 630,
+        "TERM_TOTAL": 935
+      }
+    },
+    "caveat": "batch TERM_ADOPTION/TERM_FCR_MODE fields are incomplete because the optional repo-local compute_sentence_term_adoption.py path was wrong on Aries; headline TERM_ACC is unaffected"
+  }
+}

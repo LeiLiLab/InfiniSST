@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T0910__data_prepare__v13_lm1to6_retriever_timeline_zh",
+  "event_type": "data_prepare",
+  "family": "speech_llm_termmap_sft",
+  "variant": "zh_v13_lm1to6_retriever_timeline_lh1b88kw_tau073",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_v13_lm1to6_retriever_timeline_zh.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__v13_lm1to6_retriever_timeline_zh_data.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'bash documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_v13_lm1to6_retriever_timeline_zh.sh' > documents/logs/speech_llm_data/20260522_v13_lm1to6_retriever_timeline_zh.out 2> documents/logs/speech_llm_data/20260522_v13_lm1to6_retriever_timeline_zh.err < /dev/null & echo $! > documents/logs/speech_llm_data/20260522_v13_lm1to6_retriever_timeline_zh.pid",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_v13_lm1to6_retriever_timeline_zh.sh"
+    },
+    {
+      "role": "data_prep_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_retriever_timeline_termmap_sft.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__v13_lm1to6_retriever_timeline_zh_data.md"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_train_srcchunk_asr_100k_future_ref_gt_zh_20260522/train_s_zh_srcchunk_asr_100k_future_ref_gt_termmap_none.jsonl"
+    },
+    {
+      "role": "train_gt_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample100000_zh100k_train_gt.json"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "text_index",
+      "type": "checkpoint",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v13_lm1to6_retriever_timeline_zh_lh1b88kw_tau073_20260522/lh1b88kw_tau073_zh100k_text_index.pt"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v13_lm1to6_retriever_timeline_zh_lh1b88kw_tau073_20260522/train_s_zh_v13_lm1to6_retriever_timeline_tau073_k10_minctx2p88.jsonl"
+    },
+    {
+      "role": "report",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v13_lm1to6_retriever_timeline_zh_lh1b88kw_tau073_20260522/v13_lm1to6_retriever_timeline_summary.json"
+    },
+    {
+      "role": "train_stats",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v13_lm1to6_retriever_timeline_zh_lh1b88kw_tau073_20260522/train_s_zh_v13_lm1to6_retriever_timeline_tau073_k10_minctx2p88_stats.json"
+    },
+    {
+      "role": "sample_chunks",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v13_lm1to6_retriever_timeline_zh_lh1b88kw_tau073_20260522/train_s_zh_v13_lm1to6_retriever_timeline_tau073_k10_minctx2p88_sample_chunks.json"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_data/20260522_v13_lm1to6_retriever_timeline_zh.out"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_data/20260522_v13_lm1to6_retriever_timeline_zh.err"
+    },
+    {
+      "role": "pid",
+      "type": "text",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_data/20260522_v13_lm1to6_retriever_timeline_zh.pid"
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "merge_multiplier_min": 1,
+    "merge_multiplier_max": 6,
+    "lookback_sec": 1.92,
+    "min_context_sec": 2.88,
+    "max_context_sec": 5.76,
+    "tau": 0.73,
+    "top_k": 10,
+    "num_shards": 2,
+    "gpu_devices_csv": "6,7",
+    "gt_backfill": false,
+    "low_lm_policy": "for chunks shorter than 2.88s, keep term_map:NONE until timeline context reaches 2.88s",
+    "high_lm_policy": "for chunks at least 2.88s, retrieve current user-message audio only with no lookback"
+  }
+}

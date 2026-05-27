@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0",
+  "event_id": "20260525T1455__analysis__de_batch_vs_serial_bleu_difference_rootcause",
+  "event_type": "analysis",
+  "family": "tagged_acl_de_batch_vs_serial",
+  "variant": "bleu_difference_rootcause",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": null,
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "Manual code/artifact analysis; no new eval launched. User canceled serial rerun.",
+  "parent_run_ids": [
+    "20260525T001437__analysis__de_lm4_infinisst_batch_vs_serial_diagnosis",
+    "20260525T1338__simuleval__tagged_acl_de_cap16_denoise_ttag_lm1_lm4_hn1024_tau078_max20lm",
+    "20260525T1443__simuleval__tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck"
+  ],
+  "artifacts": [
+    {
+      "role": "report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_de_batch_vs_serial_bleu_difference_rootcause.md",
+      "metadata": {}
+    },
+    {
+      "role": "batch_driver",
+      "type": "python",
+      "direction": "input",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py",
+      "metadata": {}
+    },
+    {
+      "role": "serial_agent",
+      "type": "python",
+      "direction": "input",
+      "path": "agents/infinisst_omni_vllm_maxsim_rag.py",
+      "metadata": {}
+    },
+    {
+      "role": "prior_analysis_report",
+      "type": "markdown",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260525_de_lm4_infinisst_batch_vs_serial_diagnosis.md",
+      "metadata": {}
+    },
+    {
+      "role": "current_denoise_batch_summary",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_denoise_ttag_hn1024_tau078_lm14_max20lm_20260525T1338_de_c16_den_ttag_lm14_max20lm_taurus/de_c16_denoise_ttag_r32a32_ep1_hn1024_tau078_omit_max20lm/__summary__/summary_de_lm1_lm4.tsv",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "verdict": "round-robin batch is not protocol-equivalent to serial SimulEval; do not mix serial no-RAG baselines with round-robin batch RASST rows as paper-facing comparable points",
+    "cancelled_serial_event_id": "20260525T1443__simuleval__tagged_acl_de_c16_denoise_ttag_lm4_serial_batchcheck",
+    "current_denoise_ttag_verified_lms": [
+      1,
+      4
+    ],
+    "current_denoise_ttag_missing_lms": [
+      2,
+      3
+    ]
+  }
+}

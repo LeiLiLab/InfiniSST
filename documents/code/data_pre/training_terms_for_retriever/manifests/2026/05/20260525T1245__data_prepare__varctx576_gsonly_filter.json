@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T1245__data_prepare__varctx576_gsonly_filter",
+  "event_type": "data_prepare",
+  "family": "retriever_train_data",
+  "variant": "varctx576_gigaspeech_only_filter",
+  "status": "completed",
+  "project": "qwen3_rag",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/data_pre/training_terms_for_retriever/filter_gigaspeech_only_jsonl.py",
+  "notes_path": "documents/code/data_pre/training_terms_for_retriever/notes/2026/05/20260525__filter_varctx576_gsonly.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "mkdir -p /mnt/gemini/data1/jiaxuanluo/logs/gsonly_data_ablation_20260525T1245; setsid bash -lc 'python documents/code/data_pre/training_terms_for_retriever/filter_gigaspeech_only_jsonl.py --input /mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_varctx2p88_3p84_4p80_5p76.jsonl --output /mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2full_gsdedup_varctx576_gsonly.jsonl --stats-json /mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2full_gsdedup_varctx576_gsonly_stats.json --fail-on-unknown' > /mnt/gemini/data1/jiaxuanluo/logs/gsonly_data_ablation_20260525T1245/filter.out 2> /mnt/gemini/data1/jiaxuanluo/logs/gsonly_data_ablation_20260525T1245/filter.err < /dev/null & pid=$!; echo \"$pid\" > /mnt/gemini/data1/jiaxuanluo/logs/gsonly_data_ablation_20260525T1245/filter.pid; echo \"$pid\"",
+  "parent_run_ids": [
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "filter_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/data_pre/training_terms_for_retriever/filter_gigaspeech_only_jsonl.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/data_pre/training_terms_for_retriever/notes/2026/05/20260525__filter_varctx576_gsonly.md",
+      "metadata": {}
+    },
+    {
+      "role": "source_train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_varctx2p88_3p84_4p80_5p76.jsonl",
+      "metadata": {
+        "source_run_id": "lh1b88kw",
+        "mixed_domains": [
+          "gigaspeech",
+          "wiki_synth"
+        ]
+      }
+    },
+    {
+      "role": "source_train_stats",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_varctx2p88_3p84_4p80_5p76_stats.json",
+      "metadata": {}
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2full_gsdedup_varctx576_gsonly.jsonl",
+      "metadata": {
+        "domain": "gigaspeech_only"
+      }
+    },
+    {
+      "role": "stats",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2full_gsdedup_varctx576_gsonly_stats.json",
+      "metadata": {}
+    },
+    {
+      "role": "log_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/gsonly_data_ablation_20260525T1245/filter.out",
+      "metadata": {}
+    },
+    {
+      "role": "log_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/gsonly_data_ablation_20260525T1245/filter.err",
+      "metadata": {}
+    },
+    {
+      "role": "pid_file",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/gsonly_data_ablation_20260525T1245/filter.pid",
+      "metadata": {
+        "pid": 1871961
+      }
+    }
+  ],
+  "metadata": {
+    "filter_rule": "keep rows inferred as gigaspeech; drop wiki_synth rows; fail on unknown domains",
+    "source_stats_expected_gigaspeech_rows": 4663413,
+    "source_stats_expected_wiki_rows": 2893705,
+    "storage_root_reason": "/mnt/gemini/data1 is 99% full, so the derived JSONL is stored under /mnt/gemini/home where df showed substantially more free space"
+    ,
+    "launch_20260525T1246": {
+      "pid": 1871961,
+      "status": "completed",
+      "log_root": "/mnt/gemini/data1/jiaxuanluo/logs/gsonly_data_ablation_20260525T1245"
+    },
+    "completion_20260525T1251": {
+      "total_rows": 7554926,
+      "kept_rows": 4661221,
+      "dropped_rows": 2893705,
+      "unknown_domain_rows": 0,
+      "json_errors": 0,
+      "output_size": "3.2G"
+    }
+  }
+}

@@ -1,0 +1,212 @@
+{
+  "schema_version": "1.0",
+  "event_id": "20260525T0348__data_prepare__deja_termmap_ablation_cap16_exactboundary",
+  "event_type": "data_prepare",
+  "family": "speech_llm_termmap_ablation",
+  "variant": "deja_llmgen_vs_retriever_cap16_exactboundary",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/data_pre/hard_negative_jsonl_for_speech_llm/launchers/2026/05/20260525__build_deja_termmap_ablation_cap16_exactboundary.sh",
+  "notes_path": "documents/code/data_pre/hard_negative_jsonl_for_speech_llm/notes/2026/05/20260525__deja_termmap_ablation_cap16_exactboundary.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "mkdir -p /mnt/gemini/data1/jiaxuanluo/logs/deja_termmap_ablation_cap16_exactboundary_20260525 && tmux new-session -d -s deja_termmap_ablation_20260525 \"cd /home/jiaxuanluo/InfiniSST && exec env ROOT_DIR_OVERRIDE=/home/jiaxuanluo/InfiniSST TCM_BUILD_GPU_DEVICES_OVERRIDE=0,2,3,4 LANGS_OVERRIDE='de ja' BRANCHES_OVERRIDE='llmgen retriever' bash -x /home/jiaxuanluo/InfiniSST/documents/code/data_pre/hard_negative_jsonl_for_speech_llm/launchers/2026/05/20260525__build_deja_termmap_ablation_cap16_exactboundary.sh > /mnt/gemini/data1/jiaxuanluo/logs/deja_termmap_ablation_cap16_exactboundary_20260525/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/deja_termmap_ablation_cap16_exactboundary_20260525/top.err\"",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "bash",
+      "direction": "control",
+      "path": "documents/code/data_pre/hard_negative_jsonl_for_speech_llm/launchers/2026/05/20260525__build_deja_termmap_ablation_cap16_exactboundary.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/data_pre/hard_negative_jsonl_for_speech_llm/notes/2026/05/20260525__deja_termmap_ablation_cap16_exactboundary.md",
+      "metadata": {}
+    },
+    {
+      "role": "source_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/cap_embedded_termmap.py",
+      "metadata": {}
+    },
+    {
+      "role": "source_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/data_pre/hard_negative_jsonl_for_speech_llm/generate_termmap_maxsim.py",
+      "metadata": {}
+    },
+    {
+      "role": "source_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/data_pre/hard_negative_jsonl_for_speech_llm/rebuild_termmap.py",
+      "metadata": {}
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/train_s_de_v4_ner_baseline_aligned_rate1.0_k20_final.jsonl",
+      "metadata": {
+        "lang": "de",
+        "source": "historical_tm_sft_llm_generated_termmap"
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/train_s_ja_v4_ner_baseline_aligned_rate1.0_k20_final.jsonl",
+      "metadata": {
+        "lang": "ja",
+        "source": "historical_tm_sft_llm_generated_termmap"
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/glossary_for_de_rate1.0_k20.json",
+      "metadata": {
+        "lang": "de",
+        "runtime_bank_size": 57429
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/glossary_for_ja_rate1.0_k20.json",
+      "metadata": {
+        "lang": "ja",
+        "runtime_bank_size": 42443
+      }
+    },
+    {
+      "role": "checkpoint",
+      "type": "pt",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever": "HN1024",
+        "tau": 0.78
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_deja_termmap_ablation_cap16_exactboundary_20260525",
+      "metadata": {
+        "branches": [
+          "llmgen_cap16_exactboundary",
+          "retriever_hn1024_tau078_cap16_exactboundary"
+        ]
+      }
+    },
+    {
+      "role": "validation_report",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_deja_termmap_ablation_cap16_exactboundary_20260525/de/llmgen_cap16_exactboundary/validation_summary.json",
+      "metadata": {
+        "lang": "de",
+        "branch": "llmgen_cap16_exactboundary"
+      }
+    },
+    {
+      "role": "validation_report",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_deja_termmap_ablation_cap16_exactboundary_20260525/de/retriever_hn1024_tau078_cap16_exactboundary/validation_summary.json",
+      "metadata": {
+        "lang": "de",
+        "branch": "retriever_hn1024_tau078_cap16_exactboundary"
+      }
+    },
+    {
+      "role": "validation_report",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_deja_termmap_ablation_cap16_exactboundary_20260525/ja/llmgen_cap16_exactboundary/validation_summary.json",
+      "metadata": {
+        "lang": "ja",
+        "branch": "llmgen_cap16_exactboundary"
+      }
+    },
+    {
+      "role": "validation_report",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_deja_termmap_ablation_cap16_exactboundary_20260525/ja/retriever_hn1024_tau078_cap16_exactboundary/validation_summary.json",
+      "metadata": {
+        "lang": "ja",
+        "branch": "retriever_hn1024_tau078_cap16_exactboundary"
+      }
+    },
+    {
+      "role": "slurm_logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/deja_termmap_ablation_cap16_exactboundary_20260525",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "langs": [
+      "de",
+      "ja"
+    ],
+    "max_terms": 16,
+    "tau": 0.78,
+    "retriever": "HN1024",
+    "tag_wrapping": "exact_with_boundary_only_repair",
+    "no_general_fuzzy_rewrite": true,
+    "tmux_session": "deja_termmap_ablation_20260525",
+    "direct_pid": 921882,
+    "physical_gpus": "0,2,3,4",
+    "host": "taurus",
+    "validation": {
+      "de_llmgen": {
+        "train_rows": 12500,
+        "train_chunks": 71730,
+        "train_termmap_chunk_rate": 0.7641572563780845,
+        "max_termmap_entries": 16,
+        "malformed_tag_messages": 0,
+        "latin_boundary_cut_messages": 0
+      },
+      "de_retriever": {
+        "train_rows": 12500,
+        "train_chunks": 71730,
+        "train_termmap_chunk_rate": 0.932942980621776,
+        "max_termmap_entries": 16,
+        "malformed_tag_messages": 0,
+        "latin_boundary_cut_messages": 0
+      },
+      "ja_llmgen": {
+        "train_rows": 12500,
+        "train_chunks": 53352,
+        "train_termmap_chunk_rate": 0.7409469185784975,
+        "max_termmap_entries": 16,
+        "malformed_tag_messages": 0,
+        "latin_boundary_cut_messages": 0
+      },
+      "ja_retriever": {
+        "train_rows": 12500,
+        "train_chunks": 53352,
+        "train_termmap_chunk_rate": 0.9033775678512521,
+        "max_termmap_entries": 16,
+        "malformed_tag_messages": 0,
+        "latin_boundary_cut_messages": 0
+      }
+    },
+    "verdict": "success"
+  }
+}

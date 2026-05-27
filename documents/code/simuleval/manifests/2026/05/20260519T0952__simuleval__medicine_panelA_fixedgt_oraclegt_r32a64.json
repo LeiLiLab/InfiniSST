@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "event_id": "20260519T0952__simuleval__medicine_panelA_fixedgt_oraclegt_r32a64",
+  "event_type": "simuleval",
+  "family": "speech_llm_oracle_gt_sft_readout",
+  "variant": "oraclegt_r32a64_panelA_fixedgt",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": "w1wlbv3j",
+  "slurm_job_id": "direct_medicine_panelA_fixedgt_oraclegt_r32a64",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260519__medicine_panelA_fixedgt_oraclegt_r32a64_aries2.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260519__medicine_panelA_fixedgt_oraclegt_r32a64.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "nohup setsid env CUDA_VISIBLE_DEVICES=6,7 SLURM_JOB_PARTITION=aries SLURM_JOB_ID=direct_medicine_panelA_fixedgt_oraclegt_r32a64 CUDA_VISIBLE_DEVICES_PHYSICAL_OVERRIDE_CSV=6:7 FORCE_RERUN_OVERRIDE=1 bash documents/code/simuleval/launchers/2026/05/20260519__medicine_panelA_fixedgt_oraclegt_r32a64_aries2.sh > /mnt/gemini/data1/jiaxuanluo/logs/direct_medicine_panelA_fixedgt_oraclegt_r32a64_20260519T103404.out 2> /mnt/gemini/data1/jiaxuanluo/logs/direct_medicine_panelA_fixedgt_oraclegt_r32a64_20260519T103404.err &",
+  "parent_run_ids": [
+    "3h4wm92o"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260519__medicine_panelA_fixedgt_oraclegt_r32a64_aries2.sh"
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260519__medicine_lm1to4_oracle_gt_sft_oraclegt_r32a64_aries2.sh"
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260519__medicine_onetalk_oracle_gt_sft_oraclegt_r32a64_taurus_hold.sh"
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260518__medicine_onetalk_oracle_gt_aries.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/prepare_medicine_one_talk_inputs.py"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/aggregate_medicine_oracle_lm_sweep.py"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/offline_sst_eval/offline_streamlaal_eval.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260519__medicine_panelA_fixedgt_oraclegt_r32a64.md"
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000_translated.json"
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_dev_dataset.jsonl"
+    },
+    {
+      "role": "checkpoint",
+      "type": "hf_model",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/speech_llm_oracle_gt_termmap_zh_r32a64_taurus4/keep1.0_r32/v1-20260519-105111-hf"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data2/jiaxuanluo/medicine4_panelA_fixedgt_oraclegt_sft_r32a64_lm_sweep_20260519"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "logs",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_medicine_panelA_fixedgt_oraclegt_r32a64_20260519T103404.out"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "logs",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_medicine_panelA_fixedgt_oraclegt_r32a64_20260519T103404.err"
+    }
+  ],
+  "metadata": {
+    "panel": "A",
+    "term_source": "glossary_match",
+    "glossary_source_filter": "medicine_gt",
+    "samples": [
+      "404",
+      "596001",
+      "606",
+      "545006"
+    ],
+    "latency_multipliers": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "fixed_denominator_policy": "source/ref glossary matching over translated medicine_gt entries",
+    "legacy_panelB_note": "Earlier sentence_terms oracle outputs are retained as legacy results and should be re-scored against glossary-derived denominators before interpretation.",
+    "direct_pid": 2179877,
+    "launcher_pid": 2179877,
+    "force_rerun": true,
+    "term_fcr_policy": "term_map_source_ref_negative_sentence",
+    "aggregate_wandb_run_id": "j225eij7",
+    "aggregate_summary_tsv": "/mnt/gemini/data2/jiaxuanluo/medicine4_panelA_fixedgt_oraclegt_sft_r32a64_lm_sweep_20260519/zh/summary_lm_sweep.tsv",
+    "status_note": "All four lm settings and all four medicine samples completed; aggregate summary written.",
+    "per_sample_wandb_run_ids_by_lm": {
+      "1": [
+        "nbhbz28h",
+        "uzyk831n",
+        "p2mpyewf",
+        "1lxhrr35"
+      ],
+      "2": [
+        "s6c8bj9z",
+        "ccyknyto",
+        "5aa54kif",
+        "rff2rmrt"
+      ],
+      "3": [
+        "sb5219qq",
+        "u1r7msbq",
+        "7o3meiug",
+        "xa9lpz1b"
+      ],
+      "4": [
+        "k131n7zu",
+        "hrt9zn6u",
+        "xgf50oia",
+        "hu2sbuw2"
+      ]
+    },
+    "superseded_wandb_run_id_before_termmap_fcrfix": "j225eij7",
+    "term_fcr_fix": "Panel A FCR uses explicit sentence-level oracle term_map, not runtime lookback term_map or full fixed glossary negatives.",
+    "summary_path": "/mnt/gemini/data2/jiaxuanluo/medicine4_panelA_fixedgt_oraclegt_sft_r32a64_lm_sweep_20260519/zh/summary_lm_sweep.tsv",
+    "summary_path_before_termmap_fcrfix": "/mnt/gemini/data2/jiaxuanluo/medicine4_panelA_fixedgt_oraclegt_sft_r32a64_lm_sweep_20260519/zh/summary_lm_sweep.before_termmap_fcrfix.tsv"
+  },
+  "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/simuleval_eval/runs/j225eij7"
+}

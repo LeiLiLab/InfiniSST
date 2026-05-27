@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "event_id": "20260526T031146__analysis__main_result_ja_tagged_acl_promptfix_refresh",
+  "event_type": "analysis",
+  "family": "main_result_refresh",
+  "variant": "ja_tagged_acl_rasst_promptfix_vllmaudio128",
+  "status": "success",
+  "project": "simuleval_eval",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "Update JA acl_tagged_raw RASST lm=1..4 rows from verified serial promptfix eval; regenerate new_main_result_tagged.pdf/png.",
+  "parent_run_ids": [
+    "20260526T013751__simuleval__tagged_acl_ja_lm1to4_serial_promptfix_cache30_vllmaudio128_max40lm_taurus"
+  ],
+  "artifacts": [
+    {
+      "role": "canonical_main_result_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv",
+      "sha256": "9be34bebb7c787fd657e8614737e19d8cac6d52b7c7332bea69fce9a351ef202"
+    },
+    {
+      "role": "paper_plot_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_01_main_result_tagged/data.tsv",
+      "sha256": "9be34bebb7c787fd657e8614737e19d8cac6d52b7c7332bea69fce9a351ef202"
+    },
+    {
+      "role": "paper_figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.pdf",
+      "sha256": "e24ecea65083cc1757fec92baa5b4c87926ed426c099fec051b9fc85ae67a373"
+    },
+    {
+      "role": "paper_figure_png",
+      "type": "png",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.png",
+      "sha256": "38359d8ae8dcbe3c9254ca1103d2237985435a4fae171ddd6729698805571d21"
+    },
+    {
+      "role": "canonical_builder",
+      "type": "python_script",
+      "direction": "output",
+      "path": "documents/code/simuleval/src/build_main_result_tables_and_figures_20260524.py",
+      "sha256": "724663ea885a4f63f62257e5a53c56e2562de5383eaca9a1d7896b8d9550da25"
+    },
+    {
+      "role": "source_compare_table",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260526_ja_tagged_acl_promptfix_compare.tsv"
+    },
+    {
+      "role": "compiled_paper_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/acl_latex.pdf",
+      "sha256": "4d57bb6230f20dd88edf67300923aba63b1ddc62c2fb4ffc4510ec7fe3362106"
+    },
+    {
+      "role": "compiled_paper_pdf_latex_dir",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/acl_latex.pdf",
+      "sha256": "4d57bb6230f20dd88edf67300923aba63b1ddc62c2fb4ffc4510ec7fe3362106"
+    },
+    {
+      "role": "compiled_bibliography",
+      "type": "bbl",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/acl_latex.bbl",
+      "sha256": "2c910eb7868f757938f45e31d0b1c2212fd1077134e1ad2ff6875c829147528f"
+    }
+  ],
+  "metadata": {
+    "dataset": "acl_tagged_raw",
+    "method": "RASST",
+    "lang": "ja",
+    "selected_source": "new_promptfix_vllmaudio128",
+    "eval_mode": "serial_simuleval_promptfix",
+    "max_cache_chunks": 30,
+    "keep_cache_chunks": 30,
+    "vllm_limit_audio": 128,
+    "max_new_tokens": "40*lm",
+    "empty_term_map_policy": "omit",
+    "metrics_by_lm": {
+      "1": {
+        "BLEU": 23.9284,
+        "StreamLAAL": 1560.9685,
+        "StreamLAAL_CA": 2199.9266,
+        "TERM_ACC": 0.8149,
+        "TERM_CORRECT": 766,
+        "TERM_TOTAL": 940
+      },
+      "2": {
+        "BLEU": 31.2962,
+        "StreamLAAL": 2200.9376,
+        "StreamLAAL_CA": 2951.4113,
+        "TERM_ACC": 0.8628,
+        "TERM_CORRECT": 811,
+        "TERM_TOTAL": 940
+      },
+      "3": {
+        "BLEU": 33.0112,
+        "StreamLAAL": 2764.3157,
+        "StreamLAAL_CA": 3803.5888,
+        "TERM_ACC": 0.8543,
+        "TERM_CORRECT": 803,
+        "TERM_TOTAL": 940
+      },
+      "4": {
+        "BLEU": 33.5889,
+        "StreamLAAL": 3204.9831,
+        "StreamLAAL_CA": 4473.1203,
+        "TERM_ACC": 0.8734,
+        "TERM_CORRECT": 821,
+        "TERM_TOTAL": 940
+      }
+    },
+    "validation": [
+      "TSV uniqueness by dataset/method/lang/lm passed for 87 rows in canonical and paper-local data.",
+      "Numeric fields BLEU, StreamLAAL, StreamLAAL_CA, and TERM_ACC parsed as finite values where non-NA.",
+      "build_main_result_tables_and_figures_20260524.py passed py_compile.",
+      "plot_figure_01_main_result_tagged.py --update-paper regenerated paper PDF and PNG.",
+      "Paper compiled with TEXINPUTS=latex//: and -output-directory=latex; remaining bibliography warnings are pre-existing missing keys eso_dataset and gong24b_interspeech, with pre-existing duplicate figure labels."
+    ]
+  }
+}

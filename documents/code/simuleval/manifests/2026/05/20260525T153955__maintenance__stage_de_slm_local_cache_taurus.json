@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T153955__maintenance__stage_de_slm_local_cache_taurus",
+  "event_type": "maintenance",
+  "family": "stage_de_slm_local_cache",
+  "variant": "taurus_local_data1_cap16_and_denoise",
+  "status": "running",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__launch_stage_de_slm_local_cache.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__stage_de_slm_local_cache.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "HOST_LABEL=taurus DEST_BASE=/mnt/data1/jiaxuanluo/slm_local_cache/de_tagged_acl_20260525 LOG_ROOT=/mnt/data1/jiaxuanluo/logs/slm_local_cache_20260525T153955_taurus BW_LIMIT_KB=80000 bash documents/code/simuleval/launchers/2026/05/20260525__launch_stage_de_slm_local_cache.sh",
+  "parent_run_ids": [
+    "20260525T0620__speech_llm_train__de_retriever_cap16_exactboundary_r32a32_ep4_taurus8",
+    "20260525T1236__speech_llm_train__de_cap16_denoise_budget_ttag_r32a32_ep1_taurus6"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__launch_stage_de_slm_local_cache.sh"
+    },
+    {
+      "role": "stage_script",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__stage_de_slm_local_cache.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__stage_de_slm_local_cache.md"
+    },
+    {
+      "role": "speech_llm_hf_model_cap16",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_de_retriever_cap16_exactboundary_r32a32_ep4_taurus8/keep1.0_r32/v1-20260525-141908-hf"
+    },
+    {
+      "role": "speech_llm_hf_model_denoise",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_de_cap16_denoise_budget_ttag_r32a32_ep1_taurus6/keep1.0_r32/v0-20260525-203735-hf"
+    },
+    {
+      "role": "local_model_cache_cap16",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/data1/jiaxuanluo/slm_local_cache/de_tagged_acl_20260525/cap16_exactboundary/v1-20260525-141908-hf"
+    },
+    {
+      "role": "local_model_cache_denoise",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/data1/jiaxuanluo/slm_local_cache/de_tagged_acl_20260525/cap16_denoise_ttag/v0-20260525-203735-hf"
+    },
+    {
+      "role": "log_root",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/data1/jiaxuanluo/logs/slm_local_cache_20260525T153955_taurus"
+    },
+    {
+      "role": "pid_file",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/data1/jiaxuanluo/logs/slm_local_cache_20260525T153955_taurus/stage.pid"
+    },
+    {
+      "role": "stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/data1/jiaxuanluo/logs/slm_local_cache_20260525T153955_taurus/stage.out"
+    },
+    {
+      "role": "stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/data1/jiaxuanluo/logs/slm_local_cache_20260525T153955_taurus/stage.err"
+    }
+  ],
+  "metadata": {
+    "host": "taurus",
+    "source_filesystem": "/mnt/gemini/data1 nfs4",
+    "destination_filesystem": "/mnt/data1 local xfs",
+    "copy_tool": "rsync",
+    "bw_limit_kb": 80000,
+    "expected_model_dirs": 2,
+    "expected_safetensors_per_model": 15,
+    "submitted_utc": "2026-05-25T15:42:55Z",
+    "pid": 2265903
+  }
+}

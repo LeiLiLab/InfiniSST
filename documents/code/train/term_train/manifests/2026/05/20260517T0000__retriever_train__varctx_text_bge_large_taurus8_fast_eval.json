@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "event_id": "20260517T0000__retriever_train__varctx_text_bge_large_taurus8_fast_eval",
+  "event_type": "retriever_train",
+  "family": "sst_ood_hardneg",
+  "variant": "vctx576_txt_bgel_taurus8",
+  "status": "failed",
+  "project": "qwen3_rag",
+  "wandb_run_id": "ggeqpwie",
+  "slurm_job_id": "45236",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260517__varctx_lmlb_v3_text_bge_large_en_taurus8_fast_eval.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260517__varctx_lmlb_v3_text_bge_large_en_taurus8_fast_eval.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/general/experiment_event.py launch documents/code/train/term_train/manifests/2026/05/20260517T0000__retriever_train__varctx_text_bge_large_taurus8_fast_eval.json -- sbatch --parsable documents/code/train/term_train/launchers/2026/05/20260517__varctx_lmlb_v3_text_bge_large_en_taurus8_fast_eval.sh",
+  "parent_run_ids": [
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260517__varctx_lmlb_v3_text_bge_large_en_taurus8_fast_eval.sh"
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn1024_gsv2full_gsdedup_varctx_lmlb_v3_tcmoff_ep6_8gpu_aries.sh"
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh"
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py"
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260517__varctx_lmlb_v3_text_bge_large_en_taurus8_fast_eval.md"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_varctx2p88_3p84_4p80_5p76.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_varctx2p88_3p84_4p80_5p76_new_version.jsonl"
+    },
+    {
+      "role": "acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_extracted_paper_glossary_varctx2p88_3p84_4p80_5p76/acl6060_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out ACL readout, not model selection"
+      }
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76/medicine_dev_dataset.jsonl"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample10000.json"
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_gt_union_gs10000_min_norm2_backfill.json",
+      "metadata": {
+        "usage": "held-out ACL readout with min-norm-2 backfilled gs10k"
+      }
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76/medicine_glossary_gt_plus_medicine_wiki_gs10000.json"
+    },
+    {
+      "role": "nlp_ai_cs_eval_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/data_pre/glossary_scale/wiki_glossary_nlp_ai_cs_enriched.json"
+    },
+    {
+      "role": "baseline_secondary_checkpoint",
+      "type": "model_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "run_id": "lh1b88kw",
+        "anchor": "secondary",
+        "step": 1840,
+        "metric": "eval_acl6060/recall@10"
+      }
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs"
+    }
+  ],
+  "metadata": {
+    "data_tag": "3variant_gsv2full_gsdedup_vctx576_bgel",
+    "extra_wandb_tags": [
+      "variant:vctx576_txt_bgel_taurus8",
+      "compute:taurus-8gpu"
+    ],
+    "text_encoder_preset": "bge-large-en-v1.5",
+    "text_model_id": "BAAI/bge-large-en-v1.5",
+    "audio_encoder_preset": "qwen3-omni",
+    "fixed_audio_seconds": 5.76,
+    "eval_fixed_audio_seconds": 5.76,
+    "num_gpus": 8,
+    "per_gpu_batch": 1024,
+    "global_batch": 8192,
+    "grad_cache_chunk_size": 128,
+    "max_steps": 2000,
+    "eval_steps_sample": 240,
+    "eval_top100_samples": 0,
+    "eval_glossary_match_min_norm_chars": 2,
+    "strict_train_eval_term_filter": false,
+    "best_metric": "eval_dev/recall@10_gs10000",
+    "best_metric_secondary": "eval_acl6060/recall@10",
+    "baseline_anchor": {
+      "run_id": "lh1b88kw",
+      "anchor": "secondary",
+      "step": 1840,
+      "metric": "eval_acl6060/recall@10",
+      "checkpoint_path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    "related_control_run_ids": [
+      "ah9u1bao",
+      "dxwrgbln"
+    ],
+    "tcm_off": true,
+    "baseline_confirmation_required": false
+  }
+}

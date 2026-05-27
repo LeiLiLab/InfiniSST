@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T105945__simuleval__batched_vllm_rag_eval_prototype",
+  "event_type": "simuleval",
+  "family": "batched_vllm_rag_eval",
+  "variant": "prototype_shared_vllm_multi_lm",
+  "status": "ready",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__batched_vllm_rag_eval.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'CUDA_VISIBLE_DEVICES_PHYSICAL_OVERRIDE=<gpu_pair> MODEL_NAME_OVERRIDE=<hf_model> SRC_LIST_OVERRIDE=<source_list> TGT_LIST_OVERRIDE=<target_list> SOURCE_TEXT_FILE_OVERRIDE=<source_text> REF_FILE_OVERRIDE=<ref_file> AUDIO_YAML_OVERRIDE=<audio_yaml> GLOSSARY_PATH_OVERRIDE=<glossary> EVAL_GLOSSARY_PATH_OVERRIDE=<eval_glossary> bash documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh' > <log>.out 2> <log>.err < /dev/null &",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py"
+    },
+    {
+      "role": "offline_eval_script",
+      "type": "script",
+      "direction": "input",
+      "path": "documents/code/offline_sst_eval/offline_streamlaal_eval.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__batched_vllm_rag_eval.md"
+    },
+    {
+      "role": "checkpoint",
+      "type": "model_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/batched_vllm_rag_eval_<run_tag>"
+    },
+    {
+      "role": "index_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/maxsim_index_cache/batched_vllm"
+    }
+  ],
+  "metadata": {
+    "purpose": "Non-invasive batch-vLLM prototype for multiple lm/sample streaming RAG eval streams.",
+    "does_not_modify": [
+      "documents/code/simuleval/eval_density_unified.sh",
+      "agents/infinisst_omni_vllm_maxsim_rag.py",
+      "existing serial launchers"
+    ],
+    "tmpdir_rule": "launcher defaults EVAL_TMPDIR to /tmp/jx_bvllm_* to avoid vLLM IPC path-length failures",
+    "prototype_caveat": "Compare one small run against serial SimulEval before using as main-result truth."
+  }
+}

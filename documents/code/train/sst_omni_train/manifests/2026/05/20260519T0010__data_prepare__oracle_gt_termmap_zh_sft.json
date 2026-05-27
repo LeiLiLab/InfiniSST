@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "event_id": "20260519T0010__data_prepare__oracle_gt_termmap_zh_sft",
+  "event_type": "data_prepare",
+  "family": "speech_llm_termmap_oracle",
+  "variant": "zh_oracle_gt_termmap_sft",
+  "status": "success",
+  "project": null,
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__build_oracle_gt_termmap_zh_sft.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260519__oracle_gt_termmap_zh_sft_data.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "bash documents/code/train/sst_omni_train/launchers/2026/05/20260519__build_oracle_gt_termmap_zh_sft.sh",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__build_oracle_gt_termmap_zh_sft.sh",
+      "metadata": {}
+    },
+    {
+      "role": "prepare_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_oracle_gt_termmap_sft.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260519__oracle_gt_termmap_zh_sft_data.md",
+      "metadata": {}
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/train_s_zh_v4_ner_baseline_aligned_rate1.0_k20_final.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/dev_s_zh_v4_ner_baseline_aligned_freq_k20.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_oracle_gt_termmap_zh_20260519/train_s_zh_v4_ner_baseline_aligned_rate1p0_k20_oracle_gt_termmap_none.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_oracle_gt_termmap_zh_20260519/dev_s_zh_v4_ner_baseline_aligned_freq_k20_oracle_gt_termmap_none.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "stats",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_oracle_gt_termmap_zh_20260519/oracle_gt_termmap_manifest.json",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "lang_code": "zh",
+    "term_map_policy": "GT-only for chunks with gt_terms_by_chunk; term_map:NONE otherwise",
+    "filter_policy": "drop rows missing gt_terms_by_chunk; report counts in stats JSON",
+    "purpose": "upper-bound data for Speech LLM term_map adoption",
+    "train_rows": 12318,
+    "train_audio_user_chunks": 68450,
+    "train_gt_chunk_ratio": 0.7543462381300219,
+    "train_gt_terms_total": 124843,
+    "train_dropped_missing_gt_rows": 182,
+    "dev_rows": 303,
+    "dev_audio_user_chunks": 829,
+    "dev_gt_chunk_ratio": 0.6996381182147166,
+    "dev_gt_terms_total": 1152,
+    "dev_dropped_missing_gt_rows": 52
+  }
+}

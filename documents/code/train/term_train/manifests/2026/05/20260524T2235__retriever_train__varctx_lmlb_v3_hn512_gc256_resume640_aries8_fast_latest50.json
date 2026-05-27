@@ -1,0 +1,243 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T2235__retriever_train__varctx_lmlb_v3_hn512_gc256_resume640_aries8_fast_latest50",
+  "event_type": "retriever_train",
+  "family": "sst_ood_hardneg",
+  "variant": "hn512_varctx576_v3_gc256_resume640_aries8_fast_latest50",
+  "status": "failed",
+  "project": "qwen3_rag",
+  "wandb_run_id": null,
+  "slurm_job_id": "45290",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260524__varctx_lmlb_v3_hn512_gc256_resume640_aries8_fast_latest50.sh",
+  "launcher_sha256": "35361e802b2ebef7a038937d71fc41698a67ee07903e15707c94afed4555ee93",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260524__varctx_lmlb_v3_hn512_gc256_resume640_aries8_fast_latest50.md",
+  "git_commit": "8a051b3f65dfda8e29956ad113a9d69603fd5013",
+  "git_dirty": 1,
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "cd /mnt/taurus/home/jiaxuanluo/InfiniSST && setsid bash documents/code/train/term_train/launchers/2026/05/20260524__varctx_lmlb_v3_hn512_gc256_resume640_aries8_fast_latest50.sh > /mnt/gemini/data1/jiaxuanluo/logs/hn512_gc256_resume640_aries8_fast_latest50_20260524T2235Z.direct.log 2>&1 < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/hn512_gc256_resume640_aries8_fast_latest50_20260524T2235Z.direct.pid",
+  "parent_run_ids": [
+    "bkcnqlg9",
+    "yp0rmgrl",
+    "gasqw118",
+    "5fwrs7rh",
+    "gsjheh6r",
+    "lh1b88kw",
+    "e981df6j",
+    "40fgbr2y",
+    "bgz7akb6",
+    "ah9u1bao",
+    "dxwrgbln"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260524__varctx_lmlb_v3_hn512_gc256_resume640_aries8_fast_latest50.sh",
+      "metadata": {
+        "sha256": "35361e802b2ebef7a038937d71fc41698a67ee07903e15707c94afed4555ee93"
+      }
+    },
+    {
+      "role": "hn512_inherited_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260522__varctx_lmlb_v3_hn512_gc256_taurus6.sh",
+      "metadata": {
+        "sha256": "d8eda6dd87ca0a09eae86dd5921231346c591053731611e4df70d01c9d6938b8"
+      }
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn1024_gsv2full_gsdedup_varctx_lmlb_v3_tcmoff_ep6_8gpu_aries.sh",
+      "metadata": {
+        "sha256": "87a39ba0d062e954ad7beb890ab104e76aa9453bd4c45471b1fe049386f2ac73"
+      }
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh",
+      "metadata": {
+        "sha256": "90b77595a94ac48551b4e88d45249f5860ad81108285988ec9dab94c8a349d64"
+      }
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py",
+      "metadata": {
+        "sha256": "8a117615fe576d66ecae015bc92f28514c61071f6137816241f82bcfb3c93c25"
+      }
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260524__varctx_lmlb_v3_hn512_gc256_resume640_aries8_fast_latest50.md",
+      "metadata": {}
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_varctx2p88_3p84_4p80_5p76.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_varctx2p88_3p84_4p80_5p76_new_version.jsonl",
+      "metadata": {
+        "usage": "primary checkpoint selection"
+      }
+    },
+    {
+      "role": "acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_extracted_paper_glossary_varctx2p88_3p84_4p80_5p76/acl6060_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout"
+      }
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "domain readout"
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample10000.json",
+      "metadata": {
+        "eval_glossary_sizes": [
+          10000
+        ]
+      }
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_gt_union_gs10000_min_norm2_backfill.json",
+      "metadata": {
+        "eval_glossary_sizes": [
+          10000
+        ]
+      }
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000.json",
+      "metadata": {
+        "eval_glossary_sizes": [
+          10000
+        ]
+      }
+    },
+    {
+      "role": "resume_checkpoint",
+      "type": "model",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8190_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8190_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn512_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu234567_taurus_latest.pt",
+      "metadata": {
+        "source_run_id": "bkcnqlg9",
+        "step": 640,
+        "checkpoint_role": "latest_checkpoint"
+      }
+    },
+    {
+      "role": "source_wandb_run",
+      "type": "wandb_run",
+      "direction": "input",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/bkcnqlg9",
+      "metadata": {
+        "usage": "paused HN512 run that produced step640 latest"
+      }
+    },
+    {
+      "role": "direct_launch_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/hn512_gc256_resume640_aries8_fast_latest50_20260524T2235Z.direct.log",
+      "metadata": {
+        "host": "aries"
+      }
+    },
+    {
+      "role": "pid_file",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/hn512_gc256_resume640_aries8_fast_latest50_20260524T2235Z.direct.pid",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint_latest",
+      "type": "model",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8192_gc256_wr1000k_m0.0_maxsim_mfa_variantE_hn512_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu01234567_aries_fastlatest50_latest.pt",
+      "metadata": {
+        "save_latest_steps": 50,
+        "save_latest_on_eval": true,
+        "resume_expected_from_step": 640
+      }
+    }
+  ],
+  "metadata": {
+    "prepared_at_utc": "2026-05-24T22:35:00+00:00",
+    "schema_version": 1,
+    "source_run_id": "bkcnqlg9",
+    "resume_checkpoint": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8190_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8190_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn512_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu234567_taurus_latest.pt",
+    "resume_checkpoint_step": 640,
+    "grad_cache_chunk_size": 256,
+    "previous_grad_cache_chunk_size": 128,
+    "hard_neg_k": 0,
+    "hard_neg_k_per_sample": 512,
+    "cuda_device_list": "0,1,2,3,4,5,6,7",
+    "num_gpus": 8,
+    "target_global_batch": 8192,
+    "per_gpu_batch": 1024,
+    "effective_global_batch": 8192,
+    "eval_steps_sample": 100,
+    "save_latest_steps": 50,
+    "save_steps": 999999,
+    "batch_size_policy": "preserve effective 8k global batch while moving from 6 to 8 GPUs; increase GradCache chunk to 256 for speed",
+    "best_metric": "eval_dev/recall@10_gs10000",
+    "best_metric_secondary": "eval_acl6060/recall@10",
+    "reset_scheduler": false,
+    "reset_best_on_resume": false,
+    "save_latest_on_eval": true,
+    "slurm_allocation_job_id": "45290",
+    "slurm_partition": "aries",
+    "launch_method": "direct detached process on aries through localhost:20042 inside existing hold allocation",
+    "launch_log": "/mnt/gemini/data1/jiaxuanluo/logs/hn512_gc256_resume640_aries8_fast_latest50_20260524T2235Z.direct.log",
+    "pid_file": "/mnt/gemini/data1/jiaxuanluo/logs/hn512_gc256_resume640_aries8_fast_latest50_20260524T2235Z.direct.pid",
+    "run_stamp": "hn512_gc256_resume640_aries8_fast_latest50_20260524T2235Z",
+    "wandb_exp_name": "variantE_hn512_gsv2full_gsdedup_varctx576_v3_bs8192_gc256_resume640_aries8_fast_latest50_20260524T2235Z",
+    "acl_policy": "ACL is readout-only and must not select checkpoint, tau, hyperparameters, or ablation winner.",
+    "gpu_wait_policy": "wait for all requested GPUs 0-7 to be under 500 MiB; do not terminate existing simuleval processes silently",
+    "launched_at_utc": "2026-05-24T22:40:00+00:00",
+    "direct_launch_pid": "3333632",
+    "launcher_child_pid": "3333633",
+    "manifest_updated_at_utc": "2026-05-24T22:42:40+00:00",
+    "current_status": "failed_sigterm",
+    "gpu_wait_observed_at_utc": "2026-05-24T22:41:00+00:00",
+    "gpu_wait_blockers": "GPUs 5 and 6 occupied by existing medicine_hardraw lm1 simuleval VLLM TP workers; launcher waited rather than terminating them silently.",
+    "terminated_at_utc": "2026-05-25T00:38:01+00:00",
+    "failure_reason": "detached torchrun received SIGTERM after startup; no W&B run id or new Aries latest checkpoint was recorded",
+    "replacement_event_id": "20260526T0001__retriever_train__varctx_lmlb_v3_hn512_gc256_resume640_aries8_fast_latest50"
+  }
+}

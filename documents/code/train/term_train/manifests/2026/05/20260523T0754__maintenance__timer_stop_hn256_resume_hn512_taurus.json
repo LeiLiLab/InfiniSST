@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T0754__maintenance__timer_stop_hn256_resume_hn512_taurus",
+  "event_type": "maintenance",
+  "family": "sst_ood_hardneg",
+  "variant": "timer_stop_hn256_resume_hn512_taurus",
+  "status": "completed",
+  "project": "qwen3_rag",
+  "wandb_run_id": null,
+  "slurm_job_id": "45300",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260523__timer_stop_gsjheh6r_resume_hn512_taurus.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260523__timer_stop_hn256_resume_hn512_taurus.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "cd /mnt/taurus/home/jiaxuanluo/InfiniSST && setsid env SLEEP_SECONDS=10800 bash documents/code/train/term_train/launchers/2026/05/20260523__timer_stop_gsjheh6r_resume_hn512_taurus.sh > /mnt/gemini/data1/jiaxuanluo/logs/timer_stop_hn256_resume_hn512_20260523T0754Z.log 2>&1 < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/timer_stop_hn256_resume_hn512_20260523T0754Z.pid",
+  "parent_run_ids": [
+    "gsjheh6r",
+    "5fwrs7rh"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260523__timer_stop_gsjheh6r_resume_hn512_taurus.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260523__timer_stop_hn256_resume_hn512_taurus.md",
+      "metadata": {}
+    },
+    {
+      "role": "hn256_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/train/term_train/manifests/2026/05/20260523T0335__retriever_train__varctx_lmlb_v3_hn256_step1200_aclmetric_reset_taurus6.json",
+      "metadata": {
+        "run_id": "gsjheh6r"
+      }
+    },
+    {
+      "role": "hn512_resume_manifest",
+      "type": "manifest",
+      "direction": "output",
+      "path": "documents/code/train/term_train/manifests/2026/05/20260523T1054__retriever_train__varctx_lmlb_v3_hn512_resume_after_hn256_taurus6.json",
+      "metadata": {
+        "source_run_id": "5fwrs7rh"
+      }
+    },
+    {
+      "role": "timer_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/timer_stop_hn256_resume_hn512_20260523T0754Z.log",
+      "metadata": {}
+    },
+    {
+      "role": "timer_pid",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/timer_stop_hn256_resume_hn512_20260523T0754Z.pid",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "source_hn256_run_id": "gsjheh6r",
+    "source_hn512_run_id": "5fwrs7rh",
+    "sleep_seconds": "10800",
+    "scheduled_fire_at_utc": "2026-05-23T10:58:34Z",
+    "slurm_allocation_job_id": "45300",
+    "launch_method": "detached timer process on taurus",
+    "created_at_utc": "2026-05-23T07:54:18Z",
+    "manifest_updated_at_utc": "2026-05-23T07:58:34Z",
+    "timer_pid": "4087013",
+    "armed_at_utc": "2026-05-23T07:58:34Z",
+    "completed_at_utc": "2026-05-23T11:03:41Z",
+    "timer_result": "completed HN256 pause and launched HN512 resume gasqw118",
+    "launched_hn512_run_id": "gasqw118",
+    "hn512_manifest_status_after_followup": "failed"
+  },
+  "created_at": "2026-05-23T07:54:18Z",
+  "updated_at": "2026-05-23T15:24:20+00:00"
+}

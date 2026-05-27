@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T0734__simuleval__tagged_acl_tmsft_gtwrap_ja_lm1_cap16_probe_aries01",
+  "event_type": "simuleval",
+  "family": "tagged_acl_tmsft_gtwrap_ja_lm1_cap_probe",
+  "variant": "lm1_cap16_topk3_tau079_omit_aries01",
+  "status": "deferred_no_idle_gpu_pair",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmsft_gttermwrap_exact_ja_lm1_cap_probe_aries.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_tmsft_gttermwrap_exact_ja_lm1_cap_probe_aries.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && MAX_NEW_TOKENS_VALUE_OVERRIDE=16 GPU_PAIR_OVERRIDE=0,1 RUN_STAMP_OVERRIDE=20260525T0734_ja_lm1_cap16_topk3_tau079_omit_aries01 setsid bash documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmsft_gttermwrap_exact_ja_lm1_cap_probe_aries.sh'",
+  "parent_run_ids": [
+    "juqlpjdc"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmsft_gttermwrap_exact_ja_lm1_cap_probe_aries.sh",
+      "metadata": {}
+    },
+    {
+      "role": "delegate_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh",
+      "metadata": {}
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_tmsft_gttermwrap_exact_ja_lm1_cap_probe_aries.md",
+      "metadata": {}
+    },
+    {
+      "role": "speech_llm_model",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_tmsft_gttermwrap_exact_ja_r32a32_ep4_taurus8/keep1.0_r32/v0-20260525-104902-hf",
+      "metadata": {
+        "parent_wandb_run_id": "juqlpjdc"
+      }
+    },
+    {
+      "role": "eval_input_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_20260524T0933_tagacl_newv9_hn1024_tau078_raw_ja_taurus8/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/ja/all",
+      "metadata": {}
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "glossary_tag": "acl6060_tagged_gt_raw_min_norm2"
+      }
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever_id": "HN1024"
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmsft_gttermwrap_exact_ja_lm1_cap_probe_20260525T0734_ja_lm1_cap16_topk3_tau079_omit_aries01",
+      "metadata": {
+        "max_new_tokens": 16,
+        "rag_top_k": 3,
+        "tau": 0.79,
+        "empty_term_map_policy": "omit"
+      }
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmsft_gttermwrap_exact_ja_lm1_cap_probe_20260525T0734_ja_lm1_cap16_topk3_tau079_omit_aries01",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "host": "aries",
+    "remote_checkout": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+    "language": "ja",
+    "latency_multipliers": [
+      1
+    ],
+    "same_lm_batch": true,
+    "talks_per_lm": 5,
+    "max_new_tokens": 16,
+    "rag_top_k": 3,
+    "rag_tau": 0.79,
+    "empty_term_map_policy": "omit",
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 12288,
+    "reason": "cap24 still over-generates under lm1; test a lower cap while keeping the same tagged ACL RASST settings",
+    "attempted_launcher_pid": 3675504,
+    "attempt_status": "cancelled_before_eval_start",
+    "attempt_note": "The wrapper waited on GPU pair 0,1, but Aries had no idle pair after another TMv4 tagged-ACL batch occupied all GPUs. It was stopped before model loading or eval output generation."
+  }
+}

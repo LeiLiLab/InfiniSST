@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T0116__simuleval__tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_quick_zh_lm2_raw",
+  "event_type": "simuleval",
+  "family": "tagged_acl_speech_llm_quick",
+  "variant": "new_v5_no_gt_zero_oldnewv3_r32a64_zh_lm2_raw",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": "342oxpmu",
+  "slurm_job_id": "direct_aries67_new_v5_quick_eval",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260523__tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_quick_zh_lm2_raw_aries67.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260523__tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_quick_zh_lm2_raw.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "RUN_STAMP=20260523T0116 GPU_PAIR=6,7 bash documents/code/simuleval/launchers/2026/05/20260523__tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_quick_zh_lm2_raw_aries67.sh",
+  "parent_run_ids": [
+    "cg5qisu9"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_quick_zh_lm2_raw_aries67.sh"
+    },
+    {
+      "role": "quick_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260522__tagged_acl_speech_llm_quick_zh_lm2_raw_wait_hf.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260523__tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_quick_zh_lm2_raw.md"
+    },
+    {
+      "role": "model_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/aries/data6/jiaxuanluo/slm/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_r32a64_tp2_aries2/keep1.0_r32"
+    },
+    {
+      "role": "hf_model_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/aries/data6/jiaxuanluo/slm/speech_llm_new_v5_no_gt_zero_llm_variant_aug_oldnewv3_zh_r32a64_tp2_aries2/keep1.0_r32/v0-20260523-050346-hf"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data6/jiaxuanluo/slm/tagged_acl_new_v5_no_gt_zero_oldnewv3_r32a64_quick_zh_lm2_raw_20260523T0116"
+    },
+    {
+      "role": "eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/aries/data6/jiaxuanluo/slm/tagged_acl_new_v5_no_gt_zero_oldnewv3_r32a64_quick_zh_lm2_raw_20260523T0116/new_v5_no_gt_zero_oldnewv3_r32a64/zh/dtagacl_new_v5_no_gt_zero_oldnewv3_r32a64_quick_tau073_lm2_k10_th0.73_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    {
+      "role": "term_adoption",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/aries/data6/jiaxuanluo/slm/tagged_acl_new_v5_no_gt_zero_oldnewv3_r32a64_quick_zh_lm2_raw_20260523T0116/new_v5_no_gt_zero_oldnewv3_r32a64/zh/dtagacl_new_v5_no_gt_zero_oldnewv3_r32a64_quick_tau073_lm2_k10_th0.73_gacl6060_tagged_gt_raw_min_norm2/term_adoption.json"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260523_new_v5_no_gt_zero_oldnewv3_r32a64_quick_zh_lm2_raw_aries67.out"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260523_new_v5_no_gt_zero_oldnewv3_r32a64_quick_zh_lm2_raw_aries67.err"
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "lm": 2,
+    "runtime_glossaries": [
+      "raw"
+    ],
+    "raw_panel_denominator": "raw",
+    "gpu_devices": "6,7",
+    "training_run_id": "cg5qisu9",
+    "training_model_name": "speech-llm-new_v5-no-gt-zero-oldnewv3-r32a64-tp2-aries2_keep1.0_r32",
+    "hf_export_event_id": "20260523T0115__maintenance__export_new_v5_no_gt_zero_oldnewv3_r32_hf_to_aries6",
+    "completed_at_utc": "2026-05-23T09:54:00",
+    "metrics": {
+      "BLEU": 48.20103286290166,
+      "TERM_ACC": 0.9,
+      "REAL_TERM_ADOPT": 0.9019,
+      "TERM_FCR": 0.075325,
+      "StreamLAAL": 1663.6013121195078
+    }
+  }
+}

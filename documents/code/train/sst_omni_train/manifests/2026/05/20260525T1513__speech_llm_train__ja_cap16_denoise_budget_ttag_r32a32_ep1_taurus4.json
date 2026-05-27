@@ -1,0 +1,263 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T1513__speech_llm_train__ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4",
+  "event_type": "speech_llm_train",
+  "family": "speech_llm_tcm_termmap",
+  "variant": "ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4",
+  "status": "failed_oom_after_wandb_init",
+  "project": "sst_omni",
+  "wandb_run_id": "c3xxgy7s",
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260525__watch_train_ja_cap16_denoise_budget_ttag_taurus4.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260525__speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "mkdir -p /mnt/gemini/data1/jiaxuanluo/logs/train_ja_cap16_denoise_budget_ttag_taurus4_20260525T1513; setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && ROOT_DIR_OVERRIDE=/home/jiaxuanluo/InfiniSST POLL_SEC_OVERRIDE=60 MAX_GPU_MEM_MIB_OVERRIDE=1000 IDLE_GPU_COUNT_OVERRIDE=4 MASTER_PORT_OVERRIDE=29724 bash /home/jiaxuanluo/InfiniSST/documents/code/train/sst_omni_train/launchers/2026/05/20260525__watch_train_ja_cap16_denoise_budget_ttag_taurus4.sh' > /mnt/gemini/data1/jiaxuanluo/logs/train_ja_cap16_denoise_budget_ttag_taurus4_20260525T1513/watch_train.out 2> /mnt/gemini/data1/jiaxuanluo/logs/train_ja_cap16_denoise_budget_ttag_taurus4_20260525T1513/watch_train.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/train_ja_cap16_denoise_budget_ttag_taurus4_20260525T1513/watch_train.pid",
+  "parent_run_ids": [
+    "20260525T1506__data_prepare__ja_cap16_denoise_budget_ttag"
+  ],
+  "artifacts": [
+    {
+      "role": "watch_launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260525__watch_train_ja_cap16_denoise_budget_ttag_taurus4.sh",
+      "metadata": {}
+    },
+    {
+      "role": "train_launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260525__speech_llm_ja_cap16_denoise_budget_ttag_taurus4_r32a32_ep1.sh",
+      "metadata": {}
+    },
+    {
+      "role": "train_wrapper",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/auto_train_sampling_docker.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260525__speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4.md",
+      "metadata": {}
+    },
+    {
+      "role": "parent_data_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/data_pre/hard_negative_jsonl_for_speech_llm/manifests/2026/05/20260525T1506__data_prepare__ja_cap16_denoise_budget_ttag.json",
+      "metadata": {
+        "event_id": "20260525T1506__data_prepare__ja_cap16_denoise_budget_ttag"
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_ja_cap16_denoise_budget_20260525/ja/hn1024_tau078_cap16_denoise_budget_ttag_v1/train_s_ja_retriever_hn1024_tau078_cap16_denoise_budget_ttag_exactboundary.jsonl",
+      "metadata": {
+        "rows": 12500,
+        "chunks": 53352,
+        "termmap_chunk_rate": 0.7661568451042136,
+        "max_termmap_entries": 14,
+        "tagged_rows": 11091,
+        "tag_template": "<t>{translation}</t>"
+      }
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_ja_cap16_denoise_budget_20260525/ja/hn1024_tau078_cap16_denoise_budget_ttag_v1/dev_s_ja_retriever_hn1024_tau078_cap16_denoise_budget_ttag_exactboundary_first355.jsonl",
+      "metadata": {
+        "rows": 355,
+        "chunks": 1475,
+        "termmap_chunk_rate": 0.744406779661017,
+        "max_termmap_entries": 10,
+        "tagged_rows": 303,
+        "tag_template": "<t>{translation}</t>"
+      }
+    },
+    {
+      "role": "validation_report",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_ja_cap16_denoise_budget_20260525/ja/hn1024_tau078_cap16_denoise_budget_ttag_v1/validation_summary.json",
+      "metadata": {}
+    },
+    {
+      "role": "base_mcore_model",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/Qwen3-Omni-30B-A3B-Instruct-v2/",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4",
+      "metadata": {}
+    },
+    {
+      "role": "train_log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4",
+      "metadata": {}
+    },
+    {
+      "role": "detached_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/train_ja_cap16_denoise_budget_ttag_taurus4_20260525T1513/watch_train.out",
+      "metadata": {}
+    },
+    {
+      "role": "detached_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/train_ja_cap16_denoise_budget_ttag_taurus4_20260525T1513/watch_train.err",
+      "metadata": {}
+    },
+    {
+      "role": "pid_file",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/train_ja_cap16_denoise_budget_ttag_taurus4_20260525T1513/watch_train.pid",
+      "metadata": {}
+    },
+    {
+      "role": "train_stdout_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/train_keep1.0_r32_20260525_232314.log",
+      "metadata": {
+        "wandb_run_id": "c3xxgy7s",
+        "failure": "CUDA OOM during Megatron MoE layer initialization"
+      }
+    },
+    {
+      "role": "wandb_local_run_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/keep1.0_r32/v1-20260525-232327/wandb/wandb/run-20260525_233138-c3xxgy7s",
+      "metadata": {
+        "wandb_run_id": "c3xxgy7s"
+      }
+    },
+    {
+      "role": "failed_run_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/keep1.0_r32/v1-20260525-232327",
+      "metadata": {
+        "wandb_run_id": "c3xxgy7s",
+        "failure": "CUDA OOM before first checkpoint"
+      }
+    },
+    {
+      "role": "failed_direct_prelaunch_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/train_keep1.0_r32_20260525_231648.log",
+      "metadata": {
+        "failure": "manual launcher sanity check used unsupported --dry-run argument and was stopped before W&B init"
+      }
+    },
+    {
+      "role": "failed_direct_prelaunch_run_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/keep1.0_r32/v0-20260525-231702",
+      "metadata": {
+        "failure": "partial args/logging directory only; stopped before W&B init"
+      }
+    }
+  ],
+  "metadata": {
+    "language": "ja",
+    "host": "taurus",
+    "gpu_count": 4,
+    "host_gpu_devices": "auto_any_4_idle",
+    "launch_mode": "detached_local_gpu_idle_watcher",
+    "watcher_pid": 2229131,
+    "watcher_started_utc": "2026-05-25T15:21:12Z",
+    "watcher_registered_utc": "2026-05-25T15:21:31Z",
+    "watcher_exited_utc": "2026-05-25T15:31:50Z",
+    "selected_host_gpu_devices": "4,5,6,7",
+    "training_launched_utc": "2026-05-25T15:23:13Z",
+    "wandb_initialized_utc": "2026-05-25T15:31:38Z",
+    "wandb_synced_to_sqlite_utc": "2026-05-25T15:32:48Z",
+    "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/sst_omni/runs/c3xxgy7s",
+    "train_log_path": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/train_keep1.0_r32_20260525_232314.log",
+    "run_dir": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/keep1.0_r32/v1-20260525-232327",
+    "failure": {
+      "status": "failed",
+      "reason": "CUDA OOM during Megatron MoE layer initialization after W&B run c3xxgy7s was created.",
+      "first_observed_log_line": 1256,
+      "root_cause_log_line": 2321,
+      "gpu_contention_evidence": "Selected host GPUs 4,5,6,7 also had tagged ACL de cap16 denoise simuleval/vLLM processes consuming roughly 34GB per GPU at failure time.",
+      "checkpoint_written": false
+    },
+    "watcher_stdout_path": "/mnt/gemini/data1/jiaxuanluo/logs/train_ja_cap16_denoise_budget_ttag_taurus4_20260525T1513/watch_train.out",
+    "watcher_stderr_path": "/mnt/gemini/data1/jiaxuanluo/logs/train_ja_cap16_denoise_budget_ttag_taurus4_20260525T1513/watch_train.err",
+    "watcher_pid_path": "/mnt/gemini/data1/jiaxuanluo/logs/train_ja_cap16_denoise_budget_ttag_taurus4_20260525T1513/watch_train.pid",
+    "gpu_wait_reason": "Taurus GPUs were occupied by tagged-ACL batch evals at submission time; watcher waits for any four GPUs below 1000 MiB before starting training.",
+    "current_gpu_status": {
+      "observed_utc": "2026-05-25T15:21:12Z",
+      "idle_gpus_below_1000_mib": [
+        6,
+        7
+      ],
+      "busy_gpus": [
+        "0:mem=31782MiB util=0%",
+        "1:mem=31782MiB util=0%",
+        "2:mem=31782MiB util=0%",
+        "3:mem=31782MiB util=0%",
+        "4:mem=38101MiB util=35%",
+        "5:mem=35860MiB util=28%"
+      ]
+    },
+    "lora_rank": 32,
+    "lora_alpha": 32,
+    "expert_model_parallel_size": 2,
+    "tensor_model_parallel_size": 2,
+    "sequence_parallel": true,
+    "max_length": 3072,
+    "global_batch_size": 4,
+    "micro_batch_size": 1,
+    "iterations_per_epoch": 452,
+    "save_interval": 452,
+    "parent_data_event_id": "20260525T1506__data_prepare__ja_cap16_denoise_budget_ttag",
+    "data_branch": "ja/hn1024_tau078_cap16_denoise_budget_ttag_v1",
+    "eval_strip_output_tags": "term_t",
+    "expected_eval_gate": {
+      "dataset": "tagged_acl_raw",
+      "lang": "ja",
+      "retriever": "HN1024",
+      "tau": 0.78,
+      "strip_output_tags": "term_t",
+      "empty_term_map_policy": "omit"
+    },
+    "storage_check": {
+      "/mnt/gemini/data1": "162G available at prelaunch check",
+      "/mnt/data1": "812G available for staged HF export at prelaunch check",
+      "/mnt/gemini/data2": "1.0M available at prelaunch check; base model path is pre-existing and read-only"
+    },
+    "failed_direct_prelaunch_attempts": [
+      {
+        "time_utc": "2026-05-25T15:16:48Z",
+        "reason": "unsupported --dry-run sanity check accidentally entered docker launcher",
+        "stopped_utc": "2026-05-25T15:18:00Z",
+        "wandb_initialized": false,
+        "log_path": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/train_keep1.0_r32_20260525_231648.log",
+        "partial_run_dir": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/keep1.0_r32/v0-20260525-231702"
+      }
+    ],
+    "verdict": "failed_oom_after_wandb_init"
+  }
+}

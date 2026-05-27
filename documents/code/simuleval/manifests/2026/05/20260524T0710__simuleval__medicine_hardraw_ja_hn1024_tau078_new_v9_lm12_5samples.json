@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T0710__simuleval__medicine_hardraw_ja_hn1024_tau078_new_v9_lm12_5samples",
+  "event_type": "simuleval",
+  "family": "medicine_hardraw_new_v9_hn1024_tau078",
+  "variant": "ja_lm12_5samples",
+  "status": "terminated",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "direct:master=1325026,lm1=1325659,lm2=1325662",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__submit_medicine_hardraw_ja_hn1024_tau078_new_v9_lm12_aries2345.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__medicine_hardraw_ja_hn1024_tau078_new_v9_lm12_5samples.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p 20042 jiaxuanluo@localhost \"cd /mnt/taurus/home/jiaxuanluo/InfiniSST && setsid bash -lc 'ROOT_DIR_OVERRIDE=/mnt/taurus/home/jiaxuanluo/InfiniSST ESO_TEST_ROOT_OVERRIDE=/mnt/taurus/home/jiaxingxu/rag-sst/eso-dataset/outputs_v2/test RUN_STAMP=20260524T0710_ja_hardraw_newv9_hn1024_tau078 FORCE_PREPARE_OVERRIDE=1 bash documents/code/simuleval/launchers/2026/05/20260524__submit_medicine_hardraw_ja_hn1024_tau078_new_v9_lm12_aries2345.sh' > /mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_ja_hn1024_tau078_new_v9_lm12_5samples_20260524T0710_ja_hardraw_newv9_hn1024_tau078/submit_master.out 2> /mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_ja_hn1024_tau078_new_v9_lm12_5samples_20260524T0710_ja_hardraw_newv9_hn1024_tau078/submit_master.err < /dev/null &\"",
+  "parent_run_ids": [
+    "lh1b88kw",
+    "suhezbo0"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__submit_medicine_hardraw_ja_hn1024_tau078_new_v9_lm12_aries2345.sh"
+    },
+    {
+      "role": "batch_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_hardraw_lm1to4_5samples_hn1024_tau078_new_v9_batch.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__medicine_hardraw_ja_hn1024_tau078_new_v9_lm12_5samples.md"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "data_prepare_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/prepare_medicine_one_talk_inputs.py"
+    },
+    {
+      "role": "speech_llm_checkpoint",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_ja_r32a64_tp2_taurus4/keep1.0_r32/v0-20260524-123624-hf"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "medicine_hard_raw_glossary",
+      "type": "glossary_json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hard_manual_glossary_streamlaal_20260524.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_ja_hn1024_tau078_new_v9_lm12_5samples_20260524T0710_ja_hardraw_newv9_hn1024_tau078"
+    },
+    {
+      "role": "logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_ja_hn1024_tau078_new_v9_lm12_5samples_20260524T0710_ja_hardraw_newv9_hn1024_tau078"
+    }
+  ],
+  "metadata": {
+    "lang_code": "ja",
+    "samples": [
+      "404",
+      "545006",
+      "596001",
+      "605000",
+      "606"
+    ],
+    "lms": [
+      1,
+      2
+    ],
+    "gpu_pairs": {
+      "lm1": "2,3",
+      "lm2": "4,5"
+    },
+    "compute": "aries_direct_gpu2345",
+    "root_dir_override": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+    "eso_test_root_override": "/mnt/taurus/home/jiaxingxu/rag-sst/eso-dataset/outputs_v2/test",
+    "rag_score_threshold": 0.78,
+    "rag_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "term_fcr_policy": "term_map_source_ref_negative_sentence",
+    "strip_output_tags": "term",
+    "launch_policy": "detached setsid master launcher over ssh; one combined five-sample process per lm",
+    "terminated_at_utc": "2026-05-24T10:38:25Z",
+    "termination_reason": "Stopped after ja/de New V9 SFT data was found dirty: gt terms were derived from term-map matches rather than source-aligned chunks, and assistant term wrapping used an over-broad local rewrite fallback. Outputs should not be used as main results.",
+    "terminated_process_groups": [
+      1325659,
+      1325662
+    ]
+  }
+}

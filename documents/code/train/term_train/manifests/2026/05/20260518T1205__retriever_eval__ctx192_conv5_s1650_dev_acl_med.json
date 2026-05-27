@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "event_id": "20260518T1205__retriever_eval__ctx192_conv5_s1650_dev_acl_med",
+  "event_type": "retriever_eval",
+  "family": "sst_ood_hardneg",
+  "variant": "ctx192_conv5_s1650_eval",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": "e3kljn9e",
+  "slurm_job_id": "direct_ctx192_conv5_s1650_eval",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260518__ctx192_conv5_s1650_dev_acl_med_aries1_eval.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260518__ctx192_conv5_s1650_dev_acl_med_eval.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "cd /mnt/taurus/home/jiaxuanluo/InfiniSST && LOG=/mnt/gemini/data1/jiaxuanluo/logs/direct_ctx192_conv5_s1650_eval_$(date -u +%Y%m%dT%H%M%S) && nohup env CUDA_VISIBLE_DEVICES=7 SLURM_JOB_PARTITION=aries SLURM_JOB_ID=direct_ctx192_conv5_s1650_eval MASTER_PORT=30493 bash documents/code/train/term_train/launchers/2026/05/20260518__ctx192_conv5_s1650_dev_acl_med_aries1_eval.sh > ${LOG}.out 2> ${LOG}.err &",
+  "parent_run_ids": [
+    "7xu2b4so",
+    "lh1b88kw",
+    "dxwrgbln"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260518__ctx192_conv5_s1650_dev_acl_med_aries1_eval.sh"
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh"
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py"
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260518__ctx192_conv5_s1650_dev_acl_med_eval.md"
+    },
+    {
+      "role": "source_wandb_run",
+      "type": "wandb_run",
+      "direction": "input",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/7xu2b4so"
+    },
+    {
+      "role": "source_checkpoint",
+      "type": "model_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs12k_t=0.07_3var_gsv2full_gsfix_mfa_gsdedup_gc_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_conv5_bs12k_smallest_dense_normAGGR_8gpu_aries_best_eval_dev_topk10_filtered_recallattau_0p80_gs10000.pt",
+      "metadata": {
+        "run_id": "7xu2b4so",
+        "anchor": "secondary",
+        "step": 1650,
+        "metric": "eval_dev/topk10_filtered_recall@tau_0p80_gs10000"
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/term_dev_with_wiki_synth_normalized.jsonl",
+      "metadata": {
+        "glossary_sizes": [
+          "base",
+          1000,
+          10000
+        ]
+      }
+    },
+    {
+      "role": "dev_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample10000.json"
+    },
+    {
+      "role": "acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/acl6060_dev_offline_eval_extracted_paper_glossary/acl6060_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout only",
+        "glossary_sizes": [
+          "base",
+          1000,
+          10000
+        ]
+      }
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_gt_union_gs10000_min_norm2_backfill.json",
+      "metadata": {
+        "min_norm_chars": 2,
+        "backfilled_to_bank_size": 10000
+      }
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_ctx1p92/medicine_dev_dataset.jsonl",
+      "metadata": {
+        "context_duration_sec": 1.92,
+        "usage": "held-out readout only",
+        "glossary_sizes": [
+          "base",
+          1000,
+          10000
+        ]
+      }
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_ctx1p92/medicine_glossary_gt_plus_medicine_wiki_gs10000.json"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs"
+    },
+    {
+      "role": "direct_run_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_ctx192_conv5_s1650_eval_20260518T121125.out",
+      "metadata": {
+        "pid": 3154076,
+        "status": "finished",
+        "wandb_run_id": "e3kljn9e"
+      }
+    },
+    {
+      "role": "direct_run_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_ctx192_conv5_s1650_eval_20260518T121125.err",
+      "metadata": {
+        "pid": 3154076,
+        "status": "finished",
+        "wandb_run_id": "e3kljn9e"
+      }
+    }
+  ],
+  "metadata": {
+    "data_tag": "3variant_gsdedup_ctx192_conv5_s1650_readout",
+    "extra_wandb_tags": [
+      "variant:ctx192_conv5_s1650_eval",
+      "compute:aries-1gpu",
+      "ablation:ctx192",
+      "readout:dev_acl_med"
+    ],
+    "readout_domains": [
+      "dev",
+      "acl6060",
+      "medicine"
+    ],
+    "readout_glossary_sizes": [
+      "base",
+      1000,
+      10000
+    ],
+    "eval_score_device": "cuda",
+    "eval_score_query_chunk": 256,
+    "eval_score_text_chunk": 1024,
+    "eval_glossary_match_min_norm_chars": 2,
+    "medicine_data_prepare_event": "20260518T1155__data_prepare__medicine_ctx1p92",
+    "selection_note": "This is a readout for fixed 1.92s context length. It does not use ACL or medicine to choose a checkpoint or threshold."
+  }
+}

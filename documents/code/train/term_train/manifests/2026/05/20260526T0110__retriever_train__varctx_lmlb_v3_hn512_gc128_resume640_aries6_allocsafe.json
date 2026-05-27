@@ -1,0 +1,297 @@
+{
+  "schema_version": 1,
+  "event_id": "20260526T0110__retriever_train__varctx_lmlb_v3_hn512_gc128_resume640_aries6_allocsafe",
+  "event_type": "retriever_train",
+  "family": "sst_ood_hardneg",
+  "variant": "hn512_varctx576_v3_gc128_resume640_aries6_allocsafe",
+  "status": "cancelled_user_requested",
+  "project": "qwen3_rag",
+  "wandb_run_id": "mwwe1l1e",
+  "slurm_job_id": "45311",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260526__varctx_lmlb_v3_hn512_gc128_resume640_aries6_allocsafe.sh",
+  "launcher_sha256": "14ead97da26685cb2135682b692a106f05c1bd20544a92c4ec553c238f0312bd",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260526__varctx_lmlb_v3_hn512_gc128_resume640_aries6_allocsafe.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/general/experiment_event.py launch documents/code/train/term_train/manifests/2026/05/20260526T0110__retriever_train__varctx_lmlb_v3_hn512_gc128_resume640_aries6_allocsafe.json -- sbatch --parsable documents/code/train/term_train/launchers/2026/05/20260526__varctx_lmlb_v3_hn512_gc128_resume640_aries6_allocsafe.sh",
+  "parent_run_ids": [
+    "bkcnqlg9",
+    "iz1x2v3o",
+    "yp0rmgrl",
+    "gasqw118",
+    "5fwrs7rh",
+    "gsjheh6r",
+    "lh1b88kw",
+    "e981df6j",
+    "40fgbr2y",
+    "bgz7akb6",
+    "ah9u1bao",
+    "dxwrgbln"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260526__varctx_lmlb_v3_hn512_gc128_resume640_aries6_allocsafe.sh",
+      "metadata": {
+        "sha256": "14ead97da26685cb2135682b692a106f05c1bd20544a92c4ec553c238f0312bd"
+      }
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn1024_gsv2full_gsdedup_varctx_lmlb_v3_tcmoff_ep6_8gpu_aries.sh",
+      "metadata": {
+        "sha256": "87a39ba0d062e954ad7beb890ab104e76aa9453bd4c45471b1fe049386f2ac73"
+      }
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh",
+      "metadata": {
+        "sha256": "90b77595a94ac48551b4e88d45249f5860ad81108285988ec9dab94c8a349d64"
+      }
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py",
+      "metadata": {
+        "sha256": "8a117615fe576d66ecae015bc92f28514c61071f6137816241f82bcfb3c93c25"
+      }
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260526__varctx_lmlb_v3_hn512_gc128_resume640_aries6_allocsafe.md",
+      "metadata": {}
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_varctx2p88_3p84_4p80_5p76.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_varctx2p88_3p84_4p80_5p76_new_version.jsonl",
+      "metadata": {
+        "usage": "primary checkpoint selection"
+      }
+    },
+    {
+      "role": "acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_extracted_paper_glossary_varctx2p88_3p84_4p80_5p76/acl6060_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout"
+      }
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "domain readout"
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample10000.json",
+      "metadata": {
+        "eval_glossary_sizes": [
+          10000
+        ]
+      }
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_gt_union_gs10000_min_norm2_backfill.json",
+      "metadata": {
+        "eval_glossary_sizes": [
+          10000
+        ]
+      }
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000.json",
+      "metadata": {
+        "eval_glossary_sizes": [
+          10000
+        ]
+      }
+    },
+    {
+      "role": "train_exclude_term_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "documents/code/data_pre/glossary_scale/wiki_glossary_nlp_ai_cs_enriched.json",
+      "metadata": {
+        "strict_filter_enabled": false
+      }
+    },
+    {
+      "role": "resume_checkpoint",
+      "type": "model",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8190_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8190_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn512_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu234567_taurus_latest.pt",
+      "metadata": {
+        "source_run_id": "bkcnqlg9",
+        "step": 640,
+        "checkpoint_role": "latest_checkpoint"
+      }
+    },
+    {
+      "role": "source_wandb_run",
+      "type": "wandb_run",
+      "direction": "input",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/bkcnqlg9",
+      "metadata": {
+        "usage": "paused HN512 run that produced step640 latest"
+      }
+    },
+    {
+      "role": "figure_eligibility_eval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/train/term_train/manifests/2026/05/20260526T0052__retriever_eval__hn512_latest_s640_devpr_fixedraw_100k.json",
+      "metadata": {
+        "wandb_run_id": "iz1x2v3o",
+        "decision": "step640 HN512 not paper-worthy; resume training"
+      }
+    },
+    {
+      "role": "superseded_8gpu_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/train/term_train/manifests/2026/05/20260526T0001__retriever_train__varctx_lmlb_v3_hn512_gc256_resume640_aries8_fast_latest50.json",
+      "metadata": {
+        "status": "cancelled_superseded",
+        "slurm_job_id": "45309"
+      }
+    },
+    {
+      "role": "prior_attempt_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/train/term_train/manifests/2026/05/20260524T2235__retriever_train__varctx_lmlb_v3_hn512_gc256_resume640_aries8_fast_latest50.json",
+      "metadata": {
+        "status": "failed_sigterm"
+      }
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_pattern",
+      "direction": "log",
+      "path": "/mnt/gemini/home/jiaxuanluo/logs/45311_q3_hn512_a6_resume_q3_hn512_a6_resume.out",
+      "metadata": {
+        "stderr_path": "/mnt/gemini/home/jiaxuanluo/logs/45311_q3_hn512_a6_resume_q3_hn512_a6_resume.err"
+      }
+    },
+    {
+      "role": "wandb_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/home/jiaxuanluo/wandb",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint",
+      "type": "model",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs7k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8190_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn512_tcmoff_ep6_v3_smallest_dense_normAGGR_aries6_allocsafe.pt",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint_latest",
+      "type": "model",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs7k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8190_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn512_tcmoff_ep6_v3_smallest_dense_normAGGR_aries6_allocsafe_latest.pt",
+      "metadata": {
+        "resume_expected_from_step": 640,
+        "save_latest_on_eval": true,
+        "save_latest_steps": 50
+      }
+    },
+    {
+      "role": "wandb_run",
+      "type": "wandb_run",
+      "direction": "output",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/mwwe1l1e",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "prepared_at_utc": "2026-05-26T01:10:00+00:00",
+    "source_run_id": "bkcnqlg9",
+    "resume_checkpoint": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8190_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8190_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn512_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu234567_taurus_latest.pt",
+    "resume_checkpoint_step": 640,
+    "trigger_eval_run_id": "iz1x2v3o",
+    "trigger_eval_decision": "not paper-worthy for Figure 5; resume training",
+    "supersedes_event_id": "20260526T0001__retriever_train__varctx_lmlb_v3_hn512_gc256_resume640_aries8_fast_latest50",
+    "supersedes_slurm_job_id": "45309",
+    "supersede_reason": "Aries had only 6 Slurm-available GPUs because two idle GPUs were allocated to another user.",
+    "num_gpus": 6,
+    "target_global_batch": 8190,
+    "per_gpu_batch": 1365,
+    "effective_global_batch": 8190,
+    "grad_cache_chunk_size": 128,
+    "hard_neg_k": 0,
+    "hard_neg_k_per_sample": 512,
+    "eval_steps_sample": 100,
+    "save_latest_steps": 50,
+    "best_metric": "eval_dev/recall@10_gs10000",
+    "best_metric_secondary": "eval_acl6060/recall@10",
+    "reset_scheduler": false,
+    "reset_best_on_resume": false,
+    "save_latest_on_eval": true,
+    "slurm_partition": "aries",
+    "gpu_selection_policy": "do not set CUDA_DEVICE_LIST; common launcher selects clean GPUs from SLURM_JOB_GPUS/CUDA_VISIBLE_DEVICES",
+    "log_storage_root": "/mnt/gemini/home/jiaxuanluo/logs",
+    "wandb_storage_root": "/mnt/gemini/home/jiaxuanluo/wandb",
+    "checkpoint_storage_root": "/mnt/gemini/home/jiaxuanluo/train_outputs",
+    "run_stamp": "hn512_gc128_resume640_aries6_allocsafe_20260526T0110Z",
+    "wandb_exp_name": "variantE_hn512_gsv2full_gsdedup_varctx576_v3_bs8190_gc128_resume640_aries6_allocsafe_20260526T0110Z",
+    "acl_policy": "ACL is readout-only and must not select checkpoint, tau, hyperparameters, or ablation winner.",
+    "data1_space_check": "/mnt/gemini/data1 was effectively full earlier in this session, so logs and W&B remain on /mnt/gemini/home",
+    "submitted_at_utc": "2026-05-26T01:11:37+00:00",
+    "startup_verified_at_utc": "2026-05-26T01:15:58+00:00",
+    "current_status": "cancelled_user_requested",
+    "slurm_job_id": "45311",
+    "slurm_state": "CANCELLED",
+    "cancelled_at_utc": "2026-05-26T02:56:51Z",
+    "cancel_reason": "User requested terminating this run because HN512 is no longer needed.",
+    "cancel_command": "ssh aries 'scancel 45311'",
+    "post_cancel_verification": "Slurm job 45311 absent from squeue; PIDs 3965249-3965254 and torchrun PID 3965169 absent; GPUs 2-7 pmon empty with 2-5 MiB memory.",
+    "wandb_run_id": "mwwe1l1e",
+    "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/mwwe1l1e",
+    "allocated_cuda_visible_devices": "2,3,4,5,6,7",
+    "resume_log_line": "[RESUME] /mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8190_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8190_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn512_tcmoff_ep6_v3_smallest_dense_normAGGR_gpu234567_taurus_latest.pt epoch=4 step=640",
+    "restored_best_metric_value": 0.9881,
+    "restored_best_metric": "eval_dev/recall@10_gs10000",
+    "restored_best_metric_secondary_value": 0.9889,
+    "restored_best_metric_secondary": "eval_acl6060/recall@10",
+    "train_rows": 7228866,
+    "dev_rows": 12564,
+    "acl_dev_rows": 3852,
+    "medicine_dev_rows": 11071,
+    "total_steps_after_resume": 5292
+  }
+}

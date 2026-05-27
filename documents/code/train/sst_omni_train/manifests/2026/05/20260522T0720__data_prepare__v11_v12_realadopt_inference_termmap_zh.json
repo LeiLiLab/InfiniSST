@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T0720__data_prepare__v11_v12_realadopt_inference_termmap_zh",
+  "event_type": "data_prepare",
+  "family": "speech_llm_train",
+  "variant": "v11_v12_realadopt_inference_termmap_zh",
+  "status": "cancelled",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": "direct_aries_v11_v12_realadopt_data",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_v11_v12_realadopt_inference_termmap_zh.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__v11_v12_realadopt_inference_termmap_zh_data.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "ssh -p 20042 jiaxuanluo@localhost 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && setsid env GPU_DEVICES_CSV_OVERRIDE=6,7 NUM_SHARDS_OVERRIDE=2 SLURM_JOB_PARTITION=aries SLURM_JOB_ID=direct_v11_v12_realadopt_data bash documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_v11_v12_realadopt_inference_termmap_zh.sh > /mnt/gemini/data1/jiaxuanluo/logs/direct_v11_v12_realadopt_data_20260522T072450.out 2> /mnt/gemini/data1/jiaxuanluo/logs/direct_v11_v12_realadopt_data_20260522T072450.err < /dev/null &'",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_v11_v12_realadopt_inference_termmap_zh.sh"
+    },
+    {
+      "role": "data_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/reshape_streaming_chunks_for_realadopt_sft.py"
+    },
+    {
+      "role": "data_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_realadopt_termmap_sft.py"
+    },
+    {
+      "role": "retriever_timeline_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_retriever_timeline_termmap_sft.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__v11_v12_realadopt_inference_termmap_zh_data.md"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260519/train_s_zh_srcmatch100k_gt.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260519/dev_s_zh_srcmatch100k_gt.jsonl"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample100000_zh100k_train_gt.json"
+    },
+    {
+      "role": "checkpoint",
+      "type": "model_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v11_v12_realadopt_inference_zh_lh1b88kw_tau073_20260522/train_s_zh_v11_realadopt_realistic_lm3to6_tau073.jsonl"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v11_v12_realadopt_inference_zh_lh1b88kw_tau073_20260522/train_s_zh_v12_realadopt_marker_lm3to6_tau073.jsonl"
+    },
+    {
+      "role": "report",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v11_v12_realadopt_inference_zh_lh1b88kw_tau073_20260522/v11_v12_realadopt_inference_summary.json"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_v11_v12_realadopt_data_20260522T072450.out"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_v11_v12_realadopt_data_20260522T072450.err"
+    },
+    {
+      "role": "pid_file",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_v11_v12_realadopt_data_20260522T072450.pid"
+    }
+  ],
+  "metadata": {
+    "cancel_reason": "invalid design: reshaped speech/assistant chunks instead of only changing retriever buffering strategy",
+    "selection_rule": "data preparation only; no ACL selection",
+    "retriever_policy": "top_k=10 tau=0.73 lookback=1.92s timeline filtering",
+    "chunk_policy": "drop lm>6; buffer lm<3 into lm=3..6",
+    "gt_policy": "retrieved source term plus local assistant exact target substring; no GT backfill"
+  }
+}

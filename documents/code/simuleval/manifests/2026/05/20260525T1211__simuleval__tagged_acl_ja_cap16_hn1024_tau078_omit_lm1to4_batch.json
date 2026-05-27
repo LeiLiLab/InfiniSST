@@ -1,0 +1,304 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T1211__simuleval__tagged_acl_ja_cap16_hn1024_tau078_omit_lm1to4_batch",
+  "event_type": "simuleval",
+  "family": "tagged_acl_ja_cap16_hn1024_tau078_omit",
+  "variant": "ja_cap16_hn1024_tau078_empty_term_map_omit_lm1to4_batch",
+  "status": "partial_completed_failed_lm1_lm2",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_ja_cap16_hn1024_tau078_omit_batch_host.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_ja_cap16_hn1024_tau078_omit_batch.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "setsid env RUN_STAMP_OVERRIDE=20260525T1211_jacap16_hn1024_tau078_omit_lm1to4 HOST_LABEL_OVERRIDE=taurus LMS_OVERRIDE='3 4' AUTO_PAIR_OVERRIDE=1 GPU_PAIRS_CSV_OVERRIDE='0,1;2,3;4,5;6,7' OUT_ROOT_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4 LOG_ROOT_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4 EVAL_TMPDIR_ROOT_OVERRIDE=/tmp/jx_jcap16t WANDB_LOG_OVERRIDE=1 bash /mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_ja_cap16_hn1024_tau078_omit_batch_host.sh > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/controllers/taurus_lm34.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/controllers/taurus_lm34.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/controllers/taurus_lm34.pid; ssh aries 'mkdir -p /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/controllers && cd /mnt/taurus/home/jiaxuanluo/InfiniSST && setsid env RUN_STAMP_OVERRIDE=20260525T1211_jacap16_hn1024_tau078_omit_lm1to4 HOST_LABEL_OVERRIDE=aries LMS_OVERRIDE=\"1 2\" AUTO_PAIR_OVERRIDE=0 GPU_PAIRS_CSV_OVERRIDE=\"4,5;6,7\" OUT_ROOT_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4 LOG_ROOT_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4 EVAL_TMPDIR_ROOT_OVERRIDE=/tmp/jx_jcap16a WANDB_LOG_OVERRIDE=1 bash documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_ja_cap16_hn1024_tau078_omit_batch_host.sh > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/controllers/aries_lm12.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/controllers/aries_lm12.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/controllers/aries_lm12.pid'",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_ja_cap16_hn1024_tau078_omit_batch_host.sh",
+      "metadata": {}
+    },
+    {
+      "role": "batch_launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_ja_cap16_hn1024_tau078_omit_batch.md",
+      "metadata": {}
+    },
+    {
+      "role": "parent_train_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/train/sst_omni_train/manifests/2026/05/20260525T0739__speech_llm_train__ja_retriever_cap16_exactboundary_r32a32_ep4_aries8.json",
+      "metadata": {
+        "event_id": "20260525T0739__speech_llm_train__ja_retriever_cap16_exactboundary_r32a32_ep4_aries8"
+      }
+    },
+    {
+      "role": "speech_llm_hf_model",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_retriever_cap16_exactboundary_r32a32_ep4_aries8/keep1.0_r32/v0-20260525-155544-hf",
+      "metadata": {
+        "expected_safetensor_shards": 15,
+        "source_event_id": "20260525T0739__speech_llm_train__ja_retriever_cap16_exactboundary_r32a32_ep4_aries8"
+      }
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever": "HN1024",
+        "tau": 0.78,
+        "timeline_lookback_sec": 1.92
+      }
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "glossary_kind": "tagged_acl_raw"
+      }
+    },
+    {
+      "role": "eval_input_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_20260524T0933_tagacl_newv9_hn1024_tau078_raw_ja_taurus8/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/ja/all",
+      "metadata": {
+        "talks": 5,
+        "source_files": [
+          "source.list",
+          "target.list",
+          "source_text.txt",
+          "ref.txt",
+          "audio.yaml"
+        ]
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/ja_retr_cap16_exact_r32a32_ep4_hn1024_tau078_omit_batch_max80",
+      "metadata": {
+        "expected_lms": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "density_tag": "tagacl_bv1_jacap16_hn1024_tau078_omit",
+        "empty_term_map_policy": "omit"
+      }
+    },
+    {
+      "role": "summary_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/ja_retr_cap16_exact_r32a32_ep4_hn1024_tau078_omit_batch_max80/__summary__",
+      "metadata": {}
+    },
+    {
+      "role": "log_root",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4",
+      "metadata": {}
+    },
+    {
+      "role": "aries_controller_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/controllers/aries_lm12.out",
+      "metadata": {}
+    },
+    {
+      "role": "aries_controller_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/controllers/aries_lm12.err",
+      "metadata": {}
+    },
+    {
+      "role": "taurus_controller_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/controllers/taurus_lm34.out",
+      "metadata": {}
+    },
+    {
+      "role": "taurus_controller_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/controllers/taurus_lm34.err",
+      "metadata": {}
+    },
+    {
+      "role": "aries_controller_pid",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/controllers/aries_lm12.pid",
+      "metadata": {
+        "pid": 3710609,
+        "status": "failed_after_model_load",
+        "reason": "lm1/lm2 on Aries GPUs 4-7 exited during vLLM KV-cache initialization with ShmRingBuffer shared_memory errors before eval artifacts were produced"
+      }
+    },
+    {
+      "role": "taurus_controller_pid",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/controllers/taurus_lm34.pid",
+      "metadata": {
+        "pid": 1820281,
+        "status": "terminated_before_completion",
+        "reason": "user requested lm3/lm4 move to idle aries GPUs"
+      }
+    },
+    {
+      "role": "aries_lm34_controller_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/controllers/aries_lm34.out",
+      "metadata": {}
+    },
+    {
+      "role": "aries_lm34_controller_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/controllers/aries_lm34.err",
+      "metadata": {}
+    },
+    {
+      "role": "aries_lm34_controller_pid",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/controllers/aries_lm34.pid",
+      "metadata": {
+        "pid": 3714191
+      }
+    }
+  ],
+  "metadata": {
+    "language": "ja",
+    "dataset": "tagged_acl_raw",
+    "lms": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "runtime": "batched_vllm_rag_eval",
+    "empty_term_map_policy": "omit",
+    "term_map_format": "plain",
+    "strip_output_tags": "term",
+    "retriever": "HN1024",
+    "rag_top_k": 10,
+    "tau": 0.78,
+    "timeline_lookback_sec": 1.92,
+    "max_new_tokens": 80,
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 12288,
+    "placement_plan": {
+      "aries": {
+        "lms": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "gpu_pairs": "lm1=4,5;lm2=6,7;lm3=0,1;lm4=2,3",
+        "mode": "fixed_pairs_after_user_rebalance"
+      },
+      "taurus": {
+        "lms": [
+          3
+        ],
+        "gpu_pairs": "6,7",
+        "mode": "terminated_before_completion"
+      }
+    },
+    "prelaunch_gpu_snapshot": {
+      "aries": "0-3 occupied around 31782 MiB; 4-7 idle",
+      "taurus": "0 busy; 2-5 occupied around 31782 MiB; 6-7 idle at dry-run; use auto-pair wait for lm3/lm4"
+    },
+    "launch_pids": {
+      "aries_lm12_controller_pid": 3710609,
+      "aries_lm34_controller_pid": 3714191,
+      "taurus_lm34_controller_pid": 1820281
+    },
+    "startup_verification": {
+      "verified_utc": "2026-05-25T12:15:00Z",
+      "aries": "lm1 and lm2 entered batched_vllm_rag_eval.py and began loading 15 safetensor shards on GPU pairs 4,5 and 6,7",
+      "taurus": "lm3 entered batched_vllm_rag_eval.py on GPU pair 6,7; lm4 will run after AUTO_PAIR finds an idle pair",
+      "policy_evidence": "launcher logs print term_map_format=plain empty_term_map_policy=omit and disable_rag=0"
+    },
+    "rebalance_20260525T1233": {
+      "reason": "user requested lm=3 and lm=4 be moved to idle aries GPUs 0-3",
+      "taurus_action": "terminated process group 1820281 before any lm3 eval_results.tsv was written; lm4 had not started",
+      "aries_action": "submitted lm3 on GPU pair 0,1 and lm4 on GPU pair 2,3 via controller pid 3714191",
+      "verified": "Taurus no longer has matching lm3 process; Aries lm3/lm4 entered batched_vllm_rag_eval.py"
+    },
+    "partial_failure_20260525T1240": {
+      "scope": "lm1,lm2 on Aries GPU pairs 4,5 and 6,7",
+      "artifact_check": "no eval_results.tsv, instances.log, term_adoption.json, or summary_ja_lm1/lm2.tsv found under output root",
+      "log_evidence": "launcher.err traceback is in vLLM KV-cache initialization: ShmRingBuffer has no attribute shared_memory; cleanup then reports leaked shared_memory warnings",
+      "gpu_state": "Aries GPUs 4-7 released; lm3/lm4 still running on GPUs 0-3"
+    },
+    "completion_20260525T1259": {
+      "completed_lms": [
+        3,
+        4
+      ],
+      "failed_lms": [
+        1,
+        2
+      ],
+      "lm3": {
+        "wandb_run_id": "vj0i4sep",
+        "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/simuleval_eval/runs/vj0i4sep",
+        "eval_results_tsv": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/ja_retr_cap16_exact_r32a32_ep4_hn1024_tau078_omit_batch_max80/ja/dtagacl_bv1_jacap16_hn1024_tau078_omit_lm3_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+        "instances_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/ja_retr_cap16_exact_r32a32_ep4_hn1024_tau078_omit_batch_max80/ja/dtagacl_bv1_jacap16_hn1024_tau078_omit_lm3_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+        "instances_strip_term_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/ja_retr_cap16_exact_r32a32_ep4_hn1024_tau078_omit_batch_max80/ja/dtagacl_bv1_jacap16_hn1024_tau078_omit_lm3_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.strip_term.log",
+        "BLEU": 32.559319295767814,
+        "StreamLAAL": 2874.0482562519724,
+        "StreamLAAL_CA": 2477.7846490438515,
+        "TERM_ACC": 0.8585,
+        "TERM_CORRECT": 807,
+        "TERM_TOTAL": 940
+      },
+      "lm4": {
+        "wandb_run_id": "d4agasop",
+        "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/simuleval_eval/runs/d4agasop",
+        "eval_results_tsv": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/ja_retr_cap16_exact_r32a32_ep4_hn1024_tau078_omit_batch_max80/ja/dtagacl_bv1_jacap16_hn1024_tau078_omit_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+        "instances_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/ja_retr_cap16_exact_r32a32_ep4_hn1024_tau078_omit_batch_max80/ja/dtagacl_bv1_jacap16_hn1024_tau078_omit_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+        "instances_strip_term_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_ja_cap16_hn1024_tau078_omit_batch_20260525T1211_jacap16_hn1024_tau078_omit_lm1to4/ja_retr_cap16_exact_r32a32_ep4_hn1024_tau078_omit_batch_max80/ja/dtagacl_bv1_jacap16_hn1024_tau078_omit_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.strip_term.log",
+        "BLEU": 34.029140266201985,
+        "StreamLAAL": 3324.341739285133,
+        "StreamLAAL_CA": 2301.8604199789397,
+        "TERM_ACC": 0.8574,
+        "TERM_CORRECT": 806,
+        "TERM_TOTAL": 940
+      },
+      "summary_tsv": "not_present_under_output_root; metrics are from verified per-lm eval_results.tsv and W&B log summaries",
+      "process_check": "no active JA jacap16 batched_vllm_rag_eval process found on Aries; current matching active process is unrelated DE origin no-rag lm3",
+      "full_lm1to4_average": "not_available"
+    },
+    "verdict": "lm3_lm4_completed_lm1_lm2_failed_no_full_lm1to4_average"
+  }
+}

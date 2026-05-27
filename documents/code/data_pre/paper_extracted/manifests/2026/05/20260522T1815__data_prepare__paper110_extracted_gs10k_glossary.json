@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T1815__data_prepare__paper110_extracted_gs10k_glossary",
+  "event_type": "data_prepare",
+  "family": "paper_extracted_glossary",
+  "variant": "paper110_extracted_gs10k",
+  "status": "success",
+  "project": "",
+  "wandb_run_id": null,
+  "slurm_job_id": "direct_local",
+  "launcher_path": "documents/code/data_pre/paper_extracted/build_extracted_plus_filler_glossary.py",
+  "notes_path": "documents/code/data_pre/paper_extracted/notes/2026/05/20260522__paper110_extracted_gs10k_glossary.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/data_pre/paper_extracted/build_extracted_plus_filler_glossary.py --extracted documents/data/data_pre/extracted_glossaries_by_paper/extracted_glossary__2022.acl-long.110.json --filler /mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs10000_min_norm2_backfill.json --output documents/data/data_pre/expanded_glossaries_by_paper/expanded_glossary__2022.acl-long.110_gs10000.json --target-size 10000",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "data_builder",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/data_pre/paper_extracted/build_extracted_plus_filler_glossary.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/data_pre/paper_extracted/notes/2026/05/20260522__paper110_extracted_gs10k_glossary.md"
+    },
+    {
+      "role": "paper_extracted_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/data/data_pre/extracted_glossaries_by_paper/extracted_glossary__2022.acl-long.110.json"
+    },
+    {
+      "role": "filler_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs10000_min_norm2_backfill.json"
+    },
+    {
+      "role": "expanded_paper_glossary",
+      "type": "json",
+      "direction": "output",
+      "path": "documents/data/data_pre/expanded_glossaries_by_paper/expanded_glossary__2022.acl-long.110_gs10000.json"
+    }
+  ],
+  "metadata": {
+    "paper_id": "2022.acl-long.110",
+    "target_size": 10000,
+    "output_entries": 10000,
+    "extracted_kept": 56,
+    "filler_added": 9944,
+    "duplicate_filler": 15,
+    "skipped_missing_term": 0
+  }
+}

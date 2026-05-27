@@ -1,0 +1,175 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T0122__analysis__glossary_bank_ablation_zh_fixedraw",
+  "event_type": "analysis",
+  "family": "glossary_bank_ablation",
+  "variant": "zh_tagged_acl_medicine_raw_gs1k_gs10k_fixedraw",
+  "status": "complete",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "40974420",
+  "launcher_path": "documents/code/simuleval/src/build_glossary_bank_ablation_20260525.py",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__glossary_bank_ablation_zh_fixedraw.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/simuleval/src/build_glossary_bank_ablation_20260525.py",
+  "parent_run_ids": [
+    "20260524T0520__simuleval__psc_tagged_acl_new_v9_hn1024_tau078_gs1k_gs10k_fixedraw_zh",
+    "20260524T1119__analysis__psc_tagged_acl_new_v9_gs_fixedraw_strip_recheck",
+    "20260524T0242__simuleval__medicine_hardraw_hn1024_tau078_new_v9_batch",
+    "20260524T1226__simuleval__psc_medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw_zh"
+  ],
+  "artifacts": [
+    {
+      "role": "analysis_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/reposteval_psc_medicine_gs_fixedraw_20260525.py"
+    },
+    {
+      "role": "analysis_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/build_glossary_bank_ablation_20260525.py"
+    },
+    {
+      "role": "finalizer_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__finalize_glossary_bank_ablation_when_psc_done.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__glossary_bank_ablation_zh_fixedraw.md"
+    },
+    {
+      "role": "tagged_acl_merged_report",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260524_tagged_acl_new_v9_hn1024_tau078_zh_raw_gs_fixedraw_data.tsv"
+    },
+    {
+      "role": "medicine_main_result_report",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv"
+    },
+    {
+      "role": "medicine_gs_reposteval_root",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/psc_medicine_gs_reposteval_fixedraw_20260525"
+    },
+    {
+      "role": "ablation_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_glossary_bank_ablation_zh_fixedraw_data.tsv"
+    },
+    {
+      "role": "ablation_summary",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_glossary_bank_ablation_zh_fixedraw_summary.md"
+    },
+    {
+      "role": "low_termacc_investigation",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_medicine_gs10k_lm4_low_termacc_investigation.md"
+    },
+    {
+      "role": "medicine_gs10k_lm4_miss_debug",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/glossary_bank_debug_medicine_gs10k_lm4_20260525"
+    },
+    {
+      "role": "paper_figure",
+      "type": "figure",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/glossary_bank_ablation_zh_fixedraw.pdf"
+    },
+    {
+      "role": "paper_appendix_table",
+      "type": "tex",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/tables/glossary_bank_ablation_zh_fixedraw_appendix.tex"
+    },
+    {
+      "role": "paper_section",
+      "type": "tex",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/sections/results.tex"
+    },
+    {
+      "role": "paper_appendix_section",
+      "type": "tex",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/sections/appendix.tex"
+    },
+    {
+      "role": "paper_main_tex",
+      "type": "tex",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/acl_latex.tex"
+    },
+    {
+      "role": "compiled_paper_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/acl_latex.pdf"
+    }
+  ],
+  "metadata": {
+    "datasets": [
+      "Tagged ACL",
+      "Medicine"
+    ],
+    "lang": "zh",
+    "runtime_banks": [
+      "raw",
+      "gs1k",
+      "gs10k"
+    ],
+    "lms": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "fixed_denominator_policy": "TERM metrics use each task's raw glossary denominator; medicine GS rows are re-postevaled against the local medicine raw main-result source/ref/glossary to keep TERM_TOTAL=673.",
+    "rows_collected": 24,
+    "rows_expected": 24,
+    "missing_rows": [],
+    "pending_psc_job": "40974420",
+    "pending_psc_job_status_checked_utc": "2026-05-25T01:21:49Z",
+    "pending_psc_job_state": "superseded_by_complete_local_fixedraw_table",
+    "medicine_reposteval_root": "/mnt/gemini/data1/jiaxuanluo/psc_medicine_gs_reposteval_fixedraw_20260525",
+    "finalizer_launcher": "documents/code/simuleval/launchers/2026/05/20260525__finalize_glossary_bank_ablation_when_psc_done.sh",
+    "finalizer_pid": "570043",
+    "finalizer_stdout": "/mnt/gemini/data1/jiaxuanluo/logs/glossary_bank_ablation_finalizer_20260525T0122/finalizer.restart.out",
+    "finalizer_stderr": "/mnt/gemini/data1/jiaxuanluo/logs/glossary_bank_ablation_finalizer_20260525T0122/finalizer.restart.err",
+    "finalizer_interval_seconds": 1800,
+    "finalizer_restart_reason": "original finalizer SSH command lacked subprocess timeout and hung during PSC runtime-log lookup",
+    "finalizer_last_update_utc": "2026-05-25T02:01:54.326166Z",
+    "finalizer_last_snapshot": "/mnt/gemini/data1/jiaxuanluo/logs/glossary_bank_ablation_finalizer_20260525T0122/snapshot_20260525T015848Z.txt",
+    "paper_update_utc": "2026-05-25T02:34:31Z",
+    "paper_update_summary": "main text now uses one ACL-only glossary-bank ablation figure; full ACL and medicine rows are moved to an appendix table; medicine is framed as a manually curated strict domain stress test",
+    "main_figure_scope": "Tagged ACL only, zh, raw/gs1k/gs10k, fixed raw denominator, plotted against StreamLAAL",
+    "appendix_scope": "Full Tagged ACL and Medicine zh raw/gs1k/gs10k table under fixed raw denominators",
+    "medicine_framing": "manual curated hard-domain glossary with specialized clinical terms and exact target forms; intended as a difficult stress test rather than a broad easy glossary",
+    "medicine_gs10k_lm4_low_termacc_investigation": {
+      "verdict": "not a fixed-denominator or post-eval bug; gs10k runtime bank introduces more distractors and near-duplicate target variants, reducing strict raw exact-target TERM_ACC",
+      "raw_lm4_term_acc": "573/673",
+      "gs10k_lm4_term_acc": "538/673",
+      "net_correct_drop": 35,
+      "new_gs10k_misses": 59,
+      "fixed_by_gs10k": 24,
+      "top_new_miss": "Radiation Oncologist => 放射肿瘤科医生, 10 new misses; gs10k often also injects radiation oncologists => 放射肿瘤医生",
+      "debug_dir": "/mnt/gemini/data1/jiaxuanluo/glossary_bank_debug_medicine_gs10k_lm4_20260525",
+      "report": "documents/code/simuleval/reports/20260525_medicine_gs10k_lm4_low_termacc_investigation.md"
+    }
+  }
+}

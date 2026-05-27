@@ -1,0 +1,255 @@
+{
+  "schema_version": "1.0",
+  "event_id": "20260525T070739__simuleval__tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_lm4first_taurus8",
+  "event_type": "simuleval",
+  "family": "tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078",
+  "variant": "omit_empty_termmap_lm4first_taurus8",
+  "status": "success_verified_eval_results_summary_regenerated",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_aries_lm1to4.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_taurus8.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && RUN_STAMP=20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8 ROOT_DIR=/home/jiaxuanluo/InfiniSST LMS=\"4 1 2 3\" GPU_PAIRS_CSV=\"6,7;2,3;4,5;0,1\" MODEL_NAME=/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_de_retriever_cap16_exactboundary_r32a32_ep4_taurus8/keep1.0_r32/v1-20260525-141908-hf MODEL_LABEL=de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80 DENSITY_TAG=tagacl_bv1_decap16_hn1024_tau078_omit EMPTY_TERM_MAP_POLICY=omit WANDB_LOG_OVERRIDE=0 NOTES_FILE=/home/jiaxuanluo/InfiniSST/documents/code/simuleval/notes/2026/05/20260525__tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_taurus8.md OUT_ROOT=/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8 LOG_ROOT=/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8 EVAL_TMPDIR_ROOT=/tmp/jx_dc16o bash documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_aries_lm1to4.sh' > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/top.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/top.pid",
+  "parent_run_ids": [
+    "wtkgnf8k"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_aries_lm1to4.sh",
+      "metadata": {
+        "used_with_env_overrides": true
+      }
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_taurus8.md",
+      "metadata": {}
+    },
+    {
+      "role": "parent_training_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/train/sst_omni_train/manifests/2026/05/20260525T0620__speech_llm_train__de_retriever_cap16_exactboundary_r32a32_ep4_taurus8.json",
+      "metadata": {
+        "event_id": "20260525T0620__speech_llm_train__de_retriever_cap16_exactboundary_r32a32_ep4_taurus8",
+        "wandb_run_id": "wtkgnf8k"
+      }
+    },
+    {
+      "role": "hf_model",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_de_retriever_cap16_exactboundary_r32a32_ep4_taurus8/keep1.0_r32/v1-20260525-141908-hf",
+      "metadata": {
+        "source_megatron_run_dir": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_de_retriever_cap16_exactboundary_r32a32_ep4_taurus8/keep1.0_r32/v1-20260525-141908"
+      }
+    },
+    {
+      "role": "eval_input_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all",
+      "metadata": {
+        "lang": "de",
+        "talk_count": 5
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "dataset": "acl_tagged_raw"
+      }
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever": "HN1024"
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8",
+      "metadata": {}
+    },
+    {
+      "role": "slurm_logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8",
+      "metadata": {
+        "detached_pid_file": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/top.pid"
+      }
+    },
+    {
+      "role": "summary_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/__summary__/summary_de_lm1to4.tsv",
+      "metadata": {
+        "generated_from_verified_eval_results": true
+      }
+    },
+    {
+      "role": "eval_results_lm1",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_decap16_hn1024_tau078_omit_lm1_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {
+        "lm": 1,
+        "lang": "de",
+        "dataset": "acl_tagged_raw"
+      }
+    },
+    {
+      "role": "eval_results_lm2",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_decap16_hn1024_tau078_omit_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {
+        "lm": 2,
+        "lang": "de",
+        "dataset": "acl_tagged_raw"
+      }
+    },
+    {
+      "role": "eval_results_lm3",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_decap16_hn1024_tau078_omit_lm3_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {
+        "lm": 3,
+        "lang": "de",
+        "dataset": "acl_tagged_raw"
+      }
+    },
+    {
+      "role": "eval_results_lm4",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_decap16_hn1024_tau078_omit_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {
+        "lm": 4,
+        "lang": "de",
+        "dataset": "acl_tagged_raw"
+      }
+    }
+  ],
+  "metadata": {
+    "host": "taurus",
+    "language": "de",
+    "dataset": "acl_tagged_raw",
+    "method": "RASST",
+    "latency_multipliers": [
+      4,
+      1,
+      2,
+      3
+    ],
+    "priority_lm": 4,
+    "gpu_pairs_csv": "6,7;2,3;4,5;0,1",
+    "empty_term_map_policy": "omit",
+    "max_new_tokens": 80,
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 12288,
+    "rag_score_threshold": 0.78,
+    "rag_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "wandb_logging": false,
+    "top_pid": 1296639,
+    "hf_validation": {
+      "config_json": true,
+      "generation_config_json": true,
+      "model_safetensors_index_json": true,
+      "model_safetensors_shards": 15
+    },
+    "startup_evidence": {
+      "top_pid_alive": true,
+      "vllm_workers_seen": true,
+      "lm4_log_contains_empty_term_map_policy_omit": true,
+      "lm4_log_contains_model_load": true
+    },
+    "status_note": "All four LM eval_results.tsv artifacts validated; top-level launcher nonzero was isolated to the post-eval summary glob bug and summaries were regenerated after patching the launcher.",
+    "metrics_by_lm": {
+      "1": {
+        "BLEU": 23.682026877726994,
+        "StreamLAAL": 1045.8916167264242,
+        "StreamLAAL_CA": 1238.3764058319016,
+        "TERM_ACC": 0.8225,
+        "TERM_CORRECT": 769,
+        "TERM_TOTAL": 935,
+        "instances_log_rows": 5,
+        "instances_strip_term_log_rows": 5,
+        "eval_results": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_decap16_hn1024_tau078_omit_lm1_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+        "instances_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_decap16_hn1024_tau078_omit_lm1_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+        "instances_strip_term_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_decap16_hn1024_tau078_omit_lm1_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.strip_term.log"
+      },
+      "2": {
+        "BLEU": 29.992105770035295,
+        "StreamLAAL": 1667.3326879681133,
+        "StreamLAAL_CA": 1333.19406265491,
+        "TERM_ACC": 0.8588,
+        "TERM_CORRECT": 803,
+        "TERM_TOTAL": 935,
+        "instances_log_rows": 5,
+        "instances_strip_term_log_rows": 5,
+        "eval_results": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_decap16_hn1024_tau078_omit_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+        "instances_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_decap16_hn1024_tau078_omit_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+        "instances_strip_term_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_decap16_hn1024_tau078_omit_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.strip_term.log"
+      },
+      "3": {
+        "BLEU": 32.27522974377592,
+        "StreamLAAL": 2242.508226519302,
+        "StreamLAAL_CA": 1025.018403673305,
+        "TERM_ACC": 0.8471,
+        "TERM_CORRECT": 792,
+        "TERM_TOTAL": 935,
+        "instances_log_rows": 5,
+        "instances_strip_term_log_rows": 5,
+        "eval_results": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_decap16_hn1024_tau078_omit_lm3_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+        "instances_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_decap16_hn1024_tau078_omit_lm3_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+        "instances_strip_term_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_decap16_hn1024_tau078_omit_lm3_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.strip_term.log"
+      },
+      "4": {
+        "BLEU": 32.53429001914321,
+        "StreamLAAL": 2778.312924274232,
+        "StreamLAAL_CA": 1347.4342274010157,
+        "TERM_ACC": 0.8749,
+        "TERM_CORRECT": 818,
+        "TERM_TOTAL": 935,
+        "instances_log_rows": 5,
+        "instances_strip_term_log_rows": 5,
+        "eval_results": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_decap16_hn1024_tau078_omit_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+        "instances_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_decap16_hn1024_tau078_omit_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+        "instances_strip_term_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_decap16_hn1024_tau078_omit_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.strip_term.log"
+      }
+    },
+    "validation": {
+      "eval_results_tsv_count": 4,
+      "all_lms_present": true,
+      "instances_log_rows_each_lm": 5,
+      "instances_strip_term_log_rows_each_lm": 5,
+      "term_total_each_lm": 935
+    },
+    "post_eval_summary_fix": {
+      "launcher_exit_nonzero_due_to_summary_glob_bug": true,
+      "bug": "Python Path.glob pattern 'de/**_lm{lm}_*/eval_results.tsv' is invalid because '**' must be a full path component.",
+      "fix": "patched launcher to use 'de/*_lm{lm}_*/eval_results.tsv' and regenerated summaries from verified eval_results.tsv files",
+      "summary_path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/__summary__/summary_de_lm1to4.tsv"
+    }
+  }
+}

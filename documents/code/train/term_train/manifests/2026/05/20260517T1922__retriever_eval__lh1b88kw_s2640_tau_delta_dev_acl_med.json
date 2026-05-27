@@ -1,0 +1,300 @@
+{
+  "schema_version": 1,
+  "event_id": "20260517T1922__retriever_eval__lh1b88kw_s2640_tau_delta_dev_acl_med",
+  "event_type": "retriever_eval",
+  "family": "sst_ood_hardneg",
+  "variant": "lh1b88kw_s2640_tau_delta",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": "4g108a3w",
+  "slurm_job_id": "direct_lh1b88kw_tau_delta",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260517__lh1b88kw_s2640_tau_delta_dev_acl_med_aries1_eval.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260517__lh1b88kw_s2640_tau_delta_dev_acl_med_eval.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "nohup env CUDA_VISIBLE_DEVICES=0 SLURM_JOB_PARTITION=aries SLURM_JOB_ID=direct_lh1b88kw_tau_delta bash /mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/train/term_train/launchers/2026/05/20260517__lh1b88kw_s2640_tau_delta_dev_acl_med_aries1_eval.sh > /mnt/gemini/data1/jiaxuanluo/logs/direct_lh1b88kw_tau_delta_20260517T193520.out 2> /mnt/gemini/data1/jiaxuanluo/logs/direct_lh1b88kw_tau_delta_20260517T193520.err &",
+  "parent_run_ids": [
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260517__lh1b88kw_s2640_tau_delta_dev_acl_med_aries1_eval.sh"
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh"
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py"
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260517__lh1b88kw_s2640_tau_delta_dev_acl_med_eval.md"
+    },
+    {
+      "role": "source_wandb_run",
+      "type": "wandb_run",
+      "direction": "input",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/lh1b88kw"
+    },
+    {
+      "role": "source_checkpoint",
+      "type": "model_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "run_id": "lh1b88kw",
+        "slurm_job_id": "45227",
+        "anchor": "secondary",
+        "step": 2640,
+        "metric": "eval_acl6060/recall@10"
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_varctx2p88_3p84_4p80_5p76.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_varctx2p88_3p84_4p80_5p76_new_version.jsonl",
+      "metadata": {
+        "usage": "tau calibration only",
+        "glossary_sizes": [
+          "base",
+          10000,
+          100000
+        ]
+      }
+    },
+    {
+      "role": "dev_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample1000000.json"
+    },
+    {
+      "role": "acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_extracted_paper_glossary_varctx2p88_3p84_4p80_5p76/acl6060_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout only",
+        "glossary_sizes": [
+          "base",
+          1000,
+          10000
+        ]
+      }
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_gt_union_gs10000_min_norm2_backfill.json",
+      "metadata": {
+        "min_norm_chars": 2,
+        "backfilled_to_bank_size": 10000
+      }
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76/medicine_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout only",
+        "glossary_sizes": [
+          "base",
+          1000,
+          10000
+        ]
+      }
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76/medicine_glossary_gt_plus_medicine_wiki_gs10000.json"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs"
+    },
+    {
+      "role": "slurm_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/45243_q3_lh1b88kw_tau_delta_q3_lh1b88kw_tau_delta.out"
+    },
+    {
+      "role": "slurm_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/45243_q3_lh1b88kw_tau_delta_q3_lh1b88kw_tau_delta.err"
+    },
+    {
+      "role": "direct_attempt_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_lh1b88kw_tau_delta_20260517T193314.out",
+      "metadata": {
+        "pid": 2968649,
+        "status": "failed_before_wandb_init"
+      }
+    },
+    {
+      "role": "direct_attempt_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_lh1b88kw_tau_delta_20260517T193314.err",
+      "metadata": {
+        "pid": 2968649,
+        "status": "failed_before_wandb_init"
+      }
+    },
+    {
+      "role": "direct_run_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_lh1b88kw_tau_delta_20260517T193520.out",
+      "metadata": {
+        "pid": 2968692,
+        "status": "finished",
+        "wandb_run_id": "4g108a3w"
+      }
+    },
+    {
+      "role": "direct_run_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_lh1b88kw_tau_delta_20260517T193520.err",
+      "metadata": {
+        "pid": 2968692,
+        "status": "finished",
+        "wandb_run_id": "4g108a3w"
+      }
+    }
+  ],
+  "metadata": {
+    "data_tag": "vctx576_lh1b88kw_tau_delta",
+    "extra_wandb_tags": [
+      "variant:lh1b88kw_s2640_tau_delta",
+      "compute:aries-1gpu",
+      "calibration:dev_delta",
+      "readout:acl_med"
+    ],
+    "calibration_rule": {
+      "selection_source": "dev only",
+      "tau_zero_metric": "raw recall@10",
+      "selection_metric": "topk10_chunk_any_positive_filtered_recall",
+      "selection_sizes": [
+        "base",
+        "gs10000",
+        "gs100000"
+      ],
+      "deltas_pp": [
+        0.5,
+        1.0,
+        1.5
+      ],
+      "decision": "pick largest tau with max recall drop across sizes <= delta; report precision alongside selected tau values"
+    },
+    "held_out_readout": {
+      "domains": [
+        "acl6060",
+        "medicine"
+      ],
+      "sizes": [
+        "base",
+        "gs1000",
+        "gs10000"
+      ],
+      "not_used_for_tau_selection": true
+    },
+    "threshold_grid": [
+      0.7,
+      0.71,
+      0.72,
+      0.73,
+      0.74,
+      0.75,
+      0.76,
+      0.77,
+      0.78,
+      0.79,
+      0.8,
+      0.81,
+      0.82,
+      0.83,
+      0.84,
+      0.85,
+      0.86,
+      0.87,
+      0.88,
+      0.89,
+      0.9
+    ],
+    "eval_glossary_match_min_norm_chars": 2,
+    "eval_score_device": "cuda",
+    "eval_score_query_chunk": 256,
+    "eval_score_text_chunk": 1024,
+    "fixed_audio_seconds": 5.76,
+    "eval_fixed_audio_seconds": 5.76,
+    "text_model_id": "BAAI/bge-m3",
+    "audio_model_id": "Atotti/Qwen3-Omni-AudioTransformer",
+    "term_id_normalize": "aggressive",
+    "slurm_job_name": "q3_lh1b88kw_tau_delta",
+    "slurm_partition": "aries",
+    "num_gpus": 1,
+    "time_limit": "24:00:00",
+    "completed_at_utc": "2026-05-17T19:46:59+00:00",
+    "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/4g108a3w",
+    "queued_slurm_backup": {
+      "slurm_job_id": "45243",
+      "status": "cancelled_after_direct_run_started",
+      "cancelled_at_utc": "2026-05-17T19:36:00+00:00"
+    },
+    "manual_direct_attempts": [
+      {
+        "attempt_id": "direct_lh1b88kw_tau_delta_20260517T193314",
+        "host": "aries",
+        "pid": 2968649,
+        "status": "failed_before_wandb_init",
+        "launched_at_utc": "2026-05-17T19:33:14+00:00",
+        "cuda_visible_devices": "0",
+        "slurm_job_id_env": "direct_lh1b88kw_tau_delta",
+        "stdout": "/mnt/gemini/data1/jiaxuanluo/logs/direct_lh1b88kw_tau_delta_20260517T193314.out",
+        "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/direct_lh1b88kw_tau_delta_20260517T193314.err",
+        "failure_reason": "launcher path was not found from the aries /home checkout; no WandB run was created"
+      },
+      {
+        "attempt_id": "direct_lh1b88kw_tau_delta_20260517T193520",
+        "host": "aries",
+        "pid": 2968692,
+        "status": "finished",
+        "wandb_run_id": "4g108a3w",
+        "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/4g108a3w",
+        "launched_at_utc": "2026-05-17T19:35:20+00:00",
+        "cuda_visible_devices": "0",
+        "slurm_job_id_env": "direct_lh1b88kw_tau_delta",
+        "stdout": "/mnt/gemini/data1/jiaxuanluo/logs/direct_lh1b88kw_tau_delta_20260517T193520.out",
+        "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/direct_lh1b88kw_tau_delta_20260517T193520.err"
+      }
+    ]
+  }
+}

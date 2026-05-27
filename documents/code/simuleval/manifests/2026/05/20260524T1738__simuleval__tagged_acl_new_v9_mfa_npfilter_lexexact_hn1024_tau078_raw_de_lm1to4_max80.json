@@ -1,0 +1,197 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T1738__simuleval__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_de_lm1to4_max80",
+  "event_type": "simuleval",
+  "family": "tagged_acl_new_v9_hn1024_tau078",
+  "variant": "de_raw_lm1to4_new_v9_mfa_npfilter_lexexact_hn1024_tau078_same_lm_batch_v1_max80",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_de_lm1to4_taurus.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_de_lm1to4_taurus.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && RUN_STAMP=20260524T1738_tagacl_newv9_mfa_npfilter_de_batch_mt80 bash documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_de_lm1to4_taurus.sh'",
+  "parent_run_ids": [
+    "6l7ncy2v"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_de_lm1to4_taurus.sh"
+    },
+    {
+      "role": "delegate_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_de_lm1to4_taurus.md"
+    },
+    {
+      "role": "speech_llm_model",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_new_v9_mfa_npfilter_srcunion_lexexact_oldnewv3_de_r32a64_tp2_taurus8/keep1.0_r32/v0-20260525-001708-hf"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_same_lm_batch_v1_mfa_npfilter_hn1024_tau078_raw_de_lm1to4_20260524T1738_tagacl_newv9_mfa_npfilter_de_batch_mt80"
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_same_lm_batch_v1_mfa_npfilter_hn1024_tau078_raw_de_lm1to4_20260524T1738_tagacl_newv9_mfa_npfilter_de_batch_mt80"
+    },
+    {
+      "role": "watch_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_same_lm_batch_v1_mfa_npfilter_hn1024_tau078_raw_de_lm1to4_20260524T1738_tagacl_newv9_mfa_npfilter_de_batch_mt80/watch_submit.out"
+    },
+    {
+      "role": "watch_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_same_lm_batch_v1_mfa_npfilter_hn1024_tau078_raw_de_lm1to4_20260524T1738_tagacl_newv9_mfa_npfilter_de_batch_mt80/watch_submit.err"
+    },
+    {
+      "role": "summary_md",
+      "artifact_type": "markdown",
+      "direction": "output",
+      "path_or_uri": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_same_lm_batch_v1_mfa_npfilter_hn1024_tau078_raw_de_lm1to4_20260524T1738_tagacl_newv9_mfa_npfilter_de_batch_mt80/new_v9_mfa_npfilter_lexexact_oldnewv3_de_r32a64_hn1024_tau078_same_lm_batch_v1/__summary__/summary_de_raw_lm1to4_same_lm_batch_v1_max80_wordfix.md",
+      "exists_local": 1,
+      "metadata": {
+        "word_boundary_fix": true
+      }
+    },
+    {
+      "role": "summary_tsv",
+      "artifact_type": "tsv",
+      "direction": "output",
+      "path_or_uri": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_same_lm_batch_v1_mfa_npfilter_hn1024_tau078_raw_de_lm1to4_20260524T1738_tagacl_newv9_mfa_npfilter_de_batch_mt80/new_v9_mfa_npfilter_lexexact_oldnewv3_de_r32a64_hn1024_tau078_same_lm_batch_v1/__summary__/summary_de_raw_lm1to4_same_lm_batch_v1_max80_wordfix.tsv",
+      "exists_local": 1,
+      "metadata": {
+        "word_boundary_fix": true
+      }
+    },
+    {
+      "role": "main_result_tsv",
+      "artifact_type": "tsv",
+      "direction": "output",
+      "path_or_uri": "documents/code/simuleval/reports/20260524_main_result_data.tsv",
+      "exists_local": 1,
+      "metadata": {
+        "updated_de_rows": true,
+        "word_boundary_fix": true
+      }
+    },
+    {
+      "role": "paper_main_figure",
+      "artifact_type": "pdf",
+      "direction": "output",
+      "path_or_uri": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.pdf",
+      "exists_local": 1,
+      "metadata": {
+        "updated_de_panel": true,
+        "word_boundary_fix": true
+      }
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "latency_multipliers": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "runtime_glossary": "acl6060_tagged_gt_raw_min_norm2",
+    "metric_glossary_policy": "fixed_raw_tagged_acl",
+    "retriever_id": "lh1b88kw",
+    "rag_tau": 0.78,
+    "rag_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "strip_output_tags": [
+      "term"
+    ],
+    "hf_wait_policy": "wait for 15 safetensor shards plus model index and tokenizer_config before eval",
+    "eval_mode": "same_lm_batch_v1",
+    "talks_per_lm": 5,
+    "scheduler_batch_size": 5,
+    "max_num_seqs": 5,
+    "launch_time_utc": "2026-05-24T17:38:27Z",
+    "max_new_tokens": 80,
+    "max_new_tokens_policy": "fixed",
+    "supersedes_event_id": "20260524T1733__simuleval__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_de_lm1to4",
+    "startup_pid_recorded_utc": "2026-05-24T17:38:45Z",
+    "monitor_finished_utc": "2026-05-24T17:58:49Z",
+    "summary_path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_same_lm_batch_v1_mfa_npfilter_hn1024_tau078_raw_de_lm1to4_20260524T1738_tagacl_newv9_mfa_npfilter_de_batch_mt80/new_v9_mfa_npfilter_lexexact_oldnewv3_de_r32a64_hn1024_tau078_same_lm_batch_v1/__summary__/summary_de_raw_lm1to4_same_lm_batch_v1_max80_wordfix.md",
+    "completed_utc": "2026-05-24T18:20:00+00:00",
+    "lm1_retry_reason": "initial same-lm batch hit vLLM audio prompt limit 64; rerun lm1 with VLLM_LIMIT_AUDIO_OVERRIDE=128",
+    "lm1_retry_wandb_run_id": "isqdoqcb",
+    "lm2_lm3_lm4_post_eval_logger_caveat": "eval_results.tsv written, but wrapper emitted shell EOF after eval during post-eval/W&B logging block",
+    "latency_caveat": null,
+    "summary_tsv": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_same_lm_batch_v1_mfa_npfilter_hn1024_tau078_raw_de_lm1to4_20260524T1738_tagacl_newv9_mfa_npfilter_de_batch_mt80/new_v9_mfa_npfilter_lexexact_oldnewv3_de_r32a64_hn1024_tau078_same_lm_batch_v1/__summary__/summary_de_raw_lm1to4_same_lm_batch_v1_max80_wordfix.tsv",
+    "summary_md": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_same_lm_batch_v1_mfa_npfilter_hn1024_tau078_raw_de_lm1to4_20260524T1738_tagacl_newv9_mfa_npfilter_de_batch_mt80/new_v9_mfa_npfilter_lexexact_oldnewv3_de_r32a64_hn1024_tau078_same_lm_batch_v1/__summary__/summary_de_raw_lm1to4_same_lm_batch_v1_max80_wordfix.md",
+    "main_result_tsv": "documents/code/simuleval/reports/20260524_main_result_data.tsv",
+    "paper_main_figure": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.pdf",
+    "metrics": {
+      "lm1": {
+        "BLEU": 26.24872577577687,
+        "TERM_ACC": 0.8428,
+        "REAL_TERM_ADOPT": 0.868252,
+        "TERM_FCR": 0.215743,
+        "StreamLAAL": 1015.7327002742376,
+        "TERM": "788/935"
+      },
+      "lm2": {
+        "BLEU": 29.926444569587574,
+        "TERM_ACC": 0.8599,
+        "REAL_TERM_ADOPT": 0.877021,
+        "TERM_FCR": 0.201635,
+        "StreamLAAL": 1671.2546994021263,
+        "TERM": "804/935"
+      },
+      "lm3": {
+        "BLEU": 30.810010597452628,
+        "TERM_ACC": 0.8556,
+        "REAL_TERM_ADOPT": 0.858777,
+        "TERM_FCR": 0.164524,
+        "StreamLAAL": 2157.64323091157,
+        "TERM": "800/935"
+      },
+      "lm4": {
+        "BLEU": 31.699297543350994,
+        "TERM_ACC": 0.8492,
+        "REAL_TERM_ADOPT": 0.87264,
+        "TERM_FCR": 0.146096,
+        "StreamLAAL": 2718.3162517484,
+        "TERM": "794/935"
+      }
+    },
+    "word_boundary_fix": "German batch predictions reconstructed from runtime llm_output records with explicit chunk-boundary spaces before word-level StreamLAAL scoring; batched_vllm_rag_eval.py now applies this when writing de instances.log and fails on prediction/delay unit mismatch."
+  },
+  "pid": 3849624
+}

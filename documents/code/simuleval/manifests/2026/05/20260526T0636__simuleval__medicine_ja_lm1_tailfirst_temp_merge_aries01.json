@@ -1,0 +1,120 @@
+{
+  "schema_version": "1.0",
+  "event_id": "20260526T0636__simuleval__medicine_ja_lm1_tailfirst_temp_merge_aries01",
+  "event_type": "simuleval",
+  "family": "medicine_hardraw_main_result_rescue",
+  "variant": "ja_lm1_tailfirst_temp_promptfix_vllmaudio128_merge",
+  "status": "superseded",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260526__medicine_ja_lm1_tailfirst_temp_promptfix_vllmaudio128_aries01.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260526__medicine_ja_lm1_tailfirst_temp_merge.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'ssh aries \"setsid /mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/simuleval/launchers/2026/05/20260526__medicine_ja_lm1_tailfirst_temp_promptfix_vllmaudio128_aries01.sh > /mnt/gemini/data1/jiaxuanluo/logs/medicine_ja_lm1_tailfirst_temp_promptfix_vllmaudio128_20260526T0636_aries01/outer.out 2> /mnt/gemini/data1/jiaxuanluo/logs/medicine_ja_lm1_tailfirst_temp_promptfix_vllmaudio128_20260526T0636_aries01/outer.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/medicine_ja_lm1_tailfirst_temp_promptfix_vllmaudio128_20260526T0636_aries01/outer.pid\"'",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260526__medicine_ja_lm1_tailfirst_temp_promptfix_vllmaudio128_aries01.sh",
+      "metadata": {}
+    },
+    {
+      "role": "merge_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/merge_ja_medicine_lm1_tailfirst_20260526.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260526__medicine_ja_lm1_tailfirst_temp_merge.md",
+      "metadata": {}
+    },
+    {
+      "role": "source_list",
+      "type": "text",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_ja_lm1_tailfirst_temp_promptfix_vllmaudio128_20260526T0636_aries01/inputs_tailfirst/medicine.source__medicine5_tailfirst_605000_606_first.txt",
+      "metadata": {
+        "sample_order": [
+          "605000",
+          "606",
+          "404",
+          "545006",
+          "596001"
+        ]
+      }
+    },
+    {
+      "role": "target_list",
+      "type": "text",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_ja_lm1_tailfirst_temp_promptfix_vllmaudio128_20260526T0636_aries01/inputs_tailfirst/medicine.target.ja__medicine5_tailfirst_605000_606_first.txt",
+      "metadata": {
+        "sample_order": [
+          "605000",
+          "606",
+          "404",
+          "545006",
+          "596001"
+        ]
+      }
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_ja_new_promptfix_vllmaudio128_lm12_20260526T043330_aries/ja/__medicine_inputs__/lists/hard_medicine_raw__medicine5.json",
+      "metadata": {
+        "dataset": "medicine_hardraw"
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_ja_lm1_tailfirst_temp_promptfix_vllmaudio128_20260526T0636_aries01",
+      "metadata": {
+        "host": "aries",
+        "gpu_pair": "0,1",
+        "lm": 1
+      }
+    },
+    {
+      "role": "merged_eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_ja_lm1_tailfirst_temp_promptfix_vllmaudio128_20260526T0636_aries01/__merged_from_orig3_tail2",
+      "metadata": {
+        "merge_rule": "orig first 3 rows plus tailfirst first 2 rows"
+      }
+    },
+    {
+      "role": "slurm_logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_ja_lm1_tailfirst_temp_promptfix_vllmaudio128_20260526T0636_aries01",
+      "metadata": {
+        "launcher": "detached ssh"
+      }
+    }
+  ],
+  "metadata": {
+    "lang": "ja",
+    "dataset": "medicine_hardraw",
+    "lm": 1,
+    "mode": "serial_simuleval_promptfix",
+    "vllm_limit_audio": 128,
+    "max_cache_chunks": 30,
+    "keep_cache_chunks": 30,
+    "max_new_tokens": 40,
+    "temporary_rescue": true,
+    "verdict": "superseded_by_completed_original_serial_lm1",
+    "superseded_reason": "Original five-sample serial lm1 completed before tail-first merge produced enough rows; tail-first job stopped to free GPUs."
+  }
+}

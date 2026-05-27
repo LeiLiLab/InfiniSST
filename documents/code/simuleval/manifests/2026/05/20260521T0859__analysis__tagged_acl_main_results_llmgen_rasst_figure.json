@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "event_id": "20260521T0859__analysis__tagged_acl_main_results_llmgen_rasst_figure",
+  "event_type": "analysis",
+  "family": "tagged_acl_llmgen_bsz4_tau073",
+  "variant": "fourline_main_results_replace_rasst_with_llm_generated_termmap_sft_raw",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/src/plot_tagged_acl_main_results_20260520.py",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260521__tagged_acl_main_results_llmgen_rasst_figure.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/simuleval/src/plot_tagged_acl_main_results_20260520.py --rasst-summary-tsv /mnt/aries/data7/jiaxuanluo/slm/tagged_acl_llmgen_sft_tau073_full_20260521T050150/__summary__/summary_metrics_llmgen_sft_full.tsv --rasst-glossary raw --output-prefix documents/code/simuleval/reports/20260521_tagged_acl_main_results_fourline_llmgen_rasst --plot-data-tsv documents/code/simuleval/reports/20260521_tagged_acl_main_results_fourline_llmgen_rasst_data.tsv",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "analysis_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/plot_tagged_acl_main_results_20260520.py",
+      "metadata": {
+        "rasst_source": "llm_generated_termmap_sft_summary",
+        "rasst_glossary": "raw"
+      }
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260521__tagged_acl_main_results_llmgen_rasst_figure.md",
+      "metadata": {}
+    },
+    {
+      "role": "source_simuleval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260520T1435__simuleval__tagged_acl_origin_bsz4_tau073_missing_de_resume.json",
+      "metadata": {
+        "source": "current no term-map SFT SLLM+RAG raw line"
+      }
+    },
+    {
+      "role": "source_simuleval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260521T0501__simuleval__tagged_acl_llmgen_sft_tau073_full.json",
+      "metadata": {
+        "source": "replacement RASST llm-generated term-map SFT line"
+      }
+    },
+    {
+      "role": "current_eval_output",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/tagged_acl_origin_bsz4_tau073_baseline_20260520T1010_ragreset_full_mp3/full",
+      "metadata": {
+        "selected_glossary": "raw"
+      }
+    },
+    {
+      "role": "rasst_summary",
+      "type": "markdown",
+      "direction": "input",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_llmgen_sft_tau073_full_20260521T050150/__summary__/summary_metrics_llmgen_sft_full.md",
+      "metadata": {
+        "selected_glossary": "raw"
+      }
+    },
+    {
+      "role": "rasst_summary",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_llmgen_sft_tau073_full_20260521T050150/__summary__/summary_metrics_llmgen_sft_full.tsv",
+      "metadata": {
+        "selected_glossary": "raw",
+        "used_for_cross_check": true
+      }
+    },
+    {
+      "role": "figure_png",
+      "type": "image",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260521_tagged_acl_main_results_fourline_llmgen_rasst.png",
+      "metadata": {}
+    },
+    {
+      "role": "figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260521_tagged_acl_main_results_fourline_llmgen_rasst.pdf",
+      "metadata": {}
+    },
+    {
+      "role": "plot_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260521_tagged_acl_main_results_fourline_llmgen_rasst_data.tsv",
+      "metadata": {
+        "contains": "rows used for second four-line figure"
+      }
+    }
+  ],
+  "metadata": {
+    "acl_usage": "held-out readout only",
+    "metric_denominator": "tagged raw glossary",
+    "x_axis": "StreamLAAL",
+    "panels": "2x3 term accuracy and BLEU for zh,de,ja",
+    "rasst_replacement": "llm-generated term-map SFT",
+    "rasst_glossary_selection": "raw"
+  }
+}

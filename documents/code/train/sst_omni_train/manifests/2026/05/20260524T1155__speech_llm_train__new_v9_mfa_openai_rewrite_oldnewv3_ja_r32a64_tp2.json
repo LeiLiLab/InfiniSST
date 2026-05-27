@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T1155__speech_llm_train__new_v9_mfa_openai_rewrite_oldnewv3_ja_r32a64_tp2",
+  "event_type": "speech_llm_train",
+  "family": "speech_llm_tcm_termmap",
+  "variant": "new_v9_mfa_openai_rewrite_oldnewv3_ja_r32a64_tp2",
+  "status": "running",
+  "project": "sst_omni",
+  "wandb_run_id": "f0kofhtv",
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__speech_llm_new_v9_mfa_openai_rewrite_oldnewv3_de_ja_taurus4_r32a64_tp2.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260524__speech_llm_new_v9_mfa_openai_rewrite_oldnewv3_ja_r32a64_tp2.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'LANG_CODE_OVERRIDE=ja ROOT_DIR_OVERRIDE=/home/jiaxuanluo/InfiniSST HOST_GPU_DEVICES_OVERRIDE=0,1,2,3 COMPUTE_TAG_OVERRIDE=taurus4 SAVE_BASE_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_new_v9_mfa_openai_rewrite_oldnewv3_ja_r32a64_tp2_taurus4 TRAIN_LOG_DIR_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_new_v9_mfa_openai_rewrite_oldnewv3_ja_r32a64_tp2_taurus4 WANDB_EXP_PREFIX_OVERRIDE=speech-llm-new_v9-mfa-openai-oldnewv3-ja-r32a64-tp2-taurus4 bash documents/code/train/sst_omni_train/launchers/2026/05/20260524__speech_llm_new_v9_mfa_openai_rewrite_oldnewv3_de_ja_taurus4_r32a64_tp2.sh'",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__speech_llm_new_v9_mfa_openai_rewrite_oldnewv3_de_ja_taurus4_r32a64_tp2.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260524__speech_llm_new_v9_mfa_openai_rewrite_oldnewv3_ja_r32a64_tp2.md"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_mfa_openai_rewrite_oldnewv3_ja_20260524/train_s_ja_new_v9_mfa_openai_rewrite_oldnewv3.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_mfa_openai_rewrite_oldnewv3_ja_20260524/dev_s_ja_new_v9_mfa_openai_rewrite_oldnewv3_first355.jsonl"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_new_v9_mfa_openai_rewrite_oldnewv3_ja_r32a64_tp2_taurus4"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_new_v9_mfa_openai_rewrite_oldnewv3_ja_r32a64_tp2_taurus4"
+    },
+    {
+      "role": "detached_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/train_speech_llm_new_v9_mfa_openai_rewrite_oldnewv3_ja_taurus4_20260524T135904.out"
+    },
+    {
+      "role": "detached_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/train_speech_llm_new_v9_mfa_openai_rewrite_oldnewv3_ja_taurus4_20260524T135904.err"
+    },
+    {
+      "role": "pid_file",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/train_speech_llm_new_v9_mfa_openai_rewrite_oldnewv3_ja_taurus4_20260524T135904.pid"
+    }
+  ],
+  "metadata": {
+    "rank": 32,
+    "alpha": 64,
+    "tp": 2,
+    "ep": 4,
+    "epochs": 1,
+    "storage_root": "/mnt/gemini/data1"
+  }
+}

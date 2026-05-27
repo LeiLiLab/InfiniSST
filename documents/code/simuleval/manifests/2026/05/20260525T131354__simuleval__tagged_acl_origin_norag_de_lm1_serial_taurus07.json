@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T131354__simuleval__tagged_acl_origin_norag_de_lm1_serial_taurus07",
+  "event_type": "simuleval",
+  "family": "tagged_acl_origin_norag",
+  "variant": "de_lm1_serial_taurus07",
+  "status": "completed_success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_origin_norag_de_lm1_serial_taurus07.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_origin_norag_de_lm1_serial_taurus07.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid env RUN_STAMP=20260525T131354_tagacl_origin_norag_de_lm1_serial_taurus07 GPU_PAIR=0,7 bash documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_origin_norag_de_lm1_serial_taurus07.sh > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm1_serial_taurus07_20260525T131354_tagacl_origin_norag_de_lm1_serial_taurus07/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm1_serial_taurus07_20260525T131354_tagacl_origin_norag_de_lm1_serial_taurus07/top.err < /dev/null &",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_origin_norag_de_lm1_serial_taurus07.sh"
+    },
+    {
+      "role": "baseline_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/rank16/baseline/bypass_simuleval_rank32_iter_0000452_hf_baseline_no_rag_sweep.sh"
+    },
+    {
+      "role": "post_eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/offline_sst_eval/offline_streamlaal_eval.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_origin_norag_de_lm1_serial_taurus07.md"
+    },
+    {
+      "role": "speech_llm_checkpoint",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-de-s_origin-bsz4"
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "acl6060_dataset",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/taurus/data/siqiouyang/datasets/acl6060"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm1_serial_taurus07_20260525T131354_tagacl_origin_norag_de_lm1_serial_taurus07"
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm1_serial_taurus07_20260525T131354_tagacl_origin_norag_de_lm1_serial_taurus07"
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "latency_multiplier": 1,
+    "runtime_rag": false,
+    "protocol": "serial_simuleval_agent_v4",
+    "gpu_pair": "0,7",
+    "max_new_tokens": 40,
+    "eval_tmpdir": "/tmp/jx_tacl_de1s",
+    "reason": "Verify En-De lm1 no-RAG serial baseline and runtime cost before deciding whether batch readouts can replace serial main results.",
+    "submitted_utc": "2026-05-25T13:15:00Z",
+    "launcher_pid": 1915104,
+    "pid_file": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm1_serial_taurus07_20260525T131354_tagacl_origin_norag_de_lm1_serial_taurus07/top.pid",
+    "top_stdout": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm1_serial_taurus07_20260525T131354_tagacl_origin_norag_de_lm1_serial_taurus07/top.out",
+    "top_stderr": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm1_serial_taurus07_20260525T131354_tagacl_origin_norag_de_lm1_serial_taurus07/top.err",
+    "monitor_pid": 1922487,
+    "monitor_stdout": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm1_serial_taurus07_20260525T131354_tagacl_origin_norag_de_lm1_serial_taurus07/monitor.out",
+    "monitor_stderr": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm1_serial_taurus07_20260525T131354_tagacl_origin_norag_de_lm1_serial_taurus07/monitor.err",
+    "startup_status": "vLLM initialized on Taurus GPU pair 0,7 and serial SimulEval generation is running.",
+    "completed_utc": "2026-05-25T13:46:02Z",
+    "summary_path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm1_serial_taurus07_20260525T131354_tagacl_origin_norag_de_lm1_serial_taurus07/__summary__/tagged_acl_origin_norag_de_lm1_serial_taurus07.tsv",
+    "BLEU": 25.96337669963283,
+    "StreamLAAL": 1047.977658059194,
+    "StreamLAAL_CA": 1588.651998890007,
+    "TERM_ACC": 0.6171,
+    "TERM_CORRECT": 577,
+    "TERM_TOTAL": 935,
+    "instances_log_rows": 5,
+    "runtime_seconds": 1761.0,
+    "eval_results": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm1_serial_taurus07_20260525T131354_tagacl_origin_norag_de_lm1_serial_taurus07/origin_norag/de/gigaspeech-de-s_origin-bsz4_gacl6060_tagged_gt_raw_min_norm2_cs0.96_hs0.48_lm1_k210_k110_th0p0/eval_results.tsv",
+    "instances_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm1_serial_taurus07_20260525T131354_tagacl_origin_norag_de_lm1_serial_taurus07/origin_norag/de/gigaspeech-de-s_origin-bsz4_gacl6060_tagged_gt_raw_min_norm2_cs0.96_hs0.48_lm1_k210_k110_th0p0/instances.log",
+    "completion_status_note": "Serial Taurus lm1 no-RAG baseline completed and summary TSV exists."
+  }
+}

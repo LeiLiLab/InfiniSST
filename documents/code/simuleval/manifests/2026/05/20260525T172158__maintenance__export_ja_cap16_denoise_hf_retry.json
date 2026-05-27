@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T172158__maintenance__export_ja_cap16_denoise_hf_retry",
+  "event_type": "maintenance",
+  "family": "speech_llm_hf_export",
+  "variant": "ja_cap16_denoise_ttag_v2_hf_retry",
+  "status": "running",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/export_mcore_checkpoint_to_hf.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__export_ja_cap16_denoise_hf_retry.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "mkdir -p /mnt/gemini/data1/jiaxuanluo/logs/export_ja_cap16_denoise_hf_retry_20260525T172158; setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && INNER_SCRIPT_REL=documents/code/train/sst_omni_train/export_mcore_checkpoint_to_hf.sh MCORE_ADAPTERS=/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/keep1.0_r32/v2-20260525-235251 HF_OUTPUT_DIR=/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/keep1.0_r32/v2-20260525-235251-hf HF_EXPORT_STAGE_ROOT=/mnt/data1/jiaxuanluo/hf_export_stage_retry/ja_cap16_denoise_v2_20260525T172158 HF_EXPORT_LOCAL_CACHE_ROOT=none bash documents/code/train/sst_omni_train/auto_train_sampling_docker.sh' > /mnt/gemini/data1/jiaxuanluo/logs/export_ja_cap16_denoise_hf_retry_20260525T172158/export.out 2> /mnt/gemini/data1/jiaxuanluo/logs/export_ja_cap16_denoise_hf_retry_20260525T172158/export.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/export_ja_cap16_denoise_hf_retry_20260525T172158/export.pid",
+  "parent_run_ids": [
+    "20260525T1550__speech_llm_train__ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4_retry1"
+  ],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__export_ja_cap16_denoise_hf_retry.md"
+    },
+    {
+      "role": "export_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/export_mcore_checkpoint_to_hf.sh"
+    },
+    {
+      "role": "docker_wrapper",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/auto_train_sampling_docker.sh"
+    },
+    {
+      "role": "mcore_checkpoint",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/keep1.0_r32/v2-20260525-235251"
+    },
+    {
+      "role": "hf_model_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/keep1.0_r32/v2-20260525-235251-hf"
+    },
+    {
+      "role": "log_root",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/export_ja_cap16_denoise_hf_retry_20260525T172158"
+    }
+  ],
+  "metadata": {
+    "host": "taurus",
+    "top_pid": 2731801,
+    "startup_verified_at": "2026-05-25T17:30:04Z",
+    "startup_status": "hf_export_running_after_hf_export_staging_helper_fix",
+    "reason": "Retry HF export with fresh stage root after stale stage directory caused FileExistsError.",
+    "stage_root": "/mnt/data1/jiaxuanluo/hf_export_stage_retry/ja_cap16_denoise_v2_20260525T172158"
+  }
+}

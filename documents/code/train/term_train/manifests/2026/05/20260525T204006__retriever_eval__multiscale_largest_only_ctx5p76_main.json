@@ -1,0 +1,193 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T204006__retriever_eval__multiscale_largest_only_ctx5p76_main",
+  "event_type": "retriever_eval",
+  "family": "sst_ood_context_ablation",
+  "variant": "main_lh1b88kw_largest_only_ctx5p76_perctxraw_100k",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": "g3iayem1",
+  "slurm_job_id": "direct_taurus_pid_114036",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260525__context_ablation_devraw_fixeddenom_100k_eval.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260525__multiscale_largest_only_ctx5p76_main_eval.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'env RUN_STAMP=multiscale_largest_only_ctx5p76_main_20260525T204006Z CONTEXT_TAG=ctx5p76_main_largest_only SOURCE_RUN_ID=lh1b88kw FIXED_SECONDS=5.76 RESUME=/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt TRAIN_JSONL=/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_varctx2p88_3p84_4p80_5p76.jsonl DEV_JSONL=/mnt/gemini/home/jiaxuanluo/term_dev_dataset_ctx5p76_new_version.jsonl EVAL_METRICS_GLOSSARY=/home/jiaxuanluo/InfiniSST/documents/code/train/term_train/reports/figures/20260525_dev_raw_glossary_ctx5p76.json NOTES_FILE=/home/jiaxuanluo/InfiniSST/documents/code/train/term_train/notes/2026/05/20260525__multiscale_largest_only_ctx5p76_main_eval.md CUDA_DEVICE_LIST=0 NUM_GPUS=1 MASTER_PORT=20106 SLURM_JOB_PARTITION=taurus COMPUTE_TAG=taurus-1gpu VARIANT_TAG=ctxab_main_largest_only_ctx5p76_devraw100k EXTRA_WANDB_TAGS=\"variant:ctxab_main_largest_only_ctx5p76_devraw100k compute:taurus-1gpu ablation:multiscale_inference protocol:ctx5p76-perctxraw readout:dev-only source:lh1b88kw compare:d988vg46\" BASELINE_RUN_IDS=\"lh1b88kw q2fus6f1 d988vg46 jyb2u787\" EVAL_SCORE_QUERY_CHUNK=128 EVAL_SCORE_TEXT_CHUNK=512 bash documents/code/train/term_train/launchers/2026/05/20260525__context_ablation_devraw_fixeddenom_100k_eval.sh' > /mnt/gemini/data1/jiaxuanluo/logs/multiscale_largest_only_ctx5p76_main_20260525T204006Z.out 2> /mnt/gemini/data1/jiaxuanluo/logs/multiscale_largest_only_ctx5p76_main_20260525T204006Z.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/multiscale_largest_only_ctx5p76_main_20260525T204006Z.pid",
+  "parent_run_ids": [
+    "lh1b88kw",
+    "q2fus6f1",
+    "d988vg46",
+    "jyb2u787"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260525__context_ablation_devraw_fixeddenom_100k_eval.sh",
+      "metadata": {}
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh",
+      "metadata": {}
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260525__multiscale_largest_only_ctx5p76_main_eval.md",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint",
+      "type": "model",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "source_run": "lh1b88kw",
+        "selection_role": "main_checkpoint"
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_varctx2p88_3p84_4p80_5p76.jsonl",
+      "metadata": {
+        "usage": "script-required input; eval_only does not train"
+      }
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_ctx5p76_new_version.jsonl",
+      "metadata": {
+        "usage": "dev-only eval",
+        "context_tag": "ctx5p76"
+      }
+    },
+    {
+      "role": "dev_raw_metrics_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/figures/20260525_dev_raw_glossary_ctx5p76.json",
+      "metadata": {
+        "term_count": 867,
+        "usage": "per-context fixed raw denominator"
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample100000.json",
+      "metadata": {
+        "eval_glossary_sizes": [
+          1000,
+          10000,
+          100000
+        ],
+        "prefix_equal_to_sample1000000": true
+      }
+    },
+    {
+      "role": "stdout_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/multiscale_largest_only_ctx5p76_main_20260525T204006Z.out",
+      "metadata": {
+        "host": "taurus",
+        "gpu": 0
+      }
+    },
+    {
+      "role": "stderr_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/multiscale_largest_only_ctx5p76_main_20260525T204006Z.err",
+      "metadata": {
+        "host": "taurus",
+        "gpu": 0
+      }
+    },
+    {
+      "role": "pid_file",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/multiscale_largest_only_ctx5p76_main_20260525T204006Z.pid",
+      "metadata": {
+        "launcher_pid": 113856,
+        "torchrun_pid": 113882,
+        "worker_pid": 114036
+      }
+    },
+    {
+      "role": "wandb_run",
+      "type": "wandb_run",
+      "direction": "output",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/g3iayem1",
+      "metadata": {
+        "status": "success"
+      }
+    }
+  ],
+  "metadata": {
+    "context_tag": "ctx5p76",
+    "source_run_id": "lh1b88kw",
+    "compare_to_largest_window_trained_run_id": "d988vg46",
+    "compare_to_multiscale_run_id": "q2fus6f1",
+    "fixed_audio_seconds": 5.76,
+    "eval_scope": "dev_only",
+    "eval_metric_denominator": "fixed_raw",
+    "eval_metrics_glossary": "documents/code/train/term_train/reports/figures/20260525_dev_raw_glossary_ctx5p76.json",
+    "eval_metrics_term_count": 867,
+    "eval_glossary_sizes": [
+      1000,
+      10000,
+      100000
+    ],
+    "eval_wiki_glossary": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample100000.json",
+    "gpu_list": "0",
+    "num_gpus": 1,
+    "master_port": 20106,
+    "score_query_chunk": 128,
+    "score_text_chunk": 512,
+    "run_stamp": "multiscale_largest_only_ctx5p76_main_20260525T204006Z",
+    "log_dir": "/mnt/gemini/data1/jiaxuanluo/logs",
+    "acl_usage": "disabled",
+    "medicine_usage": "disabled",
+    "launch_host": "taurus",
+    "wandb_run_id": "g3iayem1",
+    "startup_verified_at_utc": "2026-05-25T20:41:36Z",
+    "worker_pid": 114036,
+    "metrics": {
+      "eval_dev/step": 2640,
+      "eval_dev/bank_terms": 867,
+      "eval_dev/metrics_bank_terms": 867,
+      "eval_dev/base_label_any_positive": 3574,
+      "eval_dev/fixed_metric_denominator": 1,
+      "eval_dev/recall@10": 0.998,
+      "eval_dev/recall@10_gs1000": 0.998,
+      "eval_dev/recall@10_gs10000": 0.9978,
+      "eval_dev/recall@10_gs100000": 0.9947,
+      "eval_dev/topk10_chunk_any_positive_filtered_recall@tau_0p75": 0.9969,
+      "eval_dev/topk10_chunk_any_positive_filtered_recall@tau_0p75_gs100000": 0.9947
+    },
+    "completed_at_utc": "2026-05-25T20:42:53Z",
+    "verdict": "success_auxiliary_ctx5p76_main_checkpoint_readout_not_primary_maxsim_ablation",
+    "storage_check": {
+      "/mnt/gemini/data1": "91G available before launch",
+      "/mnt/gemini/home": "752G available before launch"
+    }
+  }
+}

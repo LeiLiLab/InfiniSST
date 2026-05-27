@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0",
+  "event_id": "20260526T061747__analysis__ja_tagged_acl_lm12_promptfix_vs_current_main",
+  "event_type": "analysis",
+  "family": "main_result_refresh",
+  "variant": "ja_tagged_acl_lm12_promptfix_vs_current_main",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": null,
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "Build a focused JA tagged-ACL lm1/lm2 promptfix comparison against pre-refresh and current main-result TSV rows.",
+  "parent_run_ids": [
+    "20260526T013751__simuleval__tagged_acl_ja_lm1to4_serial_promptfix_cache30_vllmaudio128_max40lm_taurus",
+    "20260526T031146__analysis__main_result_ja_tagged_acl_promptfix_refresh"
+  ],
+  "artifacts": [
+    {
+      "role": "source_compare_table",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260526_ja_tagged_acl_promptfix_compare.tsv",
+      "metadata": {
+        "note": "pre-refresh compare table; its main_tsv_current rows are stale after the 03:11 main-result refresh"
+      }
+    },
+    {
+      "role": "current_main_result_data",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_01_main_result_tagged/data.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "lm1_eval_results",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/data1/jiaxuanluo/tagged_acl_ja_serial_promptfix_cache30_vllmaudio128_max40lm_20260526T014004_tagged_acl_ja_lm1_serial_promptfix_cache30_vllmaudio128_max40lm_taurus/ja/dtagacl_ja_serial_promptfix_cache30_vllmaudio128_max40lm_lm1_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "lm2_eval_results",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/data1/jiaxuanluo/tagged_acl_ja_serial_promptfix_cache30_vllmaudio128_max40lm_20260526T014004_tagged_acl_ja_lm2_serial_promptfix_cache30_vllmaudio128_max40lm_taurus/ja/dtagacl_ja_serial_promptfix_cache30_vllmaudio128_max40lm_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "comparison_report",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260526_ja_tagged_acl_lm12_promptfix_vs_current_main.tsv",
+      "metadata": {
+        "sha256": "8ff7d57777f11354dd7a7545fbf5265a614cb86f42f52770edbfe85022017259"
+      }
+    }
+  ],
+  "metadata": {
+    "dataset": "acl_tagged_raw",
+    "lang": "ja",
+    "lms": [
+      1,
+      2
+    ],
+    "comparison": "new promptfix vllmaudio128 serial eval vs pre-refresh main and current main-result rows"
+    ,
+    "summary": {
+      "lm1": {
+        "current_main_matches_promptfix": true,
+        "delta_bleu_vs_pre_refresh_main": 2.2952,
+        "delta_term_correct_vs_pre_refresh_main": -2
+      },
+      "lm2": {
+        "current_main_matches_promptfix": true,
+        "delta_bleu_vs_pre_refresh_main": 0.1455,
+        "delta_term_correct_vs_pre_refresh_main": -4
+      }
+    }
+  }
+}

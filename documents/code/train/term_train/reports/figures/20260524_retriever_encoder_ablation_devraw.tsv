@@ -1,0 +1,10 @@
+model_id	model	run_id	bank_id	bank	metric_key	recall	recall_pct	fixed_metric_denominator	metrics_bank_terms
+main	Qwen3-Omni-AuT + BGE-M3	gczac4rf	raw	Raw	eval_dev/recall@10	0.99204075	99.2041	1	974
+main	Qwen3-Omni-AuT + BGE-M3	gczac4rf	gs10k	GS-10k	eval_dev/recall@10_gs10000	0.98973256	98.9733	1	974
+main	Qwen3-Omni-AuT + BGE-M3	gczac4rf	gs100k	GS-100k	eval_dev/recall@10_gs100000	0.98575294	98.5753	1	974
+text_e5	Qwen3-Omni-AuT + mE5	deb5d6mn	raw	Raw	eval_dev/recall@10	0.97126710	97.1267	1	974
+text_e5	Qwen3-Omni-AuT + mE5	deb5d6mn	gs10k	GS-10k	eval_dev/recall@10_gs10000	0.95702004	95.7020	1	974
+text_e5	Qwen3-Omni-AuT + mE5	deb5d6mn	gs100k	GS-100k	eval_dev/recall@10_gs100000	0.91762179	91.7622	1	974
+audio_wavlm	WavLM + BGE-M3	q1eny6jt	raw	Raw	eval_dev/recall@10	0.98376316	98.3763	1	974
+audio_wavlm	WavLM + BGE-M3	q1eny6jt	gs10k	GS-10k	eval_dev/recall@10_gs10000	0.97739571	97.7396	1	974
+audio_wavlm	WavLM + BGE-M3	q1eny6jt	gs100k	GS-100k	eval_dev/recall@10_gs100000	0.95654249	95.6542	1	974

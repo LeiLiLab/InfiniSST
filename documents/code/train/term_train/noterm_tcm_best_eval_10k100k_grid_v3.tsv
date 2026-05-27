@@ -1,0 +1,9 @@
+variant	train_run_id	checkpoint	pos_threshold	neg_threshold	pos_weight	neg_weight	inference_tau
+n64_p1n1	s5s4j4le	/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs12k_t=0.07_3var_gsv2full_gsfix_mfa_ntcm_wt_v3_n64_p1n1_s250_aries-8gpu_smallest_dense_smoke2900_best.pt	0.8500	0.6400	1	1	0.7500
+n64_p1n2	iie3967j	/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs12k_t=0.07_3var_gsv2full_gsfix_mfa_ntcm_thr_v3_nthr_n64_s250_aries-8gpu_smallest_dense_smoke2900_best.pt	0.8500	0.6400	1	2	0.7500
+n64_p1n4	aamk3dok	/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs12k_t=0.07_3var_gsv2full_gsfix_mfa_ntcm_wt_v3_n64_p1n4_s250_aries-8gpu_smallest_dense_smoke2900_best.pt	0.8500	0.6400	1	4	0.7500
+n64_p2n4	6fahgel7	/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs12k_t=0.07_3var_gsv2full_gsfix_mfa_ntcm_wt_v3_n64_p2n4_s250_aries-8gpu_smallest_dense_smoke2900_best.pt	0.8500	0.6400	2	4	0.7500
+n70_p1n1	v9y8fj5b	/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs12285_t=0.07_3var_gsv2full_gsfix_mfa_ntcm_wt_v3_n70_p1n1_s250_taurus-7gpu_smallest_dense_smoke2900_best.pt	0.8500	0.7000	1	1	0.7800
+n70_p1n2	2p0n1i0j	/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs12285_t=0.07_3var_gsv2full_gsfix_mfa_ntcm_thr_v3_nthr_n70_s250_taurus-7gpu_smallest_dense_smoke2900_best.pt	0.8500	0.7000	1	2	0.7800
+n70_p1n4	c3sgoiz8	/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs12285_t=0.07_3var_gsv2full_gsfix_mfa_ntcm_wt_v3_n70_p1n4_s250_taurus-7gpu_smallest_dense_smoke2900_best.pt	0.8500	0.7000	1	4	0.7800
+n70_p2n4	bk8xkvss	/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs12285_t=0.07_3var_gsv2full_gsfix_mfa_ntcm_wt_v3_n70_p2n4_s250_taurus-7gpu_smallest_dense_smoke2900_best.pt	0.8500	0.7000	2	4	0.7800

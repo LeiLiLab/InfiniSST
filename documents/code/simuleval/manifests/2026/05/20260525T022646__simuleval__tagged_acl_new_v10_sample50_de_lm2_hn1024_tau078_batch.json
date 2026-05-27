@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T022646__simuleval__tagged_acl_new_v10_sample50_de_lm2_hn1024_tau078_batch",
+  "event_type": "simuleval",
+  "family": "tagged_acl_newv10_s50_hn1024_tau078",
+  "variant": "new_v10_sample50_de_raw_lm2_same_lm_batch_tau078",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": "406eca6b",
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_new_v10_sample50_hn1024_tau078_raw_de_lm2_taurus.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'ROOT_DIR_OVERRIDE=/home/jiaxuanluo/InfiniSST RUN_TAG_OVERRIDE=20260525T022646_tagacl_newv10_s50_hn1024_tau078_raw_de_lm2 LANG_CODE_OVERRIDE=de LMS_OVERRIDE=2 CUDA_VISIBLE_DEVICES_PHYSICAL_OVERRIDE=0,1 VLLM_TP_SIZE_OVERRIDE=2 MAX_NUM_SEQS_OVERRIDE=5 SCHEDULER_BATCH_SIZE_OVERRIDE=5 SCHEDULE_MODE_OVERRIDE=round_robin VLLM_ENFORCE_EAGER_OVERRIDE=1 VLLM_ENABLE_PREFIX_CACHING=1 VLLM_LIMIT_AUDIO_OVERRIDE=128 MAX_CACHE_SECONDS_OVERRIDE=80 KEEP_CACHE_SECONDS_OVERRIDE=60 MIN_CACHE_CHUNKS_OVERRIDE=1 MAX_NEW_TOKENS_OVERRIDE=80 MAX_NEW_TOKENS_POLICY_OVERRIDE=fixed TEMPERATURE_OVERRIDE=0.6 TOP_P_OVERRIDE=0.95 TOP_K_DECODE_OVERRIDE=20 GPU_MEMORY_UTILIZATION_OVERRIDE=0.80 VLLM_MAX_MODEL_LEN_OVERRIDE=16384 VLLM_DISABLE_CUSTOM_ALL_REDUCE=1 VLLM_MOE_USE_DEEP_GEMM=0 VLLM_USE_FUSED_MOE_GROUPED_TOPK=0 MODEL_NAME_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_r32a64_tp2_taurus8/keep1.0_r32/v0-20260525-083507-hf SRC_LIST_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all/source.list TGT_LIST_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all/target.list SOURCE_TEXT_FILE_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all/source_text.txt REF_FILE_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all/ref.txt AUDIO_YAML_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all/audio.yaml GLOSSARY_PATH_OVERRIDE=/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json EVAL_GLOSSARY_PATH_OVERRIDE=/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json OUTPUT_BASE_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v10_s50_hn1024_tau078_raw_de_lm2_20260525T022646/new_v10_s50_no_gt_retrieved_oldnewv3_de_r32a64_hn1024_tau078_same_lm_batch_v1 DENSITY_TAG_OVERRIDE=tagacl_bv1_newv10_s50_hn1024_tau078 GLOSSARY_TAG_OVERRIDE=acl6060_tagged_gt_raw_min_norm2 RAG_MODEL_PATH_OVERRIDE=/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt RAG_SCORE_THRESHOLD_OVERRIDE=0.78 RAG_TIMELINE_LOOKBACK_SEC_OVERRIDE=1.92 RAG_TOP_K_OVERRIDE=10 RAG_DEVICE_OVERRIDE=cuda:0 RAG_BATCH_RETRIEVAL_OVERRIDE=1 INDEX_BUILD_DEVICE_OVERRIDE=cuda:0 INDEX_CACHE_DIR_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/maxsim_index_cache/batched_vllm TERM_MAP_FORMAT_OVERRIDE=plain TERM_FCR_POLICY_OVERRIDE=term_map_source_ref_negative_sentence STRIP_OUTPUT_TAGS_OVERRIDE=term WANDB_LOG_OVERRIDE=1 WANDB_RUN_PREFIX_OVERRIDE=newv10s50_hn1024_t078 WANDB_EXPERIMENT_FAMILY_OVERRIDE=tagged_acl_newv10_s50_hn1024_tau078 WANDB_VARIANT_PREFIX_OVERRIDE=newv10s50_hn1024_t078 WANDB_COMPUTE_TAG_OVERRIDE=compute:taurus_bv1_gpu01 WANDB_RUNTIME_GLOSSARY_LABEL_OVERRIDE=raw WANDB_DATA_TAG_OVERRIDE=tagged_acl_strict_raw_de NOTES_FILE_OVERRIDE=/home/jiaxuanluo/InfiniSST/documents/code/simuleval/notes/2026/05/20260525__tagged_acl_new_v10_sample50_hn1024_tau078_raw_de_lm2_taurus.md LOG_ROOT_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_new_v10_s50_hn1024_tau078_raw_de_lm2_20260525T022646 EVAL_TMPDIR_OVERRIDE=/tmp/jx_v10t78_lm2 bash documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh' > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_new_v10_s50_hn1024_tau078_raw_de_lm2_20260525T022646_top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_new_v10_s50_hn1024_tau078_raw_de_lm2_20260525T022646_top.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_new_v10_s50_hn1024_tau078_raw_de_lm2_20260525T022646_top.pid",
+  "parent_run_ids": [
+    "55aty627"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_new_v10_sample50_hn1024_tau078_raw_de_lm2_taurus.md"
+    },
+    {
+      "role": "speech_llm_model",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_r32a64_tp2_taurus8/keep1.0_r32/v0-20260525-083507-hf"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "eval_input_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v10_s50_hn1024_tau078_raw_de_lm2_20260525T022646"
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_new_v10_s50_hn1024_tau078_raw_de_lm2_20260525T022646"
+    },
+    {
+      "role": "top_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_new_v10_s50_hn1024_tau078_raw_de_lm2_20260525T022646_top.out"
+    },
+    {
+      "role": "top_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_new_v10_s50_hn1024_tau078_raw_de_lm2_20260525T022646_top.err"
+    },
+    {
+      "role": "top_pid",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_new_v10_s50_hn1024_tau078_raw_de_lm2_20260525T022646_top.pid"
+    },
+    {
+      "role": "monitor_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/monitor_tagged_acl_batch_eval_20260525.py"
+    },
+    {
+      "role": "monitor_report",
+      "type": "tsv",
+      "direction": "log",
+      "path": "documents/code/simuleval/reports/20260525_tagged_acl_new_v10_s50_de_lm2_tau078_monitor.tsv"
+    },
+    {
+      "role": "monitor_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/monitor_tagged_acl_new_v10_s50_de_lm2_tau078_20260525T0227.log"
+    },
+    {
+      "role": "monitor_pid",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/monitor_tagged_acl_new_v10_s50_de_lm2_tau078_20260525T0227.pid"
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "latency_multipliers": [2],
+    "runtime_glossary": "acl6060_tagged_gt_raw_min_norm2",
+    "retriever_id": "lh1b88kw",
+    "rag_tau": 0.78,
+    "rag_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "same_lm_batch": true,
+    "talks_per_lm": 5,
+    "max_new_tokens": 80,
+    "vllm_limit_audio": 128,
+    "gpu_pairs": ["0,1"],
+    "eval_tmpdir": "/tmp/jx_v10t78_lm2",
+    "launched_utc": "2026-05-25T02:26:46Z",
+    "launcher_pid": 791947,
+    "monitor_pid": 792730,
+    "monitor_report": "documents/code/simuleval/reports/20260525_tagged_acl_new_v10_s50_de_lm2_tau078_monitor.tsv",
+    "comparison_event_id": "20260525T0131__simuleval__tagged_acl_new_v10_sample50_de_lm1to4_hn1024_tau079_batch",
+    "gate": "Compare lm2 BLEU and TERM_ACC against tau0.79 NewV10 and verified no-RAG lm2 baseline.",
+    "completion_status": {
+      "timestamp_utc": "2026-05-25T02:37:10Z",
+      "completed_lms": [2],
+      "wandb_run_id": "406eca6b",
+      "eval_results": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v10_s50_hn1024_tau078_raw_de_lm2_20260525T022646/new_v10_s50_no_gt_retrieved_oldnewv3_de_r32a64_hn1024_tau078_same_lm_batch_v1/de/dtagacl_bv1_newv10_s50_hn1024_tau078_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "instances_rows": 5,
+      "strip_rows": 5,
+      "runtime_reference_density": {
+        "llm_inputs": 1795,
+        "mean_refs": 1.4690807799442898,
+        "p95_refs": 4,
+        "max_refs": 10,
+        "nonempty_rate": 0.6718662952646239
+      },
+      "metrics": {
+        "BLEU": 26.06049847753468,
+        "StreamLAAL": 1438.9044942274948,
+        "StreamLAAL_CA": 960.540431352125,
+        "TERM_ACC": 0.8193,
+        "TERM_CORRECT": 766,
+        "TERM_TOTAL": 935
+      }
+    }
+  }
+}

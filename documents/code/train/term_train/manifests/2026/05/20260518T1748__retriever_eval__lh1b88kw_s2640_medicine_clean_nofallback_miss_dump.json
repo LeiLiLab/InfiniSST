@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "event_id": "20260518T1748__retriever_eval__lh1b88kw_s2640_medicine_clean_nofallback_miss_dump",
+  "event_type": "retriever_eval",
+  "family": "sst_ood_hardneg",
+  "variant": "lh1b88kw_s2640_medicine_clean_nofallback_miss_dump",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": "6dxdrrl8",
+  "slurm_job_id": "direct_lh1b88kw_medicine_clean_nofallback_gpu7_20260518T180336",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260518__lh1b88kw_s2640_medicine_miss_dump_aries1_eval.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260518__lh1b88kw_s2640_medicine_clean_nofallback_miss_dump.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "nohup env CUDA_VISIBLE_DEVICES=7 SLURM_JOB_GPUS=7 SLURM_JOB_PARTITION=aries SLURM_JOB_ID=$RUN_ID RUN_STAMP=$RUN_ID MASTER_PORT=30379 LOCAL_TMP_DIR=$LOCAL_TMP_DIR MEDICINE_DEV_JSONL=/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_nofallback/medicine_dev_dataset.jsonl EVAL_WIKI_GLOSSARY=/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_nofallback/medicine_glossary_gt_plus_medicine_wiki_gs10000.json MEDICINE_EVAL_WIKI_GLOSSARY=/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_nofallback/medicine_glossary_gt_plus_medicine_wiki_gs10000.json VARIANT_TAG=lh1b88kw_s2640_medicine_clean_nofallback_miss_dump DATA_TAG=vctx576_lh1b88kw_medicine_clean_nofallback WANDB_EXP_NAME=lh1b88kw_s2640_medicine_clean_nofallback_miss_dump_aries-1gpu_$RUN_ID NOTES_FILE=/mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/train/term_train/notes/2026/05/20260518__lh1b88kw_s2640_medicine_clean_nofallback_miss_dump.md DUMP_EVAL_MISSES_DIR=$OUT_DIR bash documents/code/train/term_train/launchers/2026/05/20260518__lh1b88kw_s2640_medicine_miss_dump_aries1_eval.sh",
+  "parent_run_ids": [
+    "lh1b88kw",
+    "mry7kesp"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260518__lh1b88kw_s2640_medicine_miss_dump_aries1_eval.sh",
+      "metadata": {}
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py",
+      "metadata": {}
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260518__lh1b88kw_s2640_medicine_clean_nofallback_miss_dump.md",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_data_prepare_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/data_pre/training_terms_for_retriever/manifests/2026/05/20260518T1741__data_prepare__medicine_varctx_clean_nofallback.json",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_nofallback/medicine_dev_dataset.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_nofallback/medicine_glossary_gt_plus_medicine_wiki_gs10000.json",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "trained_from_run": "lh1b88kw",
+        "checkpoint_step": 2640
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "analysis_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/analysis_outputs/direct_lh1b88kw_medicine_clean_nofallback_gpu7_20260518T180336",
+      "metadata": {}
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "data_prepare_event_id": "20260518T1741__data_prepare__medicine_varctx_clean_nofallback",
+    "eval_names": [
+      "medicine"
+    ],
+    "eval_banks": [
+      "base",
+      "gs1000",
+      "gs10000"
+    ],
+    "eval_glossary_match_min_norm_chars": 2,
+    "hard_neg_k_per_sample": 0,
+    "medicine_clean_rows": 11141,
+    "medicine_clean_term_rows": 3094,
+    "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/6dxdrrl8",
+    "metrics": {
+      "eval_medicine/recall@10": 0.9321,
+      "eval_medicine/recall@10_gs1000": 0.9292,
+      "eval_medicine/recall@10_gs10000": 0.916,
+      "medicine_base_misses": 210,
+      "medicine_gs1000_misses": 219,
+      "medicine_gs10000_misses": 260
+    }
+  }
+}

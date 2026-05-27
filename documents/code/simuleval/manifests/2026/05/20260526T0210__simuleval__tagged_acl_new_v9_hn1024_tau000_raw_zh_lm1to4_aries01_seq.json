@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "event_id": "20260526T0210__simuleval__tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_aries01_seq",
+  "event_type": "simuleval",
+  "family": "tagged_acl_new_v9_hn1024_tau000",
+  "variant": "zh_raw_lm1_new_v9_termtag_delay_hn1024_tau000_aries01_seq_remaining_split",
+  "status": "completed_verified_lm1_remaining_split",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "direct_pid_3968077",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260526T0210__tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_aries01_seq.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260526T0210__tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_aries01_seq.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries \"bash -lc 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && mkdir -p documents/logs/simuleval && { setsid bash -lc \\\"RUN_STAMP=20260526T0210_tagacl_newv9_hn1024_tau000_raw_zh_lm1to4_aries01_seq bash documents/code/simuleval/launchers/2026/05/20260526T0210__tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_aries01_seq.sh\\\" > documents/logs/simuleval/20260526T0210_tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_aries01_seq.out 2> documents/logs/simuleval/20260526T0210_tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_aries01_seq.err < /dev/null & pid=$!; echo $pid > documents/logs/simuleval/20260526T0210_tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_aries01_seq.pid; echo $pid; }'\"",
+  "parent_run_ids": [
+    "lh1b88kw",
+    "2g6kan5y"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260526T0210__tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_aries01_seq.sh"
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "wandb_logger",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/offline_evaluation/wandb_eval_logger.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260526T0210__tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_aries01_seq.md"
+    },
+    {
+      "role": "speech_llm_hf_model",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm_exports/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8/keep1.0_r32/v0-20260524-062743-hf"
+    },
+    {
+      "role": "hn1024_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "source_run_id": "lh1b88kw"
+      }
+    },
+    {
+      "role": "acl6060_data",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/mnt/taurus/data/siqiouyang/datasets/acl6060"
+    },
+    {
+      "role": "tagged_raw_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "maxsim_index_cache",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/maxsim_index_cache/lh1b88kw_3ed0568d44__acl6060_tagged_gt_raw_min_norm2__171822e20b__maxsim.pt"
+    },
+    {
+      "role": "main_result_tsv",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/taurus/data2/jiaxuanluo/tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_20260526T0210_tagacl_newv9_hn1024_tau000_raw_zh_lm1to4_aries01_seq"
+    },
+    {
+      "role": "logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/taurus/data2/jiaxuanluo/logs/tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_20260526T0210_tagacl_newv9_hn1024_tau000_raw_zh_lm1to4_aries01_seq"
+    },
+    {
+      "role": "temp_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/taurus/data2/jiaxuanluo/tmp/jx_tacl0"
+    },
+    {
+      "role": "outer_log_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260526T0210_tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_aries01_seq.out"
+    },
+    {
+      "role": "outer_log_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260526T0210_tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_aries01_seq.err"
+    },
+    {
+      "role": "outer_pid_file",
+      "type": "text",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260526T0210_tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_aries01_seq.pid"
+    }
+  ],
+  "metadata": {
+    "host": "aries",
+    "gpu_pairs_csv": "0,1",
+    "lang": "zh",
+    "lms": [
+      1
+    ],
+    "glossary_kind": "raw",
+    "metric_denominator": "fixed raw tagged ACL glossary acl6060_tagged_gt_raw_min_norm2.json",
+    "runtime_glossary": "raw tagged ACL glossary",
+    "retriever_run_id": "lh1b88kw",
+    "retriever_variant": "HN1024",
+    "retriever_tau": 0.0,
+    "retriever_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "speech_llm_training_run_id": "2g6kan5y",
+    "speech_llm_model": "new_v9_termtag_delay_oldnewv3_r32a64",
+    "strip_output_tags": "term",
+    "vllm_tp_size": 2,
+    "vllm_disable_custom_all_reduce": true,
+    "vllm_moe_use_deep_gemm": false,
+    "vllm_use_fused_moe_grouped_topk": false,
+    "rag_gpu_override": "cuda:1",
+    "run_stamp": "20260526T0210_tagacl_newv9_hn1024_tau000_raw_zh_lm1to4_aries01_seq",
+    "direct_pid": 3968077,
+    "launched_at_utc": "2026-05-26T02:16:00Z",
+    "startup_state": "running_lm1_generation_verified",
+    "startup_verified_at_utc": "2026-05-26T02:30:00Z",
+    "startup_observed": {
+      "lm1_simuleval_pid": 3968244,
+      "gpu_pair": "0,1",
+      "simuleval_log": "/mnt/taurus/data2/jiaxuanluo/tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_20260526T0210_tagacl_newv9_hn1024_tau000_raw_zh_lm1to4_aries01_seq/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau000_readout/zh/dtagacl_new_v9_hn1024_tau000_lm1_k10_th0.0_gacl6060_tagged_gt_raw_min_norm2/simuleval.log",
+      "generation_log_pattern": "[VLLM] Output Translation",
+      "instances_log_state": "exists_but_empty_at_startup_verification"
+    },
+    "completed_lm1_at_utc": "2026-05-26T04:04:00Z",
+    "lm1_eval_results_tsv": "/mnt/taurus/data2/jiaxuanluo/tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_20260526T0210_tagacl_newv9_hn1024_tau000_raw_zh_lm1to4_aries01_seq/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau000_readout/zh/dtagacl_new_v9_hn1024_tau000_lm1_k10_th0.0_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+    "lm1_instances_log": "/mnt/taurus/data2/jiaxuanluo/tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_20260526T0210_tagacl_newv9_hn1024_tau000_raw_zh_lm1to4_aries01_seq/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau000_readout/zh/dtagacl_new_v9_hn1024_tau000_lm1_k10_th0.0_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+    "lm1_scoring_recovery": {
+      "reason": "Initial generation completed but standard eval_results.tsv was missing; offline scoring was rerun from the completed instances.log without rerunning model generation.",
+      "rescore_log_stdout": "/mnt/taurus/data2/jiaxuanluo/logs/tagged_acl_tau000_rescore/lm1_rescore.out",
+      "rescore_log_stderr": "/mnt/taurus/data2/jiaxuanluo/logs/tagged_acl_tau000_rescore/lm1_rescore.err"
+    },
+    "remaining_lms_split_to_events": [
+      "20260526T033545__simuleval__tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_aries4567_parallel",
+      "20260526T034148__simuleval__tagged_acl_new_v9_hn1024_tau000_raw_zh_lm4_aries23_parallel"
+    ],
+    "pid_file_backfilled": true,
+    "launch_note": "Initial detached ssh command started launcher PID 3968077; pid file was backfilled after shell background grouping made the automatic pid write race the log directory creation.",
+    "launch_mode": "detached_ssh_setsid_no_slurm",
+    "launch_order": "sequential_lm1_lm2_lm3_lm4",
+    "storage_root": "/mnt/taurus/data2",
+    "storage_reason": "/mnt/gemini/data1 had only about 91G free at planning time; /mnt/taurus/data2 had about 747G free",
+    "eval_tmpdir_reason": "Aries /tmp had only about 2.3GB free at preflight, so the launcher uses short /mnt/taurus/data2/jiaxuanluo/tmp/jx_tacl0; path length stays far below the vLLM Unix-domain IPC limit",
+    "main_result_reference": "documents/code/simuleval/reports/20260524_main_result_data.tsv"
+  }
+}

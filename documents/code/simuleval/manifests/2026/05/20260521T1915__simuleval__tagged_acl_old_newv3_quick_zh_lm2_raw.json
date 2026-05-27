@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "event_id": "20260521T1915__simuleval__tagged_acl_old_newv3_quick_zh_lm2_raw",
+  "event_type": "simuleval",
+  "family": "tagged_acl_old_newv3_quick",
+  "variant": "zh_lm2_raw_old_newv3_r32a64_vs_random_r32a64",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "direct_aries67_old_newv3_quick",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260521__tagged_acl_old_newv3_quick_zh_lm2_raw_aries67.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260521__tagged_acl_old_newv3_quick_zh_lm2_raw.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && RUN_STAMP=20260521T1915 GPU_PAIR=6,7 bash documents/code/simuleval/launchers/2026/05/20260521__tagged_acl_old_newv3_quick_zh_lm2_raw_aries67.sh'",
+  "parent_run_ids": [
+    "mazrc3id",
+    "y59wfnmp"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260521__tagged_acl_old_newv3_quick_zh_lm2_raw_aries67.sh"
+    },
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "agents/infinisst_omni_vllm_maxsim_rag.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260521__tagged_acl_old_newv3_quick_zh_lm2_raw.md"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/speech_llm_tcmw100kgt_tau075_new_v3_r32a64_taurus8/keep1.0_r32/v0-20260508-122348-hf"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/speech_llm_tcmw100kgt_tau075_new_v3_random_r32a64_aries8/keep1.0_r32/v1-20260508-123645-hf"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "checkpoint",
+      "type": "retriever_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_old_newv3_quick_zh_lm2_raw_20260521T1915"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_old_newv3_quick_20260521T1915"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_file",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_old_newv3_quick_20260521T1915.out"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_file",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_tagged_acl_old_newv3_quick_20260521T1915.err"
+    }
+  ],
+  "metadata": {
+    "langs": ["zh"],
+    "latency_multipliers": [2],
+    "glossary_kinds": ["raw"],
+    "term_map_format": "plain",
+    "term_fcr_policy": "term_map_source_ref_negative_sentence",
+    "rag_score_threshold": 0.73,
+    "rag_timeline_lookback_sec": 1.92,
+    "run_stamp": "20260521T1915",
+    "gpu_pair": "6,7",
+    "direct_pid": 2942150,
+    "old_newv3_train_run_id": "mazrc3id",
+    "old_newv3_random_train_run_id": "y59wfnmp",
+    "final_wandb_run_ids": {
+      "old_newv3_r32a64_zh_lm2_raw": "538mqu47",
+      "old_newv3_random_r32a64_zh_lm2_raw": "u3v3lii2"
+    },
+    "final_result_paths": {
+      "old_newv3_r32a64_zh_lm2_raw": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_old_newv3_quick_zh_lm2_raw_20260521T1915/old_newv3_r32a64/zh/dtagacl_old_newv3_r32a64_tau073_lm2_k10_th0.73_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "old_newv3_random_r32a64_zh_lm2_raw": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_old_newv3_quick_zh_lm2_raw_20260521T1915/old_newv3_random_r32a64/zh/dtagacl_old_newv3_random_r32a64_tau073_lm2_k10_th0.73_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    "sqlite_synced_run_ids": ["538mqu47", "u3v3lii2"]
+  }
+}

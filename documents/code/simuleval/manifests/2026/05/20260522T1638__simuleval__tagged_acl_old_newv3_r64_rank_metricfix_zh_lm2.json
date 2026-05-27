@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T1638__simuleval__tagged_acl_old_newv3_r64_rank_metricfix_zh_lm2",
+  "event_type": "simuleval",
+  "family": "tagged_acl_old_newv3_r64_rank_metricfix",
+  "variant": "zh_lm2_raw_full_and_paper110_extracted_metric_denominator",
+  "status": "running",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260522__tagged_acl_old_newv3_r64_rank_metricfix_zh_lm2_aries45.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260522__tagged_acl_old_newv3_r64_rank_metricfix_zh_lm2.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "ssh -p 20042 jiaxuanluo@localhost \"cd /mnt/taurus/home/jiaxuanluo/InfiniSST && RUN_STAMP=20260522T163853b setsid bash documents/code/simuleval/launchers/2026/05/20260522__tagged_acl_old_newv3_r64_rank_metricfix_zh_lm2_aries45.sh > documents/logs/simuleval/20260522_tagged_acl_old_newv3_r64_rank_metricfix_retry_zh_lm2_aries45.out 2> documents/logs/simuleval/20260522_tagged_acl_old_newv3_r64_rank_metricfix_retry_zh_lm2_aries45.err < /dev/null &\"",
+  "parent_run_ids": [
+    "q159wce4",
+    "rj1v1p7r"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260522__tagged_acl_old_newv3_r64_rank_metricfix_zh_lm2_aries45.sh"
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260522__tagged_acl_old_newv3_r64_rank_metricfix_zh_lm2.md"
+    },
+    {
+      "role": "hf_model_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/data7/jiaxuanluo/slm/old_newv3_rank_ablation/q159wce4_newv3_r64a128_full-hf"
+    },
+    {
+      "role": "hf_model_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/data7/jiaxuanluo/slm/old_newv3_rank_ablation/rj1v1p7r_newv3_random_r64a128-hf"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "documents/data/data_pre/extracted_glossaries_by_paper/extracted_glossary__2022.acl-long.110.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_old_newv3_r64_rank_metricfix_zh_lm2_*"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260522_tagged_acl_old_newv3_r64_rank_metricfix_zh_lm2_aries45.out"
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "latency_multiplier": 2,
+    "metric_glossary_policy": "follows_kind",
+    "glossary_modes": [
+      "raw_full_corpus",
+      "paper110_extracted_metric_denominator"
+    ],
+    "gpu_pair": "4,5",
+    "waits_for_export_event": "20260522T1545__analysis__export_old_newv3_r64a128_hf_for_rank_eval",
+    "replaces_invalid_event": "20260522T1605__simuleval__tagged_acl_old_newv3_r64_rank_quick_zh_lm2",
+    "pid": 3092148,
+    "previous_failed_pid": 3089704,
+    "previous_failure": "q159 corrected TSV completed, W&B logger tag length failed before rj1; retry uses shorter tags"
+  }
+}

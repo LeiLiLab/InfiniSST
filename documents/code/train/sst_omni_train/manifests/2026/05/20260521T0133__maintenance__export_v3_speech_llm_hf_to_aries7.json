@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "event_id": "20260521T0133__maintenance__export_v3_speech_llm_hf_to_aries7",
+  "event_type": "maintenance",
+  "family": "speech_llm_termmap_retriever",
+  "variant": "export_v3_r8a32_hf_to_aries7",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": "45269",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260521__export_v3_speech_llm_hf_to_aries7.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260521__export_v3_speech_llm_hf_to_aries7.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "setsid srun --jobid=45269 --overlap --chdir=/mnt/taurus/home/jiaxuanluo/InfiniSST env MAX_PARALLEL_EXPORTS_OVERRIDE=1 bash documents/code/train/sst_omni_train/launchers/2026/05/20260521__export_v3_speech_llm_hf_to_aries7.sh",
+  "parent_run_ids": [
+    "k2xo8quk",
+    "891gnubx",
+    "2st6uspm"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260521__export_v3_speech_llm_hf_to_aries7.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260521__export_v3_speech_llm_hf_to_aries7.md"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "mcore_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/speech_llm_v3_real_termmap_zh_lh1b88kw_tau073_srcmatch100k_r8a32_taurus2/keep1.0_r8/v1-20260521-070000",
+      "metadata": {
+        "variant": "real",
+        "iteration": 793
+      }
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "mcore_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/speech_llm_v3_tagged_termmap_zh_lh1b88kw_tau073_srcmatch100k_r8a32_taurus2/keep1.0_r8/v0-20260521-070000",
+      "metadata": {
+        "variant": "tagged",
+        "iteration": 923
+      }
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "mcore_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/speech_llm_v3_adv_termmap_zh_lh1b88kw_tau073_srcmatch100k_r8a32_taurus2/keep1.0_r8/v0-20260521-070000",
+      "metadata": {
+        "variant": "adv",
+        "iteration": 803
+      }
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "hf_model_dir",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/v3_speech_llm"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs"
+    }
+  ],
+  "metadata": {
+    "reason": "Recover HF exports after original SFT runs failed at safetensors save due /mnt/gemini/data2 full.",
+    "output_root": "/mnt/aries/data7/jiaxuanluo/slm/v3_speech_llm",
+    "max_parallel_exports_default": 1
+    ,
+    "pid": 75774,
+    "stdout": "/mnt/gemini/data1/jiaxuanluo/logs/direct_export_v3_speech_llm_hf_to_aries7_20260521T013409.out",
+    "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/direct_export_v3_speech_llm_hf_to_aries7_20260521T013409.err"
+  }
+}

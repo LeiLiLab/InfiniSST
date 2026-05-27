@@ -1,0 +1,437 @@
+让我检查一下当前状态——之前的 agent 超时了，我需要看看后台任务进展如何。
+
+[4 tools called]
+
+**d=10 模型有严重问题！** 所有翻译都只输出 `!!!!!!!...`，模型完全坏了。每次 vLLM 调用花 ~470 秒（因为一直生成 `!` 直到 max_new_tokens）。这不是 hang，而是模型训练出了问题。
+
+[3 tools called]
+
+训练 loss 看起来正常（d=5: ~0.576, d=10: ~0.552），训练本身没问题。问题可能出在 **checkpoint 转换**上。让我检查转换过程。
+
+[8 tools called]
+
+Audio tower 权重完全一样（冻结的）。需要检查 LoRA 层的差异。
+
+[2 tools called]
+
+权重差异正常（LoRA 合并后微小差异）。但模型输出全是 `!`。让我直接用 vLLM 测试一下 d=10 模型的基础生成能力。
+
+[9 tools called]
+
+模型还在从 NFS 加载。再等几分钟。
+
+[2 tools called]
+
+vLLM 初始化也卡住了（Worker 进程都没启动）。让我 kill 掉，换个思路——直接用 transformers 加载模型做快速测试。
+
+[1 tool called]
+
+v0 是之前 NCCL 死锁的失败尝试，没有 checkpoint。v1 的模型确实完成了推理（之前的 smoke test 跑完了 24 个 segments），只是输出全是 `!`。这说明模型加载没问题，但生成完全退化了。
+
+让我检查训练数据和训练过程是否有异常。
+
+[2 tools called]
+
+训练日志完全正常（loss 平滑下降至 0.55，无 NaN）。问题很可能在 `swift export` 转换阶段。让我重新转换 d=10 checkpoint。
+
+[3 tools called]
+
+Swift export 需要基础模型路径。让我正确挂载并重新导出。
+
+[3 tools called]
+
+`model: /workspace/Qwen3-Omni-30B-A3B-Instruct/` — docker 里的路径。需要把基础模型挂载到这个路径。
+
+[5 tools called]
+
+HF 基础模型在 `/mnt/gemini/data2/jiaxuanluo/Qwen3-Omni-30B-A3B-Instruct/`。现在用正确的挂载重新导出。
+
+[1 tool called]
+
+GPU 内存不够（单卡 48GB 不够放 30B 模型）。需要用两卡。
+
+[1 tool called]
+
+导出成功了！"Successfully transferred MG model weights to HF model." 现在用新导出的模型做 smoke test。
+
+[2 tools called]
+
+权重完全相同！所以转换没有问题。**d=10 模型本身就退化了**。让我检查 d=10 训练数据看看有什么不同。
+
+[1 tool called]
+
+权重完全相同，转换没问题。让我用新导出的 hf-v2 模型做一次快速 smoke test 确认。
+
+[3 tools called]
+
+这个也在卡 shared memory。让我 kill 掉总结一下当前状态。
+
+[2 tools called]
+
+好的，来总结两个任务的状态：
+
+---
+
+## 1. TCR 修复 ✅ 完成
+
+**问题**：原来的 TCR 是 chunk 级别的，由于翻译延迟，大部分术语在提供当时还没被翻译，导致 TCR 虚低（~2%）。
+
+**修复**：改为 **talk 级别 + 参考译文过滤**：
+- 从 runtime JSONL 收集所有 term_map 中提供过的 GT 术语（union）
+- 用参考译文过滤出 "relevant" 术语（只计算确实在 talk 中提到的术语）
+- 检查模型输出是否包含这些术语的翻译
+- `TCR = |relevant ∩ provided ∩ adopted| / |relevant ∩ provided|`
+
+**结果**：
+
+| Config | lm=1 | lm=2 | lm=3 | lm=4 |
+|--------|------|------|------|------|
+| d5 default | 91.1% | 91.1% | 94.9% | 96.2% |
+| d5 gs=1k | 95.3% | 94.2% | 94.2% | 95.3% |
+| d5 gs=10k | 84.8% | 88.7% | 90.6% | 91.6% |
+| old SLM | 96.2% | 93.7% | 96.2% | 96.2% |
+
+已更新的文件：
+- `compute_tcr_from_runtime_log.py` — 新增 `--ref-file` 参数
+- `offline_streamlaal_eval.py` — `_compute_tcr` 传入 `ref_file`
+
+---
+
+## 2. d=10 评估 ❌ 模型退化
+
+**发现**：d=10 模型（`v1-20260414-160501-hf`）对所有 audio 输入只输出 `!!!!...`（40 个感叹号 = max_new_tokens）。
+
+**排查过程**：
+- GPU 本身没问题（d=5 在相同 GPU 5,6,7 上正常工作）
+- 训练 loss 正常（从 1.61 平滑降至 0.55，无 NaN）
+- 模型权重正常（magnitudes 与 d=5 一致，无 NaN/inf）
+- 重新用 `swift export` 转换了一遍（`hf-v2`），权重与旧导出完全一样
+- config、generation_config 与 d=5 完全相同
+
+**结论**：d=10 模型在训练中学到了退化行为。可能原因：
+- d=10 的 term_map 密度太高（每 chunk 平均 10 个术语），模型在 LoRA rank=16 下无法有效学习
+- 需要重新训练，可能需要更高的 LoRA rank 或更低的学习率
+
+
+
+
+
+
+
+Plan2:
+
+---
+name: TCR-density-eval-plan
+overview: 回答 TCR 与 TERM_ACC 的关系问题，分析 old SLM 优于 d5 和 gs=10k TERM_ACC 更高的原因，并跑 d=3/d=8 评估。
+todos:
+  - id: run-d3-eval
+    content: Run d=3 per-paper evaluation (default glossary, all lm=1,2,3,4) on GPUs 5,6,7
+    status: pending
+  - id: run-d8-eval
+    content: Run d=8 per-paper evaluation (default glossary, all lm=1,2,3,4) on GPUs 5,6,7 (after d=3)
+    status: pending
+  - id: collect-results
+    content: Collect and present d=3/d=8 results alongside d=5/old_slm for comparison
+    status: pending
+isProject: false
+---
+
+# TCR 分析、原因调查与 d=3/d=8 评估计划
+
+## 1. TCR 与 TERM_ACC 的关系
+
+**你说的对。** 当前 talk 级别的 TCR 和 TERM_ACC 高度重叠：
+
+- `TERM_ACC` = 在 mWER 对齐的句子对中，GT 术语的中文翻译出现在 hypothesis 中的比率
+- `TCR` = 同上，但额外过滤到 "曾出现在 term_map 中" 的术语
+
+由于 retriever recall 接近 100%（default: 74/74, gs10k: 73/74），**TCR 约等于 TERM_ACC**。关系式 `TERM_ACC ≈ retriever_recall × TCR + self_correct × (1 - retriever_recall)` 大致成立，但因为 recall 几乎为 1，所以 TCR ≈ TERM_ACC。
+
+**结论：当前定义的 TCR 信息量不大**，因为它和 TERM_ACC 几乎相同。真正有价值的微观 TCR（逐句匹配：某句话的 term_map 里有术语 A → 该句翻译是否采纳了 A）确实很难做到，因为音频 chunk 和翻译句子的对齐关系是模糊的。
+
+**建议：不再单独报告 TCR，或者仅在 retriever recall 显著低于 100% 的场景下使用。**
+
+## 2. Old SLM 优于 d5 的原因分析
+
+调查发现以下关键差异：
+
+| 参数 | Old SLM | d5 |
+|------|---------|-----|
+| **LoRA rank** | **32** | **16** |
+| **训练数据** | v4 pipeline (LLM negatives, ~9 distractor/GT) | MaxSim varlen rebuild (density=5) |
+| **Term density (avg/chunk)** | ~7 | ~20 |
+| **max_length** | 2048 | 4096 |
+| **GPU 数量** | 4 (EP=4) | 2 (EP=2) |
+
+最可能的原因，按可能性排序：
+
+1. **LoRA rank 32 vs 16** — 2x 的参数容量让 old SLM 能更好地学习术语 copy 行为。这也解释了 d=10 (rank=16, avg 39 terms/chunk) 完全退化。
+2. **训练数据质量** — old SLM 使用 LLM 生成的 negatives（更真实的干扰项），d5 使用 MaxSim retriever negatives（可能更机械）。
+3. **Term density 低** — old SLM 只有 ~7 terms/chunk，信噪比更高；d5 有 ~20 terms/chunk，更多噪声。
+
+**Per-paper 对比（lm=1）**:
+
+| Paper | d5 default | old SLM | gs=10k |
+|-------|-----------|---------|--------|
+| 110 | 61.1% | 66.7% | 77.8% |
+| 117 | 93.7% | 93.7% | 90.5% |
+| 268 | 82.4% | **91.9%** | 89.2% |
+| 367 | 75.0% | 79.2% | 80.2% |
+| 590 | 65.5% | 70.9% | 72.7% |
+| **TOTAL** | **77.8%** | **82.4%** | **83.2%** |
+
+old SLM 在几乎所有 paper 上都优于 d5，尤其是 268 (91.9% vs 82.4%)。
+
+## 3. gs=10k lm=1 TERM_ACC 高于 d5 default 的原因
+
+调查发现：
+- gs=10k 的 MaxSim index 有 10k 条目（vs default 仅 ~50-60 per paper）
+- gs=10k retriever 在 5 个 paper 中提供了 **6856 个 unique 术语翻译**（vs default 仅 242）
+- 其中有 **67 个非 GT 术语翻译恰好出现在参考译文中**
+
+**机制**：更大的 glossary 给模型提供了更丰富的翻译上下文。即使这些额外术语不是 GT 评估目标，它们的中文翻译作为 "context clues" 帮助模型更好地翻译了 GT 术语。例如一个 paper 关于 "QA" 的话题，gs=10k 的 term_map 可能还包含 "answer extraction=答案抽取" 等相关术语，帮助模型理解上下文从而更好地翻译 GT 术语。
+
+## 4. d=3 和 d=8 评估
+
+**好消息**：d=3 和 d=8 的训练数据和 HF 模型都已经存在：
+
+- d=3: `/mnt/aries/.../d3/r16/v0-20260414-010020-hf/` (15 shards, iter 551)
+- d=8: `/mnt/aries/.../d8/r16/v0-20260414-010020-hf/` (15 shards, iter 941)
+
+Term density 分布：
+
+| Density | avg terms/chunk | median | max |
+|---------|----------------|--------|-----|
+| d=1 | 4.0 | 3 | 12 |
+| d=3 | 11.9 | 9 | 36 |
+| d=5 | 19.7 | 15 | 60 |
+| d=8 | 31.9 | 24 | 96 |
+| d=10 | 38.9 | 29 | 118 |
+
+**执行计划**：使用现有的 `run_d10_eval_batch.sh` 为模板，创建 d=3 和 d=8 的评估脚本，跑 default glossary + all lm=1,2,3,4，与 d=5 和 old SLM (baseline) 对比。
+
+使用 GPUs 5,6,7（当前空闲）。两个 density 需要串行执行（共享 GPU），每个约 2-3 小时（5 papers × 4 lm = 20 SimulEval runs）。
+
+
+
+
+Event3:
+
+
+---
+name: Cross-chunk retriever fix
+overview: 先诊断 papers 110/367/590 的 TERM_ACC 低的根因（retriever 召回问题 vs LLM 采纳问题 vs cross-chunk 问题），然后为 MaxSim retriever 添加滑动窗口机制解决 cross-chunk term 丢失问题。
+todos:
+  - id: diagnose-script
+    content: 编写 diagnose_term_adoption.py 诊断脚本，分析 papers 110/367/590 的 GT term 召回 vs 采纳情况，判断 cross-chunk 相关性
+    status: pending
+  - id: run-diagnosis
+    content: 运行诊断脚本，查看结果，确认 cross-chunk 是否是 TERM_ACC 低的主因
+    status: pending
+  - id: modify-retriever
+    content: 修改 streaming_maxsim_retriever.py：添加 window_sec 参数，改 retrieve() 为窗口编码，添加 merge_results() 方法
+    status: pending
+  - id: modify-agent
+    content: 修改 infinisst_omni_vllm_maxsim_rag.py：解耦 retriever 频率，添加 stride 调度和结果累积合并逻辑
+    status: pending
+  - id: modify-eval-script
+    content: 修改 eval_density_unified.sh：添加 RAG_RETRIEVE_STRIDE_SEC 参数传递
+    status: pending
+  - id: smoke-test
+    content: 用 paper 110 + lm=1 做冒烟测试，验证 retriever 调用频率翻倍、结果正常
+    status: pending
+isProject: false
+---
+
+# Cross-Chunk Retriever Fix
+
+## 问题背景
+
+当前 `StreamingMaxSimRetriever.retrieve()` 只编码**自上次 retrieve 以来的新音频**（即 vLLM 增量 chunk），不与前一个 chunk 有任何重叠。如果术语的语音跨两个 chunk 边界，两个 chunk 单独都无法给出足够强的检索信号。
+
+```237:265:agents/streaming_maxsim_retriever.py
+    def retrieve(self, top_k: Optional[int] = None) -> List[Dict]:
+        # ...
+        chunk = self._audio_buffer[self._retrieve_offset:]  # <-- 只取新音频
+        # ...
+        self._retrieve_offset = len(self._audio_buffer)     # <-- 前移 offset，无重叠
+```
+
+## 阶段一：诊断 TERM_ACC 低的根因
+
+**目标**：确定 papers 110/367/590 的低 TERM_ACC 是否与 cross-chunk 有关。
+
+**方法**：写一个诊断脚本 `diagnose_term_adoption.py`，分析 old_slm lm=1 的 runtime JSONL。
+
+对每个 paper 的每个 GT term 统计：
+
+- **provided_segments**: 该 term 出现在哪些 segment_idx 的 term_map 中（及对应 score）
+- **adopted**: 该 term 的中文翻译是否出现在 `instances.log` 的 prediction 中
+- **avg_score / max_score**: 当 term 被召回时的分数分布
+- **segment_count**: 该 term 被多少个不同 segment 召回
+
+然后对比 **adopted vs not-adopted** 两组 term 的统计特征：
+
+- not-adopted 的 term 是否 segment_count 更少、score 更低？（暗示 cross-chunk 问题）
+- not-adopted 的 term 是否只在少数 segment 中以低分出现？（暗示边界检索信号弱）
+
+**输出文件路径**：`documents/code/offline_sst_eval/diagnose_term_adoption.py`
+
+**输入**：
+
+- runtime JSONL: `/mnt/gemini/data2/jiaxuanluo/density_eval_maxsim_fixed/zh/dold_slm_lm1_k10_g.../*.jsonl`
+- per-paper glossary: `documents/data/data_pre/extracted_glossaries_by_paper/*.json`
+- instances.log: 同目录下
+- reference: `__paper_inputs__/lists/dev.target.zh__*.txt`
+
+## 阶段二：实现滑动窗口 MaxSim Retriever
+
+### 核心思路
+
+将 retriever 与 vLLM 解耦为不同频率：
+
+- **vLLM** 每 `vllm_segment_sec` 秒调用一次（不变）
+- **Retriever** 每 `stride_sec = vllm_segment_sec / 2` 秒调用一次
+- 每次 retrieve 编码**最近 `window_sec**` 的音频（`window_sec = vllm_segment_sec`）
+- 相邻两次 retrieve 之间自然形成 **50% 重叠**
+- vLLM 调用前，将累积的多次 retrieve 结果通过 **max-score 去重**合并
+
+```mermaid
+sequenceDiagram
+    participant SE as SimulEval
+    participant Agent as Agent.policy
+    participant RAG as MaxSimRetriever
+    participant LLM as vLLM
+
+    Note over SE,LLM: lm=4: vllm_seg=3.84s, stride=1.92s
+    SE->>Agent: audio tick (0.12s per tick)
+    Agent->>RAG: accumulate_audio()
+    Note right of Agent: t=1.92s: should_call_retriever=true
+    Agent->>RAG: retrieve(window=3.84s)
+    RAG-->>Agent: results_1 (stored)
+    Agent-->>SE: ReadAction
+    SE->>Agent: more audio ticks...
+    Note right of Agent: t=3.84s: should_call_vllm=true
+    Agent->>RAG: retrieve(window=3.84s)
+    RAG-->>Agent: results_2
+    Agent->>Agent: merge(results_1, results_2, strategy=max_score)
+    Agent->>LLM: generate(audio_increment, merged_term_map)
+    LLM-->>Agent: translation
+    Agent-->>SE: WriteAction
+```
+
+
+
+### 文件改动
+
+#### 1. `agents/streaming_maxsim_retriever.py`
+
+- **新增参数** `window_sec` (默认 = 调用方传入的 vllm_segment_sec)
+- **修改 `retrieve()**`：编码音频从 `max(0, buffer_end - window_samples)` 到 `buffer_end`（而非从 `_retrieve_offset` 开始），实现固定窗口大小 + 滑动步长
+- **offset 更新逻辑**：`_retrieve_offset` 仍然前进到当前 buffer 末尾（用于下次判断是否有足够新音频）
+- **新增 `merge_results()` 静态方法**：输入多组 retrieve 结果 List[List[Dict]]，按 `term` 字段去重，保留 max score
+
+关键变化（伪代码）：
+
+```python
+def retrieve(self, top_k=None):
+    if self._audio_buffer is None:
+        return self._last_results
+    
+    buffer_end = len(self._audio_buffer)
+    new_since_last = buffer_end - self._retrieve_offset
+    if new_since_last < int(0.48 * SR):
+        return self._last_results
+    
+    # Window-based: encode most recent window_sec of audio
+    window_samples = int(self.window_sec * SR)
+    start = max(0, buffer_end - window_samples)
+    chunk = self._audio_buffer[start:buffer_end]
+    
+    embs = _encode_audio(chunk, ...)
+    idx, scores = _retrieve_topk(embs, self.text_embs, ...)
+    
+    self._retrieve_offset = buffer_end
+    # ... build results list ...
+    return results
+
+@staticmethod
+def merge_results(result_groups, top_k):
+    """Merge multiple retrieve results, keeping max score per term."""
+    best = {}  # term -> result_dict (with highest score)
+    for results in result_groups:
+        for r in results:
+            term = r["term"]
+            if term not in best or r["score"] > best[term]["score"]:
+                best[term] = r
+    merged = sorted(best.values(), key=lambda x: -x["score"])
+    return merged[:top_k]
+```
+
+#### 2. `agents/infinisst_omni_vllm_maxsim_rag.py`
+
+- **新增 args**: `--rag-retrieve-stride-sec`（默认自动计算为 `vllm_segment_sec / 2`）
+- **新增 states 字段**:
+  - `rag_last_retrieve_src_len: int` — 上次 retrieve 时的 source 长度
+  - `accumulated_rag_results: list` — 累积的 retrieve 结果列表
+- **修改 `policy()**`:
+  - 在 accumulate_audio 之后，检查 `should_call_retriever`（基于 stride 阈值）
+  - 若 `should_call_retriever`：调用 `retrieve()`, 将结果 append 到 `accumulated_rag_results`
+  - 当 `should_call_vllm` 时：做最后一次 retrieve，然后 `merge_results()` 得到最终 references
+  - 清空 `accumulated_rag_results`
+
+关键变化（伪代码）：
+
+```python
+def policy(self, states):
+    # ... accumulate audio ...
+    
+    # Retriever runs at stride frequency (2x vLLM frequency)
+    rag_samples_since = len(states.source) - states.rag_last_retrieve_src_len
+    stride_samples = int(self.rag_retrieve_stride_sec * sr)
+    should_call_retriever = (
+        self.rag_retriever 
+        and (states.source_finished or rag_samples_since >= stride_samples)
+    )
+    
+    if should_call_retriever and not should_call_vllm:
+        results = self.rag_retriever.retrieve(self.rag_top_k)
+        states.accumulated_rag_results.append(results)
+        states.rag_last_retrieve_src_len = len(states.source)
+    
+    if not should_call_vllm:
+        return ReadAction()
+    
+    # vLLM time: final retrieve + merge all accumulated results
+    if self.rag_retriever:
+        final_results = self.rag_retriever.retrieve(self.rag_top_k)
+        states.accumulated_rag_results.append(final_results)
+        references = StreamingMaxSimRetriever.merge_results(
+            states.accumulated_rag_results, self.rag_top_k
+        )
+        states.accumulated_rag_results = []
+        states.rag_last_retrieve_src_len = len(states.source)
+    
+    # ... call vLLM with merged references ...
+```
+
+#### 3. `documents/code/simuleval/eval_density_unified.sh`
+
+- 新增 `RAG_RETRIEVE_STRIDE_SEC` 配置（默认自动计算）
+- 传 `--rag-retrieve-stride-sec` 给 simuleval
+- 新增 `RAG_RETRIEVE_STRIDE_OVERRIDE` 环境变量支持
+
+#### 4. Smoke Test
+
+- 用 1 个 paper（如 110）+ lm=1 跑一次快速 eval
+- 验证 runtime JSONL 中 retrieve 调用次数约为之前的 2 倍
+- 验证 term_map 中同一 term 的 score 比之前更高（更多窗口覆盖）
+- 验证生成结果正常（不报错、翻译合理）
+
+## 注意事项
+
+- `_encode_audio()` 每次调用都需要 GPU 前向传播，窗口滑动会使 retriever 计算量翻倍。但由于 retriever 延迟远小于 vLLM，影响可控。
+- 第一次 retrieve（talk 开头）可能音频不足 `window_sec`，此时编码实际可用的全部音频即可。
+- `_audio_buffer` 是单调增长的拼接数组，历史音频始终保留在 buffer 中，所以回溯取窗口不需要额外缓存。
+
+

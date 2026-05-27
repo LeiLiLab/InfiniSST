@@ -1,0 +1,428 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T1226__simuleval__psc_medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw_zh",
+  "event_type": "simuleval",
+  "family": "medicine_hardraw_new_v9_hn1024_tau078",
+  "variant": "zh_gs1k_gs10k_fixedraw_lm1to4_psc",
+  "status": "psc_retry5h_submitted",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__psc_medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw_zh.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__psc_medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw_zh.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "bash documents/code/simuleval/launchers/2026/05/20260524__submit_psc_medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw_zh.sh",
+  "parent_run_ids": [
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__psc_medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw_zh.sh"
+    },
+    {
+      "role": "submitter",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__submit_psc_medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw_zh.sh"
+    },
+    {
+      "role": "monitor",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__monitor_psc_medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw_zh.sh"
+    },
+    {
+      "role": "batch_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_hardraw_lm1to4_5samples_hn1024_tau078_new_v9_batch.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "data_prepare_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/prepare_medicine_one_talk_inputs.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__psc_medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw_zh.md"
+    },
+    {
+      "role": "speech_llm_checkpoint",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/models/new_v9_termtag_delay_oldnewv3_r32a64/keep1.0_r32/v0-20260524-062743-hf"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/checkpoints/lh1b88kw_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "medicine_hard_raw_glossary",
+      "type": "glossary_json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_hard_terms_llm_judge_manual_20260524/hard_medicine_glossary_raw_llm_judge_manual_zh215_unique212.json"
+    },
+    {
+      "role": "medicine_runtime_gs1k_glossary",
+      "type": "glossary_json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_plus_gtwiki_glossaries_20260524/medicine_hardraw_plus_gtwiki_gs1000_translated_fixedraw.json"
+    },
+    {
+      "role": "medicine_runtime_gs10k_glossary",
+      "type": "glossary_json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_plus_gtwiki_glossaries_20260524/medicine_hardraw_plus_gtwiki_gs10000_translated_fixedraw.json"
+    },
+    {
+      "role": "medicine_runtime_glossary_stats",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_plus_gtwiki_glossaries_20260524/medicine_hardraw_plus_gtwiki_translated_fixedraw_stats.json"
+    },
+    {
+      "role": "medicine_eso_samples",
+      "type": "directory",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/data/eso_medicine_abbrev_restored/test"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1226_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1226_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh"
+    }
+  ],
+  "metadata": {
+    "lang_code": "zh",
+    "samples": [
+      "404",
+      "545006",
+      "596001",
+      "605000",
+      "606"
+    ],
+    "lms": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "runtime_glossary_kinds": [
+      "gs1k",
+      "gs10k"
+    ],
+    "fixed_denominator_glossary": "hard_medicine_glossary_raw_llm_judge_manual_zh215_unique212.json",
+    "runtime_glossary_policy": "hardraw entries first, then deduplicated medicine gt/wiki translated filler to requested size",
+    "hardraw_rows": 212,
+    "runtime_gs1k_rows": 1000,
+    "runtime_gs10k_rows": 10000,
+    "rag_score_threshold": 0.78,
+    "rag_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "strip_output_tags": "term",
+    "term_fcr_policy": "term_map_source_ref_negative_sentence",
+    "psc_account": "cis260009p",
+    "psc_partition": "GPU-shared",
+    "psc_gres": "gpu:v100-32:4",
+    "psc_job_shape": "8 independent jobs: gs1k/gs10k x lm1..4",
+    "time_limit": "03:00:00",
+    "run_stamp_base": "20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh",
+    "vllm": {
+      "tp_size": 4,
+      "max_model_len": 8192,
+      "limit_audio": 8,
+      "gpu_memory_utilization": 0.7,
+      "max_cache_seconds": 80.0,
+      "keep_cache_seconds": 60.0,
+      "disable_custom_all_reduce": 1
+    },
+    "monitor": {
+      "interval_seconds": 1800,
+      "state_dir": "/mnt/gemini/data1/jiaxuanluo/logs/psc_medicine_new_v9_gs_fixedraw_monitor_20260524T1226_state",
+      "notification": "codex-notify Slack webhook"
+    },
+    "psc_full_jobs": [
+      {
+        "glossary_kind": "gs1k",
+        "lm": 1,
+        "job_id": "40974413",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh/gs1k/lm1",
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh/gs1k/lm1"
+      },
+      {
+        "glossary_kind": "gs1k",
+        "lm": 2,
+        "job_id": "40974416",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh/gs1k/lm2",
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh/gs1k/lm2"
+      },
+      {
+        "glossary_kind": "gs10k",
+        "lm": 1,
+        "job_id": "40974419",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh/gs10k/lm1",
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh/gs10k/lm1"
+      },
+      {
+        "glossary_kind": "gs10k",
+        "lm": 2,
+        "job_id": "40974420",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh/gs10k/lm2",
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh/gs10k/lm2"
+      }
+    ],
+    "psc_full_jobs_submitted_at_utc": "2026-05-24T18:38:32.357304Z",
+    "psc_full_output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh",
+    "psc_full_log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh",
+    "psc_retry_history": [
+      {
+        "recorded_at_utc": "2026-05-24T13:43:58.328962Z",
+        "reason": "initial PSC medicine gs fixedraw jobs failed because maxsim vLLM agent did not trim prompt audio history to VLLM_LIMIT_AUDIO_OVERRIDE=8; cancelled remaining doomed jobs before retry",
+        "superseded_jobs": [
+          {
+            "glossary_kind": "gs1k",
+            "lm": 1,
+            "job_id": "40972169",
+            "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1226_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm1",
+            "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1226_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm1"
+          },
+          {
+            "glossary_kind": "gs1k",
+            "lm": 2,
+            "job_id": "40972170",
+            "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1226_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm2",
+            "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1226_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm2"
+          },
+          {
+            "glossary_kind": "gs1k",
+            "lm": 3,
+            "job_id": "40972171",
+            "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1226_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm3",
+            "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1226_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm3"
+          },
+          {
+            "glossary_kind": "gs1k",
+            "lm": 4,
+            "job_id": "40972172",
+            "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1226_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm4",
+            "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1226_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm4"
+          },
+          {
+            "glossary_kind": "gs10k",
+            "lm": 1,
+            "job_id": "40972176",
+            "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1226_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm1",
+            "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1226_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm1"
+          },
+          {
+            "glossary_kind": "gs10k",
+            "lm": 2,
+            "job_id": "40972177",
+            "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1226_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm2",
+            "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1226_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm2"
+          },
+          {
+            "glossary_kind": "gs10k",
+            "lm": 3,
+            "job_id": "40972178",
+            "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1226_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm3",
+            "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1226_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm3"
+          },
+          {
+            "glossary_kind": "gs10k",
+            "lm": 4,
+            "job_id": "40972180",
+            "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1226_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm4",
+            "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1226_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm4"
+          }
+        ],
+        "fixes": [
+          "agents/infinisst_omni_vllm_maxsim_rag.py trims states.messages before appending current audio so prompt audio count stays <= limit_mm_per_prompt",
+          "PSC medicine wrapper avoids shell brace expansion in {sample} tag patterns"
+        ]
+      },
+      {
+        "recorded_at_utc": "2026-05-24T18:39:02.026194Z",
+        "reason": "resubmit missing medicine gs fixedraw settings with 5h limit after 3h timeout/cancel",
+        "resubmitted_settings": [
+          {
+            "glossary_kind": "gs1k",
+            "lm": 1,
+            "job_id": "40974413"
+          },
+          {
+            "glossary_kind": "gs1k",
+            "lm": 2,
+            "job_id": "40974416"
+          },
+          {
+            "glossary_kind": "gs10k",
+            "lm": 1,
+            "job_id": "40974419"
+          },
+          {
+            "glossary_kind": "gs10k",
+            "lm": 2,
+            "job_id": "40974420"
+          }
+        ],
+        "time_limit": "05:00:00",
+        "prior_completed_settings_kept": [
+          {
+            "glossary_kind": "gs1k",
+            "lm": 3,
+            "job_id": "40972313",
+            "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1345_retry_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm3",
+            "status": "completed_with_eval_results"
+          },
+          {
+            "glossary_kind": "gs1k",
+            "lm": 4,
+            "job_id": "40972316",
+            "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1345_retry_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm4",
+            "status": "completed_with_eval_results"
+          },
+          {
+            "glossary_kind": "gs10k",
+            "lm": 3,
+            "job_id": "40972327",
+            "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1345_retry_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm3",
+            "status": "completed_with_eval_results"
+          },
+          {
+            "glossary_kind": "gs10k",
+            "lm": 4,
+            "job_id": "40972328",
+            "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1345_retry_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm4",
+            "status": "completed_with_eval_results"
+          }
+        ],
+        "superseded_jobs": [
+          {
+            "glossary_kind": "gs1k",
+            "lm": 1,
+            "job_id": "40972309",
+            "state": "TIMEOUT"
+          },
+          {
+            "glossary_kind": "gs1k",
+            "lm": 2,
+            "job_id": "40972310",
+            "state": "TIMEOUT"
+          },
+          {
+            "glossary_kind": "gs10k",
+            "lm": 1,
+            "job_id": "40972317",
+            "state": "TIMEOUT"
+          },
+          {
+            "glossary_kind": "gs10k",
+            "lm": 2,
+            "job_id": "40972318",
+            "state": "CANCELLED"
+          }
+        ]
+      }
+    ],
+    "psc_initial_failure_root_cause": "ValueError: At most 8 audio(s) may be provided in one prompt.",
+    "psc_monitor": {
+      "pid": 3373983,
+      "state_dir": "/mnt/gemini/data1/jiaxuanluo/logs/psc_medicine_new_v9_gs_fixedraw_monitor_20260524T1345_retry_audio8trim_state",
+      "interval_seconds": 1800,
+      "started_at_utc": "2026-05-24T13:46:51.081821Z",
+      "run_stamp_base": "20260524T1345_retry_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh"
+    },
+    "psc_completed_jobs_prior_to_5h_retry": [
+      {
+        "glossary_kind": "gs1k",
+        "lm": 3,
+        "job_id": "40972313",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1345_retry_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm3",
+        "status": "completed_with_eval_results"
+      },
+      {
+        "glossary_kind": "gs1k",
+        "lm": 4,
+        "job_id": "40972316",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1345_retry_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm4",
+        "status": "completed_with_eval_results"
+      },
+      {
+        "glossary_kind": "gs10k",
+        "lm": 3,
+        "job_id": "40972327",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1345_retry_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm3",
+        "status": "completed_with_eval_results"
+      },
+      {
+        "glossary_kind": "gs10k",
+        "lm": 4,
+        "job_id": "40972328",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1345_retry_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm4",
+        "status": "completed_with_eval_results"
+      }
+    ],
+    "psc_active_retry_jobs": [
+      {
+        "glossary_kind": "gs1k",
+        "lm": 1,
+        "job_id": "40974413",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh/gs1k/lm1",
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh/gs1k/lm1"
+      },
+      {
+        "glossary_kind": "gs1k",
+        "lm": 2,
+        "job_id": "40974416",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh/gs1k/lm2",
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh/gs1k/lm2"
+      },
+      {
+        "glossary_kind": "gs10k",
+        "lm": 1,
+        "job_id": "40974419",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh/gs10k/lm1",
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh/gs10k/lm1"
+      },
+      {
+        "glossary_kind": "gs10k",
+        "lm": 2,
+        "job_id": "40974420",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh/gs10k/lm2",
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/medicine_hardraw_new_v9_hn1024_tau078_gs_fixedraw/20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh/gs10k/lm2"
+      }
+    ],
+    "psc_target_job_plan": "4 previous completed settings plus 4 active 5h retry settings",
+    "psc_expected_total_settings": 8,
+    "psc_expected_active_retry_settings": 4,
+    "psc_5h_retry_monitor": {
+      "pid": 4073191,
+      "state_dir": "/mnt/gemini/data1/jiaxuanluo/logs/psc_medicine_new_v9_gs_fixedraw_monitor_20260524T1837_retry5h_lm12_state",
+      "interval_seconds": 1800,
+      "started_at_utc": "2026-05-24T18:39:26.585425Z",
+      "run_stamp_base": "20260524T1837_retry5h_audio8trim_psc_med_newv9_hn1024_tau078_gs1k_gs10k_lm12_fixedraw_zh"
+    }
+  }
+}

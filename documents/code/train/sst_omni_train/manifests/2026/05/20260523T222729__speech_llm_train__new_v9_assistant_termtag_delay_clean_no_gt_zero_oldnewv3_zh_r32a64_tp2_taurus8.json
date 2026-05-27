@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T222729__speech_llm_train__new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8",
+  "event_type": "speech_llm_train",
+  "family": "speech_llm_tcm_termmap",
+  "variant": "new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8",
+  "status": "running",
+  "project": "sst_omni",
+  "wandb_run_id": "2g6kan5y",
+  "slurm_job_id": "direct_new_v9_assistant_termtag_delay_clean_taurus8",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260523__speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_taurus8_r32a64_tp2.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260523__speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && HOST_GPU_DEVICES_OVERRIDE=0,1,2,3,4,5,6,7 SLURM_JOB_PARTITION=taurus SLURM_JOB_ID=direct_new_v9_assistant_termtag_delay_clean_taurus8 MASTER_PORT=30729 bash documents/code/train/sst_omni_train/launchers/2026/05/20260523__speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_taurus8_r32a64_tp2.sh' > /mnt/gemini/data1/jiaxuanluo/logs/direct_new_v9_assistant_termtag_delay_clean_taurus8_20260523T222729.out 2> /mnt/gemini/data1/jiaxuanluo/logs/direct_new_v9_assistant_termtag_delay_clean_taurus8_20260523T222729.err < /dev/null &",
+  "parent_run_ids": [
+    "cg5qisu9"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260523__speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_taurus8_r32a64_tp2.sh"
+    },
+    {
+      "role": "data_prepare_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260523__build_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh.sh"
+    },
+    {
+      "role": "data_prepare_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/wrap_assistant_term_targets.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260523__speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh.md"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_20260523/train_s_zh_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_20260523/dev_s_zh_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3.jsonl"
+    },
+    {
+      "role": "data_summary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_20260523/new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_summary.json"
+    },
+    {
+      "role": "mcore_model",
+      "type": "checkpoint_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/Qwen3-Omni-30B-A3B-Instruct-v2/"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8"
+    },
+    {
+      "role": "direct_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_new_v9_assistant_termtag_delay_clean_taurus8_20260523T222729.out"
+    },
+    {
+      "role": "direct_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_new_v9_assistant_termtag_delay_clean_taurus8_20260523T222729.err"
+    },
+    {
+      "role": "direct_pid",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_new_v9_assistant_termtag_delay_clean_taurus8_20260523T222729.pid"
+    },
+    {
+      "role": "active_mcore_checkpoint",
+      "type": "checkpoint_dir",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8/keep1.0_r32/v0-20260524-062743"
+    },
+    {
+      "role": "train_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8/train_keep1.0_r32_20260524_062730.log"
+    }
+  ],
+  "metadata": {
+    "base_setting": "new_v5_no_gt_zero_llm_variant_aug_oldnewv3",
+    "data_prepare_event": "20260523T2235__data_prepare__new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh",
+    "supersedes_train_event": "20260523T222509__speech_llm_train__new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus6",
+    "assistant_term_tag_template": "<term>{translation}</term>",
+    "boundary_delay_prefix": true,
+    "source_term_token_filter": true,
+    "gpu_devices": "0,1,2,3,4,5,6,7",
+    "lora_rank": 32,
+    "lora_alpha": 64,
+    "nproc_per_node": 8,
+    "expert_model_parallel_size": 2,
+    "tensor_model_parallel_size": 2,
+    "global_batch_size": 8,
+    "micro_batch_size": 1,
+    "max_length": 3072,
+    "iterations_per_epoch": 1000,
+    "pid": 2885457,
+    "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/sst_omni/runs/2g6kan5y"
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T2300__simuleval__tagged_acl_origin_norag_de_lm4_raw_onebyone_aries01",
+  "event_type": "simuleval",
+  "family": "tagged_acl_origin_norag",
+  "variant": "de_lm4_raw_no_tmsft_no_rag_onebyone",
+  "status": "planned",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_origin_norag_de_lm4_raw_onebyone_aries01.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_origin_norag_de_lm4_raw_onebyone_aries01.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": null,
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_origin_norag_de_lm4_raw_onebyone_aries01.sh"
+    },
+    {
+      "role": "baseline_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/rank16/baseline/bypass_simuleval_rank32_iter_0000452_hf_baseline_no_rag_sweep.sh"
+    },
+    {
+      "role": "offline_eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/offline_sst_eval/offline_streamlaal_eval.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_origin_norag_de_lm4_raw_onebyone_aries01.md"
+    },
+    {
+      "role": "speech_llm_model",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-de-s_origin-bsz4"
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "acl6060_dataset",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/taurus/data/siqiouyang/datasets/acl6060"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_raw_onebyone_aries01_20260524T2300_tagacl_origin_norag_de_lm4_raw_onebyone_aries01"
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm4_raw_onebyone_aries01_20260524T2300_tagacl_origin_norag_de_lm4_raw_onebyone_aries01"
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "latency_multiplier": 4,
+    "runtime_rag": false,
+    "term_map_sft": false,
+    "one_sample_per_simuleval_invocation": true,
+    "talks": 5,
+    "max_new_tokens": 40,
+    "gpu_pair": "0,1",
+    "metric_denominator": "fixed tagged raw glossary",
+    "comparison_parent_event_id": "20260524T160830__simuleval__tagged_acl_origin_norag_de_lm4_raw_rerun",
+    "wandb_policy": "standalone eval; manifest plus verified TSV/log artifacts are authoritative"
+  }
+}

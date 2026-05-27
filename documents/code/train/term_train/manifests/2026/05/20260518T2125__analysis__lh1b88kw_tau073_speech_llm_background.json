@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "event_id": "20260518T2125__analysis__lh1b88kw_tau073_speech_llm_background",
+  "event_type": "analysis",
+  "family": "sst_ood_hardneg",
+  "variant": "lh1b88kw_tau073_speech_llm_background",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/train/term_train/reports/20260518_lh1b88kw_tau073_retriever_readout_for_speech_llm.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "create consolidated markdown report from W&B-backed eval readouts and registered manifests",
+  "parent_run_ids": [
+    "4g108a3w",
+    "nrxiasfm",
+    "qjy4m1x9",
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/20260518_lh1b88kw_tau073_retriever_readout_for_speech_llm.md",
+      "metadata": {}
+    },
+    {
+      "role": "tagged_acl_eval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/train/term_train/manifests/2026/05/20260518T2115__retriever_eval__lh1b88kw_s2640_tagged_acl_tau073_075_078.json",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_eval_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/train/term_train/manifests/2026/05/20260518T2052__retriever_eval__lh1b88kw_s2640_medicine_tau073_075_078_strict.json",
+      "metadata": {}
+    },
+    {
+      "role": "paper_acl_eval_notes",
+      "type": "notes",
+      "direction": "input",
+      "path": "documents/code/train/term_train/notes/2026/05/20260517__lh1b88kw_s2640_tau_delta_dev_acl_med_eval.md",
+      "metadata": {
+        "wandb_run_id": "4g108a3w"
+      }
+    },
+    {
+      "role": "checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "trained_from_run": "lh1b88kw",
+        "checkpoint_step": 2640
+      }
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_varctx2p88_3p84_4p80_5p76_new_version.jsonl",
+      "metadata": {
+        "usage": "tau calibration only"
+      }
+    },
+    {
+      "role": "acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_extracted_paper_glossary_varctx2p88_3p84_4p80_5p76/acl6060_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout"
+      }
+    },
+    {
+      "role": "tagged_acl_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_tagged_glossary_varctx2p88_3p84_4p80_5p76/acl6060_tagged_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout"
+      }
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout"
+      }
+    }
+  ],
+  "metadata": {
+    "selected_tau": 0.73,
+    "selection_data": "dev only",
+    "dev_raw_mean_recall_percent": 98.928,
+    "dev_tau073_max_drop_pp": 0.486,
+    "dev_tau073_mean_drop_pp": 0.273,
+    "readout_runs": {
+      "paper_acl": "4g108a3w",
+      "tagged_acl": "nrxiasfm",
+      "medicine_strict": "qjy4m1x9"
+    }
+  }
+}

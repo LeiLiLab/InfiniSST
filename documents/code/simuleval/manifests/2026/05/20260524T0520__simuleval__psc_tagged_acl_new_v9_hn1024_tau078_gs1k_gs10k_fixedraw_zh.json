@@ -1,0 +1,392 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T0520__simuleval__psc_tagged_acl_new_v9_hn1024_tau078_gs1k_gs10k_fixedraw_zh",
+  "event_type": "simuleval",
+  "family": "tagged_acl_new_v9_hn1024_tau078",
+  "variant": "psc_zh_gs1k_gs10k_fixedraw_lm1to4_new_v9_termtag_delay_hn1024_tau078",
+  "status": "completed_with_posthoc_strip_recheck",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__submit_psc_tagged_acl_new_v9_hn1024_tau078_gs1k_gs10k_fixedraw_zh.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__psc_tagged_acl_new_v9_hn1024_tau078_gs1k_gs10k_fixedraw_zh.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "Submit PSC zh tagged ACL New V9 HN1024 tau0.78 full jobs directly for gs1k and gs10k runtime glossaries, lm=1..4, with fixed raw tagged glossary denominator and no smoke gate.",
+  "parent_run_ids": [
+    "4b86tuti",
+    "lh1b88kw",
+    "2g6kan5y"
+  ],
+  "artifacts": [
+    {
+      "role": "submitter",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__submit_psc_tagged_acl_new_v9_hn1024_tau078_gs1k_gs10k_fixedraw_zh.sh"
+    },
+    {
+      "role": "psc_wrapper",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__psc_tagged_acl_new_v9_hn1024_tau078_raw_zh.sh"
+    },
+    {
+      "role": "quick_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260522__tagged_acl_speech_llm_quick_zh_lm2_raw_wait_hf.sh"
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh"
+    },
+    {
+      "role": "log_monitor",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__monitor_psc_tagged_acl_new_v9_hn1024_tau078_raw_zh_logs.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__psc_tagged_acl_new_v9_hn1024_tau078_gs1k_gs10k_fixedraw_zh.md"
+    },
+    {
+      "role": "speech_llm_model_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/models/new_v9_termtag_delay_oldnewv3_r32a64/keep1.0_r32/v0-20260524-062743-hf",
+      "metadata": {
+        "hf_repo_id": "gavinlaw/infinisst-new-v9-termtag-delay-oldnewv3-r32a64-keep1p0-r32-zh",
+        "expected_safetensor_shards": 15
+      }
+    },
+    {
+      "role": "hn1024_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/checkpoints/lh1b88kw_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "source_run_id": "lh1b88kw"
+      }
+    },
+    {
+      "role": "acl6060_data",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/data/acl6060"
+    },
+    {
+      "role": "runtime_glossary_gs1k",
+      "type": "json",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/glossaries/acl6060_tagged_gt_union_gs1000_min_norm2_backfill.json"
+    },
+    {
+      "role": "runtime_glossary_gs10k",
+      "type": "json",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/glossaries/acl6060_tagged_gt_union_gs10000_min_norm2_backfill.json"
+    },
+    {
+      "role": "metric_denominator_glossary_raw",
+      "type": "json",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "fixed_denominator": true,
+        "eval_glossary_follows_kind": 0
+      }
+    },
+    {
+      "role": "mwersegmenter",
+      "type": "tool_dir",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/tools/mwerSegmenter"
+    },
+    {
+      "role": "fbk_stream_laal_term",
+      "type": "script",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/tools/FBK-fairseq/examples/speech_to_text/simultaneous_translation/scripts/stream_laal_term.py"
+    },
+    {
+      "role": "output_root",
+      "type": "directory",
+      "direction": "output",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh"
+    },
+    {
+      "role": "log_root",
+      "type": "directory",
+      "direction": "log",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh"
+    }
+  ],
+  "metadata": {
+    "psc_account": "cis260009p",
+    "psc_partition": "GPU-shared",
+    "psc_gres": "gpu:v100-32:4",
+    "psc_time_limit": "02:00:00",
+    "submission_mode": "direct_full_no_smoke",
+    "lang": "zh",
+    "lms": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "glossary_kinds": [
+      "gs1k",
+      "gs10k"
+    ],
+    "excluded_glossary_kinds": [
+      "raw"
+    ],
+    "runtime_glossaries": [
+      "gs1k",
+      "gs10k"
+    ],
+    "metric_denominator": "fixed raw tagged ACL glossary acl6060_tagged_gt_raw_min_norm2.json",
+    "eval_glossary_follows_kind": 0,
+    "retriever_run_id": "lh1b88kw",
+    "retriever_variant": "HN1024",
+    "retriever_tau": 0.78,
+    "retriever_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "speech_llm_model": "new_v9_termtag_delay_oldnewv3_r32a64",
+    "vllm_tp_size": 4,
+    "vllm_max_model_len": 8192,
+    "gpu_memory_utilization": 0.7,
+    "strip_output_tags": "term",
+    "apptainer_sif": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/containers/ubuntu_22_04_gcc.sif",
+    "run_stamp_base": "20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh",
+    "supersedes_event_id": "20260524T0400__simuleval__psc_tagged_acl_new_v9_hn1024_tau078_raw_zh",
+    "psc_full_jobs": [
+      {
+        "glossary_kind": "gs1k",
+        "lm": "1",
+        "job_id": "40971087",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm1",
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm1"
+      },
+      {
+        "glossary_kind": "gs1k",
+        "lm": "2",
+        "job_id": "40971088",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm2",
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm2"
+      },
+      {
+        "glossary_kind": "gs1k",
+        "lm": "3",
+        "job_id": "40971089",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm3",
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm3"
+      },
+      {
+        "glossary_kind": "gs1k",
+        "lm": "4",
+        "job_id": "40971090",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm4",
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm4"
+      },
+      {
+        "glossary_kind": "gs10k",
+        "lm": "1",
+        "job_id": "40971091",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm1",
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm1"
+      },
+      {
+        "glossary_kind": "gs10k",
+        "lm": "2",
+        "job_id": "40971092",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm2",
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm2"
+      },
+      {
+        "glossary_kind": "gs10k",
+        "lm": "3",
+        "job_id": "40971093",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm3",
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm3"
+      },
+      {
+        "glossary_kind": "gs10k",
+        "lm": "4",
+        "job_id": "40971094",
+        "output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm4",
+        "log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs10k/lm4"
+      }
+    ],
+    "psc_full_jobs_submitted_at_utc": "2026-05-24T05:17:11.089283Z",
+    "psc_full_output_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh",
+    "psc_full_log_root": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh",
+    "psc_log_monitor_pid": "1573233",
+    "psc_log_monitor_interval_seconds": 1800,
+    "psc_log_monitor_out": "/mnt/gemini/data1/jiaxuanluo/logs/psc_tagacl_new_v9_gs_fixedraw_log_monitor_20260524T0520_retry1.out",
+    "psc_log_monitor_err": "/mnt/gemini/data1/jiaxuanluo/logs/psc_tagacl_new_v9_gs_fixedraw_log_monitor_20260524T0520_retry1.err",
+    "psc_log_monitor_state_dir": "/mnt/gemini/data1/jiaxuanluo/logs/psc_tagacl_new_v9_gs_fixedraw_monitor_20260524T0520_state",
+    "failure_diagnosis": "Initial failed jobs completed eval outputs but failed in wandb_eval_logger because PSC wrapper inherited base launcher WANDB_HOME default /mnt/taurus/home/jiaxuanluo, so W&B could not find PSC credentials.",
+    "fix_applied": "PSC wrapper now exports WANDB_HOME=${HOME} and WANDB_CONFIG_DIR=${HOME}/.config/wandb before calling the quick/base launcher.",
+    "wandb_backfill_runs": {
+      "gs1k_lm1": "v7vgjvfh",
+      "gs1k_lm2": "j0t7k1do",
+      "gs1k_lm3": "ydvn6pfl",
+      "gs1k_lm4": "ck188p4q",
+      "gs10k_lm2": "dv5ypmq8"
+    },
+    "bleu_low_diagnosis": {
+      "symptom": "Initial PSC gs1k/gs10k eval_results.tsv showed zh BLEU around 30-32 despite expected 40+.",
+      "root_cause": "PSC source tree was stale and lacked offline_streamlaal_eval.py --strip-output-tags support; jobs scored raw instances.log containing <term> tags as literal hypothesis text.",
+      "evidence": {
+        "psc_failed_eval_instances_log": "eval_results.tsv instances_log pointed to instances.log, not instances.strip_term.log",
+        "psc_old_offline_eval_error": "Before source sync, PSC offline_streamlaal_eval.py rejected --strip-output-tags term as an unrecognized argument.",
+        "strip_recheck": "After syncing eval_density_unified.sh and offline_streamlaal_eval.py to PSC, gs1k/lm2 strip recheck BLEU changed from 30.9978 to 48.7430.",
+        "raw_aries_reference": "Aries raw New V9 zh lm2/lm3/lm4 verified at 49.6099/50.1545/50.8145 BLEU."
+      },
+      "fix_applied": [
+        "Synced current eval_density_unified.sh and offline_streamlaal_eval.py to PSC source tree.",
+        "Synced base/PSC launchers to explicitly propagate STRIP_OUTPUT_TAGS_OVERRIDE, VLLM_LIMIT_AUDIO_OVERRIDE, and cache overrides.",
+        "PSC wrapper defaults now include STRIP_OUTPUT_TAGS_OVERRIDE=term, VLLM_LIMIT_AUDIO_OVERRIDE=8, MAX_CACHE_SECONDS_OVERRIDE=80.0, KEEP_CACHE_SECONDS_OVERRIDE=60.0."
+      ]
+    },
+    "posthoc_rechecks": {
+      "gs1k_lm2_strip_term_20260524T0615": {
+        "output_tsv": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm2/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/zh/dtagacl_new_v9_hn1024_tau078_gs_fixedraw_lm2_k10_th0.78_gacl6060_tagged_gt_union_gs1000_min_norm2_backfill/eval_results.strip_term_recheck.tsv",
+        "instances_log": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/gs1k/lm2/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/zh/dtagacl_new_v9_hn1024_tau078_gs_fixedraw_lm2_k10_th0.78_gacl6060_tagged_gt_union_gs1000_min_norm2_backfill/instances.strip_term.log",
+        "BLEU": 48.74302505045849,
+        "StreamLAAL": 1926.749661605612,
+        "TERM_ACC": 0.891,
+        "REAL_TERM_ADOPT": 0.904838,
+        "TERM_FCR": 0.127596
+      }
+    },
+    "posthoc_strip_recheck_event": "20260524T1119__analysis__psc_tagged_acl_new_v9_gs_fixedraw_strip_recheck",
+    "posthoc_strip_recheck_summary": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/tagged_acl_new_v9_hn1024_tau078_gs_fixedraw/20260524T0520_psc_tagacl_newv9_hn1024_tau078_gs1k_gs10k_fixedraw_zh/__summary__/strip_recheck_summary.tsv",
+    "posthoc_wandb_runs": {
+      "gs1k_lm1to4": "b6p445cl",
+      "gs10k_lm1to4": "lv8d2i9r"
+    },
+    "merged_report_tsv": "documents/code/simuleval/reports/20260524_tagged_acl_new_v9_hn1024_tau078_zh_raw_gs_fixedraw_data.tsv",
+    "merged_report_md": "documents/code/simuleval/reports/20260524_tagged_acl_new_v9_hn1024_tau078_zh_raw_gs_fixedraw_summary.md",
+    "merged_report_updated_at_utc": "2026-05-24T15:18:29Z",
+    "merged_report_update_note": "raw zh lm1 row updated to same-lm batch max256 readout from simuleval_eval/kolja8vr",
+    "merged_results": [
+      {
+        "runtime_glossary": "tagged_raw",
+        "lm": 1,
+        "BLEU": 44.4102,
+        "StreamLAAL": 1236.7205,
+        "TERM_ACC_pct": 85.39,
+        "REAL_ADOPT_pct": 89.40,
+        "TERM_FCR_pct": 13.01,
+        "source_wandb_run_id": "kolja8vr",
+        "source_event_id": "20260524T1442__simuleval__tagged_acl_same_lm_batch_v1exact_hn1024_tau078_raw_zh_lm1_max256"
+      },
+      {
+        "runtime_glossary": "tagged_raw",
+        "lm": 2,
+        "BLEU": 49.6099,
+        "StreamLAAL": 1861.8699,
+        "TERM_ACC_pct": 88.88,
+        "REAL_ADOPT_pct": 90.37,
+        "TERM_FCR_pct": 12.41
+      },
+      {
+        "runtime_glossary": "tagged_raw",
+        "lm": 3,
+        "BLEU": 50.1545,
+        "StreamLAAL": 2342.6068,
+        "TERM_ACC_pct": 89.89,
+        "REAL_ADOPT_pct": 91.08,
+        "TERM_FCR_pct": 8.07
+      },
+      {
+        "runtime_glossary": "tagged_raw",
+        "lm": 4,
+        "BLEU": 50.8145,
+        "StreamLAAL": 2785.504,
+        "TERM_ACC_pct": 90.0,
+        "REAL_ADOPT_pct": 92.12,
+        "TERM_FCR_pct": 9.4
+      },
+      {
+        "runtime_glossary": "tagged_gs1k",
+        "lm": 1,
+        "BLEU": 46.9162,
+        "StreamLAAL": 1320.2466,
+        "TERM_ACC_pct": 86.29,
+        "REAL_ADOPT_pct": 89.84,
+        "TERM_FCR_pct": 10.32
+      },
+      {
+        "runtime_glossary": "tagged_gs1k",
+        "lm": 2,
+        "BLEU": 48.743,
+        "StreamLAAL": 1926.7497,
+        "TERM_ACC_pct": 89.1,
+        "REAL_ADOPT_pct": 90.48,
+        "TERM_FCR_pct": 12.76
+      },
+      {
+        "runtime_glossary": "tagged_gs1k",
+        "lm": 3,
+        "BLEU": 49.8246,
+        "StreamLAAL": 2427.2251,
+        "TERM_ACC_pct": 88.09,
+        "REAL_ADOPT_pct": 89.99,
+        "TERM_FCR_pct": 7.95
+      },
+      {
+        "runtime_glossary": "tagged_gs1k",
+        "lm": 4,
+        "BLEU": 50.2348,
+        "StreamLAAL": 2823.8464,
+        "TERM_ACC_pct": 89.1,
+        "REAL_ADOPT_pct": 91.36,
+        "TERM_FCR_pct": 9.33
+      },
+      {
+        "runtime_glossary": "tagged_gs10k",
+        "lm": 1,
+        "BLEU": 46.1979,
+        "StreamLAAL": 1373.0813,
+        "TERM_ACC_pct": 84.61,
+        "REAL_ADOPT_pct": 88.11,
+        "TERM_FCR_pct": 9.38
+      },
+      {
+        "runtime_glossary": "tagged_gs10k",
+        "lm": 2,
+        "BLEU": 49.0672,
+        "StreamLAAL": 1913.431,
+        "TERM_ACC_pct": 88.54,
+        "REAL_ADOPT_pct": 90.29,
+        "TERM_FCR_pct": 8.87
+      },
+      {
+        "runtime_glossary": "tagged_gs10k",
+        "lm": 3,
+        "BLEU": 49.8589,
+        "StreamLAAL": 2426.7215,
+        "TERM_ACC_pct": 88.99,
+        "REAL_ADOPT_pct": 91.25,
+        "TERM_FCR_pct": 8.32
+      },
+      {
+        "runtime_glossary": "tagged_gs10k",
+        "lm": 4,
+        "BLEU": 50.3517,
+        "StreamLAAL": 2828.4538,
+        "TERM_ACC_pct": 88.65,
+        "REAL_ADOPT_pct": 91.37,
+        "TERM_FCR_pct": 10.28
+      }
+    ]
+  }
+}

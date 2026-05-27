@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T104417__analysis__de_mfa_termmap_lm_shape_bleu_recovery",
+  "event_type": "analysis",
+  "family": "tagged_acl_de_mfa_termmap_shape",
+  "variant": "hn1024_tau078_lm1to4_bleu_recovery",
+  "status": "completed",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__analysis_de_mfa_termmap_lm_shape_bleu_recovery.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/simuleval/src/analyze_de_mfa_termmap_lm_shape_20260525.py",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__analysis_de_mfa_termmap_lm_shape_bleu_recovery.md",
+      "metadata": {
+        "sha256": "795dcff6bdb6d40198f938f23227ab74ae101f7de3d272219f73d343454a3446"
+      }
+    },
+    {
+      "role": "analysis_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/analyze_de_mfa_termmap_lm_shape_20260525.py",
+      "metadata": {
+        "sha256": "e0f42c518ee5629cf68d8f668fd0092f719c18385b2ce16b6efbaf405843884b"
+      }
+    },
+    {
+      "role": "base_analysis_script",
+      "type": "python",
+      "direction": "input",
+      "path": "documents/code/simuleval/src/analyze_de_lm2_rasst_bleu_cases_20260525.py",
+      "metadata": {
+        "sha256": "9d5e2eb8b3305fd1b371ada4b92291c198eab4253230ba094385342e54d6f601"
+      }
+    },
+    {
+      "role": "term_adoption_helper",
+      "type": "python",
+      "direction": "input",
+      "path": "documents/code/offline_sst_eval/compute_sentence_term_adoption.py",
+      "metadata": {
+        "sha256": "fd56d50051147469034fe9b467bde4bc72ca4e1718f4d83e6878805f53abfcd7"
+      }
+    },
+    {
+      "role": "eval_input",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all"
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "newv9_lm1to4_eval_root",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_same_lm_batch_v1_mfa_npfilter_hn1024_tau078_raw_de_lm1to4_20260524T1738_tagacl_newv9_mfa_npfilter_de_batch_mt80/new_v9_mfa_npfilter_lexexact_oldnewv3_de_r32a64_hn1024_tau078_same_lm_batch_v1/de"
+    },
+    {
+      "role": "tmv4_omit_lm2_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260525T100614__simuleval__tagged_acl_tmv4_de_lm2_hn1024_tau078_omit_batch_taurus45.json"
+    },
+    {
+      "role": "tmv4_omit_lm4_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260525T102941__simuleval__tagged_acl_tmv4_de_lm4_hn1024_tau078_omit_batch_taurus45.json"
+    },
+    {
+      "role": "report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_de_mfa_termmap_lm_shape_bleu_recovery.md",
+      "metadata": {
+        "sha256": "81d5dbc03aae8751557bbd2ee0817f8430572947883b511f5a5a80acbd2e97d5"
+      }
+    },
+    {
+      "role": "summary_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_de_mfa_termmap_lm_shape_summary.tsv",
+      "metadata": {
+        "sha256": "6cd58a788aef86da78d8397aa9ef10bbe87be3fef7df28a3c8b892bd9b657415"
+      }
+    },
+    {
+      "role": "call_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_de_mfa_termmap_lm_shape_calls.tsv",
+      "metadata": {
+        "sha256": "dea684f4f0dd6bbed4f4f4ac684071e711e20828f59fc578eefaa07708bd94aa"
+      }
+    },
+    {
+      "role": "sentence_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_de_mfa_termmap_lm_shape_sentences.tsv",
+      "metadata": {
+        "sha256": "44478c650f7025af80c50bed93f6f8bf37e8ff3efcd7b52ad52a667e02fe7e9b"
+      }
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "runtime_glossary": "acl6060_tagged_gt_raw_min_norm2",
+    "retriever": "HN1024",
+    "rag_top_k": 10,
+    "rag_tau": 0.78,
+    "latency_multipliers": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "analysis_scope": "post-tau runtime term-map shape plus MFA/sentence alignment; no ACL-driven tau/model selection",
+    "completed_utc": "2026-05-25T10:45:30Z",
+    "verdict": "post-tau references are identical between NewV9 and TM-SFT at matched lm; BLEU gap is SLM/prompt behavior, not retriever output",
+    "key_metrics": {
+      "tmv4_omit_lm4_bleu": 32.53319716625566,
+      "verified_norag_lm4_bleu": 33.30075964509326,
+      "lm4_sentence_gold_recall": 0.9269,
+      "lm4_sentence_noise_ref_rate": 0.5632,
+      "lm4_marginal_ref_rate_078_080": 0.1267,
+      "lm4_stale_lookback_ref_rate": 0.0
+    },
+    "recommended_slm_repair": "match omit-empty prompt policy in training, keep retrieved maps on no-GT chunks, add negative/noise exposure, and dropout/down-weight score 0.78-0.80 or sentence-unsupported terms without ACL tau tuning"
+  }
+}

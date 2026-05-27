@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T1318__analysis__offline_de_instance_posthandle_check",
+  "event_type": "analysis",
+  "family": "main_result_refresh",
+  "variant": "offline_de_instance_posthandle_check",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__offline_llm_upper_reference_main_results.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python import of build_main_result_tables_and_figures_20260524.py helpers to inspect offline de instances.log row counts and scorer-aligned TERM_ACC",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "analysis_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/build_main_result_tables_and_figures_20260524.py"
+    },
+    {
+      "role": "offline_acl_baseline_instances",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/data/siqiouyang/runs/infinisst_rag/offline/acl6060/de/instances.log"
+    },
+    {
+      "role": "offline_acl_glossary_instances",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/data/siqiouyang/runs/infinisst_rag/offline/acl6060/glossary/de/instances.log"
+    },
+    {
+      "role": "offline_medicine_baseline_instances",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/data/siqiouyang/runs/infinisst_rag/offline/eso/baseline/de/instances.log"
+    },
+    {
+      "role": "offline_medicine_glossary_instances",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/data/siqiouyang/runs/infinisst_rag/offline/eso/glossary/de/instances.log"
+    },
+    {
+      "role": "report",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_offline_de_instance_posthandle_check.tsv"
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "offline_posteval_attempt": "offline_streamlaal_eval.py --mode acl6060 fails for offline sentence-level instances because predictions are keyed by sent_*.wav while ACL streaming references are keyed by five talk wavs",
+    "valid_offline_policy": "Use full-context scores.tsv for BLEU and scorer-aligned sentence-level TERM_ACC from build_main_result_tables_and_figures_20260524.py; StreamLAAL remains NA for offline horizontal references.",
+    "acl_tagged_raw": {
+      "rows": 468,
+      "term_total": 935
+    },
+    "medicine_hardraw": {
+      "rows": 1437,
+      "term_total": 718
+    }
+  }
+}

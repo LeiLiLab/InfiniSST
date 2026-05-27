@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T0751__simuleval__acl_paper_extracted_main_no_tmsft_llmgen_rasst",
+  "event_type": "simuleval",
+  "family": "acl_paper_extracted_main",
+  "variant": "no_tmsft_and_llmgen_rasst_5paper_3glossary_3lang_lm1to4_fixed_raw_denom",
+  "status": "prepared_waiting_for_hf_model_upload",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260523__acl_paper_extracted_main_no_tmsft_llmgen_rasst.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260523__acl_paper_extracted_main_no_tmsft_llmgen_rasst.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "sbatch --parsable -A cis260009p -p GPU-shared --gres=gpu:v100-32:6 -c 24 -t 48:00:00 -J aclpp_main -o /ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/aclpp_main_%j.out -e /ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/aclpp_main_%j.err --wrap='cd /ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/src/InfiniSST && PSC_BASE=/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval RUN_STAMP=20260523T0751_psc_${SLURM_JOB_ID} GPU_GROUPS_CSV=\"0,1,2;3,4,5\" MAX_PARALLEL_OVERRIDE=2 WANDB_COMPUTE_TAG_OVERRIDE=compute:psc_bridges2_v100 bash documents/code/simuleval/launchers/2026/05/20260523__acl_paper_extracted_main_no_tmsft_llmgen_rasst.sh'",
+  "parent_run_ids": [
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__acl_paper_extracted_main_no_tmsft_llmgen_rasst.sh"
+    },
+    {
+      "role": "psc_streaming_model_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__psc_acl_paper_extracted_stream_models.sh",
+      "metadata": {
+        "usage": "PSC /ocean has insufficient free space for all six 66G models; pull/evaluate/delete one method-lang model at a time."
+      }
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260523__acl_paper_extracted_main_no_tmsft_llmgen_rasst.md"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "wandb_logger",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/offline_evaluation/wandb_eval_logger.py"
+    },
+    {
+      "role": "acl6060_data_dir",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/data/acl6060"
+    },
+    {
+      "role": "paper_extracted_raw_glossaries",
+      "type": "directory",
+      "direction": "input",
+      "path": "documents/data/data_pre/extracted_glossaries_by_paper",
+      "metadata": {
+        "usage": "fixed per-paper denominator for all term metrics"
+      }
+    },
+    {
+      "role": "runtime_glossary_gs1k",
+      "type": "json",
+      "direction": "input",
+      "path": "retriever/gigaspeech/data_pre/glossary_acl6060_gt_union_gs1000.json"
+    },
+    {
+      "role": "runtime_glossary_gs10k",
+      "type": "json",
+      "direction": "input",
+      "path": "retriever/gigaspeech/data_pre/glossary_acl6060_gt_union_gs10000.json"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/checkpoints/lh1b88kw_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "no_tmsft_models",
+      "type": "model_dir_set",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/models/owaski/gigaspeech-{zh,de,ja}-s_origin-bsz4"
+    },
+    {
+      "role": "llmgen_rasst_models",
+      "type": "model_dir_set",
+      "direction": "input",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/models/owaski/gigaspeech-{zh,de,ja}-s_v4_ner_baseline_aligned_rate1.0_k20_final-bsz4"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/acl_paper_extracted_main"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs"
+    }
+  ],
+  "metadata": {
+    "psc_account": "cis260009p",
+    "psc_partition": "GPU-shared",
+    "psc_target_gres": "gpu:v100-32:6",
+    "psc_smoke_dependency_event_id": "20260523T0440__simuleval__psc_tagged_acl_new_v5_no_gt_zero_oldnewv3_r32_gs1k_gs10k_zh_lm2",
+    "methods": [
+      "no_tmsft",
+      "llmgen_rasst"
+    ],
+    "langs": [
+      "zh",
+      "de",
+      "ja"
+    ],
+    "latency_multipliers": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "papers": [
+      "2022.acl-long.268",
+      "2022.acl-long.367",
+      "2022.acl-long.590",
+      "2022.acl-long.110",
+      "2022.acl-long.117"
+    ],
+    "runtime_glossary_kinds": [
+      "raw",
+      "gs1k",
+      "gs10k"
+    ],
+    "runtime_glossary_size_source": "global_acl_gt_union_for_gs1k_gs10k",
+    "term_metric_denominator_policy": "fixed_per_paper_extracted_raw_glossary",
+    "retriever_run_alias": "lh1b88kw",
+    "retriever_tau": 0.73,
+    "timeline_lookback_sec": 1.92,
+    "planned_setting_count": 72,
+    "planned_single_paper_eval_count": 360,
+    "model_transfer_policy": "HF model repos pulled to PSC model dirs before long eval",
+    "asset_transfer_policy": "small control/data assets synced directly to PSC repo; 66G model dirs transfer via private HF repos",
+    "psc_storage_strategy": "stream models one at a time: pull one 66G HF repo, run one method/lang chunk, delete the local model and HF cache, then continue.",
+    "psc_streaming_launcher": "documents/code/simuleval/launchers/2026/05/20260523__psc_acl_paper_extracted_stream_models.sh",
+    "psc_prepare_check": {
+      "status": "passed",
+      "command": "PSC_BASE=/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval RUN_STAMP=20260523T0751_psc_prepare MODE=prepare METHODS=no_tmsft LANGS=zh LMS=2 GLOSSARY_KINDS=raw OUTPUT_ROOT=/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/outputs/acl_paper_extracted_main/prepare_check LOG_ROOT=/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/logs/acl_paper_extracted_main/prepare_check bash documents/code/simuleval/launchers/2026/05/20260523__acl_paper_extracted_main_no_tmsft_llmgen_rasst.sh",
+      "tasks": 5,
+      "remapped_audio_paths": 473
+    },
+    "psc_vllm_defaults": {
+      "gres": "gpu:v100-32:4",
+      "gpu_groups_csv": "0,1,2,3",
+      "max_parallel": 1,
+      "vllm_tp": 4,
+      "rag_gpu": "cuda:3",
+      "max_model_len": 8192,
+      "gpu_memory_utilization": 0.68,
+      "vllm_limit_audio": 8,
+      "max_cache_seconds": 4,
+      "keep_cache_seconds": 4,
+      "use_apptainer": true,
+      "apptainer_sif": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/containers/ubuntu_22_04_gcc.sif"
+    }
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T150214__simuleval__tagged_acl_origin_norag_de_lm4_batch_promptfix_rerun",
+  "event_type": "simuleval",
+  "family": "tagged_acl_origin_norag_batch_promptfix",
+  "variant": "de_lm4_infinisst_origin_norag_promptfix_max80",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_origin_norag_de_lm1234_batch_infinisst_prompt_max20lm_aries_taurus.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_origin_norag_de_lm4_batch_promptfix_rerun.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "cd /home/jiaxuanluo/InfiniSST && MODE=run_one ROOT_DIR_OVERRIDE=/home/jiaxuanluo/InfiniSST RUN_STAMP_OVERRIDE=20260525T150214_origin_norag_de_lm4_batch_promptfix EVENT_ID_OVERRIDE=20260525T150214__simuleval__tagged_acl_origin_norag_de_lm4_batch_promptfix_rerun LM_VALUE=4 GPU_PAIR=0,1 OUT_ROOT_BASE_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_promptfix_20260525T150214 LOG_ROOT_BASE_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm4_batch_promptfix_20260525T150214 CACHE_BASE_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/cache/tagged_acl_origin_norag_de_lm4_batch_promptfix_20260525T150214 NOTES_FILE_OVERRIDE=/home/jiaxuanluo/InfiniSST/documents/code/simuleval/notes/2026/05/20260525__tagged_acl_origin_norag_de_lm4_batch_promptfix_rerun.md EVAL_TMPDIR_OVERRIDE=/tmp/jxnoi4_pf bash documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_origin_norag_de_lm1234_batch_infinisst_prompt_max20lm_aries_taurus.sh",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_origin_norag_de_lm1234_batch_infinisst_prompt_max20lm_aries_taurus.sh"
+    },
+    {
+      "role": "batch_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_origin_norag_de_lm4_batch_promptfix_rerun.md"
+    },
+    {
+      "role": "speech_llm_checkpoint",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-de-s_origin-bsz4"
+    },
+    {
+      "role": "eval_input_dir",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all"
+    },
+    {
+      "role": "acl_eval_raw_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_promptfix_20260525T150214"
+    },
+    {
+      "role": "summary_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_promptfix_20260525T150214/lm4_taurus_g01/origin_norag_de_batch_infprompt_max20lm/__summary__/summary_de_lm4.tsv"
+    },
+    {
+      "role": "eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_promptfix_20260525T150214/lm4_taurus_g01/origin_norag_de_batch_infprompt_max20lm/de/dtagacl_origin_norag_infprompt_max20lm_lm4_lm4_k0_th0.0_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    {
+      "role": "instances_log",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_promptfix_20260525T150214/lm4_taurus_g01/origin_norag_de_batch_infprompt_max20lm/de/dtagacl_origin_norag_infprompt_max20lm_lm4_lm4_k0_th0.0_gacl6060_tagged_gt_raw_min_norm2/instances.log"
+    },
+    {
+      "role": "instances_strip_term_log",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_promptfix_20260525T150214/lm4_taurus_g01/origin_norag_de_batch_infprompt_max20lm/de/dtagacl_origin_norag_infprompt_max20lm_lm4_lm4_k0_th0.0_gacl6060_tagged_gt_raw_min_norm2/instances.strip_term.log"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm4_batch_promptfix_20260525T150214"
+    },
+    {
+      "role": "cache_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/cache/tagged_acl_origin_norag_de_lm4_batch_promptfix_20260525T150214"
+    }
+  ],
+  "metadata": {
+    "lang": "de",
+    "lm": 4,
+    "method": "InfiniSST/no-RAG",
+    "disable_rag": true,
+    "rag_top_k": 0,
+    "max_new_tokens": 80,
+    "max_new_tokens_policy": "fixed",
+    "norag_prompt_policy": "serial_compat",
+    "empty_term_map_policy": "omit",
+    "gpu_pair": "0,1",
+    "host": "taurus",
+    "top_pid": 2197316,
+    "batched_eval_pid": 2197365,
+    "vllm_worker_pids": [
+      2198046,
+      2198048
+    ],
+    "run_stamp": "20260525T150214_origin_norag_de_lm4_batch_promptfix",
+    "metrics": {
+      "BLEU": 30.65870789607356,
+      "StreamLAAL": 2721.0152282140543,
+      "StreamLAAL_CA": 585.4563809702355,
+      "TERM_ACC": 0.6492,
+      "TERM_CORRECT": 607,
+      "TERM_TOTAL": 935
+    },
+    "validation": {
+      "eval_results_rows": 1,
+      "instances_log_rows": 5,
+      "instances_strip_term_log_rows": 5,
+      "success_file": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_promptfix_20260525T150214/lm4_taurus_g01/.success"
+    },
+    "nonfatal_warnings": [
+      "vLLM shared-memory cleanup FileNotFoundError at shutdown after outputs were written"
+    ],
+    "reason": "refresh batch baseline after prompt mismatch fix"
+  }
+}

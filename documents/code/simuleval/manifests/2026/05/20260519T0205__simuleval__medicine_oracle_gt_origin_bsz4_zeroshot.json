@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "event_id": "20260519T0205__simuleval__medicine_oracle_gt_origin_bsz4_zeroshot",
+  "event_type": "simuleval",
+  "family": "speech_llm_oracle_gt_zeroshot",
+  "variant": "origin_bsz4_medicine404_lm2",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": "x818tsc6",
+  "slurm_job_id": "45269",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260519__medicine_onetalk_oracle_gt_origin_bsz4_taurus_hold.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260519__medicine_onetalk_oracle_gt_origin_bsz4_zeroshot.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "tmux new-session -d -s rasst_oraclegt_eval \"cd /mnt/taurus/home/jiaxuanluo/InfiniSST && CUDA_VISIBLE_DEVICES=4,5 CUDA_VISIBLE_DEVICES_PHYSICAL_OVERRIDE_CSV=4:5 bash documents/code/simuleval/launchers/2026/05/20260519__medicine_onetalk_oracle_gt_origin_bsz4_taurus_hold.sh > /mnt/gemini/data1/jiaxuanluo/logs/direct_medicine_oraclegt_origin_bsz4_20260519.out 2> /mnt/gemini/data1/jiaxuanluo/logs/direct_medicine_oraclegt_origin_bsz4_20260519.err\"",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260519__medicine_onetalk_oracle_gt_origin_bsz4_taurus_hold.sh",
+      "metadata": {}
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260518__medicine_onetalk_oracle_gt_aries.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260519__medicine_onetalk_oracle_gt_origin_bsz4_zeroshot.md",
+      "metadata": {}
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh",
+      "metadata": {}
+    },
+    {
+      "role": "wandb_logger",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/offline_evaluation/wandb_eval_logger.py",
+      "metadata": {}
+    },
+    {
+      "role": "hf_checkpoint",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-zh-s_origin-bsz4",
+      "metadata": {}
+    },
+    {
+      "role": "strict_medicine_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_dev_dataset.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "strict_medicine_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000_translated.json",
+      "metadata": {}
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data2/jiaxuanluo/medicine_onetalk_oracle_gt_origin_bsz4_20260519",
+      "metadata": {}
+    },
+    {
+      "role": "direct_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_medicine_oraclegt_origin_bsz4_20260519.out",
+      "metadata": {
+        "stream": "stdout"
+      }
+    },
+    {
+      "role": "direct_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_medicine_oraclegt_origin_bsz4_20260519.err",
+      "metadata": {
+        "stream": "stderr"
+      }
+    }
+  ],
+  "metadata": {
+    "allocation_job_id": "45269",
+    "compute": "taurus_hold45269",
+    "target_sample": "404",
+    "latency_multiplier": 2,
+    "lang_code": "zh",
+    "oracle_term_map": true,
+    "gpu_csv": "4:5",
+    "max_sentences": 0,
+    "tmux_session": "rasst_oraclegt_eval",
+    "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/simuleval_eval/runs/x818tsc6",
+    "metrics_source": "WandB summary for x818tsc6"
+  }
+}

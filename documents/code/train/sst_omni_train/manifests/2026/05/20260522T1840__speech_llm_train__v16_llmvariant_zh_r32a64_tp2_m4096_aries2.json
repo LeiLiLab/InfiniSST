@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T1840__speech_llm_train__v16_llmvariant_zh_r32a64_tp2_m4096_aries2",
+  "event_type": "speech_llm_train",
+  "family": "speech_llm_termmap_retriever",
+  "variant": "v16_llmvariant_zh_r32a64_tp2_m4096_aries2",
+  "status": "running",
+  "project": "sst_omni",
+  "wandb_run_id": "pqg310ag",
+  "slurm_job_id": "direct_aries23_v16_llmvariant_r32a64_tp2_m4096",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__speech_llm_v16_llm_variant_aug_zh_aries2_rank_tp2.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__speech_llm_v16_llm_variant_aug_zh_r32a64_tp2.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "HOST_GPU_DEVICES_OVERRIDE=2,3 MASTER_PORT=30664 LORA_RANK_OVERRIDE=32 LORA_ALPHA_OVERRIDE=64 MAX_LENGTH_OVERRIDE=4096 SAVE_BASE_OVERRIDE=/mnt/aries/data7/jiaxuanluo/slm/speech_llm_v16_llm_variant_aug_retriever_timeline_zh_lh1b88kw_tau073_r32a64_tp2_m4096_aries2 TRAIN_LOG_DIR_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_v16_llm_variant_aug_retriever_timeline_zh_r32a64_tp2_m4096_aries2 WANDB_EXP_PREFIX_OVERRIDE=speech-llm-v16-llmvariant-zh-r32a64-tp2-m4096-aries2 bash documents/code/train/sst_omni_train/launchers/2026/05/20260522__speech_llm_v16_llm_variant_aug_zh_aries2_rank_tp2.sh",
+  "parent_run_ids": [
+    "34u4nxec"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__speech_llm_v16_llm_variant_aug_zh_aries2_rank_tp2.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__speech_llm_v16_llm_variant_aug_zh_r32a64_tp2.md"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v16_llm_variant_aug_retriever_timeline_zh_lh1b88kw_tau073_20260522/train_s_zh_v16_llm_variant_aug_tau073_k10_minctx2p88.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v16_llm_variant_aug_retriever_timeline_zh_lh1b88kw_tau073_20260522/dev_s_zh_v16_llm_variant_aug_tau073_k10_minctx2p88_first200.jsonl"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/speech_llm_v16_llm_variant_aug_retriever_timeline_zh_lh1b88kw_tau073_r32a64_tp2_m4096_aries2"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_train/20260522_v16_llmvariant_r32a64_tp2_m4096_aries23.out"
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "lora_rank": 32,
+    "lora_alpha": 64,
+    "gpu_devices": "2,3",
+    "compute": "aries",
+    "tensor_model_parallel_size": 2,
+    "sequence_parallel": true,
+    "max_length": 4096,
+    "pid": 3116826
+  }
+}

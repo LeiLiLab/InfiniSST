@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T0814__data_prepare__srcmatch100k_future_ref_gt_zh",
+  "event_type": "data_prepare",
+  "family": "speech_llm_termmap_sft",
+  "variant": "zh_srcmatch100k_future_ref_gt",
+  "status": "deprecated",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_srcmatch100k_future_ref_gt_zh.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__srcmatch100k_future_ref_gt_zh_data.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'bash documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_srcmatch100k_future_ref_gt_zh.sh' > documents/logs/speech_llm_data/20260522_srcmatch100k_future_ref_gt_zh.out 2> documents/logs/speech_llm_data/20260522_srcmatch100k_future_ref_gt_zh.err < /dev/null &",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__build_srcmatch100k_future_ref_gt_zh.sh"
+    },
+    {
+      "role": "data_prep_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_source_glossary_exact_gt_terms.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__srcmatch100k_future_ref_gt_zh_data.md"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/train_s_zh_v4_ner_baseline_aligned_rate1.0_k20_final.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/dev_s_zh_v4_ner_baseline_aligned_freq_k20.jsonl"
+    },
+    {
+      "role": "train_alignment_tsv",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/train_xl_case_robust_asr-filtered_zh_metricx-qe3.0_align.tsv"
+    },
+    {
+      "role": "dev_alignment_tsv",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/dev_case_robust_asr-filtered_zh_metricx-qe3.0_align.tsv"
+    },
+    {
+      "role": "train_gt_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample100000_zh100k_train_gt.json"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_srcmatch100k_future_ref_gt_zh_20260522/train_s_zh_srcmatch100k_future_ref_gt.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_srcmatch100k_future_ref_gt_zh_20260522/dev_s_zh_srcmatch100k_future_ref_gt.jsonl"
+    },
+    {
+      "role": "report",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_srcmatch100k_future_ref_gt_zh_20260522/srcmatch100k_future_ref_gt_summary.json"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_data/20260522_srcmatch100k_future_ref_gt_zh.out"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_data/20260522_srcmatch100k_future_ref_gt_zh.err"
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "gt_source": "source glossary exact whole-token match over TSV source chunks",
+    "target_match_policy": "future_ref",
+    "target_match_reference": "assistant messages from current audio response through conversation end",
+    "target_match_exact_substring": true,
+    "status_note": "deprecated after review: source chunk matching used TSV src_trajectory split by streaming chunk count, not MFA word timestamps",
+    "deprecated_reason": "Not a valid MFA-grounded GT source. Keep only as a proxy/debug artifact; do not use for V13 training.",
+    "train_rows": 12500,
+    "train_chunks": 68705,
+    "train_source_exact_terms_total": 172726,
+    "train_future_ref_gt_terms": 80062,
+    "train_target_match_kept_term_rate": 0.463520257517687,
+    "train_chunks_with_gt_rate": 0.567324066661815,
+    "train_avg_gt_terms_per_chunk": 1.1653009242413217,
+    "dev_rows": 355,
+    "dev_chunks": 891,
+    "dev_source_exact_terms_total": 1902,
+    "dev_future_ref_gt_terms": 813,
+    "dev_target_match_kept_term_rate": 0.4274447949526814,
+    "dev_chunks_with_gt_rate": 0.5028058361391695,
+    "dev_avg_gt_terms_per_chunk": 0.9124579124579124,
+    "future_ref_validation": "passed"
+  }
+}

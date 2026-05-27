@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T161754__analysis__paper_plot_local_packages_all_figures",
+  "event_type": "analysis",
+  "family": "paper_plot_assets",
+  "variant": "local_packages_all_current_figures",
+  "status": "complete",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260525__paper_plot_local_packages_all_figures.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "manual reorganization of documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot into per-figure local packages",
+  "parent_run_ids": [
+    "20260525T055818__analysis__paper_plot_registry_all_figures",
+    "20260524T1232__analysis__main_results_aclraw_medicine_figures",
+    "20260525T0149__analysis__rag_compute_rtf_figure",
+    "20260525T0153__analysis__retriever_encoder_ablation_figure4_style_refresh",
+    "20260523T0430__analysis__hn_fixeddenom_report_denominator_prcurve_update",
+    "20260525T0122__analysis__glossary_bank_ablation_zh_fixedraw",
+    "20260525T055246__analysis__paper_plot_index_figure7"
+  ],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260525__paper_plot_local_packages_all_figures.md",
+      "metadata": {}
+    },
+    {
+      "role": "paper_plot_registry",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/README.md",
+      "metadata": {
+        "figures_indexed": 8
+      }
+    },
+    {
+      "role": "paper_plot_package",
+      "type": "directory",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_01_main_result_tagged",
+      "metadata": {
+        "figure": 1,
+        "label": "fig:main_result_1"
+      }
+    },
+    {
+      "role": "paper_plot_package",
+      "type": "directory",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_02_medicine_main_result",
+      "metadata": {
+        "figure": 2,
+        "label": "fig:main_result_2"
+      }
+    },
+    {
+      "role": "paper_plot_package",
+      "type": "directory",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_03_rag_compute_rtf",
+      "metadata": {
+        "figure": 3,
+        "label": "fig:rag_compute_rtf"
+      }
+    },
+    {
+      "role": "paper_plot_package",
+      "type": "directory",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_04_retriever_encoder_ablation",
+      "metadata": {
+        "figure": 4,
+        "label": "fig:ablation_retriever_encoder"
+      }
+    },
+    {
+      "role": "paper_plot_package",
+      "type": "directory",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_05_hn_tau_ablation",
+      "metadata": {
+        "figure": 5,
+        "label": "fig:ablation_hn_tau",
+        "script_status": "not_preserved"
+      }
+    },
+    {
+      "role": "paper_plot_package",
+      "type": "directory",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_06_speechllm_placeholder",
+      "metadata": {
+        "figure": 6,
+        "label": "fig:ablation_speechllm",
+        "asset_status": "inline_placeholder"
+      }
+    },
+    {
+      "role": "paper_plot_package",
+      "type": "directory",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_07_glossary_bank_ablation",
+      "metadata": {
+        "figure": 7,
+        "label": "fig:ablation_glossary_bank"
+      }
+    },
+    {
+      "role": "paper_plot_package",
+      "type": "directory",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_08_term_duration_distribution",
+      "metadata": {
+        "figure": 8,
+        "label": "fig:term_duration",
+        "asset_status": "static_pdf_plot_pipeline_not_backfilled"
+      }
+    },
+    {
+      "role": "compiled_aux",
+      "type": "tex_aux",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/acl_latex.aux",
+      "metadata": {
+        "numbering_source": true
+      }
+    },
+    {
+      "role": "results_section",
+      "type": "tex",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/sections/results.tex",
+      "metadata": {}
+    },
+    {
+      "role": "appendix_section",
+      "type": "tex",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/sections/appendix.tex",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "package_count": 8,
+    "new_packages_created": 7,
+    "existing_package_updated": "figure_07_glossary_bank_ablation",
+    "figures_with_local_wrappers": [
+      1,
+      2,
+      3,
+      4,
+      7
+    ],
+    "figures_without_reusable_plot_script": [
+      5,
+      8
+    ],
+    "inline_placeholders": [
+      6
+    ],
+    "metric_change": false,
+    "validation": "manifest artifact paths resolved; local wrapper scripts for figures 1,2,3,4,7 regenerated local snapshots without updating latex/figures",
+    "generated_at_utc": "2026-05-25T16:17:54Z"
+  }
+}

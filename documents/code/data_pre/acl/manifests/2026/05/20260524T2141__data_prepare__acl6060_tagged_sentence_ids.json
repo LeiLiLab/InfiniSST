@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T2141__data_prepare__acl6060_tagged_sentence_ids",
+  "event_type": "data_prepare",
+  "family": "acl6060_tagged_eval_data",
+  "variant": "tagged_glossary_sentence_ids_min_norm2",
+  "status": "success",
+  "project": null,
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/data_pre/acl/launchers/2026/05/20260524__acl6060_tagged_sentence_ids.sh",
+  "notes_path": "documents/code/data_pre/acl/notes/2026/05/20260524__acl6060_tagged_sentence_ids.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "bash documents/code/data_pre/acl/launchers/2026/05/20260524__acl6060_tagged_sentence_ids.sh",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/data_pre/acl/launchers/2026/05/20260524__acl6060_tagged_sentence_ids.sh",
+      "metadata": {}
+    },
+    {
+      "role": "prepare_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/data_pre/acl/src/add_sentence_ids_to_tagged_acl_glossary.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/data_pre/acl/notes/2026/05/20260524__acl6060_tagged_sentence_ids.md",
+      "metadata": {}
+    },
+    {
+      "role": "acl_xml",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/data/siqiouyang/datasets/acl6060/dev/text/xml/ACL.6060.dev.en-xx.en.xml",
+      "metadata": {}
+    },
+    {
+      "role": "acl_tagged_text",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/data/siqiouyang/datasets/acl6060/dev/text/tagged_terminology/ACL.6060.dev.tagged.en-xx.en.txt",
+      "metadata": {}
+    },
+    {
+      "role": "acl_source_text",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/taurus/data/siqiouyang/datasets/acl6060/dev/text/txt/ACL.6060.dev.en-xx.en.txt",
+      "metadata": {}
+    },
+    {
+      "role": "tagged_glossary_source",
+      "type": "glossary",
+      "direction": "input",
+      "path": "documents/data/data_pre/glossary_acl6060.json",
+      "metadata": {
+        "source_script": "documents/data/data_pre/handle_tagged_glossary.py"
+      }
+    },
+    {
+      "role": "tagged_acl_eval_glossary_raw",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {}
+    },
+    {
+      "role": "tagged_acl_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs10000_min_norm2_backfill.json",
+      "metadata": {}
+    },
+    {
+      "role": "tagged_acl_eval_glossary_raw_sentence_ids",
+      "type": "glossary",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2_sentence_ids.json",
+      "metadata": {}
+    },
+    {
+      "role": "tagged_acl_eval_wiki_glossary_sentence_ids",
+      "type": "glossary",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs10000_min_norm2_backfill_sentence_ids.json",
+      "metadata": {}
+    },
+    {
+      "role": "tagged_glossary_source_sentence_ids",
+      "type": "glossary",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_source_glossary_min_norm2_sentence_ids.json",
+      "metadata": {}
+    },
+    {
+      "role": "tagged_acl_sentence_term_map_zh",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_sentence_term_map_min_norm2_zh.json",
+      "metadata": {}
+    },
+    {
+      "role": "tagged_acl_sentence_term_map_ja",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_sentence_term_map_min_norm2_ja.json",
+      "metadata": {}
+    },
+    {
+      "role": "tagged_acl_sentence_term_map_de",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_sentence_term_map_min_norm2_de.json",
+      "metadata": {}
+    },
+    {
+      "role": "tagged_acl_sentence_term_map_multilang",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_sentence_term_map_min_norm2_multilang.json",
+      "metadata": {}
+    },
+    {
+      "role": "tagged_acl_term_occurrences",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_term_occurrences_min_norm2.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "stats_json",
+      "type": "report",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_sentence_ids_min_norm2_stats.json",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "min_norm_chars": 2,
+    "sentence_id_definition": "1-based ACL XML seg id; sentence_index is 0-based source/ref line index",
+    "expected_sentence_count": 468,
+    "expected_tagged_gt_terms": 238,
+    "sentence_count": 468,
+    "source_dict_terms": 241,
+    "observed_unique_terms": 238,
+    "observed_unique_terms_after_backfill": 241,
+    "raw_bracket_terms": 1287,
+    "kept_occurrences": 1163,
+    "source_text_exact_backfilled_terms": 3,
+    "source_text_exact_backfilled_occurrences": 9,
+    "kept_occurrences_after_backfill": 1172,
+    "sentences_with_references": 409,
+    "sentence_term_map_references": {
+      "zh": 1112,
+      "ja": 1108,
+      "de": 1112
+    },
+    "completed_at_utc": "2026-05-24T21:47:07Z",
+    "acl_usage": "held-out readout only"
+  }
+}

@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T1338__simuleval__tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry2_taurus",
+  "event_type": "simuleval",
+  "family": "tagged_acl_ja_cap16_hn1024_tau078_omit",
+  "variant": "ja_cap16_hn1024_tau078_empty_term_map_omit_lm12_retry2_taurus",
+  "status": "failed_no_kv_cache_memory",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_ja_cap16_hn1024_tau078_omit_batch_host.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry2_taurus.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "LOG_ROOT=/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry2_20260525T1338_jacap16_hn1024_tau078_omit_lm12_retry2_taurus; mkdir -p ${LOG_ROOT}/controllers; setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && env RUN_STAMP_OVERRIDE=20260525T1338_jacap16_hn1024_tau078_omit_lm12_retry2_taurus HOST_LABEL_OVERRIDE=taurus LMS_OVERRIDE=\"1 2\" AUTO_PAIR_OVERRIDE=0 GPU_PAIRS_CSV_OVERRIDE=\"2,3;4,5\" OUT_ROOT_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry2_20260525T1338_jacap16_hn1024_tau078_omit_lm12_retry2_taurus LOG_ROOT_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry2_20260525T1338_jacap16_hn1024_tau078_omit_lm12_retry2_taurus EVAL_TMPDIR_ROOT_OVERRIDE=/tmp/jx_jc12r2 WANDB_LOG_OVERRIDE=1 POLL_SECS_OVERRIDE=20 bash documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_ja_cap16_hn1024_tau078_omit_batch_host.sh' > ${LOG_ROOT}/controllers/taurus_lm12_retry2.out 2> ${LOG_ROOT}/controllers/taurus_lm12_retry2.err < /dev/null & echo $! > ${LOG_ROOT}/controllers/taurus_lm12_retry2.pid",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_ja_cap16_hn1024_tau078_omit_batch_host.sh",
+      "metadata": {}
+    },
+    {
+      "role": "batch_launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry2_taurus.md",
+      "metadata": {}
+    },
+    {
+      "role": "parent_event_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260525T1211__simuleval__tagged_acl_ja_cap16_hn1024_tau078_omit_lm1to4_batch.json",
+      "metadata": {
+        "event_id": "20260525T1211__simuleval__tagged_acl_ja_cap16_hn1024_tau078_omit_lm1to4_batch",
+        "reason": "retry missing lm1/lm2 only"
+      }
+    },
+    {
+      "role": "cancelled_aries_retry_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260525T1331__simuleval__tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry1_aries.json",
+      "metadata": {
+        "event_id": "20260525T1331__simuleval__tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry1_aries",
+        "reason": "cancelled after Taurus resources became available"
+      }
+    },
+    {
+      "role": "speech_llm_hf_model",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_retriever_cap16_exactboundary_r32a32_ep4_aries8/keep1.0_r32/v0-20260525-155544-hf",
+      "metadata": {
+        "expected_safetensor_shards": 15,
+        "source_event_id": "20260525T0739__speech_llm_train__ja_retriever_cap16_exactboundary_r32a32_ep4_aries8"
+      }
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever": "HN1024",
+        "tau": 0.78,
+        "timeline_lookback_sec": 1.92
+      }
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "glossary_kind": "tagged_acl_raw"
+      }
+    },
+    {
+      "role": "eval_input_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_20260524T0933_tagacl_newv9_hn1024_tau078_raw_ja_taurus8/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/ja/all",
+      "metadata": {
+        "talks": 5,
+        "source_files": [
+          "source.list",
+          "target.list",
+          "source_text.txt",
+          "ref.txt",
+          "audio.yaml"
+        ]
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry2_20260525T1338_jacap16_hn1024_tau078_omit_lm12_retry2_taurus/ja_retr_cap16_exact_r32a32_ep4_hn1024_tau078_omit_batch_max80",
+      "metadata": {
+        "expected_lms": [
+          1,
+          2
+        ],
+        "density_tag": "tagacl_bv1_jacap16_hn1024_tau078_omit",
+        "empty_term_map_policy": "omit"
+      }
+    },
+    {
+      "role": "summary_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry2_20260525T1338_jacap16_hn1024_tau078_omit_lm12_retry2_taurus/ja_retr_cap16_exact_r32a32_ep4_hn1024_tau078_omit_batch_max80/__summary__",
+      "metadata": {}
+    },
+    {
+      "role": "log_root",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry2_20260525T1338_jacap16_hn1024_tau078_omit_lm12_retry2_taurus",
+      "metadata": {}
+    },
+    {
+      "role": "taurus_controller_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry2_20260525T1338_jacap16_hn1024_tau078_omit_lm12_retry2_taurus/controllers/taurus_lm12_retry2.out",
+      "metadata": {}
+    },
+    {
+      "role": "taurus_controller_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry2_20260525T1338_jacap16_hn1024_tau078_omit_lm12_retry2_taurus/controllers/taurus_lm12_retry2.err",
+      "metadata": {}
+    },
+    {
+      "role": "taurus_controller_pid",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry2_20260525T1338_jacap16_hn1024_tau078_omit_lm12_retry2_taurus/controllers/taurus_lm12_retry2.pid",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "language": "ja",
+    "dataset": "tagged_acl_raw",
+    "lms": [
+      1,
+      2
+    ],
+    "runtime": "batched_vllm_rag_eval",
+    "empty_term_map_policy": "omit",
+    "term_map_format": "plain",
+    "strip_output_tags": "term",
+    "retriever": "HN1024",
+    "rag_top_k": 10,
+    "tau": 0.78,
+    "timeline_lookback_sec": 1.92,
+    "max_new_tokens": 80,
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 12288,
+    "placement_plan": {
+      "taurus": {
+        "lms": [
+          1,
+          2
+        ],
+        "gpu_pairs": "lm1=2,3;lm2=4,5",
+        "mode": "fixed_pairs_parallel"
+      }
+    },
+    "prelaunch_gpu_snapshot": {
+      "taurus": "GPU 2,3,4,5 idle at 2026-05-25T13:37:36Z; GPU 0 and 7 occupied; GPU 1 lightly occupied",
+      "aries": "retry1 terminated and GPUs 6,7 released"
+    },
+    "parent_event_id": "20260525T1211__simuleval__tagged_acl_ja_cap16_hn1024_tau078_omit_lm1to4_batch",
+    "cancelled_retry_event_id": "20260525T1331__simuleval__tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry1_aries",
+    "retry_reason": "lm1/lm2 failed before eval artifacts in parent event due to vLLM ShmRingBuffer shared_memory error",
+    "failure_20260525T1343": {
+      "scope": "lm1,lm2",
+      "reason": "parallel Taurus vLLM startup failed after model loading during KV-cache initialization",
+      "error": "ValueError: No available memory for the cache blocks. Try increasing gpu_memory_utilization",
+      "artifact_check": "no eval_results.tsv, instances.log, or result.txt produced",
+      "co_resident_process": "root pid 2021142 swift export for speech_llm_de_cap16_denoise_budget_ttag_r32a32_ep1_taurus6 holds GPU memory on Taurus GPUs 1-6",
+      "successor_event_id": "20260525T1344__simuleval__tagged_acl_ja_cap16_hn1024_tau078_omit_lm12_retry3_taurus_serial_highmem"
+    },
+    "verdict": "failed_before_eval_artifacts_retry_with_serial_highmem"
+  }
+}

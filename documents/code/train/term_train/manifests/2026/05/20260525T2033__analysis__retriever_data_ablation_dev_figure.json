@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T2033__analysis__retriever_data_ablation_dev_figure",
+  "event_type": "analysis",
+  "family": "paper_figure",
+  "variant": "retriever_data_ablation_dev",
+  "status": "completed",
+  "project": "qwen3_rag",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260525__retriever_data_ablation_dev_figure.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_09_retriever_data_ablation/plot_figure_09_retriever_data_ablation.py --update-paper",
+  "parent_run_ids": [
+    "lh1b88kw",
+    "g49qabuf"
+  ],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260525__retriever_data_ablation_dev_figure.md",
+      "metadata": {}
+    },
+    {
+      "role": "source_wandb_run",
+      "type": "wandb_run",
+      "direction": "input",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/lh1b88kw",
+      "metadata": {
+        "usage": "main retriever with GigaSpeech plus Wiki-synthetic training data",
+        "bundle": "primary",
+        "step": 1440
+      }
+    },
+    {
+      "role": "source_wandb_run",
+      "type": "wandb_run",
+      "direction": "input",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/g49qabuf",
+      "metadata": {
+        "usage": "GigaSpeech-only training-data ablation",
+        "bundle": "primary",
+        "step": 240,
+        "event_id": "20260525T1248__retriever_train__varctx576_hn1024_gsonly_tcmoff_ep6_aries4"
+      }
+    },
+    {
+      "role": "source_manifest",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/train/term_train/manifests/2026/05/20260525T1248__retriever_train__varctx576_hn1024_gsonly_tcmoff_ep6_aries4.json",
+      "metadata": {
+        "usage": "GigaSpeech-only run provenance"
+      }
+    },
+    {
+      "role": "checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best.pt",
+      "metadata": {
+        "source_run_id": "lh1b88kw",
+        "selection": "primary",
+        "metric": "eval_dev/recall@10_gs10000",
+        "step": 1440
+      }
+    },
+    {
+      "role": "checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_gsonly_bs8192_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_4gpu_aries_best.pt",
+      "metadata": {
+        "source_run_id": "g49qabuf",
+        "source_event_id": "20260525T1248__retriever_train__varctx576_hn1024_gsonly_tcmoff_ep6_aries4",
+        "selection": "primary",
+        "metric": "eval_dev/recall@10_gs10000",
+        "step": 320
+      }
+    },
+    {
+      "role": "canonical_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260525_retriever_data_ablation_dev.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "paper_plot_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_09_retriever_data_ablation/data.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "plot_script",
+      "type": "python",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_09_retriever_data_ablation/plot_figure_09_retriever_data_ablation.py",
+      "metadata": {}
+    },
+    {
+      "role": "paper_figure",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/retriever_data_ablation_dev.pdf",
+      "metadata": {}
+    },
+    {
+      "role": "paper_figure_preview",
+      "type": "png",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/retriever_data_ablation_dev.png",
+      "metadata": {}
+    },
+    {
+      "role": "paper_latex",
+      "type": "tex",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/sections/results.tex",
+      "metadata": {}
+    },
+    {
+      "role": "paper_plot_registry",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/README.md",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "metric_source": "documents/code/general/wandb_tool.py db-compare --refresh --anchor-metric both",
+    "selection_metric": "eval_dev/recall@10_gs10000",
+    "main_eval_dev_recall_at10_gs10000": 0.9901,
+    "gsonly_eval_dev_recall_at10_gs10000": 0.983,
+    "main_eval_dev_filtered_recall_tau_0p80_gs10000": 0.9791,
+    "gsonly_eval_dev_filtered_recall_tau_0p80_gs10000": 0.9586,
+    "acl_usage": "held-out readout only; not used for plotted metric"
+  }
+}

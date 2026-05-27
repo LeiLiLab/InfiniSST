@@ -1,0 +1,98 @@
+{
+  "artifacts": [
+    {
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v9_mfa_openai_npfilter_oldnewv3_de.sh",
+      "role": "launcher",
+      "type": "script"
+    },
+    {
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v9_mfa_openai_rewrite_oldnewv3_de_ja.sh",
+      "role": "base_launcher",
+      "type": "script"
+    },
+    {
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/train_s_de_v4_ner_baseline_aligned_rate1.0_k20_final.jsonl",
+      "role": "train_jsonl_raw",
+      "type": "dataset"
+    },
+    {
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/train_xl_case_robust_asr-filtered_de_metricx-qe3.0_align.tsv",
+      "role": "source_tsv",
+      "type": "dataset"
+    },
+    {
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample100000.json",
+      "role": "base_source_glossary",
+      "type": "glossary"
+    },
+    {
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_mfa_openai_npfilter_srcunion_oldnewv3_de_20260524/source_glossary_wiki100k_plus_de_oldnewv3_candidates.json",
+      "role": "merged_source_glossary",
+      "type": "glossary"
+    },
+    {
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_mfa_openai_npfilter_srcunion_oldnewv3_de_20260524/source_candidates/source_candidates_de_oldnewv3_spacy.jsonl",
+      "role": "source_candidate_jsonl",
+      "type": "dataset"
+    },
+    {
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v9_mfa_openai_npfilter_srcunion_oldnewv3_de_20260524",
+      "role": "output_dir",
+      "type": "directory"
+    },
+    {
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs",
+      "role": "logs",
+      "type": "directory"
+    },
+    {
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_openai_npfilter_srcunion_oldnewv3_de_20260524T1510.out",
+      "role": "stdout",
+      "type": "log"
+    },
+    {
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_openai_npfilter_srcunion_oldnewv3_de_20260524T1510.err",
+      "role": "stderr",
+      "type": "log"
+    },
+    {
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_openai_npfilter_srcunion_oldnewv3_de_20260524T1510.pid",
+      "role": "pid_file",
+      "type": "pid"
+    }
+  ],
+  "command": "setsid bash -lc 'OUT_NAME_PREFIX_OVERRIDE=speech_llm_new_v9_mfa_openai_npfilter_srcunion_oldnewv3 GPU_DEVICES_CSV_OVERRIDE=6,7 bash documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v9_mfa_openai_npfilter_oldnewv3_de.sh' > /mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_openai_npfilter_srcunion_oldnewv3_de_20260524T1510.out 2> /mnt/gemini/data1/jiaxuanluo/logs/build_new_v9_mfa_openai_npfilter_srcunion_oldnewv3_de_20260524T1510.err < /dev/null &",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "event_id": "20260524T1510__data_prepare__new_v9_mfa_openai_npfilter_srcunion_oldnewv3_de",
+  "event_type": "data_prepare",
+  "family": "speech_llm_sft_data",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260524__build_new_v9_mfa_openai_npfilter_oldnewv3_de.sh",
+  "metadata": {
+    "cancel_reason": "source union fixed coverage but produced about 113k per-candidate OpenAI tasks; replaced by legacy term_map exact-span prefilter",
+    "fix": "source glossary union with de old-new_v3 candidates",
+    "gt_source": "MFA source exact + OpenAI exact future-reference span rewrite",
+    "language": "de",
+    "pid": 3632922,
+    "termmap_lineage": "old-new_v3 TCM filtered with GT backfill"
+  },
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260524__new_v9_mfa_openai_npfilter_srcunion_oldnewv3_de_data.md",
+  "parent_run_ids": [],
+  "project": "sst_omni",
+  "schema_version": 1,
+  "slurm_job_id": null,
+  "status": "cancelled",
+  "variant": "new_v9_mfa_openai_npfilter_srcunion_oldnewv3_de",
+  "wandb_run_id": null
+}

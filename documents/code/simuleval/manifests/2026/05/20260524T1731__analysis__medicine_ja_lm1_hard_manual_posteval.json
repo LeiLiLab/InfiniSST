@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T1731__analysis__medicine_ja_lm1_hard_manual_posteval",
+  "event_type": "analysis",
+  "family": "medicine_norag_baseline_abbrev_restored",
+  "variant": "ja_lm1_hard_manual_streamlaal_posteval",
+  "status": "completed",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_ja_lm1_hard_manual_posteval.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__medicine_ja_lm1_hard_manual_posteval.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "bash documents/code/simuleval/launchers/2026/05/20260524__medicine_ja_lm1_hard_manual_posteval.sh",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_ja_lm1_hard_manual_posteval.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__medicine_ja_lm1_hard_manual_posteval.md"
+    },
+    {
+      "role": "parent_simuleval_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T0130__simuleval__medicine_norag_abbrev_restored_ja_lm134_aries012345.json"
+    },
+    {
+      "role": "instances_log",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_ja_lm1_aries01/ja/gigaspeech-ja-s_origin-bsz4_gstrict_fixed_medicine_glossary_abbrev_restored__medicine5_cs0.96_hs0.48_lm1_k210_k110_th0p0/instances.log"
+    },
+    {
+      "role": "timing",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_ja_lm1_aries01/timing.tsv"
+    },
+    {
+      "role": "source_sentences",
+      "type": "text",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_ja_lm1_aries01/ja/__medicine_inputs__/combined/medicine5.source_text.en.sentences.txt"
+    },
+    {
+      "role": "reference_sentences",
+      "type": "text",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_ja_lm1_aries01/ja/__medicine_inputs__/combined/medicine5.ref.ja.sentences.txt"
+    },
+    {
+      "role": "audio_yaml",
+      "type": "yaml",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_ja_lm1_aries01/ja/__medicine_inputs__/combined/medicine5.audio.yaml"
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hard_manual_glossary_streamlaal_20260524.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_ja_lm1_aries01/ja/gigaspeech-ja-s_origin-bsz4_gstrict_fixed_medicine_glossary_abbrev_restored__medicine5_cs0.96_hs0.48_lm1_k210_k110_th0p0/eval_results_streamlaal_term.hard_llm_manual_check.tsv"
+    },
+    {
+      "role": "eval_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_ja_lm1_aries01/ja/gigaspeech-ja-s_origin-bsz4_gstrict_fixed_medicine_glossary_abbrev_restored__medicine5_cs0.96_hs0.48_lm1_k210_k110_th0p0/post_eval_streamlaal_term.hard_llm_manual_check.log"
+    },
+    {
+      "role": "term_misses",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_ja_lm1_aries01/ja/gigaspeech-ja-s_origin-bsz4_gstrict_fixed_medicine_glossary_abbrev_restored__medicine5_cs0.96_hs0.48_lm1_k210_k110_th0p0/term_misses.hard_llm_manual_check.ja_lm1.tsv"
+    },
+    {
+      "role": "term_miss_summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_norag_baseline_abbrev_restored_batched_20260524_ja_lm1_aries01/ja/gigaspeech-ja-s_origin-bsz4_gstrict_fixed_medicine_glossary_abbrev_restored__medicine5_cs0.96_hs0.48_lm1_k210_k110_th0p0/term_miss_summary.hard_llm_manual_check.ja_lm1.tsv"
+    }
+  ],
+  "metadata": {
+    "target_lang": "ja",
+    "target_lm": 1,
+    "target_samples": ["404", "545006", "596001", "605000", "606"],
+    "required_instances": 5,
+    "reason": "main-results figure was missing the JA lm1 InfiniSST baseline point because only generation artifacts existed",
+    "completed_utc": "2026-05-24T17:34:00Z",
+    "metrics": {
+      "BLEU": 17.846154733005715,
+      "StreamLAAL": 1256.0678355515458,
+      "StreamLAAL_CA": 2057.83722259844,
+      "TERM_ACC": 0.3150,
+      "TERM_CORRECT": 229,
+      "TERM_TOTAL": 727
+    }
+  }
+}

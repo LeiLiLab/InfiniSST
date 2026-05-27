@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "event_id": "20260526T060956__analysis__medicine_de_serial_main_result_refresh",
+  "event_type": "analysis",
+  "family": "main_result_refresh",
+  "variant": "medicine_de_serial_promptfix_lm124",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260526__medicine_de_serial_main_result_refresh.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_02_medicine_main_result/plot_figure_02_medicine_main_result.py --update-paper",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "eval_output",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/data1/jiaxuanluo/medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_20260526T035925_medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_taurus/lm1/de/dmedhard_de_lm1_serial_promptfix_cache30_audioauto_max40lm_lm1_k10_th0.78_ghard_medicine_raw__medicine5/eval_results.tsv",
+      "metadata": {
+        "dataset": "medicine_hardraw",
+        "lang": "de",
+        "lm": 1
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/data1/jiaxuanluo/medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_20260526T035925_medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_taurus/lm2/de/dmedhard_de_lm2_serial_promptfix_cache30_audioauto_max40lm_lm2_k10_th0.78_ghard_medicine_raw__medicine5/eval_results.tsv",
+      "metadata": {
+        "dataset": "medicine_hardraw",
+        "lang": "de",
+        "lm": 2
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/data1/jiaxuanluo/medicine_de_lm4_serial_promptfix_cache30_audioauto_max40lm_20260526T043300_taurus23/de/dmedhard_de_lm4_serial_promptfix_cache30_audioauto_max40lm_lm4_k10_th0.78_ghard_medicine_raw__medicine5/eval_results.tsv",
+      "metadata": {
+        "dataset": "medicine_hardraw",
+        "lang": "de",
+        "lm": 4
+      }
+    },
+    {
+      "role": "main_result_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "figure_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_01_main_result_tagged/data.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "figure_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_02_medicine_main_result/data.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "plot_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_02_medicine_main_result/plot_figure_02_medicine_main_result.py",
+      "metadata": {}
+    },
+    {
+      "role": "figure",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/medicine_main_result.pdf",
+      "metadata": {}
+    },
+    {
+      "role": "figure",
+      "type": "png",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/medicine_main_result.png",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "updated_rows": [
+      {
+        "dataset": "medicine_hardraw",
+        "method": "RASST",
+        "lang": "de",
+        "lm": 1,
+        "BLEU": 22.6187,
+        "StreamLAAL": 1023.7187,
+        "StreamLAAL_CA": 1491.4312,
+        "TERM_ACC": 0.7264,
+        "TERM_CORRECT": 470,
+        "TERM_TOTAL": 647
+      },
+      {
+        "dataset": "medicine_hardraw",
+        "method": "RASST",
+        "lang": "de",
+        "lm": 2,
+        "BLEU": 26.7696,
+        "StreamLAAL": 1838.9518,
+        "StreamLAAL_CA": 2550.2054,
+        "TERM_ACC": 0.7821,
+        "TERM_CORRECT": 506,
+        "TERM_TOTAL": 647
+      },
+      {
+        "dataset": "medicine_hardraw",
+        "method": "RASST",
+        "lang": "de",
+        "lm": 4,
+        "BLEU": 28.9154,
+        "StreamLAAL": 2782.5832,
+        "StreamLAAL_CA": 3896.9905,
+        "TERM_ACC": 0.8238,
+        "TERM_CORRECT": 533,
+        "TERM_TOTAL": 647
+      }
+    ],
+    "validation": "unique (dataset, method, lang, lm) keys and updated-row numeric checks passed for canonical and paper-local TSVs"
+  }
+}

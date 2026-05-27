@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "event_id": "20260519T0522__simuleval__medicine_remaining_oracle_gt_sft_oraclegt_r32a64",
+  "event_type": "simuleval",
+  "family": "speech_llm_oracle_gt_sft_readout",
+  "variant": "oraclegt_r32a64_medicine_remaining_lm2",
+  "status": "planned",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "direct_medicine_remaining_oraclegt_sft_r32a64",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260519__medicine_remaining_oracle_gt_sft_oraclegt_r32a64_aries2.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260519__medicine_remaining_oracle_gt_sft_oraclegt_r32a64.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "CUDA_VISIBLE_DEVICES=6,7 CUDA_VISIBLE_DEVICES_PHYSICAL_OVERRIDE_CSV=6:7 SLURM_JOB_PARTITION=aries SLURM_JOB_ID=direct_medicine_remaining_oraclegt_sft_r32a64 MASTER_PORT=30519 bash documents/code/simuleval/launchers/2026/05/20260519__medicine_remaining_oracle_gt_sft_oraclegt_r32a64_aries2.sh",
+  "parent_run_ids": [
+    "3h4wm92o"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260519__medicine_remaining_oracle_gt_sft_oraclegt_r32a64_aries2.sh"
+    },
+    {
+      "role": "single_sample_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260519__medicine_onetalk_oracle_gt_sft_oraclegt_r32a64_taurus_hold.sh"
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260518__medicine_onetalk_oracle_gt_aries.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260519__medicine_remaining_oracle_gt_sft_oraclegt_r32a64.md"
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/offline_sst_eval/compute_sentence_term_adoption.py"
+    },
+    {
+      "role": "offline_eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/offline_sst_eval/offline_streamlaal_eval.py"
+    },
+    {
+      "role": "wandb_logger",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/offline_evaluation/wandb_eval_logger.py"
+    },
+    {
+      "role": "model_checkpoint",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/speech_llm_oracle_gt_termmap_zh_r32a64_taurus4/keep1.0_r32/v1-20260519-105111-hf"
+    },
+    {
+      "role": "strict_medicine_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_dev_dataset.jsonl"
+    },
+    {
+      "role": "strict_medicine_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000_translated.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data2/jiaxuanluo/medicine_remaining_oracle_gt_sft_oraclegt_r32a64_20260519"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_medicine_remaining_oraclegt_sft_r32a64_<timestamp>.out"
+    }
+  ],
+  "metadata": {
+    "target_samples": [
+      "596001",
+      "606",
+      "545006"
+    ],
+    "target_lm": 2,
+    "oracle_term_map": true,
+    "term_fcr_mode": "term_map_sentence_true_false_copy",
+    "compute": "aries direct CUDA_VISIBLE_DEVICES=6,7",
+    "trained_from_run": "3h4wm92o",
+    "expected_wandb_runs": 3
+  }
+}

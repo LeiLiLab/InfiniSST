@@ -1,0 +1,356 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T0430__analysis__hn_fixeddenom_report_denominator_prcurve_update",
+  "event_type": "analysis",
+  "family": "sst_ood_hardneg_eval_compare",
+  "variant": "fixeddenom_denominator_audit_dev_prcurve_update",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260523__hn_fixeddenom_report_denominator_prcurve_update.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "interactive report update using W&B summary exports and local plotting",
+  "parent_run_ids": [
+    "zji769ve",
+    "9esujv2w",
+    "ry8osg4u",
+    "e8t8zdtd",
+    "evcgcdlu",
+    "31xmxmdp",
+    "8h9q0v4t",
+    "ifs45d6j"
+  ],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260523__hn_fixeddenom_report_denominator_prcurve_update.md"
+    },
+    {
+      "role": "report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/20260522_nohn_vs_hn1024_fixeddenom_eval_report.md"
+    },
+    {
+      "role": "dev_pr_curve_fixedraw_commonbase_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260523_dev_multibank_pr_fixedraw_commonbase_nohn_hn256_hn1024.tsv"
+    },
+    {
+      "role": "dev_pr_fixedraw_commonbase_tau_summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260523_dev_multibank_pr_fixedraw_commonbase_tau_summary.tsv"
+    },
+    {
+      "role": "dev_pr_curve_fixedraw_commonbase_raw1k",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260523_dev_pr_fixedraw_commonbase_raw1k_nohn_hn256_hn1024.pdf"
+    },
+    {
+      "role": "dev_pr_curve_fixedraw_commonbase_gs10k",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260523_dev_pr_fixedraw_commonbase_gs10k_nohn_hn256_hn1024.pdf"
+    },
+    {
+      "role": "dev_pr_curve_fixedraw_commonbase_gs100k",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260523_dev_pr_fixedraw_commonbase_gs100k_nohn_hn256_hn1024.pdf"
+    },
+    {
+      "role": "dev_pr_curve_fixedraw_commonbase_threepanel",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260523_dev_pr_fixedraw_commonbase_threepanel_nohn_hn256_hn1024.pdf"
+    },
+    {
+      "role": "dev_pr_curve_fixedraw_commonbase_threepanel_preview",
+      "type": "image",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260523_dev_pr_fixedraw_commonbase_threepanel_nohn_hn256_hn1024.png"
+    },
+    {
+      "role": "heldout_lt0p5_delta_plot",
+      "type": "image",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260523_heldout_lt0p5_raw1k10k_delta_nohn_hn256_hn1024.png"
+    },
+    {
+      "role": "heldout_lt0p5_delta_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260523_heldout_lt0p5_raw1k10k_delta_nohn_hn256_hn1024.tsv"
+    },
+    {
+      "role": "heldout_budget_tradeoff_plot",
+      "type": "image",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260523_heldout_tradeoff_by_budget_summary.png"
+    },
+    {
+      "role": "heldout_budget_tradeoff_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260523_heldout_tradeoff_by_budget_summary.tsv"
+    },
+    {
+      "role": "wandb_summary_export",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tmp/retriever_eval_fixeddenom_20260522/report_summaries/zji769ve.json"
+    },
+    {
+      "role": "wandb_summary_export",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tmp/retriever_eval_fixeddenom_20260522/report_summaries/9esujv2w.json"
+    },
+    {
+      "role": "wandb_summary_export",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tmp/retriever_eval_fixeddenom_20260522/report_summaries/ry8osg4u.json"
+    },
+    {
+      "role": "wandb_summary_export",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tmp/retriever_eval_fixeddenom_20260522/report_summaries/e8t8zdtd.json"
+    },
+    {
+      "role": "wandb_summary_export",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tmp/retriever_eval_fixeddenom_20260522/report_summaries/evcgcdlu.json"
+    },
+    {
+      "role": "wandb_summary_export",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tmp/retriever_eval_fixeddenom_20260522/report_summaries/31xmxmdp.json"
+    },
+    {
+      "role": "wandb_summary_export",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tmp/retriever_eval_fixeddenom_20260522/report_summaries/8h9q0v4t.json"
+    },
+    {
+      "role": "wandb_summary_export",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tmp/retriever_eval_fixeddenom_20260522/report_summaries/ifs45d6j.json"
+    },
+    {
+      "role": "dev_pr_fixedraw_commonbase_hn1024_drop1_points",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260523_dev_pr_fixedraw_commonbase_hn1024_drop1_points.tsv"
+    }
+  ],
+  "metadata": {
+    "denominator_audit": {
+      "eval_acl6060_metrics_bank_terms": 97,
+      "eval_tagged_acl_metrics_bank_terms": 238,
+      "eval_medicine_metrics_bank_terms": 570,
+      "interpretation": "fixed_raw is per-domain fixed denominator; tagged ACL is not using the paper ACL 97-term denominator"
+    },
+    "dev_pr_curve": {
+      "x": "eval_dev/topk10_filtered_precision_micro@tau_*_gs100000",
+      "y": "recall_drop_from_raw_ref_pp",
+      "no_hn_sources": [
+        "e8t8zdtd tau 0.50..0.70",
+        "evcgcdlu tau 0.71..0.90"
+      ],
+      "hn256_source": "8h9q0v4t",
+      "hn1024_sources": [
+        "31xmxmdp tau 0.65..0.90",
+        "ifs45d6j tau 0.91..0.99"
+      ],
+      "plot_x_range": [
+        9.7,
+        20.1
+      ],
+      "plot_y_range": [
+        -0.05,
+        2.05
+      ],
+      "detail_plot_x_range": [
+        9.6,
+        22.4
+      ],
+      "detail_plot_y_range": [
+        96.45,
+        98.68
+      ],
+      "plot_highlight_box": "removed; fixedraw common-reference plots mark y=1pp directly",
+      "matched_precision_result": "superseded by fixedraw common-reference recall-drop curves and HN1024 drop=1pp crossing table",
+      "multibank_banks": [
+        "raw (~1k)",
+        "gs10k",
+        "gs100k"
+      ],
+      "multibank_plot_style": "paper-style three-panel matplotlib figure plus refreshed per-bank diagnostic figures; no highlight band; smaller HN1024 1pp crossing marker",
+      "multibank_result": "HN1024 score-shaping is visible across banks, but the clean same-precision winner range is strongest on gs100k; raw and gs10k are more mixed near the low-precision and 22+ edges",
+      "common_reference_correction": {
+        "reason": "The earlier drop table used each bank own maximum recall, which hid bank-expansion ceiling loss and made gs100k look artificially low-drop.",
+        "new_metric": "recall_drop_from_raw_ref = model_raw_dev_max_filtered_recall - bank_tau_filtered_recall",
+        "old_artifacts_preserved": false,
+        "old_absolute_pr_artifacts_deleted": true
+      },
+      "hn1024_tau_selection": {
+        "conservative_all_bank_recall_drop_choice": 0.78,
+        "tau0p78": {
+          "raw_precision_recall_common_drop": [
+            17.94,
+            98.19,
+            0.91
+          ],
+          "gs10k_precision_recall_common_drop": [
+            16.82,
+            98.19,
+            0.91
+          ],
+          "gs100k_precision_recall_common_drop": [
+            13.04,
+            98.18,
+            0.92
+          ]
+        },
+        "tau0p80": {
+          "raw_precision_recall_common_drop": [
+            19.29,
+            97.99,
+            1.11
+          ],
+          "gs10k_precision_recall_common_drop": [
+            18.41,
+            97.99,
+            1.11
+          ],
+          "gs100k_precision_recall_common_drop": [
+            14.9,
+            97.99,
+            1.11
+          ]
+        },
+        "exact_common_drop_1pp_choice": "0.787..0.788",
+        "two_decimal_conservative_choice": 0.78,
+        "recommended_continuous_choice_under_1pp": "0.787..0.788",
+        "two_decimal_safe_choice": 0.78,
+        "two_decimal_rounded_crossing": 0.79,
+        "rounding_note": "0.79 is nearest to the crossing but slightly exceeds the 1pp budget; use 0.78 for strict budget compliance."
+      },
+      "legacy_absolute_pr_artifacts_removed": true,
+      "hn1024_drop1_crossing": {
+        "raw": {
+          "tau": 0.788314,
+          "precision": 18.495579,
+          "recall": 98.100608,
+          "drop": 1.0
+        },
+        "gs10k": {
+          "tau": 0.788314,
+          "precision": 17.482862,
+          "recall": 98.100608,
+          "drop": 1.0
+        },
+        "gs100k": {
+          "tau": 0.787415,
+          "precision": 13.703707,
+          "recall": 98.100608,
+          "drop": 1.0
+        },
+        "deployment_rounding": "continuous crossing is tau about 0.787..0.788; two-decimal conservative choice is 0.78 because 0.79 slightly exceeds the 1pp budget"
+      }
+    },
+    "heldout_lt0p5_delta": {
+      "baseline": "zji769ve no-HN tau 0.61",
+      "hn256": "8h9q0v4t tau 0.70",
+      "hn1024": "ry8osg4u tau 0.72",
+      "small_bank_summary": {
+        "hn256_raw_plus_1k_mean_delta_recall_pp": -0.872,
+        "hn256_raw_plus_1k_mean_delta_precision_pp": 2.535,
+        "hn1024_raw_plus_1k_mean_delta_recall_pp": -1.191,
+        "hn1024_raw_plus_1k_mean_delta_precision_pp": 2.215
+      },
+      "gs10k_summary": {
+        "hn256_mean_delta_recall_pp": -0.486,
+        "hn256_mean_delta_precision_pp": 0.321,
+        "hn1024_mean_delta_recall_pp": -1.188,
+        "hn1024_mean_delta_precision_pp": 0.185
+      }
+    },
+    "heldout_budget_tradeoff_summary": {
+      "interpretation": "raw/gs1k precision gain exceeds recall cost across all budgets; gs10k only does so at the loose <1.5pp budget; plot uses solid precision gain and dashed recall cost",
+      "raw_plus_1k": {
+        "hn256": {
+          "lt0p5": {
+            "delta_recall_pp": -0.872,
+            "delta_precision_pp": 2.535
+          },
+          "lt1p0": {
+            "delta_recall_pp": -0.497,
+            "delta_precision_pp": 2.37
+          },
+          "lt1p5": {
+            "delta_recall_pp": -2.025,
+            "delta_precision_pp": 5.852
+          }
+        },
+        "hn1024": {
+          "lt0p5": {
+            "delta_recall_pp": -1.191,
+            "delta_precision_pp": 2.215
+          },
+          "lt1p0": {
+            "delta_recall_pp": -1.605,
+            "delta_precision_pp": 1.998
+          },
+          "lt1p5": {
+            "delta_recall_pp": -4.25,
+            "delta_precision_pp": 6.302
+          }
+        }
+      },
+      "gs10k": {
+        "hn256": {
+          "lt0p5": {
+            "delta_recall_pp": -0.486,
+            "delta_precision_pp": 0.321
+          },
+          "lt1p0": {
+            "delta_recall_pp": -0.542,
+            "delta_precision_pp": 0.544
+          },
+          "lt1p5": {
+            "delta_recall_pp": -2.037,
+            "delta_precision_pp": 4.8
+          }
+        },
+        "hn1024": {
+          "lt0p5": {
+            "delta_recall_pp": -1.188,
+            "delta_precision_pp": 0.185
+          },
+          "lt1p0": {
+            "delta_recall_pp": -1.585,
+            "delta_precision_pp": 0.949
+          },
+          "lt1p5": {
+            "delta_recall_pp": -4.202,
+            "delta_precision_pp": 6.309
+          }
+        }
+      }
+    }
+  }
+}

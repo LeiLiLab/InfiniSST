@@ -1,0 +1,125 @@
+\section{Retrieval-Augmented Simultaneous Speech Translation}
+\label{sec:method}
+
+We propose \method, a retrieval-augmented simultaneous speech translation framework for terminology-sensitive streaming translation. The system has two components: a cross-modal term retriever that finds glossary entries supported by the recent speech signal, and a streaming Speech LLM that conditions on the speech stream and the retrieved term map when generating partial translations. The retriever is optimized for high-recall terminology detection under latency constraints, while the Speech LLM is trained to verify retrieved evidence against the audio and avoid unsupported terms.
+
+\subsection{Problem Formulation}
+\label{sec:problem_formulation}
+
+Let $\mathbf{s}$ denote the source speech waveform and let $\mathcal{G}=\{(e_j,\tau_j)\}_{j=1}^{|\mathcal{G}|}$ be a bilingual glossary, where $e_j$ is a source-language term and $\tau_j$ is its target-language translation. A simultaneous speech translation system observes $\mathbf{s}$ incrementally as a sequence of chunks $\mathbf{c}_1,\ldots,\mathbf{c}_T$, where $\mathbf{c}_i=\mathbf{s}_{[\ell_i,r_i]}$ is the newly available audio between times $\ell_i$ and $r_i$. At step $i$, the policy has access to the speech prefix $\mathbf{s}_{\le r_i}$ and the previously emitted target prefix $\hat{\mathbf{y}}_{<i}$, and it emits a possibly empty target segment $\hat{\mathbf{y}}_i$. Empty segments correspond to wait decisions; non-empty segments are appended to the final hypothesis $\hat{\mathbf{y}}$ with delay $r_i$.
+
+To ground terminology, we introduce a retriever $R_\phi$ that returns a step-local subset $\hat{\mathcal{G}}_i\subseteq\mathcal{G}$. The generator then models
+\begin{equation}
+  p_\theta(\hat{\mathbf{y}}_i \mid
+    \mathbf{s}_{\le r_i},
+    \hat{\mathbf{y}}_{<i},
+    \mathrm{format}(\hat{\mathcal{G}}_i)).
+\end{equation}
+The retrieved term map is evidence, not a hard constraint: the generator should use a term only when the audio context supports it.
+
+\subsection{\method Overview}
+\label{sec:method_overview}
+
+\method runs retrieval at the same cadence as the streaming translator. For the current chunk $\mathbf{c}_i=\mathbf{s}_{[\ell_i,r_i]}$, the online retriever encodes an acoustic context that includes the current chunk plus a fixed look-back:
+\begin{equation}
+  \mathbf{a}_i=\mathbf{s}_{[\max(0,\ell_i-L),r_i]},
+  \qquad L=1.92\mathrm{s}.
+\end{equation}
+The look-back reduces missed terms that cross chunk boundaries. To prevent stale evidence from being injected, the online agent keeps only MaxSim evidence windows that overlap the current chunk $[\ell_i,r_i]$; a term whose best evidence lies entirely in the look-back region is not used for the current step.
+
+The retained candidates are thresholded and capped:
+\begin{equation}
+  \hat{\mathcal{G}}_i =
+  \mathrm{TopK}_{K,\tau}\left(\{(e_j,\tau_j,R_\phi(\mathbf{a}_i,e_j))\}_{j=1}^{|\mathcal{G}|}\right),
+\end{equation}
+where the main system uses $K=10$ and a development-selected threshold $\tau=0.78$. The resulting entries are formatted as a plain term map and supplied with the current speech chunk to the Speech LLM.
+
+\subsection{Dense Cross-Modal Term Retriever}
+\label{sec:retriever}
+
+\paragraph{Encoders.}
+The retriever is a dual encoder. The text encoder $E_t$ maps each source-language glossary term $e_j$ to a dense embedding. The main configuration uses BGE-M3~\citep{chen-etal-2024-m3} with CLS pooling and LoRA adaptation. The speech encoder $E_a$ uses the Qwen3-Omni Audio Transformer~\citep{xu2025qwen3omnitechnicalreport}, followed by a projection to the same embedding dimension. Both text and speech embeddings are $\ell_2$-normalized, so every embedding has unit norm and inner product scoring is cosine similarity:
+\begin{equation}
+  \mathbf{g}_j =
+  \frac{E_t(e_j)}{\|E_t(e_j)\|_2}
+  \in \mathbb{R}^{1024}.
+\end{equation}
+
+\paragraph{Multi-scale speech windows.}
+Terminology spans vary in duration and rarely align exactly with streaming chunk boundaries. Instead of representing the full acoustic context with a single pooled vector, the retriever creates a set of local speech-window embeddings. Given projected speech states $H=[\mathbf{h}_1,\ldots,\mathbf{h}_M]$, we average-pool over sliding encoder-frame windows:
+\begin{equation}
+  \mathbf{z}_{u,v}
+  =
+  \frac{
+    \frac{1}{v-u+1}\sum_{m=u}^{v}\mathbf{h}_m
+  }{
+    \left\|\frac{1}{v-u+1}\sum_{m=u}^{v}\mathbf{h}_m\right\|_2
+  }.
+\end{equation}
+The main retriever uses window sizes
+$\{2,3,4,5,6,7,8,10,12,16,20,24\}$ encoder frames with stride $2$ frames. With the current audio encoder frame rate, these windows cover approximately $0.16$--$1.92$ seconds with a $0.16$ second stride. This is the MaxSim retriever used in the main system; direct dense pooling over the whole audio chunk is treated as an ablation.
+
+\paragraph{MaxSim scoring.}
+For each glossary term, the retriever takes the maximum similarity over local speech windows:
+\begin{equation}
+  R_\phi(\mathbf{a}_i,e_j)
+  =
+  \max_{\mathbf{z}\in\mathcal{Z}(\mathbf{a}_i)}
+  \mathbf{z}^{\top}\mathbf{g}_j,
+\end{equation}
+where $\mathcal{Z}(\mathbf{a}_i)$ is the set of multi-scale embeddings extracted from $\mathbf{a}_i$. MaxSim allows one retrieval context to contain multiple possible terms while letting each term align to its own local acoustic evidence. In implementation, text embeddings are precomputed once; online retrieval scores the current set of speech-window embeddings against the active glossary bank, then applies top-$K$ and threshold filtering.
+
+\subsection{Retriever Training Data}
+\label{sec:retriever_data}
+
+We train the retriever from GigaSpeech-derived speech-text supervision and additional Wiki-synthetic terminology examples. For the speech-derived data, we first obtain word-level timestamps with the Montreal Forced Aligner (MFA), extract terminology candidates from transcripts, normalize their surface forms, and map each candidate to its timestamp span. Exact repeated MFA term events are deduplicated. For each selected acoustic context, every known MFA term event overlapping that context is written as a positive.
+
+The main training data uses variable-duration contexts of $2.88$, $3.84$, $4.80$, and $5.76$ seconds. These durations match the online retrieval contexts induced by latency multipliers $1$--$4$ plus the fixed $1.92$ second look-back. The Wiki-synthetic data broadens term coverage beyond terms observed in GigaSpeech transcripts and is ablated separately from the GigaSpeech-only setting.
+
+\subsection{Retriever Objective}
+\label{sec:retriever_objective}
+
+We train with a multi-positive contrastive objective. For a speech example $b$, let $\mathcal{P}_b$ be the set of positive terms and let $\mathcal{C}_b$ contain positives, in-batch negatives, and mined hard negatives. The loss is
+\begin{equation}
+  \mathcal{L}_{\mathrm{ret}}
+  =
+  -\log
+  \frac{
+    \sum_{p\in\mathcal{P}_b}
+    \exp(R_\phi(\mathbf{a}_b,p)/\gamma)
+  }{
+    \sum_{c\in\mathcal{C}_b}
+    \exp(R_\phi(\mathbf{a}_b,c)/\gamma)
+  },
+\end{equation}
+where $\gamma=0.07$ is the contrastive temperature. The main retriever uses hard-negative depth HN1024, i.e., up to $1024$ mined hard negatives per sample. We fine-tune both encoders with LoRA~\citep{hu2022lora}; the main retriever uses rank $128$ and alpha $256$ for both the Qwen3-Omni audio encoder and the BGE-M3 text encoder.
+
+\paragraph{MFA-supervised MaxSim.}
+Because global MaxSim can match a positive term to any local window in the context, we use MFA timestamps to localize positive supervision. For a positive term with timestamp span $[b_p,e_p]$, we restrict its positive score to speech windows that cover the span:
+\begin{equation}
+  \mathcal{Z}_p
+  =
+  \{\mathbf{z}_{u,v}: u \le b_p,\; v \ge e_p\}.
+\end{equation}
+The main setting selects the shortest covering window for each positive term, encouraging tight acoustic alignment. If no window covers the term, or if timestamps are unavailable, the training example falls back to standard global MaxSim.
+
+\subsection{Online Retrieval}
+\label{sec:retriever_inference}
+
+At inference time, we pre-encode the glossary terms and build a dense inner-product retrieval bank. For each streaming step, the HN1024 retriever encodes the current chunk plus the $1.92$ second look-back, computes MaxSim scores, removes evidence windows that do not overlap the current chunk, and retains the top $10$ candidates above $\tau=0.78$. Duplicate candidates from overlapping evidence windows are merged by keeping the maximum score. The selected entries are formatted as
+\begin{equation}
+  \texttt{source\_term} \mapsto \texttt{target\_translation}
+\end{equation}
+and injected into the Speech LLM state for that step. The threshold $\tau=0.78$ is selected from development-only fixed-raw-denominator precision-recall calibration over raw, 10k, and 100k glossary banks.
+
+\subsection{Retrieval-Augmented SST Generator}
+\label{sec:rag_sst_generator}
+
+The generator follows the InfiniSST streaming formulation~\citep{ouyang-etal-2025-infinisst} and uses Qwen3-Omni-30B-A3B-Instruct as the Speech LLM. At each step, the model receives the speech history, the previous target prefix, and the current term map. The map is not enforced by decoding constraints; the model must decide whether each entry is supported by the audio.
+
+We construct term-map SFT data to make this behavior match runtime retrieval. Starting from InfiniSST-style speech-translation conversations, we identify ground-truth terms by source-side string matching against a 100k glossary and keep only terms whose target translations are supported by the assistant target text. For chunks with ground-truth terms, we run the retriever on the speech chunk to add acoustically plausible negative terms, then cap the term map at $20$ entries. We further augment target translations with LLM-proposed variants that preserve rare terminology while varying common synonyms. Chunks without supported ground-truth terms are assigned an empty term map. Finally, matching assistant output spans are wrapped with \texttt{\textless term\textgreater...\textless/term\textgreater} tags, which are stripped before evaluation. We fine-tune the Speech LLM with LoRA rank $32$ and alpha $64$ using standard supervised cross-entropy on assistant tokens.
+
+\subsection{Evaluation Protocol}
+\label{sec:evaluation_protocol}
+
+We evaluate the retriever offline for threshold selection and the full system online for simultaneous translation. Retriever thresholds are selected only on development data using fixed-raw-denominator precision-recall curves; ACL and medicine results are not used to tune $\tau$, checkpoints, or hyperparameters. End-to-end evaluation reports StreamLAAL for latency, SacreBLEU for translation quality, and TERM\_ACC as the main terminology metric. TERM\_ACC uses a fixed raw-glossary denominator: expanded retrieval banks can change which terms are retrieved at runtime, but they do not expand the set of terms counted for the main accuracy numerator or denominator.

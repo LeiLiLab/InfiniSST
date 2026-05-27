@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T0149__analysis__rag_compute_rtf_figure",
+  "event_type": "analysis",
+  "family": "paper_reporting",
+  "variant": "rag_compute_rtf_from_timeline_runtime_traces",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260525__rag_compute_rtf_figure.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/train/term_train/src/plot_rag_compute_rtf.py --out-tsv documents/code/train/term_train/reports/figures/20260525_rag_compute_rtf.tsv --out-pdf documents/code/train/term_train/reports/figures/20260525_rag_compute_rtf.pdf --out-png documents/code/train/term_train/reports/figures/20260525_rag_compute_rtf.png --latex-pdf documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/rag_compute_rtf.pdf --latex-png documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/rag_compute_rtf.png",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "analysis_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/src/plot_rag_compute_rtf.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260525__rag_compute_rtf_figure.md",
+      "metadata": {}
+    },
+    {
+      "role": "verified_eval_summary",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260525_glossary_bank_ablation_zh_fixedraw_data.tsv",
+      "metadata": {
+        "selected_rows": "Medicine zh raw lm1-lm4"
+      }
+    },
+    {
+      "role": "lm1_runtime_jsonl",
+      "type": "runtime_log",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_hn1024_tau078_new_v9_batch_20260524T0242/zh/dmedhard5_new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau0p78_raw_lm1_k10_th0.78_ghard_medicine_glossary_raw_llm_judge_manual_zh215_unique212_ppmedicine5_hardraw/runtime_omni_vllm_maxsim_rag_1779590694_pid345153.jsonl",
+      "metadata": {
+        "rag_calls": 14315
+      }
+    },
+    {
+      "role": "lm2_runtime_jsonl",
+      "type": "runtime_log",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_hn1024_tau078_new_v9_batch_20260524T0242/zh/dmedhard5_new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau0p78_raw_lm2_k10_th0.78_ghard_medicine_glossary_raw_llm_judge_manual_zh215_unique212_ppmedicine5_hardraw/runtime_omni_vllm_maxsim_rag_1779590693_pid345260.jsonl",
+      "metadata": {
+        "rag_calls": 7159
+      }
+    },
+    {
+      "role": "lm3_runtime_jsonl",
+      "type": "runtime_log",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_hn1024_tau078_new_v9_batch_20260524T0242/zh/dmedhard5_new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau0p78_raw_lm3_k10_th0.78_ghard_medicine_glossary_raw_llm_judge_manual_zh215_unique212_ppmedicine5_hardraw/runtime_omni_vllm_maxsim_rag_1779590691_pid343474.jsonl",
+      "metadata": {
+        "rag_calls": 4774
+      }
+    },
+    {
+      "role": "lm4_runtime_jsonl",
+      "type": "runtime_log",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_hn1024_tau078_new_v9_batch_20260524T0242/zh/dmedhard5_new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau0p78_raw_lm4_k10_th0.78_ghard_medicine_glossary_raw_llm_judge_manual_zh215_unique212_ppmedicine5_hardraw/runtime_omni_vllm_maxsim_rag_1779591220_pid636415.jsonl",
+      "metadata": {
+        "rag_calls": 3581
+      }
+    },
+    {
+      "role": "rtf_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260525_rag_compute_rtf.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "rtf_figure_pdf",
+      "type": "figure",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260525_rag_compute_rtf.pdf",
+      "metadata": {}
+    },
+    {
+      "role": "rtf_figure_png",
+      "type": "figure",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260525_rag_compute_rtf.png",
+      "metadata": {}
+    },
+    {
+      "role": "paper_figure_pdf",
+      "type": "figure",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/rag_compute_rtf.pdf",
+      "metadata": {}
+    },
+    {
+      "role": "paper_results_tex",
+      "type": "latex",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/sections/results.tex",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "rtf_formula": "rag_sec / (0.96 * lm)",
+    "lookback_sec": 1.92,
+    "source_dataset": "Medicine zh raw fixed denominator",
+    "median_rtf_pct_by_lm": {
+      "1": 3.8497,
+      "2": 2.2055,
+      "3": 1.4778,
+      "4": 1.1366
+    },
+    "generated_at_utc": "2026-05-25T01:50:00+00:00"
+  }
+}

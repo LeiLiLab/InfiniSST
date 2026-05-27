@@ -1,0 +1,5 @@
+timestamp_utc	lm	status	alive_pids	engine_pids_all	stage	eval_results	instances_rows	strip_rows	BLEU	StreamLAAL	StreamLAAL_CA	TERM_ACC	TERM_CORRECT	TERM_TOTAL	note
+2026-05-25T02:02:39Z	1	error		606402,606430,606446	error_seen_in_log										Traceback
+2026-05-25T02:02:40Z	2	running	605652	606402,606430,606446	generation_step_61_ready_5_active_5										
+2026-05-25T02:02:40Z	3	running	605651	606402,606430,606446	generation_step_51_ready_5_active_5										
+2026-05-25T02:02:40Z	4	running	605649	606402,606430,606446	generation_step_45_ready_5_active_5										

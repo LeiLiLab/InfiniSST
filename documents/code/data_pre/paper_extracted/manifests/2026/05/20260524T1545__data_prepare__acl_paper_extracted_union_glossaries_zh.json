@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T1545__data_prepare__acl_paper_extracted_union_glossaries_zh",
+  "event_type": "data_prepare",
+  "family": "acl_paper_extracted_union_zh",
+  "variant": "raw_gs1k_gs10k_union_zh",
+  "status": "completed",
+  "project": "",
+  "wandb_run_id": null,
+  "slurm_job_id": "direct_local",
+  "launcher_path": "documents/code/data_pre/paper_extracted/run_build_acl_paper_extracted_union_glossaries.sh",
+  "notes_path": "documents/code/data_pre/paper_extracted/notes/2026/05/20260524__acl_paper_extracted_union_glossaries_zh.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "bash documents/code/data_pre/paper_extracted/run_build_acl_paper_extracted_union_glossaries.sh",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "bash",
+      "direction": "control",
+      "path": "documents/code/data_pre/paper_extracted/run_build_acl_paper_extracted_union_glossaries.sh"
+    },
+    {
+      "role": "data_builder",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/data_pre/paper_extracted/build_acl_paper_extracted_union_glossaries.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/data_pre/paper_extracted/notes/2026/05/20260524__acl_paper_extracted_union_glossaries_zh.md"
+    },
+    {
+      "role": "paper_extracted_raw_glossaries",
+      "type": "directory",
+      "direction": "input",
+      "path": "documents/data/data_pre/extracted_glossaries_by_paper"
+    },
+    {
+      "role": "filler_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/data_pre/glossary_scale/wiki_glossary_nlp_ai_cs_enriched.json"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "output",
+      "path": "retriever/gigaspeech/data_pre/acl6060_paper_extracted_union_raw_zh.json"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "output",
+      "path": "retriever/gigaspeech/data_pre/acl6060_paper_extracted_union_gs1000_zh.json"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "output",
+      "path": "retriever/gigaspeech/data_pre/acl6060_paper_extracted_union_gs10000_zh.json"
+    },
+    {
+      "role": "report",
+      "type": "json",
+      "direction": "output",
+      "path": "retriever/gigaspeech/data_pre/acl6060_paper_extracted_union_stats_zh.json"
+    }
+  ],
+  "metadata": {
+    "target_lang": "zh",
+    "expected_raw_terms": 253,
+    "target_sizes": [
+      1000,
+      10000
+    ],
+    "papers": [
+      "2022.acl-long.268",
+      "2022.acl-long.367",
+      "2022.acl-long.590",
+      "2022.acl-long.110",
+      "2022.acl-long.117"
+    ],
+    "metric_denominator_policy": "fixed_union_raw_glossary",
+    "validation": {
+      "raw_count": 253,
+      "gs1000_count": 1000,
+      "gs10000_count": 10000,
+      "raw_terms_in_gs1000": 253,
+      "raw_terms_in_gs10000": 253,
+      "duplicate_normalized_terms": 0,
+      "zh_translation_missing": 0
+    }
+  }
+}

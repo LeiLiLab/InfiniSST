@@ -1,0 +1,197 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T013600__retriever_eval__context_ablation_ctx5p76_perctxraw_100k",
+  "event_type": "retriever_eval",
+  "family": "sst_ood_context_ablation",
+  "variant": "ctx5p76_latest_s1300_perctxraw_100k",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": "d988vg46",
+  "slurm_job_id": "45290",
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260525__context_ablation_devraw_fixeddenom_100k_eval.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260525__context_ablation_devraw_fixeddenom_100k_eval.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "ssh -n -f aries.cs.ucsb.edu 'mkdir -p /mnt/gemini/data1/jiaxuanluo/logs/context_ablation_perctxraw_100k_20260525T013600Z && cd /mnt/taurus/home/jiaxuanluo/InfiniSST && nohup setsid env RUN_STAMP=ctxab_perctxraw_100k_20260525T013600Z_ctx5p76 CONTEXT_TAG=ctx5p76 SOURCE_RUN_ID=jyb2u787 FIXED_SECONDS=5.76 RESUME=/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8190_t=0.07_3var_gsv2full_gsdedup_ctx5p76_bs8190_gc128_eval100_tagacl_med_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_q3o_resume_s400_gpu012367_aries6_latest.pt TRAIN_JSONL=/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_ctx5p76.jsonl DEV_JSONL=/mnt/gemini/home/jiaxuanluo/term_dev_dataset_ctx5p76_new_version.jsonl EVAL_METRICS_GLOSSARY=/mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/train/term_train/reports/figures/20260525_dev_raw_glossary_ctx5p76.json NOTES_FILE=/mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/train/term_train/notes/2026/05/20260525__context_ablation_devraw_fixeddenom_100k_eval.md CUDA_DEVICE_LIST=0 NUM_GPUS=1 MASTER_PORT=20055 EVAL_SCORE_QUERY_CHUNK=128 EVAL_SCORE_TEXT_CHUNK=512 bash documents/code/train/term_train/launchers/2026/05/20260525__context_ablation_devraw_fixeddenom_100k_eval.sh > /mnt/gemini/data1/jiaxuanluo/logs/context_ablation_perctxraw_100k_20260525T013600Z/ctx5p76.direct.log 2>&1 < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/context_ablation_perctxraw_100k_20260525T013600Z/ctx5p76.direct.pid'",
+  "parent_run_ids": [
+    "jyb2u787",
+    "zseptpl0",
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260525__context_ablation_devraw_fixeddenom_100k_eval.sh",
+      "metadata": {}
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh",
+      "metadata": {}
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260525__context_ablation_devraw_fixeddenom_100k_eval.md",
+      "metadata": {}
+    },
+    {
+      "role": "slurm_allocation",
+      "type": "slurm_job",
+      "direction": "control",
+      "path": "slurm:45290",
+      "metadata": {
+        "usage": "Aries hold allocation used for detached single-GPU eval"
+      }
+    },
+    {
+      "role": "checkpoint",
+      "type": "model",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8190_t=0.07_3var_gsv2full_gsdedup_ctx5p76_bs8190_gc128_eval100_tagacl_med_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_q3o_resume_s400_gpu012367_aries6_latest.pt",
+      "metadata": {
+        "source_run": "jyb2u787",
+        "context_tag": "ctx5p76"
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2_full0_31_clean_mfa_gsrepaired_gsdedup_ctx5p76.jsonl",
+      "metadata": {
+        "usage": "script-required input; eval_only does not train"
+      }
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_ctx5p76_new_version.jsonl",
+      "metadata": {
+        "usage": "dev-only eval",
+        "context_tag": "ctx5p76"
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample100000.json",
+      "metadata": {
+        "eval_glossary_sizes": [
+          1000,
+          10000,
+          100000
+        ],
+        "prefix_equal_to_sample1000000": true
+      }
+    },
+    {
+      "role": "dev_raw_metrics_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/figures/20260525_dev_raw_glossary_ctx5p76.json",
+      "metadata": {
+        "term_count": 867,
+        "usage": "per-context fixed raw denominator"
+      }
+    },
+    {
+      "role": "protocol_note",
+      "type": "note",
+      "direction": "control",
+      "path": "inline:per-context raw metrics glossary",
+      "metadata": {}
+    },
+    {
+      "role": "direct_launch_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/context_ablation_perctxraw_100k_20260525T013600Z/ctx5p76.direct.log",
+      "metadata": {
+        "host": "aries",
+        "gpu": 0
+      }
+    },
+    {
+      "role": "pid_file",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/context_ablation_perctxraw_100k_20260525T013600Z/ctx5p76.direct.pid",
+      "metadata": {}
+    },
+    {
+      "role": "wandb_run",
+      "type": "wandb_run",
+      "direction": "output",
+      "path": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/d988vg46",
+      "metadata": {
+        "status": "success"
+      }
+    },
+    {
+      "role": "report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/20260525_context_ablation_devraw_fixeddenom_100k.md",
+      "metadata": {}
+    },
+    {
+      "role": "report_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260525_context_ablation_devraw_fixeddenom_100k.tsv",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "context_tag": "ctx5p76",
+    "source_run_id": "jyb2u787",
+    "fixed_audio_seconds": 5.76,
+    "eval_scope": "dev_only",
+    "eval_metric_denominator": "fixed_raw",
+    "eval_metrics_glossary": "documents/code/train/term_train/reports/figures/20260525_dev_raw_glossary_ctx5p76.json",
+    "eval_metrics_term_count": 867,
+    "eval_glossary_sizes": [
+      1000,
+      10000,
+      100000
+    ],
+    "eval_wiki_glossary": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample100000.json",
+    "gpu_list": "0",
+    "num_gpus": 1,
+    "master_port": 20055,
+    "score_query_chunk": 128,
+    "score_text_chunk": 512,
+    "run_stamp": "ctxab_perctxraw_100k_20260525T013600Z_ctx5p76",
+    "log_dir": "/mnt/gemini/data1/jiaxuanluo/logs/context_ablation_perctxraw_100k_20260525T013600Z",
+    "acl_usage": "disabled",
+    "medicine_usage": "disabled",
+    "wandb_run_id": "d988vg46",
+    "metrics": {
+      "eval_dev/step": 1300,
+      "eval_dev/bank_terms": 867,
+      "eval_dev/metrics_bank_terms": 867,
+      "eval_dev/recall@10": 0.9964,
+      "eval_dev/recall@10_gs1000": 0.9964,
+      "eval_dev/recall@10_gs10000": 0.9958,
+      "eval_dev/recall@10_gs100000": 0.9933,
+      "eval_dev/fixed_metric_denominator": 1,
+      "eval_dev/base_label_any_positive": 3574
+    },
+    "completed_at_utc": "2026-05-25T01:49:05+00:00",
+    "verdict": "success_context_ablation_devraw_fixeddenom_100k"
+  }
+}

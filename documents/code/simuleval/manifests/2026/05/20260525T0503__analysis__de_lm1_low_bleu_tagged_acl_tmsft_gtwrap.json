@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T0503__analysis__de_lm1_low_bleu_tagged_acl_tmsft_gtwrap",
+  "event_type": "analysis",
+  "family": "tagged_acl_tmsft_gtwrap_de_hn1024_tau078",
+  "variant": "de_lm1_low_bleu_diagnosis",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/reports/20260525_de_lm1_low_bleu_diagnosis.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "Read verified eval_results.tsv, eval_results.log, instances.strip_term.log, and runtime_omni_vllm_maxsim_rag_batched_lm*.jsonl artifacts for 20260525T0413 DE tagged-ACL RASST run; compute per-talk length/repetition and runtime retrieval statistics.",
+  "parent_run_ids": [
+    "sf6nw09x"
+  ],
+  "artifacts": [
+    {
+      "role": "report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_de_lm1_low_bleu_diagnosis.md",
+      "metadata": {}
+    },
+    {
+      "role": "parent_eval_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260525T0413__simuleval__tagged_acl_tmsft_gttermwrap_exact_de_lm1to4_hn1024_tau078_batch_aries8.json",
+      "metadata": {
+        "event_id": "20260525T0413__simuleval__tagged_acl_tmsft_gttermwrap_exact_de_lm1to4_hn1024_tau078_batch_aries8"
+      }
+    },
+    {
+      "role": "summary_metrics",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_20260525T0413_tagacl_tmsftgtwrap_de_hn1024_tau078_lm1to4_aries/tmsft_gttermwrap_exact_de_r32a32_ep4_hn1024_tau078_batch_max80/__summary__/summary_de_lm1to4_manual.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "lm1_eval_results",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_20260525T0413_tagacl_tmsftgtwrap_de_hn1024_tau078_lm1to4_aries/tmsft_gttermwrap_exact_de_r32a32_ep4_hn1024_tau078_batch_max80/de/dtagacl_bv1_tmsft_gtwrap_hn1024_tau078_lm1_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "lm1_runtime_log",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_20260525T0413_tagacl_tmsftgtwrap_de_hn1024_tau078_lm1to4_aries/tmsft_gttermwrap_exact_de_r32a32_ep4_hn1024_tau078_batch_max80/de/dtagacl_bv1_tmsft_gtwrap_hn1024_tau078_lm1_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/runtime_omni_vllm_maxsim_rag_batched_lm1.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "parent_training_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/train/sst_omni_train/manifests/2026/05/20260525T0055__speech_llm_train__tmsft_gttermwrap_exact_de_r32a32_ep4_aries8.json",
+      "metadata": {
+        "wandb_run_id": "sf6nw09x"
+      }
+    },
+    {
+      "role": "parent_data_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/train/sst_omni_train/manifests/2026/05/20260525T0045__data_prepare__tmsft_gttermwrap_exact_de.json",
+      "metadata": {
+        "event_id": "20260525T0045__data_prepare__tmsft_gttermwrap_exact_de"
+      }
+    },
+    {
+      "role": "source_train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/train_s_de_v4_ner_baseline_aligned_rate1.0_k20_final.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "final_train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_tmsft_gttermwrap_exact_de_20260525/train_s_de_tmsft_gttermwrap_exact.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "final_dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_tmsft_gttermwrap_exact_de_20260525/dev_s_de_tmsft_gttermwrap_exact_first355.jsonl",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "completed_utc": "2026-05-25T05:03:00Z",
+    "finding": "The lm=1 BLEU drop is dominated by over-generation and a late decode loop on 2022.acl-long.367, not by missing eval artifacts or Chinese-polluted retriever references.",
+    "lm1_metrics": {
+      "BLEU": 20.6877,
+      "TERM_ACC": 0.7872,
+      "TERM_CORRECT": 736,
+      "TERM_TOTAL": 935
+    },
+    "pathological_talk": {
+      "source_id": "2022.acl-long.367",
+      "pred_words_lm1": 2707,
+      "ref_words": 1327,
+      "length_ratio_lm1": 2.04,
+      "as_wer_lm1": 167.925,
+      "repeated_8gram_rate_lm1": 0.538
+    },
+    "runtime_stats": {
+      "lm1_llm_calls": 3588,
+      "lm1_empty_ref_rate": 0.481,
+      "lm1_avg_refs_per_call": 0.93,
+      "lm2_empty_ref_rate": 0.328,
+      "lm3_empty_ref_rate": 0.233,
+      "lm4_empty_ref_rate": 0.180,
+      "retrieved_refs_with_chinese_chars_lm1": 0,
+      "llm_output_chunks_with_chinese_chars_lm1": 31
+    },
+    "empty_retrieval_prompt_behavior": "empty refs are rendered as explicit term_map:\\nNONE",
+    "training_contamination_check": {
+      "abnormal_phrase_hits_in_source_train_final_train_final_dev": {
+        "位置编码": 0,
+        "Rei儿": 0,
+        "以实现位置编码": 0,
+        "Bemerkungen，以": 0,
+        "儿Bemerkungen": 0,
+        "Reihe von Bemerkungen": 0
+      },
+      "source_train": {
+        "rows": 12500,
+        "user_cjk_chars": 9,
+        "user_msgs_with_cjk": 4,
+        "assistant_cjk_chars": 1,
+        "assistant_msgs_with_cjk": 1,
+        "term_map_none": 0,
+        "audio_only_user_msgs": 16917
+      },
+      "final_train": {
+        "rows": 12500,
+        "user_cjk_chars": 9,
+        "user_msgs_with_cjk": 4,
+        "assistant_cjk_chars": 1,
+        "assistant_msgs_with_cjk": 1,
+        "term_map_none": 0,
+        "audio_only_user_msgs": 16917
+      },
+      "final_dev": {
+        "rows": 355,
+        "user_cjk_chars": 0,
+        "user_msgs_with_cjk": 0,
+        "assistant_cjk_chars": 0,
+        "assistant_msgs_with_cjk": 0,
+        "term_map_none": 0,
+        "audio_only_user_msgs": 453
+      },
+      "interpretation": "No evidence for large-scale training contamination or for the exact GT-term-wrap transform introducing the mixed Chinese tail; the stronger mismatch is train bare-audio empty chunks versus eval explicit term_map NONE."
+    }
+  }
+}

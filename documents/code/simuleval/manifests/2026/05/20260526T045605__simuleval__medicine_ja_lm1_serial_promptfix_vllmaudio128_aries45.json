@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "event_id": "20260526T045605__simuleval__medicine_ja_lm1_serial_promptfix_vllmaudio128_aries45",
+  "event_type": "simuleval",
+  "family": "medicine_hardraw_ja_cap16_denoise",
+  "variant": "lm1_serial_promptfix_vllmaudio128_aries45",
+  "status": "running",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260526__medicine_ja_serial_promptfix_vllmaudio128_max40lm_aries.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260526__medicine_ja_lm12_serial_promptfix_vllmaudio128_aries.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries 'mkdir -p /mnt/gemini/data1/jiaxuanluo/logs/medicine_ja_lm1_serial_promptfix_vllmaudio128_max40lm_20260526T045605_aries45 && setsid bash -lc \"ROOT_DIR=/mnt/taurus/home/jiaxuanluo/InfiniSST RUN_STAMP=20260526T045605_medicine_ja_lm1_serial_promptfix_vllmaudio128_aries45 OUT_ROOT=/mnt/gemini/data1/jiaxuanluo/medicine_ja_lm1_serial_promptfix_vllmaudio128_max40lm_20260526T045605_aries45 LOG_ROOT=/mnt/gemini/data1/jiaxuanluo/logs/medicine_ja_lm1_serial_promptfix_vllmaudio128_max40lm_20260526T045605_aries45 GPU_PAIR=4,5 LM=1 VLLM_LIMIT_AUDIO=128 MAX_CACHE_CHUNKS=30 KEEP_CACHE_CHUNKS=30 MAX_NEW_TOKENS=40 EVAL_TMPDIR=/tmp/jxmjs1p128_045605 bash /mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/simuleval/launchers/2026/05/20260526__medicine_ja_serial_promptfix_vllmaudio128_max40lm_aries.sh\" > /mnt/gemini/data1/jiaxuanluo/logs/medicine_ja_lm1_serial_promptfix_vllmaudio128_max40lm_20260526T045605_aries45/launcher.outer.log 2>&1 < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/medicine_ja_lm1_serial_promptfix_vllmaudio128_max40lm_20260526T045605_aries45/outer.pid'",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260526__medicine_ja_serial_promptfix_vllmaudio128_max40lm_aries.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260526__medicine_ja_lm12_serial_promptfix_vllmaudio128_aries.md",
+      "metadata": {}
+    },
+    {
+      "role": "eval_script",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh",
+      "metadata": {}
+    },
+    {
+      "role": "agent",
+      "type": "python",
+      "direction": "control",
+      "path": "agents/infinisst_omni_vllm_maxsim_rag.py",
+      "metadata": {}
+    },
+    {
+      "role": "model",
+      "type": "checkpoint_dir",
+      "direction": "input",
+      "path": "/mnt/taurus/data1/jiaxuanluo/slm_local_cache/ja_tagged_acl_20260525/cap16_denoise_ttag/v2-20260525-235251-hf",
+      "metadata": {}
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_ja_new_promptfix_vllmaudio128_lm12_20260526T043330_aries/ja/__medicine_inputs__/lists/hard_medicine_raw__medicine5.json",
+      "metadata": {}
+    },
+    {
+      "role": "eval_inputs",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_ja_new_promptfix_vllmaudio128_lm12_20260526T043330_aries/ja/__medicine_inputs__/lists",
+      "metadata": {
+        "source_path_rewrite": "/home/jiaxingxu/ -> /mnt/taurus/home/jiaxingxu/"
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_ja_lm1_serial_promptfix_vllmaudio128_max40lm_20260526T045605_aries45",
+      "metadata": {}
+    },
+    {
+      "role": "logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_ja_lm1_serial_promptfix_vllmaudio128_max40lm_20260526T045605_aries45",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "host": "aries",
+    "lang": "ja",
+    "dataset": "medicine_hardraw",
+    "lm": 1,
+    "mode": "serial_simuleval",
+    "gpu_pair": "4,5",
+    "setting_name": "new_promptfix_vllmaudio128",
+    "cache_chunks": "30/30",
+    "vllm_limit_audio": 128,
+    "max_new_tokens": 40,
+    "empty_term_map_policy": "omit",
+    "rag_prompt_policy": "given_chunks",
+    "comparison_target": "same-lm batch lm1 on Aries GPUs 0,1"
+    ,
+    "outer_pid": 4088085,
+    "simuleval_pid": 4088552,
+    "vllm_worker_pids": [4089336, 4089338],
+    "startup_validation": "startup verified on Aries GPUs 4,5; simuleval process and two VLLM TP workers are running"
+  }
+}

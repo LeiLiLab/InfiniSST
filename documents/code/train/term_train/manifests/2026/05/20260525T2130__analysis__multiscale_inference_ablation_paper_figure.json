@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T2130__analysis__multiscale_inference_ablation_paper_figure",
+  "event_type": "analysis",
+  "family": "sst_ood_multiscale_inference_ablation",
+  "variant": "paper_figure",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_10_multiscale_inference_ablation/plot_figure_10_multiscale_inference_ablation.py",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260525__multiscale_inference_ablation_paper_figure.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_10_multiscale_inference_ablation/plot_figure_10_multiscale_inference_ablation.py --update-paper",
+  "parent_run_ids": [
+    "q2fus6f1",
+    "y454004y",
+    "740c7y40",
+    "r5l4780c"
+  ],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260525__multiscale_inference_ablation_paper_figure.md",
+      "metadata": {}
+    },
+    {
+      "role": "source_report_tsv",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/figures/20260525_multiscale_inference_ablation_devraw.tsv",
+      "metadata": {
+        "source_event": "20260525T2100__analysis__multiscale_inference_ablation_report"
+      }
+    },
+    {
+      "role": "paper_local_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_10_multiscale_inference_ablation/data.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "plot_script",
+      "type": "python",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_10_multiscale_inference_ablation/plot_figure_10_multiscale_inference_ablation.py",
+      "metadata": {}
+    },
+    {
+      "role": "paper_local_readme",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_10_multiscale_inference_ablation/README.md",
+      "metadata": {}
+    },
+    {
+      "role": "local_figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_10_multiscale_inference_ablation/local/multiscale_inference_ablation_devraw.pdf",
+      "metadata": {}
+    },
+    {
+      "role": "local_figure_png",
+      "type": "png",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_10_multiscale_inference_ablation/local/multiscale_inference_ablation_devraw.png",
+      "metadata": {}
+    },
+    {
+      "role": "paper_figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/multiscale_inference_ablation_devraw.pdf",
+      "metadata": {}
+    },
+    {
+      "role": "paper_figure_png",
+      "type": "png",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/multiscale_inference_ablation_devraw.png",
+      "metadata": {}
+    },
+    {
+      "role": "paper_results_tex",
+      "type": "latex",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/sections/results.tex",
+      "metadata": {
+        "label": "fig:ablation_multiscale_inference"
+      }
+    },
+    {
+      "role": "paper_plot_registry",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/README.md",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "primary_runs": [
+      "q2fus6f1",
+      "y454004y",
+      "740c7y40"
+    ],
+    "historical_debt_runs": [
+      "r5l4780c"
+    ],
+    "plotted_variants": [
+      "multiscale_maxsim",
+      "only_largest_maxsim_window",
+      "dense_1p92_trained"
+    ],
+    "excluded_variants": [
+      "aux_main_checkpoint_ctx5p76"
+    ]
+  }
+}

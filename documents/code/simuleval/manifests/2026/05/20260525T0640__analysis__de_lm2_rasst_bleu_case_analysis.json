@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T0640__analysis__de_lm2_rasst_bleu_case_analysis",
+  "event_type": "analysis",
+  "family": "tagged_acl_de_lm2_rasst_bleu_forensics",
+  "variant": "newv9_vs_tmv4_hn1024_sentence_cases",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__de_lm2_rasst_bleu_case_analysis.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/simuleval/src/analyze_de_lm2_rasst_bleu_cases_20260525.py",
+  "parent_run_ids": [
+    "40i1fl5v",
+    "gb313iyk"
+  ],
+  "artifacts": [
+    {
+      "role": "analysis_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/analyze_de_lm2_rasst_bleu_cases_20260525.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__de_lm2_rasst_bleu_case_analysis.md"
+    },
+    {
+      "role": "newv9_rasst_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T1738__simuleval__tagged_acl_new_v9_mfa_npfilter_lexexact_hn1024_tau078_raw_de_lm1to4_max80.json"
+    },
+    {
+      "role": "tmv4_hn1024_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T2135__simuleval__tagged_acl_tmv4_de_lm2_hn1024_batch.json"
+    },
+    {
+      "role": "origin_norag_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T2200__simuleval__tagged_acl_origin_norag_de_lm2_batch_max80_aries01.json"
+    },
+    {
+      "role": "eval_input_audio_yaml",
+      "type": "yaml",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all/audio.yaml"
+    },
+    {
+      "role": "eval_input_source_text",
+      "type": "text",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all/source_text.txt"
+    },
+    {
+      "role": "eval_input_reference_text",
+      "type": "text",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all/ref.txt"
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "case_report_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_de_lm2_rasst_bleu_case_report.tsv"
+    },
+    {
+      "role": "case_report_md",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_de_lm2_rasst_bleu_case_report.md"
+    },
+    {
+      "role": "tmv4_term_adoption_json",
+      "type": "json",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_de_lm2_tmv4_hn1024_term_adoption.json"
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "latency_multiplier": 2,
+    "dataset": "acl_tagged_raw",
+    "completed_utc": "2026-05-25T06:40:15Z",
+    "sentence_count": 468,
+    "runtime_chunks": 1795,
+    "runtime_term_maps_identical_newv9_vs_tmv4": true,
+    "newv9_bleu": 29.926444569587574,
+    "newv9_term_acc": 0.8599,
+    "newv9_real_term_adopt": 0.877021,
+    "newv9_term_fcr": 0.201635,
+    "tmv4_bleu": 31.121069182103,
+    "tmv4_term_acc": 0.8353,
+    "tmv4_real_term_adopt": 0.853383,
+    "tmv4_term_fcr": 0.147139,
+    "norag_bleu": 30.06764803241279,
+    "norag_term_acc": 0.6364,
+    "newv9_raw_term_open_tags": 877,
+    "newv9_raw_term_close_tags": 874,
+    "tmv4_raw_term_open_tags": 0,
+    "norag_raw_term_open_tags": 0,
+    "sentence_rows_with_aligned_term_map": 443,
+    "sentence_rows_newv9_worse_than_tmv4_chrf_gt5": 85,
+    "sentence_rows_newv9_worse_than_tmv4_chrf_gt5_with_term_map": 78,
+    "sentence_rows_newv9_false_copy_from_term_map": 74,
+    "sentence_rows_newv9_term_tag_overlap": 402,
+    "malformed_leftover_xml_like_tags_after_strip": 2
+  }
+}

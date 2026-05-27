@@ -1,0 +1,222 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T115605__simuleval__tagged_acl_origin_norag_de_lm1234_batch_infinisst_prompt_max20lm_aries_taurus",
+  "event_type": "simuleval",
+  "family": "tagged_acl_origin_norag_batch_infinisst_prompt",
+  "variant": "de_lm1to4_max20lm_aries_taurus",
+  "status": "completed_success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_origin_norag_de_lm1234_batch_infinisst_prompt_max20lm_aries_taurus.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_origin_norag_de_lm1234_batch_infinisst_prompt_max20lm.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "bash documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_origin_norag_de_lm1234_batch_infinisst_prompt_max20lm_aries_taurus.sh",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_origin_norag_de_lm1234_batch_infinisst_prompt_max20lm_aries_taurus.sh"
+    },
+    {
+      "role": "batch_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_origin_norag_de_lm1234_batch_infinisst_prompt_max20lm.md"
+    },
+    {
+      "role": "speech_llm_model",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-de-s_origin-bsz4"
+    },
+    {
+      "role": "eval_input",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all"
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "reference_serial_norag_lm4",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T160830__simuleval__tagged_acl_origin_norag_de_lm4_raw_rerun.json"
+    },
+    {
+      "role": "prompt_mismatch_diagnosis",
+      "type": "report",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260525_de_lm4_infinisst_batch_vs_serial_diagnosis.md"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_batch_infinisst_prompt_max20lm_20260525T115605_origin_norag_de_batch_infprompt_max20lm"
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_batch_infinisst_prompt_max20lm_20260525T115605_origin_norag_de_batch_infprompt_max20lm"
+    },
+    {
+      "role": "merged_summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/reports/20260525_de_origin_norag_batch_infinisst_prompt_max20lm_summary.tsv"
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "latency_multipliers": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "runtime_glossary": "acl6060_tagged_gt_raw_min_norm2",
+    "method": "InfiniSST/no-RAG",
+    "disable_rag": true,
+    "empty_term_map_policy": "omit",
+    "norag_prompt_policy": "serial_compat",
+    "max_new_tokens_by_lm": {
+      "1": 20,
+      "2": 40,
+      "3": 60,
+      "4": 80
+    },
+    "same_lm_batch": true,
+    "talks_per_lm": 5,
+    "wandb_log_override": 0,
+    "gpu_plan": {
+      "lm1": "aries:4,5",
+      "lm2": "aries:6,7",
+      "lm3": "aries:4,5",
+      "lm4": "aries:6,7"
+    },
+    "submitted_utc": "2026-05-25T11:57:55Z",
+    "status_note": "Initial detached Taurus/Aries jobs failed in vLLM shared-memory initialization. Completed accepted retry on Aries only for lm1-lm4; Taurus waiting queue was canceled before starting no-RAG eval.",
+    "pid_table": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_batch_infinisst_prompt_max20lm_20260525T115605_origin_norag_de_batch_infprompt_max20lm/pids.tsv",
+    "submission_caveat": "Aries pid table rows were written with a literal $! due to a launcher escaping bug; actual wrapper/python pids were recovered with pgrep and the launcher has been fixed for future submissions.",
+    "pids": {
+      "lm1_taurus_wrapper": 1797746,
+      "lm1_taurus_python": 1797822,
+      "lm2_taurus_wrapper": 1797752,
+      "lm2_taurus_python": 1797826,
+      "lm3_aries_wrapper": 3708221,
+      "lm3_aries_python": 3708315,
+      "lm4_aries_wrapper": 3708431,
+      "lm4_aries_python": 3708522
+    },
+    "startup_observation_utc": "2026-05-25T11:59:08Z",
+    "startup_status": "all four child jobs entered vLLM model loading with serial-compatible no-RAG prompt and empty term maps omitted",
+    "initial_failure_utc": "2026-05-25T12:25:00Z",
+    "initial_failure": {
+      "lm1_taurus": "failed during vLLM KV-cache initialization with AttributeError: ShmRingBuffer object has no attribute shared_memory",
+      "lm2_taurus": "failed during vLLM KV-cache initialization with AttributeError: ShmRingBuffer object has no attribute shared_memory",
+      "lm3_aries": "failed during vLLM KV-cache initialization with AttributeError: ShmRingBuffer object has no attribute shared_memory",
+      "lm4_aries": "failed during vLLM KV-cache initialization with AttributeError: ShmRingBuffer object has no attribute shared_memory"
+    },
+    "initial_failure_interpretation": "The four jobs were launched as two concurrent vLLM initializations per host. Existing project notes document this as a /dev/shm MessageQueue race risk on Aries/Taurus.",
+    "retry_sequence_utc": "2026-05-25T12:41:45Z",
+    "retry_sequence_policy": "Detached Aries-only active driver uses idle GPUs 4,5 and 6,7. It starts lm1 on 4,5, waits until that vLLM model load completes, then starts lm2 on 6,7; later lm3/lm4 reuse the same pairs with staggered initialization.",
+    "retry_sequence_pid_table": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_batch_infinisst_prompt_max20lm_20260525T115605_origin_norag_de_batch_infprompt_max20lm/aries_g45g67_active_pids_v2.tsv",
+    "retry_sequence_pids": {
+      "aries_g45g67_driver": 3717302,
+      "aries_lm1_g45_child": 3717318,
+      "aries_lm1_g45_python": 3717355
+    },
+    "retry_sequence_v1_note": "Initial retry queue pids 1833591 and 3712341 were canceled before running no-RAG batches so the queue could pick up stale /dev/shm cleanup after active own vLLM exits.",
+    "retry_sequence_v2_note": "Canceled Taurus queue pid 1835084, local monitor pid 1838773, and Aries lm3/lm4 queue pid 3712704 before any no-RAG retry batch started; an Aries all-LM waiting queue pid 3713771 and monitor pid 3713843 were later canceled because GPUs 4-7 were idle while JA occupied GPUs 0-3.",
+    "retry_sequence_status": "completed on Aries only for lm1-lm4; Taurus retry queue was canceled before no-RAG execution.",
+    "monitor_pid": 3717472,
+    "monitor_log_dir": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_batch_infinisst_prompt_max20lm_20260525T115605_origin_norag_de_batch_infprompt_max20lm/monitor_no_rag_gate_aries_g45g67_v2",
+    "monitor_report_path": "/mnt/gemini/data1/jiaxuanluo/reports/20260525_de_origin_norag_batch_infinisst_prompt_max20lm_summary.tsv",
+    "summary_patch_utc": "2026-05-25T13:00:00Z",
+    "summary_patch": "Fixed launcher summary generation to call PYTHON_BIN instead of bare python; backfilled lm1/lm2 summary TSVs from verified eval_results.tsv and 5-row instances logs.",
+    "completed_lm_metrics": {
+      "lm1": {
+        "BLEU": 26.56392603963281,
+        "StreamLAAL": 1049.2446371457079,
+        "StreamLAAL_CA": 1606.3982179157306,
+        "TERM_ACC": 0.6342,
+        "TERM_CORRECT": 593,
+        "TERM_TOTAL": 935,
+        "max_new_tokens": 20,
+        "instances_log_rows": 5,
+        "instances_strip_term_log_rows": 5
+      },
+      "lm2": {
+        "BLEU": 29.55517806681845,
+        "StreamLAAL": 1746.2114597770667,
+        "StreamLAAL_CA": 1561.8990470634549,
+        "TERM_ACC": 0.6642,
+        "TERM_CORRECT": 621,
+        "TERM_TOTAL": 935,
+        "max_new_tokens": 40,
+        "instances_log_rows": 5,
+        "instances_strip_term_log_rows": 5
+      },
+      "lm3": {
+        "BLEU": 29.552577199409345,
+        "StreamLAAL": 2221.4341041498246,
+        "StreamLAAL_CA": 1292.271984416513,
+        "TERM_ACC": 0.6385,
+        "TERM_CORRECT": 597,
+        "TERM_TOTAL": 935,
+        "max_new_tokens": 60,
+        "instances_log_rows": 5,
+        "instances_strip_term_log_rows": 5
+      },
+      "lm4": {
+        "BLEU": 30.65870789607356,
+        "StreamLAAL": 2721.0152282140543,
+        "StreamLAAL_CA": 964.8039681913181,
+        "TERM_ACC": 0.6492,
+        "TERM_CORRECT": 607,
+        "TERM_TOTAL": 935,
+        "max_new_tokens": 80,
+        "instances_log_rows": 5,
+        "instances_strip_term_log_rows": 5
+      }
+    },
+    "completed_lm_summary_paths": {
+      "lm1": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_batch_infinisst_prompt_max20lm_20260525T115605_origin_norag_de_batch_infprompt_max20lm/lm1_aries_g45/origin_norag_de_batch_infprompt_max20lm/__summary__/summary_de_lm1.tsv",
+      "lm2": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_batch_infinisst_prompt_max20lm_20260525T115605_origin_norag_de_batch_infprompt_max20lm/lm2_aries_g67/origin_norag_de_batch_infprompt_max20lm/__summary__/summary_de_lm2.tsv",
+      "lm3": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_batch_infinisst_prompt_max20lm_20260525T115605_origin_norag_de_batch_infprompt_max20lm/lm3_aries_g45/origin_norag_de_batch_infprompt_max20lm/__summary__/summary_de_lm3.tsv",
+      "lm4": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_batch_infinisst_prompt_max20lm_20260525T115605_origin_norag_de_batch_infprompt_max20lm/lm4_aries_g67/origin_norag_de_batch_infprompt_max20lm/__summary__/summary_de_lm4.tsv"
+    },
+    "retry_lm3_lm4_utc": "2026-05-25T13:00:00Z",
+    "retry_lm3_lm4_policy": "Submitted lm3 and lm4 on Aries idle GPUs 4,5 and 6,7 after lm1/lm2 completed; staggered lm4 after lm3 model loading was observed.",
+    "retry_lm3_lm4_pid_table": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_batch_infinisst_prompt_max20lm_20260525T115605_origin_norag_de_batch_infprompt_max20lm/aries_g45g67_active_pids_lm3_lm4.tsv",
+    "retry_lm3_lm4_pids": {
+      "aries_lm3_g45_wrapper": 3722900,
+      "aries_lm3_g45_python": 3722937,
+      "aries_lm4_g67_wrapper": 3724502,
+      "aries_lm4_g67_python": 3724539
+    },
+    "completed_utc": "2026-05-25T13:09:35Z",
+    "completion_status_note": "All lm1-lm4 no-RAG batch evals completed with 5 raw and 5 strip-term instance rows per lm; summary report merged."
+  }
+}

@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "event_id": "20260526T035925__simuleval__medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_taurus",
+  "event_type": "simuleval",
+  "family": "medicine_hardraw_de_serial_promptfix",
+  "variant": "lm1_lm2_lm3_lm4_cache30_audioauto_max40lm",
+  "status": "running",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260526__medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_taurus.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260526__medicine_de_serial_promptfix_cache30_audioauto_max40lm_taurus.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'RUN_STAMP=20260526T035925_medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_taurus bash documents/code/simuleval/launchers/2026/05/20260526__medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_taurus.sh' > /mnt/data1/jiaxuanluo/logs/medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_20260526T035925_medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_taurus/top.outer.log 2>&1 < /dev/null &",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260526__medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_taurus.sh",
+      "metadata": {}
+    },
+    {
+      "role": "base_launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260526__medicine_de_serial_promptfix_cache30_audioauto_max40lm_taurus.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260526__medicine_de_serial_promptfix_cache30_audioauto_max40lm_taurus.md",
+      "metadata": {}
+    },
+    {
+      "role": "eval_script",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh",
+      "metadata": {}
+    },
+    {
+      "role": "agent",
+      "type": "python",
+      "direction": "control",
+      "path": "agents/infinisst_omni_vllm_maxsim_rag.py",
+      "metadata": {}
+    },
+    {
+      "role": "model",
+      "type": "checkpoint_dir",
+      "direction": "input",
+      "path": "/mnt/data1/jiaxuanluo/slm_local_cache/de_tagged_acl_20260525/cap16_denoise_ttag/v0-20260525-203735-hf",
+      "metadata": {}
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/de_cap16_denoise_medicine_acl_batch_taurus_20260525T165125_de_cap16_denoise_med_acl_batch_taurus/medicine_hardraw_de_cap16_denoise_ttag_hn1024_tau078_batch_chunks30/de/__medicine_inputs__/lists/hard_medicine_raw__medicine5.json",
+      "metadata": {}
+    },
+    {
+      "role": "eval_input_root",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/de_cap16_denoise_medicine_acl_batch_taurus_20260525T165125_de_cap16_denoise_med_acl_batch_taurus/medicine_hardraw_de_cap16_denoise_ttag_hn1024_tau078_batch_chunks30/de/__medicine_inputs__/lists",
+      "metadata": {}
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/data1/jiaxuanluo/medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_20260526T035925_medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_taurus",
+      "metadata": {}
+    },
+    {
+      "role": "logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/data1/jiaxuanluo/logs/medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_20260526T035925_medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_taurus",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "host": "taurus",
+    "lang": "de",
+    "dataset": "medicine_hardraw",
+    "lms": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "mode": "serial_simuleval_promptfix",
+    "cache_chunks": "30/30",
+    "vllm_limit_audio": "auto",
+    "max_new_tokens_policy": "40*lm",
+    "empty_term_map_policy": "omit",
+    "system_prompt_style": "given_chunks",
+    "launch_plan": "lm1 on 0,1; lm2 on 4,5; lm3 on 6,7; lm4 starts on 4,5 after lm2 exits",
+    "top_pid": 404546,
+    "child_pids": {
+      "lm1_wrapper": 404576,
+      "lm2_wrapper": 404577,
+      "lm3_wrapper": 404578
+    },
+    "startup_validation": "lm1/lm2/lm3 run_meta written; each has cache_chunks=30/30 and vLLM startup with limit_mm_per_prompt audio=30; lm4 queued to start after lm2 exits",
+    "queued_lm4_cancelled": true,
+    "queued_lm4_cancel_reason": "manual lm4 moved to Taurus GPUs 2,3 per user request; top wrapper stopped while lm1/lm2/lm3 child evals continued",
+    "top_wrapper_stopped_at_utc": "2026-05-26T04:27:39Z",
+    "replacement_lm4_event_id": "20260526T043300__simuleval__medicine_de_lm4_serial_promptfix_cache30_audioauto_max40lm_taurus23",
+    "completed_lms": {
+      "lm3": {
+        "completed_at_utc": "2026-05-26T05:12:27Z",
+        "BLEU": 26.24480457050744,
+        "StreamLAAL": 2361.211679150242,
+        "StreamLAAL_CA": 3310.736301603948,
+        "TERM_ACC": 0.8192,
+        "TERM_CORRECT": 530,
+        "TERM_TOTAL": 647,
+        "REAL_TERM_ADOPT": 0.877626,
+        "TERM_FCR": 0.098916,
+        "eval_results": "/mnt/data1/jiaxuanluo/medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_20260526T035925_medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_taurus/lm3/de/dmedhard_de_lm3_serial_promptfix_cache30_audioauto_max40lm_lm3_k10_th0.78_ghard_medicine_raw__medicine5/eval_results.tsv",
+        "summary": "/mnt/data1/jiaxuanluo/medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_20260526T035925_medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_taurus/lm3/__summary__/summary_medicine_hardraw_de_lm3_serial_promptfix.tsv",
+        "instances_rows": 5,
+        "instances_strip_term_rows": 5
+      },
+      "lm2": {
+        "completed_at_utc": "2026-05-26T05:20:16Z",
+        "BLEU": 26.769638479796985,
+        "StreamLAAL": 1838.9517839435177,
+        "StreamLAAL_CA": 2550.205401101398,
+        "TERM_ACC": 0.7821,
+        "TERM_CORRECT": 506,
+        "TERM_TOTAL": 647,
+        "REAL_TERM_ADOPT": 0.840827,
+        "TERM_FCR": 0.094891,
+        "eval_results": "/mnt/data1/jiaxuanluo/medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_20260526T035925_medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_taurus/lm2/de/dmedhard_de_lm2_serial_promptfix_cache30_audioauto_max40lm_lm2_k10_th0.78_ghard_medicine_raw__medicine5/eval_results.tsv",
+        "summary": "/mnt/data1/jiaxuanluo/medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_20260526T035925_medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_taurus/lm2/__summary__/summary_medicine_hardraw_de_lm2_serial_promptfix.tsv",
+        "instances_rows": 5,
+        "instances_strip_term_rows": 5
+      },
+      "lm1": {
+        "completed_at_utc": "2026-05-26T06:05:25Z",
+        "BLEU": 22.618703112981127,
+        "StreamLAAL": 1023.7186739051511,
+        "StreamLAAL_CA": 1491.4311587526008,
+        "TERM_ACC": 0.7264,
+        "TERM_CORRECT": 470,
+        "TERM_TOTAL": 647,
+        "REAL_TERM_ADOPT": 0.774164,
+        "TERM_FCR": 0.115031,
+        "eval_results": "/mnt/data1/jiaxuanluo/medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_20260526T035925_medicine_de_lm1234_serial_promptfix_cache30_audioauto_max40lm_taurus/lm1/de/dmedhard_de_lm1_serial_promptfix_cache30_audioauto_max40lm_lm1_k10_th0.78_ghard_medicine_raw__medicine5/eval_results.tsv",
+        "instances_rows": 5,
+        "instances_strip_term_rows": 5
+      }
+    }
+  }
+}

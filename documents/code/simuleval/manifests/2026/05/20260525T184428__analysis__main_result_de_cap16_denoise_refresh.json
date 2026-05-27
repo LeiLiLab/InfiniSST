@@ -1,0 +1,201 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T184428__analysis__main_result_de_cap16_denoise_refresh",
+  "event_type": "analysis",
+  "family": "main_result_refresh",
+  "variant": "de_cap16_denoise_rasst_rows",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__main_result_de_cap16_denoise_refresh.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python plot_figure_01_main_result_tagged.py --update-paper && python plot_figure_02_medicine_main_result.py --update-paper",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__main_result_de_cap16_denoise_refresh.md",
+      "metadata": {}
+    },
+    {
+      "role": "main_result_data",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv",
+      "metadata": {
+        "updated_rows": [
+          "acl_tagged_raw/RASST/de/lm1",
+          "acl_tagged_raw/RASST/de/lm2",
+          "acl_tagged_raw/RASST/de/lm3",
+          "acl_tagged_raw/RASST/de/lm4",
+          "medicine_hardraw/RASST/de/lm1",
+          "medicine_hardraw/RASST/de/lm2",
+          "medicine_hardraw/RASST/de/lm3",
+          "medicine_hardraw/RASST/de/lm4"
+        ]
+      }
+    },
+    {
+      "role": "plot_data_snapshot",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_01_main_result_tagged/data.tsv",
+      "metadata": {
+        "synced_from": "documents/code/simuleval/reports/20260524_main_result_data.tsv"
+      }
+    },
+    {
+      "role": "plot_data_snapshot",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_02_medicine_main_result/data.tsv",
+      "metadata": {
+        "synced_from": "documents/code/simuleval/reports/20260524_main_result_data.tsv"
+      }
+    },
+    {
+      "role": "analysis_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_01_main_result_tagged/plot_figure_01_main_result_tagged.py",
+      "metadata": {}
+    },
+    {
+      "role": "analysis_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/plot/figure_02_medicine_main_result/plot_figure_02_medicine_main_result.py",
+      "metadata": {}
+    },
+    {
+      "role": "tagged_acl_eval_result",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_denoise_lm14_serial_chunks30_aries_20260525T1504_tagged_acl_de_cap16_denoise_lm14_serial_chunks30_aries/de_cap16_denoise_ttag_hn1024_tau078_omit_serial_chunks30/de/dtagacl_serial_dedenoise_ttag_hn1024_tau078_omit_chunks30_lm1_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {
+        "lang": "de",
+        "lm": 1
+      }
+    },
+    {
+      "role": "tagged_acl_eval_result",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_denoise_lm23_batch_aries_20260525T172158_deacl23_jamed1234_cap16denoise_aries/de_cap16_denoise_ttag_hn1024_tau078_omit_batch_chunks30_lm23_aries/de/dtagacl_bv1_decap16den_ttag_hn1024_tau078_omit_chunks30_lm23_aries_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {
+        "lang": "de",
+        "lm": 2
+      }
+    },
+    {
+      "role": "tagged_acl_eval_result",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_denoise_lm23_batch_aries_20260525T172158_deacl23_jamed1234_cap16denoise_aries/de_cap16_denoise_ttag_hn1024_tau078_omit_batch_chunks30_lm23_aries/de/dtagacl_bv1_decap16den_ttag_hn1024_tau078_omit_chunks30_lm23_aries_lm3_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {
+        "lang": "de",
+        "lm": 3
+      }
+    },
+    {
+      "role": "tagged_acl_eval_result",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_denoise_lm14_batch_chunks30_taurus_20260525T1504_tagged_acl_de_cap16_denoise_lm14_batch_chunks30_taurus/de_cap16_denoise_ttag_hn1024_tau078_omit_batch_chunks30/de/dtagacl_bv1_dedenoise_ttag_hn1024_tau078_omit_chunks30_batch_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {
+        "lang": "de",
+        "lm": 4
+      }
+    },
+    {
+      "role": "medicine_eval_result",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/de_cap16_denoise_medicine_acl_batch_taurus_20260525T165125_de_cap16_denoise_med_acl_batch_taurus/medicine_hardraw_de_cap16_denoise_ttag_hn1024_tau078_batch_chunks30/de/dmedhard5_cap16denoise_ttag_hn1024_tau0p78_omit_chunks30_lm1_k10_th0.78_ghard_medicine_raw__medicine5/eval_results.tsv",
+      "metadata": {
+        "lang": "de",
+        "lm": 1
+      }
+    },
+    {
+      "role": "medicine_eval_result",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/de_cap16_denoise_medicine_acl_batch_taurus_20260525T165125_de_cap16_denoise_med_acl_batch_taurus/medicine_hardraw_de_cap16_denoise_ttag_hn1024_tau078_batch_chunks30/de/dmedhard5_cap16denoise_ttag_hn1024_tau0p78_omit_chunks30_lm2_k10_th0.78_ghard_medicine_raw__medicine5/eval_results.tsv",
+      "metadata": {
+        "lang": "de",
+        "lm": 2
+      }
+    },
+    {
+      "role": "medicine_eval_result",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_de_cap16_denoise_lm34_batch_taurus03_20260525T170456_medicine_de_cap16_denoise_lm34_batch_taurus03/de/dmedhard5_cap16denoise_ttag_hn1024_tau0p78_omit_chunks30_lm34_taurus03_lm3_k10_th0.78_ghard_medicine_raw__medicine5/eval_results.tsv",
+      "metadata": {
+        "lang": "de",
+        "lm": 3
+      }
+    },
+    {
+      "role": "medicine_eval_result",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_de_cap16_denoise_lm34_batch_taurus03_20260525T170456_medicine_de_cap16_denoise_lm34_batch_taurus03/de/dmedhard5_cap16denoise_ttag_hn1024_tau0p78_omit_chunks30_lm34_taurus03_lm4_k10_th0.78_ghard_medicine_raw__medicine5/eval_results.tsv",
+      "metadata": {
+        "lang": "de",
+        "lm": 4
+      }
+    },
+    {
+      "role": "figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.pdf",
+      "metadata": {
+        "figure": "fig:main_result_1"
+      }
+    },
+    {
+      "role": "figure_png",
+      "type": "png",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/new_main_result_tagged.png",
+      "metadata": {
+        "figure": "fig:main_result_1"
+      }
+    },
+    {
+      "role": "figure_pdf",
+      "type": "pdf",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/medicine_main_result.pdf",
+      "metadata": {
+        "figure": "fig:main_result_2"
+      }
+    },
+    {
+      "role": "figure_png",
+      "type": "png",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/EMNLP_26_InfiniSST_RAG_src/latex/figures/medicine_main_result.png",
+      "metadata": {
+        "figure": "fig:main_result_2"
+      }
+    }
+  ],
+  "metadata": {
+    "completed_utc": "2026-05-25T18:44:28Z",
+    "validation": {
+      "status": "success",
+      "row_count": 87,
+      "unique_keys": 87,
+      "updated_rows": 8,
+      "figure_generation": "success"
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T1545__analysis__export_old_newv3_r64a128_hf_for_rank_eval",
+  "event_type": "analysis",
+  "family": "speech_llm_rank_ablation",
+  "variant": "export_old_newv3_r64a128_hf_for_rank_eval",
+  "status": "running",
+  "project": "sst_omni",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__export_old_newv3_r64a128_hf_aries45.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__export_old_newv3_r64a128_hf_for_rank_eval.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "ssh -p 20042 jiaxuanluo@localhost \"cd /mnt/taurus/home/jiaxuanluo/InfiniSST && setsid bash documents/code/train/sst_omni_train/launchers/2026/05/20260522__export_old_newv3_r64a128_hf_aries45.sh > documents/logs/speech_llm_train/20260522_export_old_newv3_r64a128_hf_aries45.out 2> documents/logs/speech_llm_train/20260522_export_old_newv3_r64a128_hf_aries45.err < /dev/null &\"",
+  "parent_run_ids": [
+    "q159wce4",
+    "rj1v1p7r"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260522__export_old_newv3_r64a128_hf_aries45.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260522__export_old_newv3_r64a128_hf_for_rank_eval.md"
+    },
+    {
+      "role": "export_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/export_mcore_checkpoint_to_hf.sh"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/speech_llm_tcmw100kgt_tau075_new_v3_r64a128_taurus4/keep1.0_r64/v1-20260508-135111"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/speech_llm_tcmw100kgt_tau075_new_v3_random_r64a128_aries8/keep1.0_r64/v1-20260508-143031"
+    },
+    {
+      "role": "hf_model_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/data7/jiaxuanluo/slm/old_newv3_rank_ablation/q159wce4_newv3_r64a128_full-hf"
+    },
+    {
+      "role": "hf_model_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/data7/jiaxuanluo/slm/old_newv3_rank_ablation/rj1v1p7r_newv3_random_r64a128-hf"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/speech_llm_train/20260522_export_old_newv3_r64a128_hf_aries45.out"
+    }
+  ],
+  "metadata": {
+    "gpu_devices": "4,5",
+    "conversion": "mcore_to_hf",
+    "export_overwrite": false,
+    "pid": 3066753,
+    "path_note": "/mnt/aries/data7 is a host symlink to /mnt/data7; docker export uses /mnt/data7 directly."
+  }
+}

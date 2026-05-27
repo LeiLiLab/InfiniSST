@@ -1,0 +1,324 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T1550__speech_llm_train__ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4_retry1",
+  "event_type": "speech_llm_train",
+  "family": "speech_llm_tcm_termmap",
+  "variant": "ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4_retry1_gpu0123",
+  "status": "success_exported",
+  "project": "sst_omni",
+  "wandb_run_id": "wkoonqux",
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260525__speech_llm_ja_cap16_denoise_budget_ttag_taurus4_r32a32_ep1.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260525__speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4_retry1.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "mkdir -p /mnt/gemini/data1/jiaxuanluo/logs/train_ja_cap16_denoise_budget_ttag_taurus4_retry1_20260525T1550; setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && ROOT_DIR_OVERRIDE=/home/jiaxuanluo/InfiniSST HOST_GPU_DEVICES_OVERRIDE=0,1,2,3 MASTER_PORT_OVERRIDE=29725 NOTES_FILE_OVERRIDE=/home/jiaxuanluo/InfiniSST/documents/code/train/sst_omni_train/notes/2026/05/20260525__speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4_retry1.md WANDB_EXP_PREFIX_OVERRIDE=speech-llm-ja-c16-denoise-ttag-r32a32-ep1-taurus4-retry1-gpu0123 bash /home/jiaxuanluo/InfiniSST/documents/code/train/sst_omni_train/launchers/2026/05/20260525__speech_llm_ja_cap16_denoise_budget_ttag_taurus4_r32a32_ep1.sh' > /mnt/gemini/data1/jiaxuanluo/logs/train_ja_cap16_denoise_budget_ttag_taurus4_retry1_20260525T1550/direct_train.out 2> /mnt/gemini/data1/jiaxuanluo/logs/train_ja_cap16_denoise_budget_ttag_taurus4_retry1_20260525T1550/direct_train.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/train_ja_cap16_denoise_budget_ttag_taurus4_retry1_20260525T1550/direct_train.pid",
+  "parent_run_ids": [
+    "20260525T1506__data_prepare__ja_cap16_denoise_budget_ttag",
+    "20260525T1513__speech_llm_train__ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4",
+    "c3xxgy7s"
+  ],
+  "artifacts": [
+    {
+      "role": "train_launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260525__speech_llm_ja_cap16_denoise_budget_ttag_taurus4_r32a32_ep1.sh",
+      "metadata": {}
+    },
+    {
+      "role": "train_wrapper",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/auto_train_sampling_docker.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260525__speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4_retry1.md",
+      "metadata": {}
+    },
+    {
+      "role": "parent_data_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/data_pre/hard_negative_jsonl_for_speech_llm/manifests/2026/05/20260525T1506__data_prepare__ja_cap16_denoise_budget_ttag.json",
+      "metadata": {
+        "event_id": "20260525T1506__data_prepare__ja_cap16_denoise_budget_ttag"
+      }
+    },
+    {
+      "role": "failed_prior_train_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/train/sst_omni_train/manifests/2026/05/20260525T1513__speech_llm_train__ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4.json",
+      "metadata": {
+        "event_id": "20260525T1513__speech_llm_train__ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4",
+        "wandb_run_id": "c3xxgy7s",
+        "failure": "CUDA OOM after W&B init due GPU contention"
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_ja_cap16_denoise_budget_20260525/ja/hn1024_tau078_cap16_denoise_budget_ttag_v1/train_s_ja_retriever_hn1024_tau078_cap16_denoise_budget_ttag_exactboundary.jsonl",
+      "metadata": {
+        "rows": 12500,
+        "chunks": 53352,
+        "termmap_chunk_rate": 0.7661568451042136,
+        "max_termmap_entries": 14,
+        "tagged_rows": 11091,
+        "tag_template": "<t>{translation}</t>"
+      }
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_ja_cap16_denoise_budget_20260525/ja/hn1024_tau078_cap16_denoise_budget_ttag_v1/dev_s_ja_retriever_hn1024_tau078_cap16_denoise_budget_ttag_exactboundary_first355.jsonl",
+      "metadata": {
+        "rows": 355,
+        "chunks": 1475,
+        "termmap_chunk_rate": 0.744406779661017,
+        "max_termmap_entries": 10,
+        "tagged_rows": 303,
+        "tag_template": "<t>{translation}</t>"
+      }
+    },
+    {
+      "role": "validation_report",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_ja_cap16_denoise_budget_20260525/ja/hn1024_tau078_cap16_denoise_budget_ttag_v1/validation_summary.json",
+      "metadata": {}
+    },
+    {
+      "role": "base_mcore_model",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/Qwen3-Omni-30B-A3B-Instruct-v2/",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4",
+      "metadata": {}
+    },
+    {
+      "role": "train_log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4",
+      "metadata": {}
+    },
+    {
+      "role": "detached_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/train_ja_cap16_denoise_budget_ttag_taurus4_retry1_20260525T1550/direct_train.out",
+      "metadata": {}
+    },
+    {
+      "role": "detached_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/train_ja_cap16_denoise_budget_ttag_taurus4_retry1_20260525T1550/direct_train.err",
+      "metadata": {}
+    },
+    {
+      "role": "pid_file",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/train_ja_cap16_denoise_budget_ttag_taurus4_retry1_20260525T1550/direct_train.pid",
+      "metadata": {
+        "pid": 2279856
+      }
+    },
+    {
+      "role": "train_stdout_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/train_keep1.0_r32_20260525_235237.log",
+      "metadata": {
+        "wandb_run_id": "wkoonqux"
+      }
+    },
+    {
+      "role": "wandb_local_run_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/keep1.0_r32/v2-20260525-235251/wandb/wandb/run-20260525_235635-wkoonqux",
+      "metadata": {
+        "wandb_run_id": "wkoonqux"
+      }
+    },
+    {
+      "role": "active_run_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/keep1.0_r32/v2-20260525-235251",
+      "metadata": {
+        "wandb_run_id": "wkoonqux"
+      }
+    },
+    {
+      "role": "hf_export_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/keep1.0_r32/v2-20260525-235251-hf",
+      "metadata": {
+        "export_retry": true,
+        "reason": "initial post-training HF export failed because a stale stage directory already existed"
+      }
+    },
+    {
+      "role": "hf_local_cache_dir",
+      "type": "model_dir",
+      "direction": "output",
+      "path": "/mnt/data1/jiaxuanluo/slm_local_cache/ja_tagged_acl_20260525/cap16_denoise_ttag/v2-20260525-235251-hf",
+      "metadata": {
+        "used_by": "taurus_vllm_eval"
+      }
+    },
+    {
+      "role": "hf_export_retry_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/export_ja_cap16_denoise_ttag_hf_20260525T183729Z/export.out",
+      "metadata": {}
+    },
+    {
+      "role": "hf_export_retry_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/export_ja_cap16_denoise_ttag_hf_20260525T183729Z/export.err",
+      "metadata": {}
+    },
+    {
+      "role": "hf_export_retry_pid_file",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/export_ja_cap16_denoise_ttag_hf_20260525T183729Z/export.pid",
+      "metadata": {}
+    },
+    {
+      "role": "hf_export_retry2_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/export_ja_cap16_denoise_ttag_hf_retry2_20260525T185444Z/export.out",
+      "metadata": {}
+    },
+    {
+      "role": "hf_export_retry2_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/export_ja_cap16_denoise_ttag_hf_retry2_20260525T185444Z/export.err",
+      "metadata": {}
+    },
+    {
+      "role": "hf_export_retry2_pid_file",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/export_ja_cap16_denoise_ttag_hf_retry2_20260525T185444Z/export.pid",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "language": "ja",
+    "host": "taurus",
+    "gpu_count": 4,
+    "host_gpu_devices": "0,1,2,3",
+    "direct_pid": 2279856,
+    "submitted_utc": "2026-05-25T15:52:37Z",
+    "startup_verified_utc": "2026-05-25T15:57:37Z",
+    "wandb_initialized_utc": "2026-05-25T15:56:35Z",
+    "wandb_synced_to_sqlite_utc": "2026-05-25T15:57:37Z",
+    "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/sst_omni/runs/wkoonqux",
+    "train_log_path": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/train_keep1.0_r32_20260525_235237.log",
+    "run_dir": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/keep1.0_r32/v2-20260525-235251",
+    "startup_evidence": {
+      "wandb_run_id": "wkoonqux",
+      "selected_gpus_memory_mib_at_verification": {
+        "0": 37997,
+        "1": 37997,
+        "2": 37997,
+        "3": 37997
+      },
+      "log_line_wandb_setup": 1240,
+      "log_line_wandb_url": 1246,
+      "log_line_checkpoint_load": 1536
+    },
+    "retry_of_event_id": "20260525T1513__speech_llm_train__ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4",
+    "retry_of_wandb_run_id": "c3xxgy7s",
+    "retry_reason": "Previous Taurus4 run initialized W&B but failed with CUDA OOM after watcher selected GPUs that were also occupied by tagged ACL de simuleval/vLLM workers.",
+    "launch_mode": "detached_direct_fixed_gpu",
+    "lora_rank": 32,
+    "lora_alpha": 32,
+    "expert_model_parallel_size": 2,
+    "tensor_model_parallel_size": 2,
+    "sequence_parallel": true,
+    "max_length": 3072,
+    "global_batch_size": 4,
+    "micro_batch_size": 1,
+    "iterations_per_epoch": 452,
+    "save_interval": 452,
+    "parent_data_event_id": "20260525T1506__data_prepare__ja_cap16_denoise_budget_ttag",
+    "data_branch": "ja/hn1024_tau078_cap16_denoise_budget_ttag_v1",
+    "eval_strip_output_tags": "term_t",
+    "expected_eval_gate": {
+      "dataset": "tagged_acl_raw",
+      "lang": "ja",
+      "retriever": "HN1024",
+      "tau": 0.78,
+      "strip_output_tags": "term_t",
+      "empty_term_map_policy": "omit"
+    },
+    "prelaunch_gpu_status": {
+      "observed_utc": "2026-05-25T15:50:48Z",
+      "selected_gpus": "0,1,2,3",
+      "selected_gpu_memory_mib": {
+        "0": 2,
+        "1": 2,
+        "2": 2,
+        "3": 2
+      },
+      "busy_gpu_processes": [
+        "gpu4: VLLM::Worker_TP0 pid=2272392 mem=34942MiB",
+        "gpu4: batched_vllm_rag_eval.py pid=2272111 mem=2238MiB",
+        "gpu5: VLLM::Worker_TP1 pid=2272394 mem=34942MiB"
+      ]
+    },
+    "storage_check": {
+      "/mnt/gemini/data1": "162G available at retry prelaunch check",
+      "/mnt/data1": "775G available for staged HF export at retry prelaunch check",
+      "/mnt/gemini/data2": "1.0M available at retry prelaunch check; base model path is pre-existing and read-only"
+    },
+    "training_completed_observed_utc": "2026-05-25T18:37:29Z",
+    "hf_export_retry_submitted_utc": "2026-05-25T18:38:24Z",
+    "hf_export_retry_reason": "Training completed and checkpoint iter_0000513 exists, but the initial post-training HF export failed with FileExistsError on a stale stage dir: /mnt/data1/jiaxuanluo/hf_export_stage/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/v2-20260525-235251-hf.stage.31. The previous stage-root parents are root-owned and not writable by this user, so the retry uses a fresh writable stage root under slm_local_cache.",
+    "hf_export_retry_gpu": "6",
+    "hf_export_retry_log_root": "/mnt/gemini/data1/jiaxuanluo/logs/export_ja_cap16_denoise_ttag_hf_20260525T183729Z",
+    "hf_export_retry_stage_root": "/mnt/data1/jiaxuanluo/slm_local_cache/hf_export_stage_retry/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4",
+    "hf_export_retry_failed_utc": "2026-05-25T18:54:44Z",
+    "hf_export_retry_failure": "Single-GPU swift export reached Merge LoRA / HF shard load and failed with torch.OutOfMemoryError on A6000 48GB at checkpoint shard 9/15.",
+    "hf_export_retry2_submitted_utc": "2026-05-25T18:54:44Z",
+    "hf_export_retry2_gpu_devices": "2,3,4,5",
+    "hf_export_retry2_swift_extra_args": "--device_map auto",
+    "hf_export_retry2_log_root": "/mnt/gemini/data1/jiaxuanluo/logs/export_ja_cap16_denoise_ttag_hf_retry2_20260525T185444Z",
+    "hf_export_completed_utc": "2026-05-25T19:23:25Z",
+    "hf_export_validation": {
+      "nfs_hf_dir": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/keep1.0_r32/v2-20260525-235251-hf",
+      "local_cache_dir": "/mnt/data1/jiaxuanluo/slm_local_cache/ja_tagged_acl_20260525/cap16_denoise_ttag/v2-20260525-235251-hf",
+      "safetensor_shards": 15,
+      "size": "66G",
+      "local_latest_symlink": "/mnt/data1/jiaxuanluo/slm_local_cache/ja_tagged_acl_20260525/cap16_denoise_ttag/latest-hf"
+    },
+    "hf_output_dir": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4/keep1.0_r32/v2-20260525-235251-hf",
+    "hf_local_cache_dir": "/mnt/data1/jiaxuanluo/slm_local_cache/ja_tagged_acl_20260525/cap16_denoise_ttag/v2-20260525-235251-hf",
+    "verdict": "success_exported"
+  }
+}

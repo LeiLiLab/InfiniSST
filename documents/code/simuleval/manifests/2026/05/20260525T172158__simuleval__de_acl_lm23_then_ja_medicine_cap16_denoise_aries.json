@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T172158__simuleval__de_acl_lm23_then_ja_medicine_cap16_denoise_aries",
+  "event_type": "simuleval",
+  "family": "cap16_denoise_batch_vllm_readout",
+  "variant": "de_tagged_acl_lm23_then_ja_medicine_lm1234_aries",
+  "status": "running",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__de_acl_lm23_then_ja_medicine_cap16_denoise_aries.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__de_acl_then_ja_medicine_cap16_denoise_aries.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries \"cd /mnt/taurus/home/jiaxuanluo/InfiniSST && mkdir -p /mnt/gemini/data1/jiaxuanluo/logs/de_acl_then_ja_medicine_cap16_denoise_aries_20260525T172158_deacl23_jamed1234_cap16denoise_aries && setsid bash -lc 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && ROOT_DIR=/mnt/taurus/home/jiaxuanluo/InfiniSST RUN_STAMP=20260525T172158_deacl23_jamed1234_cap16denoise_aries LOG_ROOT=/mnt/gemini/data1/jiaxuanluo/logs/de_acl_then_ja_medicine_cap16_denoise_aries_20260525T172158_deacl23_jamed1234_cap16denoise_aries bash documents/code/simuleval/launchers/2026/05/20260525__de_acl_lm23_then_ja_medicine_cap16_denoise_aries.sh' > /mnt/gemini/data1/jiaxuanluo/logs/de_acl_then_ja_medicine_cap16_denoise_aries_20260525T172158_deacl23_jamed1234_cap16denoise_aries/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/de_acl_then_ja_medicine_cap16_denoise_aries_20260525T172158_deacl23_jamed1234_cap16denoise_aries/top.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/de_acl_then_ja_medicine_cap16_denoise_aries_20260525T172158_deacl23_jamed1234_cap16denoise_aries/top.pid\"",
+  "parent_run_ids": [
+    "20260525T1236__speech_llm_train__de_cap16_denoise_budget_ttag_r32a32_ep1_taurus6",
+    "20260525T1550__speech_llm_train__ja_cap16_denoise_budget_ttag_r32a32_ep1_taurus4_retry1",
+    "20260525T172158__maintenance__stage_ja_cap16_denoise_local_cache_aries"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__de_acl_lm23_then_ja_medicine_cap16_denoise_aries.sh"
+    },
+    {
+      "role": "de_batch_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_lm14_batch_chunks30.sh"
+    },
+    {
+      "role": "ja_medicine_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__medicine_ja_cap16_denoise_lm1234_batch_aries.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__de_acl_then_ja_medicine_cap16_denoise_aries.md"
+    },
+    {
+      "role": "de_speech_llm_checkpoint",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_de_cap16_denoise_budget_ttag_r32a32_ep1_taurus6/keep1.0_r32/v0-20260525-203735-hf"
+    },
+    {
+      "role": "ja_speech_llm_checkpoint",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/data3/jiaxuanluo/slm_local_cache/ja_tagged_acl_20260525/cap16_denoise_ttag/v2-20260525-235251-hf"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "de_acl_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_denoise_lm23_batch_aries_20260525T172158_deacl23_jamed1234_cap16denoise_aries"
+    },
+    {
+      "role": "ja_medicine_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_ja_cap16_denoise_lm1234_batch_aries_20260525T172158_deacl23_jamed1234_cap16denoise_aries"
+    },
+    {
+      "role": "log_root",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/de_acl_then_ja_medicine_cap16_denoise_aries_20260525T172158_deacl23_jamed1234_cap16denoise_aries"
+    }
+  ],
+  "metadata": {
+    "host": "aries",
+    "top_pid": 3948448,
+    "startup_verified_at": "2026-05-25T17:31:34Z",
+    "startup_status": "de_tagged_acl_lm2_lm3_running_on_aries_gpu4_7",
+    "gpu_pairs": "4,5;6,7",
+    "de_acl_lms": [2, 3],
+    "ja_medicine_lms": [1, 2, 3, 4],
+    "batch_eval": "same-lm five-stream batch-vLLM",
+    "max_new_tokens_policy": "20*lm",
+    "empty_term_map_policy": "omit",
+    "rag_prompt_policy": "given_chunks",
+    "strip_output_tags": "term_t",
+    "max_cache_chunks": 30,
+    "keep_cache_chunks": 30,
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 12288,
+    "rag_top_k": 10,
+    "rag_score_threshold": 0.78,
+    "rag_timeline_lookback_sec": 1.92
+  }
+}

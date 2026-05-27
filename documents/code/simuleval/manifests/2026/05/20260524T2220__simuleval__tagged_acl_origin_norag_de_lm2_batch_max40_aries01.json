@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T2220__simuleval__tagged_acl_origin_norag_de_lm2_batch_max40_aries01",
+  "event_type": "simuleval",
+  "family": "tagged_acl_origin_norag_batch_cmp",
+  "variant": "origin_norag_de_raw_lm2_batch_max40",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": "wqptj8tr",
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_origin_norag_de_lm2_batch_max40_aries01.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_origin_norag_de_lm2_batch_max40_aries01.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries \"cd /mnt/taurus/home/jiaxuanluo/InfiniSST && setsid env RUN_STAMP=20260524T2220_tagacl_origin_norag_de_lm2_batch_max40_aries01 GPU_PAIR=0,1 bash documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_origin_norag_de_lm2_batch_max40_aries01.sh > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm2_batch_max40_aries01_20260524T2220_tagacl_origin_norag_de_lm2_batch_max40_aries01/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm2_batch_max40_aries01_20260524T2220_tagacl_origin_norag_de_lm2_batch_max40_aries01/top.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm2_batch_max40_aries01_20260524T2220_tagacl_origin_norag_de_lm2_batch_max40_aries01/top.pid\"",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_origin_norag_de_lm2_batch_max40_aries01.sh"
+    },
+    {
+      "role": "delegate_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh"
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py"
+    },
+    {
+      "role": "offline_eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/offline_sst_eval/offline_streamlaal_eval.py"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_origin_norag_de_lm2_batch_max40_aries01.md"
+    },
+    {
+      "role": "speech_llm_model",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-de-s_origin-bsz4"
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "eval_input_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm2_batch_max40_aries01_20260524T2220_tagacl_origin_norag_de_lm2_batch_max40_aries01"
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_origin_norag_de_lm2_batch_max40_aries01_20260524T2220_tagacl_origin_norag_de_lm2_batch_max40_aries01"
+    },
+    {
+      "role": "eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm2_batch_max40_aries01_20260524T2220_tagacl_origin_norag_de_lm2_batch_max40_aries01/origin_norag_de_lm2_batch_max40/de/dtagacl_origin_norag_batch_max40_lm2_k0_th0.0_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    {
+      "role": "eval_summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm2_batch_max40_aries01_20260524T2220_tagacl_origin_norag_de_lm2_batch_max40_aries01/origin_norag_de_lm2_batch_max40/__summary__/summary_de_lm2.tsv"
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "latency_multipliers": [2],
+    "runtime_glossary": "acl6060_tagged_gt_raw_min_norm2",
+    "rag_enabled": false,
+    "same_lm_batch": true,
+    "talks_per_lm": 5,
+    "max_new_tokens": 40,
+    "comparison_parent_event_id": "20260524T2200__simuleval__tagged_acl_origin_norag_de_lm2_batch_max80_aries01",
+    "gpu_pair": "0,1",
+    "strip_output_tags": "term",
+    "launched_utc": "2026-05-24T22:20:00Z",
+    "launcher_pid": 3290926,
+    "completed_utc": "2026-05-24T22:29:56Z",
+    "metrics": {
+      "BLEU": 29.74658140814941,
+      "StreamLAAL": 1577.0869681672189,
+      "StreamLAAL_CA": 1007.6401509428589,
+      "TERM_ACC": 0.6417,
+      "TERM_CORRECT": 600,
+      "TERM_TOTAL": 935
+    },
+    "completion_evidence": {
+      "eval_results_rows": 1,
+      "instances_log_rows": 5,
+      "instances_strip_term_log_rows": 5,
+      "wandb_run_id": "wqptj8tr",
+      "wandb_initial_verdict": "FAILED: no eval TSVs found to log",
+      "wandb_initial_verdict_note": "The final W&B TSV discovery missed the already-written eval_results.tsv; W&B was annotated after verifying the TSV and logs."
+    },
+    "strip_validation": {
+      "status": "ok",
+      "raw_rows": 5,
+      "strip_rows": 5,
+      "tags_before": 0,
+      "changed_rows": 0,
+      "source_reference_unchanged": true,
+      "delay_count_matches_stripped_prediction_words": true
+    }
+  }
+}

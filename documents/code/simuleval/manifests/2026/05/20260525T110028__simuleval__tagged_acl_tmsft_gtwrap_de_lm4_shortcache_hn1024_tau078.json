@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T110028__simuleval__tagged_acl_tmsft_gtwrap_de_lm4_shortcache_hn1024_tau078",
+  "event_type": "simuleval",
+  "family": "tagged_acl_tmsft_gtwrap_de_hn1024_tau078",
+  "variant": "lm4_shortcache_omit_emptytm",
+  "status": "success_failed_bleu_gate",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_cap16_lm4_decode_cache_probe.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_tmsft_gtwrap_de_lm4_shortcache_hn1024_tau078.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'RUN_STAMP_OVERRIDE=20260525T110028_tmsft_gtwrap_de_lm4_shortcache_taurus37 CONFIG_ID_OVERRIDE=tmsft_gtwrap_full5_mt80_c40k20_ch8k4 GPU_PAIR_OVERRIDE=3,7 MODEL_NAME_OVERRIDE=/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_tmsft_gttermwrap_exact_de_r32a32_ep4_aries8/keep1.0_r32/v0-20260525-083705-hf MODEL_LABEL_OVERRIDE=tmsft_gtwrap_de_lm4_shortcache_hn1024_tau078 MAX_NEW_TOKENS_VALUE_OVERRIDE=80 MAX_CACHE_SECONDS_VALUE_OVERRIDE=40 KEEP_CACHE_SECONDS_VALUE_OVERRIDE=20 MAX_CACHE_CHUNKS_VALUE_OVERRIDE=8 KEEP_CACHE_CHUNKS_VALUE_OVERRIDE=4 EMPTY_TERM_MAP_POLICY_VALUE_OVERRIDE=omit EXPECTED_INSTANCE_ROWS_OVERRIDE=5 bash documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_cap16_lm4_decode_cache_probe.sh'",
+  "parent_run_ids": [
+    "sf6nw09x"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_cap16_lm4_decode_cache_probe.sh",
+      "metadata": {}
+    },
+    {
+      "role": "delegate_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_tmsft_gtwrap_de_lm4_shortcache_hn1024_tau078.md",
+      "metadata": {}
+    },
+    {
+      "role": "parent_train_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/train/sst_omni_train/manifests/2026/05/20260525T0055__speech_llm_train__tmsft_gttermwrap_exact_de_r32a32_ep4_aries8.json",
+      "metadata": {
+        "wandb_run_id": "sf6nw09x"
+      }
+    },
+    {
+      "role": "previous_default_cache_eval_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260525T0413__simuleval__tagged_acl_tmsft_gttermwrap_exact_de_lm1to4_hn1024_tau078_batch_aries8.json",
+      "metadata": {
+        "lm4_bleu": 32.2681,
+        "lm4_term_acc": 0.8727
+      }
+    },
+    {
+      "role": "speech_llm_model",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_tmsft_gttermwrap_exact_de_r32a32_ep4_aries8/keep1.0_r32/v0-20260525-083705-hf",
+      "metadata": {
+        "parent_wandb_run_id": "sf6nw09x"
+      }
+    },
+    {
+      "role": "eval_input_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all",
+      "metadata": {
+        "talk_count": 5
+      }
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "dataset": "acl_tagged_raw"
+      }
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever": "HN1024"
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T110028_tmsft_gtwrap_de_lm4_shortcache_taurus37_tmsft_gtwrap_full5_mt80_c40k20_ch8k4",
+      "metadata": {
+        "config_id": "tmsft_gtwrap_full5_mt80_c40k20_ch8k4"
+      }
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T110028_tmsft_gtwrap_de_lm4_shortcache_taurus37_tmsft_gtwrap_full5_mt80_c40k20_ch8k4",
+      "metadata": {
+        "pid": 1717551
+      }
+    },
+    {
+      "role": "outer_log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmsft_gtwrap_de_lm4_shortcache_submit_20260525T110028_tmsft_gtwrap_de_lm4_shortcache_taurus37",
+      "metadata": {
+        "pid": 1717551
+      }
+    },
+    {
+      "role": "summary_tsv",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T110028_tmsft_gtwrap_de_lm4_shortcache_taurus37_tmsft_gtwrap_full5_mt80_c40k20_ch8k4/tmsft_gtwrap_de_lm4_shortcache_hn1024_tau078/__summary__/summary_de_lm4.tsv",
+      "metadata": {
+        "lm": 4,
+        "rows": 1
+      }
+    },
+    {
+      "role": "eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T110028_tmsft_gtwrap_de_lm4_shortcache_taurus37_tmsft_gtwrap_full5_mt80_c40k20_ch8k4/tmsft_gtwrap_de_lm4_shortcache_hn1024_tau078/de/dtagacl_bv1_decap16_tmsft_gtwrap_full5_mt80_c40k20_ch8k4_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {
+        "lm": 4,
+        "rows": 1
+      }
+    },
+    {
+      "role": "instances_log",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T110028_tmsft_gtwrap_de_lm4_shortcache_taurus37_tmsft_gtwrap_full5_mt80_c40k20_ch8k4/tmsft_gtwrap_de_lm4_shortcache_hn1024_tau078/de/dtagacl_bv1_decap16_tmsft_gtwrap_full5_mt80_c40k20_ch8k4_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+      "metadata": {
+        "rows": 5
+      }
+    },
+    {
+      "role": "instances_strip_term_log",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T110028_tmsft_gtwrap_de_lm4_shortcache_taurus37_tmsft_gtwrap_full5_mt80_c40k20_ch8k4/tmsft_gtwrap_de_lm4_shortcache_hn1024_tau078/de/dtagacl_bv1_decap16_tmsft_gtwrap_full5_mt80_c40k20_ch8k4_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.strip_term.log",
+      "metadata": {
+        "rows": 5
+      }
+    },
+    {
+      "role": "comparison_report",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_de_lm4_tmsft_gtwrap_shortcache_probe.tsv",
+      "metadata": {
+        "verdict": "TM-SFT GT-wrap short-cache remains below verified no-RAG BLEU gate"
+      }
+    }
+  ],
+  "metadata": {
+    "dataset": "acl_tagged_raw",
+    "language": "de",
+    "lm": 4,
+    "method": "TM-SFT exact GT-term-wrap + HN1024",
+    "model": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_tmsft_gttermwrap_exact_de_r32a32_ep4_aries8/keep1.0_r32/v0-20260525-083705-hf",
+    "rag_top_k": 10,
+    "rag_score_threshold": 0.78,
+    "empty_term_map_policy": "omit",
+    "max_new_tokens": 80,
+    "max_cache_seconds": 40,
+    "keep_cache_seconds": 20,
+    "max_cache_chunks": 8,
+    "keep_cache_chunks": 4,
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 12288,
+    "target_bleu_gate": 33.3008,
+    "baseline_reference": {
+      "verified_infinisst_norag_lm4_bleu": 33.3008,
+      "default_cache_tmsft_gtwrap_lm4_bleu": 32.2681,
+      "shortcache_cap16_lm4_bleu": 33.482003332358964
+    },
+    "host": "taurus",
+    "gpu_pair": "3,7",
+    "pid": 1717551,
+    "run_stamp": "20260525T110028_tmsft_gtwrap_de_lm4_shortcache_taurus37",
+    "config_id": "tmsft_gtwrap_full5_mt80_c40k20_ch8k4",
+    "launch_status": "completed",
+    "final_metrics": {
+      "BLEU": 32.616559008572416,
+      "StreamLAAL": 2596.2699629637004,
+      "StreamLAAL_CA": 684.9766557700916,
+      "TERM_ACC": 0.8749,
+      "TERM_CORRECT": 818,
+      "TERM_TOTAL": 935,
+      "REAL_TERM_ADOPT": 0.896856,
+      "TERM_FCR": 0.163728
+    },
+    "validation": {
+      "instances_log_rows": 5,
+      "instances_strip_term_log_rows": 5,
+      "eval_results_rows": 1,
+      "passed_bleu_gate": false,
+      "bleu_gate": 33.3008
+    },
+    "verdict": "short-cache improves TM-SFT GT-wrap over default cache but does not recover BLEU above verified no-RAG or cap16 short-cache",
+    "startup_evidence": {
+      "pid": 1717551,
+      "host": "taurus",
+      "gpu_pair": "3,7",
+      "evidence": "vLLM worker processes started and model shard loading began in launcher logs"
+    }
+  }
+}

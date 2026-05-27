@@ -1,0 +1,21 @@
+timestamp_utc	lm	status	alive_pids	engine_pids_all	stage	eval_results	instances_rows	strip_rows	BLEU	StreamLAAL	StreamLAAL_CA	TERM_ACC	TERM_CORRECT	TERM_TOTAL	note
+2026-05-25T02:03:19Z	1	error		606402,606430,606446	error_seen_in_log										Traceback
+2026-05-25T02:03:20Z	2	running	605652	606402,606430,606446	generation_step_94_ready_5_active_5										
+2026-05-25T02:03:20Z	3	running	605651	606402,606430,606446	generation_step_79_ready_5_active_5										
+2026-05-25T02:03:21Z	4	running	605649	606402,606430,606446	generation_step_68_ready_5_active_5										
+2026-05-25T02:04:21Z	1	error		606402,606430,606446	error_seen_in_log										Traceback
+2026-05-25T02:04:22Z	2	running	605652	606402,606430,606446	generation_step_144_ready_5_active_5										
+2026-05-25T02:04:22Z	3	running	605651	606402,606430,606446	generation_step_121_ready_5_active_5										
+2026-05-25T02:04:23Z	4	running	605649	606402,606430,606446	generation_step_104_ready_5_active_5										
+2026-05-25T02:05:23Z	1	error		606402,606430,606446	error_seen_in_log										Traceback
+2026-05-25T02:05:23Z	2	running	605652	606402,606430,606446	generation_step_191_ready_5_active_5										
+2026-05-25T02:05:24Z	3	running	605651	606402,606430,606446	generation_step_161_ready_5_active_5										
+2026-05-25T02:05:24Z	4	running	605649	606402,606430,606446	generation_step_138_ready_5_active_5										
+2026-05-25T02:06:25Z	1	error		606402,606430,606446	error_seen_in_log										Traceback
+2026-05-25T02:06:25Z	2	running	605652	606402,606430,606446	generation_step_231_ready_5_active_5										
+2026-05-25T02:06:26Z	3	running	605651	606402,606430,606446	generation_step_202_ready_4_active_4										
+2026-05-25T02:06:26Z	4	running	605649	606402,606430,606446	generation_step_174_ready_4_active_4										
+2026-05-25T02:07:27Z	1	done	644919	606402,606446,645232	completed_eval_results	/mnt/gemini/data1/jiaxuanluo/tagged_acl_same_lm_batch_v1_new_v10_s50_hn1024_tau079_raw_de_lm1to4_20260525T0131_tagacl_newv10_s50_hn1024_tau079_raw_de_lm1to4/new_v10_s50_no_gt_retrieved_oldnewv3_de_r32a64_hn1024_tau079_same_lm_batch_v1/de/dtagacl_bv1_newv10_s50_hn1024_tau079_lm4_k10_th0.79_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv	5	5	29.17661049263311	2567.2804132567517	810.991373955562	0.8267	773	935	
+2026-05-25T02:07:27Z	2	running	605652	606402,606446,645232	generation_step_271_ready_5_active_5										
+2026-05-25T02:07:27Z	3	running	605651	606402,606446,645232	generation_step_246_ready_2_active_2										
+2026-05-25T02:07:28Z	4	done		606402,606446,645232	completed_eval_results	/mnt/gemini/data1/jiaxuanluo/tagged_acl_same_lm_batch_v1_new_v10_s50_hn1024_tau079_raw_de_lm1to4_20260525T0131_tagacl_newv10_s50_hn1024_tau079_raw_de_lm1to4/new_v10_s50_no_gt_retrieved_oldnewv3_de_r32a64_hn1024_tau079_same_lm_batch_v1/de/dtagacl_bv1_newv10_s50_hn1024_tau079_lm4_k10_th0.79_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv	5	5	29.17661049263311	2567.2804132567517	810.991373955562	0.8267	773	935	

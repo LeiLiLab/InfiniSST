@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T0800__maintenance__acl_paper_extracted_models_hf_transfer",
+  "event_type": "maintenance",
+  "family": "acl_paper_extracted_main",
+  "variant": "upload_six_speech_llm_hf_dirs_to_private_hf_and_pull_to_psc",
+  "status": "paused_for_medicine_baseline",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260523__upload_acl_paper_extracted_models_to_hf.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260523__acl_paper_extracted_models_hf_transfer.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && bash documents/code/simuleval/launchers/2026/05/20260523__upload_acl_paper_extracted_models_to_hf.sh' > /mnt/gemini/data1/jiaxuanluo/logs/aclpp_models_hf_upload_20260523T0800.out 2> /mnt/gemini/data1/jiaxuanluo/logs/aclpp_models_hf_upload_20260523T0800.err < /dev/null &",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "upload_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__upload_acl_paper_extracted_models_to_hf.sh"
+    },
+    {
+      "role": "psc_pull_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__psc_pull_acl_paper_extracted_models.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260523__acl_paper_extracted_models_hf_transfer.md"
+    },
+    {
+      "role": "local_no_tmsft_models",
+      "type": "model_dir_set",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-{zh,de,ja}-s_origin-bsz4"
+    },
+    {
+      "role": "local_llmgen_rasst_models",
+      "type": "model_dir_set",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-{zh,de,ja}-s_v4_ner_baseline_aligned_rate1.0_k20_final-bsz4"
+    },
+    {
+      "role": "hf_model_repos",
+      "type": "hf_model_repo_set",
+      "direction": "output",
+      "path": "gavinlaw/infinisst-{no-tmsft-origin-bsz4,llmgen-rasst-bsz4}-{zh,de,ja}"
+    },
+    {
+      "role": "psc_model_dirs",
+      "type": "model_dir_set",
+      "direction": "output",
+      "path": "/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/models/owaski"
+    },
+    {
+      "role": "logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs"
+    }
+  ],
+  "metadata": {
+    "model_count": 6,
+    "per_model_size_gb": 66,
+    "total_size_gb_approx": 396,
+    "hf_owner": "gavinlaw",
+    "private_repos": true,
+    "psc_pull_command": "cd /ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval/src/InfiniSST && PSC_BASE=/ocean/projects/cis260009p/jluo7/InfiniSST_psc_eval bash documents/code/simuleval/launchers/2026/05/20260523__psc_pull_acl_paper_extracted_models.sh",
+    "validation": "config.json plus 15 model-*.safetensors per model",
+    "local_upload_pid": "2198607",
+    "local_upload_log_stdout": "/mnt/gemini/data1/jiaxuanluo/logs/aclpp_models_hf_upload_20260523T0800.out",
+    "local_upload_log_stderr": "/mnt/gemini/data1/jiaxuanluo/logs/aclpp_models_hf_upload_20260523T0800.err",
+    "upload_started_utc": "2026-05-23T19:12:46Z",
+    "psc_storage_observation": "/ocean has about 211G free, so PSC must pull and evaluate one 66G model at a time instead of storing all six simultaneously.",
+    "current_upload_repo": "gavinlaw/infinisst-no-tmsft-origin-bsz4-zh",
+    "paused_utc": "2026-05-23T20:24:43Z",
+    "pause_reason": "User prioritized restored ESO medicine no-RAG baseline before paper-extracted ACL main-result evals.",
+    "pause_action": "Terminated local upload process group 2198607. The private zh origin repo may contain only partial committed metadata from the paused full-transfer attempt."
+  }
+}

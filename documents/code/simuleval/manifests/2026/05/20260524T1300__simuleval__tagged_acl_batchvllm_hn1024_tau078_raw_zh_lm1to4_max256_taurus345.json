@@ -1,0 +1,137 @@
+{
+  "schema_version": "1.0",
+  "event_id": "20260524T1300__simuleval__tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_max256_taurus345",
+  "event_type": "simuleval",
+  "family": "tagged_acl_batchvllm_hn1024_tau078_max256",
+  "variant": "zh_raw_lm1to4_batchvllm_tp2_maxseq8_maxnew256",
+  "status": "failed",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_max256_taurus345.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_max256.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && RUN_TAG_OVERRIDE=20260524T1300_tagacl_batchvllm_hn1024_tau078_raw_zh_lm1to4_max256_taurus345 CUDA_VISIBLE_DEVICES_PHYSICAL_OVERRIDE=6,7,5 bash documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_max256_taurus345.sh' > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_max256_20260524T1300_tagacl_batchvllm_hn1024_tau078_raw_zh_lm1to4_max256_taurus345/top_rerun_gpu675.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_max256_20260524T1300_tagacl_batchvllm_hn1024_tau078_raw_zh_lm1to4_max256_taurus345/top_rerun_gpu675.err < /dev/null & echo $!",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_max256_taurus345.sh",
+      "metadata": {}
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_max256.md",
+      "metadata": {}
+    },
+    {
+      "role": "speech_llm_checkpoint",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm_exports/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8/keep1.0_r32/v0-20260524-062743-hf",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint",
+      "type": "pytorch",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever_id": "lh1b88kw",
+        "tau": 0.78
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "glossary_kind": "raw"
+      }
+    },
+    {
+      "role": "eval_input",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_zh_lm1_20260524T0507_tagacl_newv9_hn1024_tau078_raw_zh_lm1_aries01/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/zh/all",
+      "metadata": {}
+    },
+    {
+      "role": "serial_compat_validation",
+      "type": "manifest",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T1159__simuleval__tagged_acl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_taurus3.json",
+      "metadata": {}
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_max256_20260524T1300_tagacl_batchvllm_hn1024_tau078_raw_zh_lm1to4_max256_taurus345/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078_batchvllm_max256",
+      "metadata": {}
+    },
+    {
+      "role": "slurm_logs",
+      "type": "logs",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_batchvllm_hn1024_tau078_raw_zh_lm1to4_max256_20260524T1300_tagacl_batchvllm_hn1024_tau078_raw_zh_lm1to4_max256_taurus345",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "purpose": "throughput batch-vLLM zh tagged ACL raw sweep after serial-compat validation",
+    "language": "zh",
+    "latency_multipliers": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "glossary_kind": "raw",
+    "retriever_id": "lh1b88kw",
+    "tau": 0.78,
+    "vllm_tp_size": 2,
+    "max_num_seqs": 8,
+    "scheduler_batch_size": 8,
+    "schedule_mode": "round_robin",
+    "vllm_limit_audio": 64,
+    "max_cache_seconds": 80,
+    "keep_cache_seconds": 60,
+    "decode": {
+      "temperature": 0.6,
+      "top_p": 0.95,
+      "top_k": 20,
+      "max_new_tokens": 256,
+      "seed": 998244353
+    },
+    "acceptance_metrics": [
+      "BLEU",
+      "TERM_ACC",
+      "REAL_TERM_ADOPT",
+      "TERM_FCR",
+      "StreamLAAL"
+    ],
+    "ignored_for_acceptance": [
+      "StreamLAAL_CA"
+    ],
+    "pid": 3207185,
+    "cancelled_attempt_reason": "VLLM_ENFORCE_EAGER=0 compile path hung before model weights loaded; stopped and relaunched with eager mode matching serial-compatible validation",
+    "vllm_enforce_eager": 1,
+    "max_model_len": 16384,
+    "cuda_visible_devices_physical": "6,7,5",
+    "restart_reason": "physical GPU pair 3,4 hung during vLLM init before weights; moved vLLM to 6,7 and retriever to physical 5",
+    "failure_reason": "max256 lm1 prompt exceeded vLLM limit_mm_per_prompt audio=64 at step 64; retry uses audio limit 96 with same cache/decode settings"
+  }
+}

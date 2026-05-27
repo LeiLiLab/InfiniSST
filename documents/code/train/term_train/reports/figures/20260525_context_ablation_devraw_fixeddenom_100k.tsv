@@ -1,0 +1,5 @@
+context	run_id	setting	metrics_terms	base	gs1k	gs10k	gs100k	note
+ctx192	9mff3bc4	1.92 fixed	1852	0.9811		0.9747	0.9518	gs1000 skipped: raw bank 1852 >= 1000
+ctx384	k0odyh1h	3.84 fixed	955	0.9865	0.9862	0.9831	0.9758	
+ctx5p76	d988vg46	5.76 fixed	867	0.9964	0.9964	0.9958	0.9933	latest step1300
+varctx	q2fus6f1	variable 2.88/3.84/4.80/5.76	974	0.9920	0.9920	0.9897	0.9858	main lh1b88kw checkpoint

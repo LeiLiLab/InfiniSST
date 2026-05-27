@@ -1,0 +1,166 @@
+{
+  "schema_version": "1.0",
+  "event_id": "20260524T1159__simuleval__tagged_acl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_taurus3",
+  "event_type": "simuleval",
+  "family": "tagged_acl_batchvllm_serialcompat_hn1024_tau078",
+  "variant": "zh_raw_lm2_batchvllm_serialcompat_tp2_maxseq1_cache80",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_taurus3.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_taurus3.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && RUN_TAG_OVERRIDE=20260524T1159_tagacl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_taurus3 bash documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_taurus3.sh' > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_20260524T1159_tagacl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_taurus3/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_20260524T1159_tagacl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_taurus3/top.err < /dev/null & echo $!",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_taurus3.sh",
+      "metadata": {}
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py",
+      "metadata": {}
+    },
+    {
+      "role": "analysis_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/tools/compare_batched_vs_serial_eval.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_taurus3.md",
+      "metadata": {}
+    },
+    {
+      "role": "speech_llm_checkpoint",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm_exports/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8/keep1.0_r32/v0-20260524-062743-hf",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint",
+      "type": "pytorch",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever_id": "lh1b88kw",
+        "tau": 0.78
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "glossary_kind": "raw"
+      }
+    },
+    {
+      "role": "eval_input",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_zh_lm1_20260524T0507_tagacl_newv9_hn1024_tau078_raw_zh_lm1_aries01/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/zh/all",
+      "metadata": {}
+    },
+    {
+      "role": "serial_reference_output",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_zh_lm23_20260524T0522_tagacl_newv9_hn1024_tau078_raw_zh_lm23_aries4567/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/zh/dtagacl_new_v9_hn1024_tau078_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2",
+      "metadata": {
+        "reference_event_id": "20260524T0522__simuleval__tagged_acl_new_v9_hn1024_tau078_raw_zh_lm23_aries4567"
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_20260524T1159_tagacl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_taurus3/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078_batchvllm_serialcompat",
+      "metadata": {}
+    },
+    {
+      "role": "report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_20260524T1159_tagacl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_taurus3/compare_serialcompat_lm2.md",
+      "metadata": {}
+    },
+    {
+      "role": "slurm_logs",
+      "type": "logs",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_20260524T1159_tagacl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_taurus3",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "purpose": "serial-compatible validation before accepting batched-vLLM acceleration",
+    "pid": 2906792,
+    "retry_reason": "first attempt failed because VLLM_LIMIT_AUDIO default 16 was below serial cache audio count; second retry also fixes per-stream elapsed and rounded delay timestamps",
+    "language": "zh",
+    "latency_multiplier": 2,
+    "glossary_kind": "raw",
+    "retriever_id": "lh1b88kw",
+    "tau": 0.78,
+    "vllm_tp_size": 2,
+    "max_num_seqs": 1,
+    "scheduler_batch_size": 1,
+    "schedule_mode": "serial_by_lm",
+    "vllm_enforce_eager": 1,
+    "vllm_limit_audio": 64,
+    "max_cache_seconds": 80,
+    "keep_cache_seconds": 60,
+    "decode": {
+      "temperature": 0.6,
+      "top_p": 0.95,
+      "top_k": 20,
+      "max_new_tokens": 40,
+      "seed": 998244353
+    },
+    "metrics": {
+      "mode": "acl6060",
+      "lang_code": "zh",
+      "BLEU": 49.60993119989425,
+      "StreamLAAL": 1861.8699175022116,
+      "StreamLAAL_CA": 558.3357022282347,
+      "TERM_ACC": 0.8888,
+      "TERM_CORRECT": 791.0,
+      "TERM_TOTAL": 890.0,
+      "TERM_ADOPTION": 0.885818,
+      "TERM_ADOPTED": 1050.0,
+      "TERM_ADOPTION_TOTAL": 1173.0,
+      "TERM_ADOPTION_SENTENCES": 405.0,
+      "TERM_ADOPTION_MICRO": 0.895141,
+      "REAL_TERM_ADOPT": 0.903735,
+      "REAL_TERM_ADOPTED": 972.0,
+      "REAL_TERM_ADOPT_TOTAL": 1069.0,
+      "REAL_TERM_ADOPT_SENTENCES": 399.0,
+      "REAL_TERM_ADOPT_MICRO": 0.909261,
+      "TERM_FCR": 0.124113,
+      "FALSE_COPY": 35.0,
+      "NEG_TOTAL": 282.0,
+      "FALSE_COPY_TERMS": 40.0,
+      "instances_log": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_20260524T1159_tagacl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_taurus3/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078_batchvllm_serialcompat/zh/dtagacl_batchvllm_serialcompat_hn1024_tau078_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.strip_term.log",
+      "TERM_FCR_MODE": "term_map_source_ref_negative_sentence",
+      "SOURCE_TERM_SENT_FCR": 0.235043,
+      "SOURCE_FALSE_COPY": 110.0,
+      "SOURCE_NEG_TOTAL": 468.0,
+      "SOURCE_FALSE_COPY_TERMS": 148.0
+    },
+    "compare_report": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_20260524T1159_tagacl_batchvllm_serialcompat_hn1024_tau078_raw_zh_lm2_taurus3/compare_serialcompat_lm2.md",
+    "verdict": "serial-compatible validation matches serial for BLEU, TERM_ACC, REAL_TERM_ADOPT, TERM_FCR, and StreamLAAL; StreamLAAL_CA ignored"
+  }
+}

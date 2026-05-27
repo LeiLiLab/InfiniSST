@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "event_id": "20260523T0042__simuleval__tagged_acl_v16_llmvariant_r32_quick_zh_lm2_raw",
+  "event_type": "simuleval",
+  "family": "tagged_acl_speech_llm_quick",
+  "variant": "v16_llmvariant_r32a64_zh_lm2_raw",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": "fo2p096d",
+  "slurm_job_id": "direct_aries23_v16_r32_quick_eval",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260523__tagged_acl_v16_llmvariant_r32_quick_zh_lm2_raw_aries23.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260523__tagged_acl_v16_llmvariant_r32_quick_zh_lm2_raw.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "RUN_STAMP=20260523T0042 GPU_PAIR=2,3 bash documents/code/simuleval/launchers/2026/05/20260523__tagged_acl_v16_llmvariant_r32_quick_zh_lm2_raw_aries23.sh",
+  "parent_run_ids": [
+    "pqg310ag"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260523__tagged_acl_v16_llmvariant_r32_quick_zh_lm2_raw_aries23.sh"
+    },
+    {
+      "role": "quick_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260522__tagged_acl_speech_llm_quick_zh_lm2_raw_wait_hf.sh"
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260523__tagged_acl_v16_llmvariant_r32_quick_zh_lm2_raw.md"
+    },
+    {
+      "role": "model_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/aries/data6/jiaxuanluo/slm/speech_llm_v16_llm_variant_aug_retriever_timeline_zh_lh1b88kw_tau073_r32a64_tp2_m4096_aries2/keep1.0_r32"
+    },
+    {
+      "role": "hf_model_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/aries/data6/jiaxuanluo/slm/speech_llm_v16_llm_variant_aug_retriever_timeline_zh_lh1b88kw_tau073_r32a64_tp2_m4096_aries2/keep1.0_r32/v0-20260523-053943-hf"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data6/jiaxuanluo/slm/tagged_acl_v16_llmvariant_r32a64_quick_zh_lm2_raw_20260523T0042"
+    },
+    {
+      "role": "eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/aries/data6/jiaxuanluo/slm/tagged_acl_v16_llmvariant_r32a64_quick_zh_lm2_raw_20260523T0042/v16_llmvariant_r32a64/zh/dtagacl_v16_llmvariant_r32a64_quick_tau073_lm2_k10_th0.73_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    {
+      "role": "term_adoption",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/aries/data6/jiaxuanluo/slm/tagged_acl_v16_llmvariant_r32a64_quick_zh_lm2_raw_20260523T0042/v16_llmvariant_r32a64/zh/dtagacl_v16_llmvariant_r32a64_quick_tau073_lm2_k10_th0.73_gacl6060_tagged_gt_raw_min_norm2/term_adoption.json"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260523_v16_llmvariant_r32a64_quick_zh_lm2_raw_aries23.out"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260523_v16_llmvariant_r32a64_quick_zh_lm2_raw_aries23.err"
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "lm": 2,
+    "runtime_glossaries": [
+      "raw"
+    ],
+    "raw_panel_denominator": "raw",
+    "gpu_devices": "2,3",
+    "training_run_id": "pqg310ag",
+    "training_model_name": "speech-llm-v16-llmvariant-zh-r32a64-tp2-m4096-aries2_keep1.0_r32",
+    "output_root_note": "Rerouted eval outputs and maxsim index cache to /mnt/aries/data6 because /mnt/aries/data7 was full at launch time.",
+    "completed_at_utc": "2026-05-23T01:02:00",
+    "metrics": {
+      "BLEU": 48.20199685121564,
+      "TERM_ACC": 0.8404,
+      "REAL_TERM_ADOPT": 0.838136,
+      "TERM_FCR": 0.064935,
+      "StreamLAAL": 1818.0751858918961
+    }
+  }
+}

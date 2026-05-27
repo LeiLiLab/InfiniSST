@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "event_id": "20260524T0242__simuleval__medicine_hardraw_hn1024_tau078_new_v9_batch",
+  "event_type": "simuleval",
+  "family": "medicine_hardraw",
+  "variant": "hn1024_tau078_new_v9_batch_lm1to4_5samples",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_hardraw_lm1to4_5samples_hn1024_tau078_new_v9_batch.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__medicine_hardraw_hn1024_tau078_new_v9_batch.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'TARGET_LMS_OVERRIDE=<lm> GPU_PAIR=<pair> ... bash documents/code/simuleval/launchers/2026/05/20260524__medicine_hardraw_lm1to4_5samples_hn1024_tau078_new_v9_batch.sh'",
+  "parent_run_ids": [
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__medicine_hardraw_lm1to4_5samples_hn1024_tau078_new_v9_batch.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260524__medicine_hardraw_hn1024_tau078_new_v9_batch.md"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "data_prepare_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/prepare_medicine_one_talk_inputs.py"
+    },
+    {
+      "role": "speech_llm_checkpoint",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm_exports/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_zh_r32a64_tp2_taurus8/keep1.0_r32/v0-20260524-062743-hf"
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "medicine_hard_raw_glossary",
+      "type": "glossary_json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_hard_terms_llm_judge_manual_20260524/hard_medicine_glossary_raw_llm_judge_manual_zh215_unique212.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/medicine_hardraw_hn1024_tau078_new_v9_batch_20260524T0242"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/medicine_hardraw_hn1024_tau078_new_v9_batch_20260524T0242"
+    }
+  ],
+  "metadata": {
+    "samples": [
+      "404",
+      "545006",
+      "596001",
+      "605000",
+      "606"
+    ],
+    "lms": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "lang_code": "zh",
+    "rag_score_threshold": 0.78,
+    "rag_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "term_fcr_policy": "term_map_source_ref_negative_sentence",
+    "strip_output_tags": "term",
+    "launch_policy": "detached setsid, one combined five-sample process per lm",
+    "verified_at_utc": "2026-05-24T07:02:40Z",
+    "completion_evidence": {
+      "lm1": {
+        "pid_status": "exited",
+        "instances_log_lines": 5,
+        "eval_results_rows": 1,
+        "scores_rows": 1
+      },
+      "lm2": {
+        "pid_status": "exited",
+        "instances_log_lines": 5,
+        "eval_results_rows": 1,
+        "scores_rows": 1
+      },
+      "lm3": {
+        "pid_status": "exited",
+        "instances_log_lines": 5,
+        "eval_results_rows": 1,
+        "scores_rows": 1
+      },
+      "lm4": {
+        "pid_status": "exited",
+        "instances_log_lines": 5,
+        "eval_results_rows": 1,
+        "scores_rows": 1
+      },
+      "log_tail": "each lm*.out ends with [ALL DONE] medicine hard raw batch eval complete"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+timestamp_utc	lm	status	alive_pids	engine_pids_all	stage	eval_results	instances_rows	strip_rows	BLEU	StreamLAAL	StreamLAAL_CA	TERM_ACC	TERM_CORRECT	TERM_TOTAL	note
+2026-05-25T02:28:39Z	2	running	791960	792263	running_no_result_yet										
+2026-05-25T02:29:40Z	2	running	791960	792263	running_no_result_yet										
+2026-05-25T02:30:40Z	2	running	791960	792263	running_no_result_yet										
+2026-05-25T02:31:40Z	2	running	791960	792263	running_no_result_yet										
+2026-05-25T02:32:41Z	2	running	791960	792263	running_no_result_yet										
+2026-05-25T02:33:41Z	2	running	791960	792263	running_no_result_yet										
+2026-05-25T02:34:42Z	2	running	791960	792263	running_no_result_yet										
+2026-05-25T02:35:42Z	2	running	791960	792263	running_no_result_yet										
+2026-05-25T02:36:43Z	2	running	791960	792263	running_no_result_yet										
+2026-05-25T02:37:43Z	2	done			completed_eval_results	/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v10_s50_hn1024_tau078_raw_de_lm2_20260525T022646/new_v10_s50_no_gt_retrieved_oldnewv3_de_r32a64_hn1024_tau078_same_lm_batch_v1/de/dtagacl_bv1_newv10_s50_hn1024_tau078_lm2_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv	5	5	26.06049847753468	1438.9044942274948	960.540431352125	0.8193	766	935	

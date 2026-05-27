@@ -1,0 +1,420 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T1013__simuleval__tagged_acl_de_cap16_lm4_decode_cache_probe_aries_taurus",
+  "event_type": "simuleval",
+  "family": "tagged_acl_de_cap16_lm4_decode_cache_probe",
+  "variant": "decode_cache_grid_aries_taurus",
+  "status": "completed_full5_shortcache_success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_cap16_lm4_decode_cache_probe.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_de_cap16_lm4_decode_cache_probe.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "detached Taurus/Aries lm4 decode/cache probes; stopped full grid after user requested quick results; scored two-talk quick probes from completed generations",
+  "parent_run_ids": [
+    "wtkgnf8k"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_de_cap16_lm4_decode_cache_probe.sh",
+      "metadata": {}
+    },
+    {
+      "role": "delegate_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_de_cap16_lm4_decode_cache_probe.md",
+      "metadata": {}
+    },
+    {
+      "role": "speech_llm_model",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_de_retriever_cap16_exactboundary_r32a32_ep4_taurus8/keep1.0_r32/v1-20260525-141908-hf",
+      "metadata": {
+        "parent_wandb_run_id": "wtkgnf8k"
+      }
+    },
+    {
+      "role": "eval_input_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all",
+      "metadata": {
+        "lang": "de",
+        "talk_count": 5
+      }
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "dataset": "acl_tagged_raw"
+      }
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever": "HN1024"
+      }
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T1013_*",
+      "metadata": {}
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T1013_*",
+      "metadata": {}
+    },
+    {
+      "role": "quick_probe_report",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_de_lm4_quick_decode_probe.tsv",
+      "metadata": {
+        "scope": "full5_and_quick2"
+      }
+    },
+    {
+      "role": "quick2_input_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_quick2_inputs_20260525_lm4_probe",
+      "metadata": {
+        "talk_count": 2,
+        "segment_count": 189
+      }
+    },
+    {
+      "role": "previous_cap16_max80_quick2_eval",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_20260525T070739_de_cap16_hn1024_tau078_omit_lm4first_taurus8/de_retriever_cap16_exactboundary_hn1024_tau078_omit_batch_max80/de/dtagacl_bv1_decap16_hn1024_tau078_omit_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.quick2.tsv",
+      "metadata": {
+        "scope": "quick2_post_eval"
+      }
+    },
+    {
+      "role": "mt64_quick2_eval",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T1026_quick2_mt64_c80k60_ch16k8_taurus_quick2_mt64_c80k60_ch16k8/de_retriever_cap16_lm4_quick2_mt64_c80k60_ch16k8/de/dtagacl_bv1_decap16_quick2_mt64_c80k60_ch16k8_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.quick2.tsv",
+      "metadata": {
+        "scope": "quick2_post_eval"
+      }
+    },
+    {
+      "role": "mt80_shortcache_quick2_eval",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T1026_quick2_mt80_c40k20_ch8k4_taurus_quick2_mt80_c40k20_ch8k4/de_retriever_cap16_lm4_quick2_mt80_c40k20_ch8k4/de/dtagacl_bv1_decap16_quick2_mt80_c40k20_ch8k4_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.quick2.tsv",
+      "metadata": {
+        "scope": "quick2_post_eval"
+      }
+    },
+    {
+      "role": "full5_shortcache_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T103743_full5_shortcache_full5_mt80_c40k20_ch8k4",
+      "metadata": {
+        "config_id": "full5_mt80_c40k20_ch8k4"
+      }
+    },
+    {
+      "role": "full5_shortcache_log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T103743_full5_shortcache_full5_mt80_c40k20_ch8k4",
+      "metadata": {
+        "pid": 1678547
+      }
+    },
+    {
+      "role": "full5_shortcache_outer_log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_de_cap16_lm4_full5_shortcache_submit_20260525T103743_full5_shortcache",
+      "metadata": {
+        "pid": 1678547
+      }
+    },
+    {
+      "role": "full5_shortcache_summary",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T103743_full5_shortcache_full5_mt80_c40k20_ch8k4/de_retriever_cap16_lm4_full5_mt80_c40k20_ch8k4/__summary__/summary_de_lm4.tsv",
+      "metadata": {
+        "config_id": "full5_mt80_c40k20_ch8k4"
+      }
+    },
+    {
+      "role": "full5_shortcache_eval_results",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T103743_full5_shortcache_full5_mt80_c40k20_ch8k4/de_retriever_cap16_lm4_full5_mt80_c40k20_ch8k4/de/dtagacl_bv1_decap16_full5_mt80_c40k20_ch8k4_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {
+        "config_id": "full5_mt80_c40k20_ch8k4"
+      }
+    },
+    {
+      "role": "full5_shortcache_instances_log",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T103743_full5_shortcache_full5_mt80_c40k20_ch8k4/de_retriever_cap16_lm4_full5_mt80_c40k20_ch8k4/de/dtagacl_bv1_decap16_full5_mt80_c40k20_ch8k4_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+      "metadata": {
+        "rows": 5
+      }
+    },
+    {
+      "role": "full5_shortcache_instances_strip_term_log",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T103743_full5_shortcache_full5_mt80_c40k20_ch8k4/de_retriever_cap16_lm4_full5_mt80_c40k20_ch8k4/de/dtagacl_bv1_decap16_full5_mt80_c40k20_ch8k4_lm4_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.strip_term.log",
+      "metadata": {
+        "rows": 5
+      }
+    }
+  ],
+  "metadata": {
+    "dataset": "acl_tagged_raw",
+    "language": "de",
+    "lm": 4,
+    "method": "RASST",
+    "rag_top_k": 10,
+    "rag_score_threshold": 0.78,
+    "empty_term_map_policy": "omit",
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 12288,
+    "target_bleu_gate": 33.0,
+    "baseline_reference": {
+      "verified_infinisst_norag_lm4_bleu": 33.3008,
+      "cap16_rasst_lm4_bleu": 32.5343,
+      "cap16_rasst_lm4_term_acc": 0.8749
+    },
+    "configs": [
+      {
+        "config_id": "mt96_c80k60_ch16k8",
+        "host": "taurus",
+        "gpu_pair": "3,7",
+        "max_new_tokens": 96,
+        "max_cache_seconds": 80,
+        "keep_cache_seconds": 60,
+        "max_cache_chunks": 16,
+        "keep_cache_chunks": 8,
+        "temperature": 0.6,
+        "purpose": "test whether lm4 is capped by max_new_tokens",
+        "pid": 1641561,
+        "launch_status": "completed_full5"
+      },
+      {
+        "config_id": "mt64_c80k60_ch16k8",
+        "host": "taurus",
+        "gpu_pair": "4,5",
+        "max_new_tokens": 64,
+        "max_cache_seconds": 80,
+        "keep_cache_seconds": 60,
+        "max_cache_chunks": 16,
+        "keep_cache_chunks": 8,
+        "temperature": 0.6,
+        "purpose": "test whether a lower cap reduces drift",
+        "pid": 1641567,
+        "launch_status": "completed_quick2_posteval"
+      },
+      {
+        "config_id": "mt80_c120k90_ch24k12",
+        "host": "aries",
+        "gpu_pair": "0,1",
+        "max_new_tokens": 80,
+        "max_cache_seconds": 120,
+        "keep_cache_seconds": 90,
+        "max_cache_chunks": 24,
+        "keep_cache_chunks": 12,
+        "temperature": 0.6,
+        "purpose": "test longer streaming history",
+        "pid": 3696613,
+        "launch_status": "cancelled_or_failed_not_used"
+      },
+      {
+        "config_id": "mt80_c40k20_ch8k4",
+        "host": "aries",
+        "gpu_pair": "2,3",
+        "max_new_tokens": 80,
+        "max_cache_seconds": 40,
+        "keep_cache_seconds": 20,
+        "max_cache_chunks": 8,
+        "keep_cache_chunks": 4,
+        "temperature": 0.6,
+        "purpose": "test shorter streaming history",
+        "pid": 3696621,
+        "launch_status": "completed_quick2_posteval"
+      },
+      {
+        "config_id": "mt112_c120k90_ch24k12",
+        "host": "taurus",
+        "gpu_pair": "6,7",
+        "max_new_tokens": 112,
+        "max_cache_seconds": 120,
+        "keep_cache_seconds": 90,
+        "max_cache_chunks": 24,
+        "keep_cache_chunks": 12,
+        "temperature": 0.6,
+        "purpose": "test high cap with longer cache",
+        "pid": 1641575,
+        "launch_status": "cancelled_or_failed_not_used"
+      },
+      {
+        "config_id": "mt80_c80k60_ch16k8_greedy",
+        "host": "aries",
+        "gpu_pair": "4,5",
+        "max_new_tokens": 80,
+        "max_cache_seconds": 80,
+        "keep_cache_seconds": 60,
+        "max_cache_chunks": 16,
+        "keep_cache_chunks": 8,
+        "temperature": 0.0,
+        "purpose": "test stochastic decoding variance",
+        "pid": 3696629,
+        "launch_status": "cancelled_or_failed_not_used"
+      }
+    ],
+    "submission_status": {
+      "final": "full5 short-cache completed successfully",
+      "pid": 1678547,
+      "run_stamp": "20260525T103743_full5_shortcache",
+      "summary": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T103743_full5_shortcache_full5_mt80_c40k20_ch8k4/de_retriever_cap16_lm4_full5_mt80_c40k20_ch8k4/__summary__/summary_de_lm4.tsv"
+    },
+    "quick_probe_policy": {
+      "requested_by_user": "do_not_run_full; get fast result",
+      "quick2_talks": [
+        "2022.acl-long.268.wav",
+        "2022.acl-long.367.wav"
+      ],
+      "quick2_segment_count": 189,
+      "remaining_full_grid": "cancelled_or_not_started",
+      "caveat": "quick2 rows are directional diagnostics, not paper-facing full metrics"
+    },
+    "results": {
+      "full5_previous_cap16_max80": {
+        "BLEU": 32.53429001914321,
+        "StreamLAAL": 2778.312924274232,
+        "StreamLAAL_CA": 1347.4342274010157,
+        "TERM_ACC": 0.8749,
+        "TERM_CORRECT": 818,
+        "TERM_TOTAL": 935
+      },
+      "full5_mt96_c80k60_ch16k8": {
+        "BLEU": 32.58361179616797,
+        "StreamLAAL": 2808.349730462877,
+        "StreamLAAL_CA": 1124.868294539722,
+        "TERM_ACC": 0.8556,
+        "TERM_CORRECT": 800,
+        "TERM_TOTAL": 935
+      },
+      "quick2_previous_cap16_max80": {
+        "BLEU": 33.178866618075986,
+        "StreamLAAL": 2777.412436156832,
+        "StreamLAAL_CA": 1358.6373029173285,
+        "TERM_ACC": 0.8911,
+        "TERM_CORRECT": 401,
+        "TERM_TOTAL": 450
+      },
+      "quick2_mt64_c80k60_ch16k8": {
+        "BLEU": 34.35715399773603,
+        "StreamLAAL": 2862.2232538729236,
+        "StreamLAAL_CA": 585.6530755353309,
+        "TERM_ACC": 0.8844,
+        "TERM_CORRECT": 398,
+        "TERM_TOTAL": 450
+      },
+      "quick2_mt80_c40k20_ch8k4": {
+        "BLEU": 35.3184358995246,
+        "StreamLAAL": 2823.5938686191575,
+        "StreamLAAL_CA": 1124.8334301898603,
+        "TERM_ACC": 0.8822,
+        "TERM_CORRECT": 397,
+        "TERM_TOTAL": 450
+      },
+      "full5_mt80_c40k20_ch8k4_selected": {
+        "BLEU": 33.482003332358964,
+        "StreamLAAL": 2745.098537273287,
+        "StreamLAAL_CA": 819.5417415693659,
+        "TERM_ACC": 0.8674,
+        "TERM_CORRECT": 811,
+        "TERM_TOTAL": 935,
+        "REAL_TERM_ADOPT": 0.886488,
+        "TERM_FCR": 0.123426,
+        "instances_log_rows": 5,
+        "instances_strip_term_log_rows": 5
+      }
+    },
+    "failure_notes": {
+      "mt80_c80k60_ch16k8_greedy": "failed before generation because quick2 config produced too-long EVAL_TMPDIR; launcher patched to hash-based short tmp root",
+      "mt80_c120k90_ch24k12_quick2": "failed with OOM due overlapping same GPU pair during quick launch; ignored",
+      "mt64_and_shortcache_default_offline": "generation succeeded but default offline scoring used five-row ref/source/audio; post-evaluated with quick2-filtered ref/source/audio"
+    },
+    "selected_full5_followup": {
+      "config_id": "full5_mt80_c40k20_ch8k4",
+      "host": "taurus",
+      "gpu_pair": "3,7",
+      "pid": 1678547,
+      "run_stamp": "20260525T103743_full5_shortcache",
+      "max_new_tokens": 80,
+      "max_cache_seconds": 40,
+      "keep_cache_seconds": 20,
+      "max_cache_chunks": 8,
+      "keep_cache_chunks": 4,
+      "expected_instance_rows": 5,
+      "launch_status": "completed_success",
+      "reason": "quick2 short-cache probe had strongest BLEU signal and user approved full5 run",
+      "startup_evidence": {
+        "vllm_model_loaded": true,
+        "retriever_loaded": true,
+        "step_tail": "STEP 0..10 ready=5 active=5",
+        "gpu_pair_occupied": "taurus gpu 3,7"
+      },
+      "results": {
+        "BLEU": 33.482003332358964,
+        "StreamLAAL": 2745.098537273287,
+        "StreamLAAL_CA": 819.5417415693659,
+        "TERM_ACC": 0.8674,
+        "TERM_CORRECT": 811,
+        "TERM_TOTAL": 935,
+        "REAL_TERM_ADOPT": 0.886488,
+        "TERM_FCR": 0.123426,
+        "instances_log_rows": 5,
+        "instances_strip_term_log_rows": 5
+      },
+      "comparison": {
+        "verified_infinisst_norag_lm4_bleu": 33.3008,
+        "passes_verified_norag_bleu_gate": true,
+        "delta_bleu_vs_verified_norag_lm4": 0.18120333235896308,
+        "delta_bleu_vs_previous_cap16_max80": 0.9477133132157517,
+        "delta_term_acc_vs_previous_cap16_max80": -0.0075
+      },
+      "output_summary": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_de_cap16_lm4_decode_cache_probe_20260525T103743_full5_shortcache_full5_mt80_c40k20_ch8k4/de_retriever_cap16_lm4_full5_mt80_c40k20_ch8k4/__summary__/summary_de_lm4.tsv"
+    }
+  }
+}

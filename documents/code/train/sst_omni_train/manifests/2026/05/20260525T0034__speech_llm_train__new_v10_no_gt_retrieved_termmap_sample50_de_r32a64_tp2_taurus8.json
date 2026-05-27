@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T0034__speech_llm_train__new_v10_no_gt_retrieved_termmap_sample50_de_r32a64_tp2_taurus8",
+  "event_type": "speech_llm_train",
+  "family": "speech_llm_tcm_termmap",
+  "variant": "new_v10_no_gt_retrieved_termmap_sample50_de_r32a64_tp2_taurus8",
+  "status": "success",
+  "project": "sst_omni",
+  "wandb_run_id": "55aty627",
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260525__speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_taurus8_r32a64_tp2.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260525__speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_r32a64_tp2_taurus8.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'ROOT_DIR_OVERRIDE=/home/jiaxuanluo/InfiniSST HOST_GPU_DEVICES_OVERRIDE=0,1,2,3,4,5,6,7 MASTER_PORT_OVERRIDE=29692 bash documents/code/train/sst_omni_train/launchers/2026/05/20260525__speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_taurus8_r32a64_tp2.sh' > /mnt/gemini/data1/jiaxuanluo/logs/train_speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_taurus8_20260525T0034.out 2> /mnt/gemini/data1/jiaxuanluo/logs/train_speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_taurus8_20260525T0034.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/train_speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_taurus8_20260525T0034.pid",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260525__speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_taurus8_r32a64_tp2.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260525__speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_r32a64_tp2_taurus8.md",
+      "metadata": {}
+    },
+    {
+      "role": "data_prepare_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/train/sst_omni_train/manifests/2026/05/20260525T0025__data_prepare__new_v10_no_gt_retrieved_termmap_sample50_mfa_npfilter_oldnewv3_de.json",
+      "metadata": {
+        "event_id": "20260525T0025__data_prepare__new_v10_no_gt_retrieved_termmap_sample50_mfa_npfilter_oldnewv3_de"
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v10_no_gt_retrieved_termmap_sample50_mfa_npfilter_oldnewv3_de_20260525/train_s_de_new_v10_no_gt_retrieved_termmap_sample50_mfa_npfilter_oldnewv3.jsonl",
+      "metadata": {
+        "rows": 12500
+      }
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v10_no_gt_retrieved_termmap_sample50_mfa_npfilter_oldnewv3_de_20260525/dev_s_de_new_v10_no_gt_retrieved_termmap_sample50_mfa_npfilter_oldnewv3_first355.jsonl",
+      "metadata": {
+        "rows": 355
+      }
+    },
+    {
+      "role": "data_summary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_new_v10_no_gt_retrieved_termmap_sample50_mfa_npfilter_oldnewv3_de_20260525/new_v10_no_gt_retrieved_termmap_sample50_mfa_npfilter_oldnewv3_de_summary.json",
+      "metadata": {}
+    },
+    {
+      "role": "base_mcore_model",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/Qwen3-Omni-30B-A3B-Instruct-v2/",
+      "metadata": {}
+    },
+    {
+      "role": "base_model_host",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/Qwen3-Omni-30B-A3B-Instruct",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_r32a64_tp2_taurus8",
+      "metadata": {}
+    },
+    {
+      "role": "megatron_save_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_r32a64_tp2_taurus8/keep1.0_r32/v0-20260525-083507",
+      "metadata": {
+        "created_at_log_time": "2026-05-25 08:35:07"
+      }
+    },
+    {
+      "role": "wandb_local_run_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_r32a64_tp2_taurus8/keep1.0_r32/v0-20260525-083507/wandb/wandb/run-20260525_083616-55aty627",
+      "metadata": {
+        "wandb_run_id": "55aty627"
+      }
+    },
+    {
+      "role": "train_log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_r32a64_tp2_taurus8",
+      "metadata": {}
+    },
+    {
+      "role": "detached_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/train_speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_taurus8_20260525T0034.out",
+      "metadata": {}
+    },
+    {
+      "role": "detached_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/train_speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_taurus8_20260525T0034.err",
+      "metadata": {}
+    },
+    {
+      "role": "pid_file",
+      "type": "pid",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/train_speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_taurus8_20260525T0034.pid",
+      "metadata": {}
+    },
+    {
+      "role": "hf_export_dir",
+      "type": "hf_model_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_r32a64_tp2_taurus8/keep1.0_r32/v0-20260525-083507-hf",
+      "metadata": {
+        "shards": 15,
+        "config": "config.json",
+        "index": "model.safetensors.index.json"
+      }
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "parent_data_event_id": "20260525T0025__data_prepare__new_v10_no_gt_retrieved_termmap_sample50_mfa_npfilter_oldnewv3_de",
+    "sample_unit": "term",
+    "no_gt_keep_prob": 0.5,
+    "no_gt_entries": 102842,
+    "tm_sft_reference_no_gt_entries": 79906,
+    "lora_rank": 32,
+    "lora_alpha": 64,
+    "rank_tag": "r32a64",
+    "tensor_model_parallel_size": 2,
+    "expert_model_parallel_size": 2,
+    "nproc_per_node": 8,
+    "global_batch_size": 8,
+    "micro_batch_size": 1,
+    "max_epochs": 1,
+    "max_length": 3072,
+    "iterations_per_epoch": 1000,
+    "save_interval": 1000,
+    "host": "taurus",
+    "host_gpu_devices": "0,1,2,3,4,5,6,7",
+    "master_port": 29692,
+    "launcher_pid": 478945,
+    "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/sst_omni/runs/55aty627",
+    "startup_status": "wandb_initialized_model_loaded",
+    "startup_observation_utc": "2026-05-25T00:36:45Z",
+    "startup_evidence": {
+      "wandb_run_id": "55aty627",
+      "train_dataset_rows": 12500,
+      "val_dataset_rows": 355,
+      "gpu_memory_mib_per_gpu": 38007,
+      "save_dir": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_r32a64_tp2_taurus8/keep1.0_r32/v0-20260525-083507",
+      "log_file": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_r32a64_tp2_taurus8/train_keep1.0_r32_20260525_083454.log"
+    },
+    "completed_utc": "2026-05-25T01:51:04Z",
+    "completion_status": "hf_export_completed",
+    "completion_evidence": {
+      "hf_export_dir": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_new_v10_no_gt_retrieved_termmap_sample50_de_r32a64_tp2_taurus8/keep1.0_r32/v0-20260525-083507-hf",
+      "hf_shards": 15,
+      "log_markers": [
+        "Successfully saved HF model weights",
+        "Export done."
+      ],
+      "wandb_db_sync_utc": "2026-05-25T01:51:04Z"
+    },
+    "prelaunch_storage": {
+      "data1_avail": "581G",
+      "data2_avail": "1.0M",
+      "root_avail": "288G",
+      "data2_usage_note": "base model is read-only from data2"
+    },
+    "expected_eval_gate": {
+      "dataset": "acl_tagged_raw",
+      "lang": "de",
+      "lm": 2,
+      "retriever": "HN1024",
+      "tau": 0.79,
+      "max_new_tokens": 80,
+      "bleu_baseline_verified_norag": 30.0676
+    }
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "event_id": "20260521T1342__speech_llm_train__v7_refmatch_r95_zh_r8a32_aries2",
+  "event_type": "speech_llm_train",
+  "family": "speech_llm_termmap_retriever",
+  "variant": "v7_refmatch_r95_zh_r8a32_aries2",
+  "status": "running",
+  "project": "sst_omni",
+  "wandb_run_id": "l3igp2ot",
+  "slurm_job_id": "direct_aries_gpu45",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260521__speech_llm_v7_refmatch_r95_zh_aries2_r8a32.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260521__speech_llm_v7_refmatch_r95_zh_r8a32_aries2.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "setsid bash -lc 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && env HOST_GPU_DEVICES_OVERRIDE_CSV=4:5 MASTER_PORT=30675 WANDB_VARIANT_TAG_OVERRIDE=v7_r95_r8a32_aries45 WANDB_EXP_PREFIX_OVERRIDE=speech-llm-v7-r95-zh-r8a32-aries45 bash documents/code/train/sst_omni_train/launchers/2026/05/20260521__speech_llm_v7_refmatch_r95_zh_aries2_r8a32.sh' > /mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_v7_refmatch_r95_aries45_20260521T134450.out 2> /mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_v7_refmatch_r95_aries45_20260521T134450.err < /dev/null &",
+  "parent_run_ids": [],
+  "parent_event_ids": [
+    "20260521T1350__data_prepare__v7_refmatch_r95_termmap_zh"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260521__speech_llm_v7_refmatch_r95_zh_aries2_r8a32.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260521__speech_llm_v7_refmatch_r95_zh_r8a32_aries2.md"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v7_refmatch_r95_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260521/train_s_zh_v7_refmatch_r95_termmap_lh1b88kw_tau073_srcmatch100k.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_v7_refmatch_r95_termmap_zh_lh1b88kw_tau073_srcmatch100k_20260521/dev_s_zh_v7_refmatch_r95_termmap_lh1b88kw_tau073_srcmatch100k.jsonl"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/speech_llm_v7_refmatch_r95_zh_lh1b88kw_tau073_srcmatch100k_r8a32_aries2"
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_v7_refmatch_r95_aries45_20260521T134450.out",
+      "metadata": {
+        "stderr": "/mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_v7_refmatch_r95_aries45_20260521T134450.err",
+        "pid_file": "/mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_v7_refmatch_r95_aries45_20260521T134450.pid"
+      }
+    }
+  ],
+  "metadata": {
+    "lora_rank": 8,
+    "lora_alpha": 32,
+    "term_map_format": "plain",
+    "compute": "aries2",
+    "host_gpu_devices": "4,5",
+    "launch_mode": "direct_detached_docker_on_aries",
+    "max_epochs": 1,
+    "pid": 2901112,
+    "direct_launch_utc": "20260521T134450",
+    "previous_failed_attempt": {
+      "pid": 2899710,
+      "direct_launch_utc": "20260521T134309",
+      "reason": "docker mount did not include /mnt/data7 for /mnt/aries/data7 symlink"
+    }
+  }
+}

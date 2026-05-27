@@ -1,0 +1,40 @@
+{
+  "event_id": "20260524T0928__simuleval__tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_taurus8",
+  "created_utc": "2026-05-24T09:28:00Z",
+  "family": "tagged_acl_new_v9_hn1024_tau078",
+  "task": "simuleval",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_taurus8.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260524__tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_taurus8.md",
+  "local_pid": "2465888",
+  "config": {
+    "host": "taurus",
+    "lang": "ja",
+    "lms": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "parallel_settings": 4,
+    "gpu_pairs": "0,1;2,3;4,5;6,7",
+    "runtime_glossary": "acl6060_tagged_gt_raw_min_norm2",
+    "metric_glossary_policy": "fixed_raw_tagged_acl",
+    "retriever": "HN1024/lh1b88kw",
+    "tau": 0.78,
+    "lookback_sec": 1.92,
+    "strip_output_tags": [
+      "term"
+    ],
+    "model": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_new_v9_assistant_termtag_delay_clean_no_gt_zero_oldnewv3_ja_r32a64_tp2_taurus4/keep1.0_r32/v0-20260524-123624-hf"
+  },
+  "outputs": {
+    "output_root": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_20260524T0928_tagacl_newv9_hn1024_tau078_raw_ja_taurus8",
+    "output_base": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_20260524T0928_tagacl_newv9_hn1024_tau078_raw_ja_taurus8/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078",
+    "log_root": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_20260524T0928_tagacl_newv9_hn1024_tau078_raw_ja_taurus8",
+    "launcher_stdout": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_20260524T0928_tagacl_newv9_hn1024_tau078_raw_ja_taurus8/launcher.out",
+    "launcher_stderr": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_20260524T0928_tagacl_newv9_hn1024_tau078_raw_ja_taurus8/launcher.err",
+    "summary_md": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_20260524T0928_tagacl_newv9_hn1024_tau078_raw_ja_taurus8/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/__summary__/summary_ja_raw_lm1to4.md",
+    "summary_tsv": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_20260524T0928_tagacl_newv9_hn1024_tau078_raw_ja_taurus8/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/__summary__/summary_ja_raw_lm1to4.tsv"
+  },
+  "replaces": "20260524T0811__simuleval__tagged_acl_new_v9_hn1024_tau078_raw_ja_lm1to4_aries_auto"
+}

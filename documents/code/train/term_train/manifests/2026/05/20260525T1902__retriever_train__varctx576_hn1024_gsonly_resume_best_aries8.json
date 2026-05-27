@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T1902__retriever_train__varctx576_hn1024_gsonly_resume_best_aries8",
+  "event_type": "retriever_train",
+  "family": "sst_ood_hardneg",
+  "variant": "hn1024_varctx576_gsonly_resume_best_aries8",
+  "status": "startup_verified",
+  "project": "qwen3_rag",
+  "wandb_run_id": "0rs042wc",
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/term_train/launchers/2026/05/20260525__varctx576_hn1024_gsonly_resume_best_aries8.sh",
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260525__varctx576_hn1024_gsonly_resume_best_aries8.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries 'mkdir -p /mnt/gemini/home/jiaxuanluo/logs/gsonly_data_ablation_resume8_20260525T1902; cd /mnt/taurus/home/jiaxuanluo/InfiniSST; setsid env RUN_STAMP=20260525T1902_gsonly_hn1024_varctx576_resume_best_aries8 CUDA_DEVICE_LIST=0,1,2,3,4,5,6,7 NUM_GPUS=8 bash documents/code/train/term_train/launchers/2026/05/20260525__varctx576_hn1024_gsonly_resume_best_aries8.sh > /mnt/gemini/home/jiaxuanluo/logs/gsonly_data_ablation_resume8_20260525T1902/train.out 2> /mnt/gemini/home/jiaxuanluo/logs/gsonly_data_ablation_resume8_20260525T1902/train.err < /dev/null & pid=$!; echo $pid > /mnt/gemini/home/jiaxuanluo/logs/gsonly_data_ablation_resume8_20260525T1902/train.pid; echo $pid'",
+  "parent_run_ids": [
+    "g49qabuf",
+    "lh1b88kw",
+    "ah9u1bao",
+    "dxwrgbln"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260525__varctx576_hn1024_gsonly_resume_best_aries8.sh",
+      "metadata": {}
+    },
+    {
+      "role": "source_launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/term_train/launchers/2026/05/20260525__varctx576_hn1024_gsonly_tcmoff_ep6_aries4_wait.sh",
+      "metadata": {
+        "source_event_id": "20260525T1248__retriever_train__varctx576_hn1024_gsonly_tcmoff_ep6_aries4"
+      }
+    },
+    {
+      "role": "common_launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/term_train/run_mfa_smallest_dense_hn_depth_common_8gpu_aries.sh",
+      "metadata": {}
+    },
+    {
+      "role": "train_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/term_train/qwen3_glossary_neg_train.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260525__varctx576_hn1024_gsonly_resume_best_aries8.md",
+      "metadata": {}
+    },
+    {
+      "role": "data_prepare_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/data_pre/training_terms_for_retriever/manifests/2026/05/20260525T1245__data_prepare__varctx576_gsonly_filter.json",
+      "metadata": {
+        "event_id": "20260525T1245__data_prepare__varctx576_gsonly_filter"
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_train_3variant_gsv2full_gsdedup_varctx576_gsonly.jsonl",
+      "metadata": {
+        "domain": "gigaspeech_only"
+      }
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_varctx2p88_3p84_4p80_5p76_new_version.jsonl",
+      "metadata": {
+        "usage": "dev calibration and primary model selection"
+      }
+    },
+    {
+      "role": "acl_dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/acl6060_dev_offline_eval_extracted_paper_glossary_varctx2p88_3p84_4p80_5p76/acl6060_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "held-out readout only"
+      }
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_dev_dataset.jsonl",
+      "metadata": {
+        "usage": "domain readout only"
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample10000.json",
+      "metadata": {}
+    },
+    {
+      "role": "acl_eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/taurus/home/jiaxuanluo/InfiniSST/retriever/gigaspeech/data_pre/glossary_acl6060_gt_union_gs10000.json",
+      "metadata": {
+        "usage": "held-out readout only"
+      }
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_mfa_exact_only/medicine_glossary_gt_plus_medicine_wiki_gs10000.json",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_gsonly_bs8192_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_4gpu_aries_best.pt",
+      "metadata": {
+        "source_run_id": "g49qabuf",
+        "source_event_id": "20260525T1248__retriever_train__varctx576_hn1024_gsonly_tcmoff_ep6_aries4",
+        "selection": "primary_best",
+        "step": 320,
+        "metric": "eval_dev/recall@10_gs10000"
+      }
+    },
+    {
+      "role": "checkpoint",
+      "type": "checkpoint",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_gsonly_bs8192_gc128_resume_best_g49qabuf_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries.pt",
+      "metadata": {
+        "expected": true
+      }
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs",
+      "metadata": {
+        "available_space_checked_utc": "2026-05-25T19:02:00Z"
+      }
+    },
+    {
+      "role": "log_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/home/jiaxuanluo/logs/gsonly_data_ablation_resume8_20260525T1902/train.out",
+      "metadata": {}
+    },
+    {
+      "role": "log_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/home/jiaxuanluo/logs/gsonly_data_ablation_resume8_20260525T1902/train.err",
+      "metadata": {}
+    },
+    {
+      "role": "pid_file",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/home/jiaxuanluo/logs/gsonly_data_ablation_resume8_20260525T1902/train.pid",
+      "metadata": {
+        "pid": 3954026
+      }
+    }
+  ],
+  "metadata": {
+    "main_result_run_id": "lh1b88kw",
+    "source_run_id": "g49qabuf",
+    "source_event_id": "20260525T1248__retriever_train__varctx576_hn1024_gsonly_tcmoff_ep6_aries4",
+    "resume_checkpoint": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_gsonly_bs8192_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_4gpu_aries_best.pt",
+    "resume_selection_rule": "primary best checkpoint from eval_dev/recall@10_gs10000 at step 320",
+    "replacement_reason": "user requested cancel 4-GPU ablation and resume training from best checkpoint on all 8 Aries GPUs",
+    "data_ablation": "remove wiki_synth training rows; keep GigaSpeech training rows",
+    "gpus": "aries physical 0,1,2,3,4,5,6,7",
+    "wait_for_gpus": true,
+    "batch_size": 8192,
+    "num_gpus": 8,
+    "per_gpu_batch": 1024,
+    "grad_cache_chunk_size": 128,
+    "save_latest_steps": 50,
+    "epochs": 6,
+    "scheduler_epochs": 6,
+    "hard_neg_k_per_sample": 1024,
+    "tcm_off": true,
+    "best_metric": "eval_dev/recall@10_gs10000",
+    "best_metric_secondary": "eval_acl6060/recall@10",
+    "acl_policy": "ACL is readout only and is not used for hyperparameter or checkpoint selection",
+    "storage_check_20260525T1902": {
+      "/mnt/gemini/data1": "157G available, 99% used; avoided for new run logs",
+      "/mnt/gemini/home": "760G available; selected for logs and existing checkpoint output path",
+      "/mnt/taurus/home": "2.1T available"
+    },
+    "launch_20260525T1905": {
+      "host": "aries",
+      "pid": 3954026,
+      "cuda_device_list": "0,1,2,3,4,5,6,7",
+      "status": "startup_verified"
+    },
+    "startup_verification_20260525T1908": {
+      "wandb_run_id": "0rs042wc",
+      "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/qwen3_rag/runs/0rs042wc",
+      "resume_evidence": "train.err shows [RESUME] ..._4gpu_aries_best.pt epoch=1 step=320",
+      "wandb_evidence": "train.err shows setting up run 0rs042wc and W&B run URL",
+      "gpu_placement": "aries physical GPUs 0,1,2,3,4,5,6,7"
+    }
+  }
+}

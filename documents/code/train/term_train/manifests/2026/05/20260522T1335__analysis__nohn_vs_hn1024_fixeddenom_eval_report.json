@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T1335__analysis__nohn_vs_hn1024_fixeddenom_eval_report",
+  "event_type": "analysis",
+  "family": "sst_ood_hardneg_eval_compare",
+  "variant": "nohn_vs_hn1024_fixeddenom_eval_report",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": null,
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/general/wandb_tool.py --project qwen3_rag --json show <run_id> --summary-prefix eval_; parse fixed-denominator metrics; write report",
+  "parent_run_ids": ["9esujv2w", "ry8osg4u"],
+  "artifacts": [
+    {"role": "source_eval_manifest", "type": "manifest", "direction": "input", "path": "documents/code/train/term_train/manifests/2026/05/20260522T1316__retriever_eval__nohn_best_secondary_tau_delta_fixeddenom_dev_acl_tagacl_medstrict.json"},
+    {"role": "source_eval_manifest", "type": "manifest", "direction": "input", "path": "documents/code/train/term_train/manifests/2026/05/20260522T1317__retriever_eval__lh1b88kw_tau_delta_fixeddenom_dev_acl_tagacl_medstrict.json"},
+    {"role": "eval_output", "type": "wandb_summary_json", "direction": "input", "path": "/mnt/gemini/data1/jiaxuanluo/tmp/retriever_eval_fixeddenom_20260522/nohn_9esujv2w_eval_summary.json"},
+    {"role": "eval_output", "type": "wandb_summary_json", "direction": "input", "path": "/mnt/gemini/data1/jiaxuanluo/tmp/retriever_eval_fixeddenom_20260522/lh1b88kw_ry8osg4u_eval_summary.json"},
+    {"role": "report", "type": "markdown", "direction": "output", "path": "documents/code/train/term_train/reports/20260522_nohn_vs_hn1024_fixeddenom_eval_report.md"}
+  ],
+  "metadata": {
+    "created_at_utc": "2026-05-22T13:35:20Z",
+    "metric_source": "WandB summary exported with wandb_tool.py",
+    "selection_rule": "dev-only max recall drop; choose highest tau under budget",
+    "fixed_denominator_runs": ["9esujv2w", "ry8osg4u"],
+    "legacy_runs_excluded": ["vj0z7xdv", "v4vl6zxr"],
+    "report": "documents/code/train/term_train/reports/20260522_nohn_vs_hn1024_fixeddenom_eval_report.md"
+  }
+}

@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T001437__analysis__de_lm4_infinisst_batch_vs_serial_diagnosis",
+  "event_type": "analysis",
+  "family": "tagged_acl_origin_norag_batch_cmp",
+  "variant": "de_lm4_batch_vs_serial_diagnosis",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__de_lm4_infinisst_batch_vs_serial_diagnosis.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python documents/code/general/experiment_event.py show/files; python/json inspection of eval_results.tsv, instances.log, and runtime JSONL artifacts; see report",
+  "parent_run_ids": [
+    "3upoqej5",
+    "ixmu9jhv"
+  ],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__de_lm4_infinisst_batch_vs_serial_diagnosis.md"
+    },
+    {
+      "role": "report",
+      "type": "markdown",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_de_lm4_infinisst_batch_vs_serial_diagnosis.md"
+    },
+    {
+      "role": "serial_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T160830__simuleval__tagged_acl_origin_norag_de_lm4_raw_rerun.json"
+    },
+    {
+      "role": "batch_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260524T2338__simuleval__tagged_acl_origin_norag_de_lm4_batch_max40_aries23.json"
+    },
+    {
+      "role": "serial_driver",
+      "type": "python",
+      "direction": "input",
+      "path": "agents/infinisst_omni_vllm_rag_v4.py"
+    },
+    {
+      "role": "batch_driver",
+      "type": "python",
+      "direction": "input",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py"
+    },
+    {
+      "role": "serial_launcher",
+      "type": "shell",
+      "direction": "input",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_origin_norag_de_lm4_raw_rerun.sh"
+    },
+    {
+      "role": "batch_launcher",
+      "type": "shell",
+      "direction": "input",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__tagged_acl_origin_norag_de_lm4_batch_max40_aries23.sh"
+    },
+    {
+      "role": "serial_eval_results",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_raw_rerun_20260524T160830_tagacl_origin_norag_de_lm4_raw_rerun/origin_norag/de/gigaspeech-de-s_origin-bsz4_gacl6060_tagged_gt_raw_min_norm2_cs3.84_hs0.48_lm4_k210_k110_th0p0/eval_results.tsv"
+    },
+    {
+      "role": "batch_eval_results",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_max40_aries23_20260524T2338_tagacl_origin_norag_de_lm4_batch_max40_aries23/origin_norag_de_lm4_batch_max40/de/dtagacl_origin_norag_batch_max40_lm4_k0_th0.0_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    {
+      "role": "serial_runtime_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_raw_rerun_20260524T160830_tagacl_origin_norag_de_lm4_raw_rerun/origin_norag/de/gigaspeech-de-s_origin-bsz4_gacl6060_tagged_gt_raw_min_norm2_cs3.84_hs0.48_lm4_k210_k110_th0p0/runtime_omni_vllm_rag_v4_1779640284_pid2631490.jsonl"
+    },
+    {
+      "role": "batch_runtime_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_origin_norag_de_lm4_batch_max40_aries23_20260524T2338_tagacl_origin_norag_de_lm4_batch_max40_aries23/origin_norag_de_lm4_batch_max40/de/dtagacl_origin_norag_batch_max40_lm4_k0_th0.0_gacl6060_tagged_gt_raw_min_norm2/runtime_omni_vllm_maxsim_rag_batched_lm4.jsonl"
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "latency_multiplier": 4,
+    "dataset": "acl_tagged_raw",
+    "model": "/mnt/gemini/data/jiaxuanluo/owaski/gigaspeech-de-s_origin-bsz4",
+    "completed_utc": "2026-05-25T00:14:37Z",
+    "serial_event_id": "20260524T160830__simuleval__tagged_acl_origin_norag_de_lm4_raw_rerun",
+    "batch_event_id": "20260524T2338__simuleval__tagged_acl_origin_norag_de_lm4_batch_max40_aries23",
+    "metrics": {
+      "serial": {
+        "BLEU": 33.30075964509326,
+        "StreamLAAL": 2824.4372171749956,
+        "StreamLAAL_CA": 4100.570443638962,
+        "TERM_ACC": 0.6909,
+        "TERM_CORRECT": 646,
+        "TERM_TOTAL": 935
+      },
+      "batch": {
+        "BLEU": 30.024288610842845,
+        "StreamLAAL": 2675.3593704178256,
+        "StreamLAAL_CA": 882.8662155653666,
+        "TERM_ACC": 0.6738,
+        "TERM_CORRECT": 630,
+        "TERM_TOTAL": 935
+      }
+    },
+    "validation": {
+      "source_lists_byte_identical": true,
+      "source_list_sha256": "b0b9484da51930226cc6a8985129df6efa53f899cec310c790f196fb4581b50b",
+      "instance_rows_serial": 5,
+      "instance_rows_batch": 5,
+      "references_match_by_index": true,
+      "source_lengths_match_by_index": true,
+      "serial_llm_input_records": 899,
+      "batch_llm_input_records": 899,
+      "serial_llm_inputs_with_term_map": 0,
+      "batch_llm_inputs_with_term_map": 899,
+      "all_predictions_differ_by_index": true
+    },
+    "diagnosis": {
+      "primary": "batch no-RAG prompt is not serial-compatible: it includes the term-map instruction and term_map:NONE for every request",
+      "secondary": "batch uses max_num_seqs=5 and multi-stream stochastic vLLM generation, while serial uses max_num_seqs=1",
+      "verdict": "current batch result is diagnostic and should not replace the serial lm4 no-RAG main-result point"
+    }
+  }
+}

@@ -1,0 +1,5 @@
+cap	BLEU	StreamLAAL	StreamLAAL_CA	TERM_ACC	TERM_CORRECT	TERM_TOTAL	sum_hyp_ref_char_ratio	max_hyp_ref_char_ratio	status	note
+24	18.362100277495486	1267.9551243830708	2465.31051021309	0.8032	755	940	1.625987	1.965736	completed_overlong	Best among tested caps, but still substantially over-generates at lm=1.
+32	17.16318018241365	1242.9386465435985	2731.851747694356	0.7809	734	940	1.731195	2.268782	completed_overlong	Worse than cap24; increasing cap worsens length control.
+48	11.095060101271816	682.86758742294	2509.3216307705156	0.7117	669	940	2.376962	6.236294	completed_unusable	Severe over-generation.
+64	14.620911263917018	1734.2443892028318	3832.627283448686	0.8298	780	940	2.074177	3.598477	completed_unusable	TERM_ACC recovers but BLEU/length control remain unusable.

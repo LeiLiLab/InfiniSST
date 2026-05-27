@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "event_type": "simuleval",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "parent_run_ids": [],
+  "event_id": "20260526T020512__simuleval__tagged_acl_de_lm4_serial_promptfix_audioauto_cache30_max40lm_taurus_direct",
+  "family": "main_result_rasst_serial_promptfix",
+  "variant": "tagged_acl_de_lm4_cache30_audioauto_max40lm_promptfix_direct",
+  "status": "success",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260526__tagged_acl_de_lm3_serial_promptfix_cache30_audioauto_max40lm_taurus.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260526__tagged_acl_de_lm3_serial_promptfix_cache30_audioauto_max40lm_taurus.md",
+  "command": "RUN_STAMP=20260526T020512_tagged_acl_de_lm4_serial_promptfix_audioauto_cache30_max40lm_taurus_direct OUT_ROOT=/mnt/data1/jiaxuanluo/tagged_acl_de_lm4_serial_promptfix_cache30_audioauto_max40lm_20260526T020512_tagged_acl_de_lm4_serial_promptfix_audioauto_cache30_max40lm_taurus_direct LOG_ROOT=/mnt/data1/jiaxuanluo/logs/tagged_acl_de_lm4_serial_promptfix_cache30_audioauto_max40lm_20260526T020512_tagged_acl_de_lm4_serial_promptfix_audioauto_cache30_max40lm_taurus_direct LM=4 MAX_NEW_TOKENS=160 GPU_PAIR=2,3 VLLM_LIMIT_AUDIO=auto VLLM_LIMIT_AUDIO_OVERRIDE=auto EVAL_TMPDIR=/tmp/jxde4auto setsid bash documents/code/simuleval/launchers/2026/05/20260526__tagged_acl_de_lm3_serial_promptfix_cache30_audioauto_max40lm_taurus.sh > /mnt/data1/jiaxuanluo/logs/tagged_acl_de_lm4_serial_promptfix_cache30_audioauto_max40lm_20260526T020512_tagged_acl_de_lm4_serial_promptfix_audioauto_cache30_max40lm_taurus_direct/launcher.out 2> /mnt/data1/jiaxuanluo/logs/tagged_acl_de_lm4_serial_promptfix_cache30_audioauto_max40lm_20260526T020512_tagged_acl_de_lm4_serial_promptfix_audioauto_cache30_max40lm_taurus_direct/launcher.err < /dev/null & echo $! > /mnt/data1/jiaxuanluo/logs/tagged_acl_de_lm4_serial_promptfix_cache30_audioauto_max40lm_20260526T020512_tagged_acl_de_lm4_serial_promptfix_audioauto_cache30_max40lm_taurus_direct/setsid.pid",
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260526__tagged_acl_de_lm3_serial_promptfix_cache30_audioauto_max40lm_taurus.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260526__tagged_acl_de_lm3_serial_promptfix_cache30_audioauto_max40lm_taurus.md"
+    },
+    {
+      "role": "eval_agent",
+      "type": "python_script",
+      "direction": "control",
+      "path": "agents/infinisst_omni_vllm_maxsim_rag.py"
+    },
+    {
+      "role": "eval_script",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/eval_density_unified.sh"
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/data1/jiaxuanluo/slm_local_cache/de_tagged_acl_20260525/cap16_denoise_ttag/v0-20260525-203735-hf"
+    },
+    {
+      "role": "checkpoint",
+      "type": "retriever_checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt"
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "eval_input",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/data1/jiaxuanluo/main_result_rasst_serial_de_ja_cache30_max40lm_20260525T215831_main_result_rasst_serial_de_ja_cache30_max40lm_taurus_retry1/__inputs__/acl_de"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/data1/jiaxuanluo/tagged_acl_de_lm4_serial_promptfix_cache30_audioauto_max40lm_20260526T020512_tagged_acl_de_lm4_serial_promptfix_audioauto_cache30_max40lm_taurus_direct"
+    },
+    {
+      "role": "launcher_logs",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/data1/jiaxuanluo/logs/tagged_acl_de_lm4_serial_promptfix_cache30_audioauto_max40lm_20260526T020512_tagged_acl_de_lm4_serial_promptfix_audioauto_cache30_max40lm_taurus_direct"
+    },
+    {
+      "role": "pid_file",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/data1/jiaxuanluo/logs/tagged_acl_de_lm4_serial_promptfix_cache30_audioauto_max40lm_20260526T020512_tagged_acl_de_lm4_serial_promptfix_audioauto_cache30_max40lm_taurus_direct/setsid.pid"
+    }
+  ],
+  "metadata": {
+    "host": "taurus",
+    "dataset": "acl_tagged_raw",
+    "lang": "de",
+    "lm": 4,
+    "gpu_pair": "2,3",
+    "mode": "serial_simuleval",
+    "max_cache_chunks": 30,
+    "keep_cache_chunks": 30,
+    "vllm_limit_audio": "auto",
+    "max_new_tokens": 160,
+    "empty_term_map_policy": "omit",
+    "system_prompt_style": "given_chunks",
+    "runtime_prompt_validation": "all llm_input rows must contain exactly one system prompt and audio_count <= max_cache_chunks",
+    "launcher_pid": 3303146,
+    "launched_at_utc": "2026-05-26T02:05:12Z",
+    "reason": "User requested de lm4 on free GPU 2,3 and medicine de lm1/lm2 on GPUs 4-7 after JA lm2/lm3/lm4 completed.",
+    "startup_validation": "startup verified: simuleval running on GPU 2,3; vLLM limit_mm_per_prompt audio=30 from VLLM_LIMIT_AUDIO=auto; model loading/worker processes observed",
+    "startup_checked_at_utc": "2026-05-26T02:07:20Z",
+    "completed_at_utc": "2026-05-26T02:16:00Z",
+    "completed_summary": "/mnt/data1/jiaxuanluo/tagged_acl_de_lm4_serial_promptfix_cache30_audioauto_max40lm_20260526T020512_tagged_acl_de_lm4_serial_promptfix_audioauto_cache30_max40lm_taurus_direct/__summary__/summary_acl_tagged_raw_de_lm4_promptfix.tsv",
+    "verified_metrics": {
+      "BLEU": 34.709832444235644,
+      "StreamLAAL": 2702.2863855788146,
+      "StreamLAAL_CA": 3933.0218911846946,
+      "TERM_ACC": 0.8481,
+      "TERM_CORRECT": 793,
+      "TERM_TOTAL": 935
+    }
+  }
+}

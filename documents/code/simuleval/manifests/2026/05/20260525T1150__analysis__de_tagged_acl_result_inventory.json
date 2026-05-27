@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T1150__analysis__de_tagged_acl_result_inventory",
+  "event_type": "analysis",
+  "family": "tagged_acl_de_result_inventory",
+  "variant": "slm_cache_tau_decode_inventory_20260525",
+  "status": "completed",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__de_tagged_acl_result_inventory.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "manual artifact inventory from verified standalone eval summaries and manifests",
+  "parent_run_ids": [
+    "20260524T160830__simuleval__tagged_acl_origin_norag_de_lm4_raw_rerun",
+    "20260524T2135__simuleval__tagged_acl_origin_de_lm2_hn1024_batch",
+    "20260524T2135__simuleval__tagged_acl_tmv4_de_lm2_hn1024_batch",
+    "20260525T0413__simuleval__tagged_acl_tmsft_gttermwrap_exact_de_lm1to4_hn1024_tau078_batch_aries8",
+    "20260525T070739__simuleval__tagged_acl_de_retriever_cap16_exactboundary_hn1024_tau078_omit_lm4first_taurus8",
+    "20260525T113241__simuleval__tagged_acl_tmv4_de_lm4_old_protocol_compat_matrix_aries",
+    "20260525T1143__simuleval__tagged_acl_de_cap16_lm12_mt80_shortcache"
+  ],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__de_tagged_acl_result_inventory.md",
+      "metadata": {}
+    },
+    {
+      "role": "result_inventory",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260525_de_tagged_acl_result_inventory.tsv",
+      "metadata": {
+        "dataset": "acl_tagged_raw",
+        "language": "de",
+        "contains_running_rows": true
+      }
+    },
+    {
+      "role": "main_result_tsv",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "mfa_shape_summary",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260525_de_mfa_termmap_lm_shape_summary.tsv",
+      "metadata": {}
+    },
+    {
+      "role": "mfa_shape_calls",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260525_de_mfa_termmap_lm_shape_calls.tsv",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "dataset": "acl_tagged_raw",
+    "language": "de",
+    "purpose": "inventory all currently relevant de tagged ACL result rows for SLM/cache/tau/decode comparison",
+    "metric_truth_policy": "standalone eval rows require summary or eval_results artifacts; running rows are placeholders only",
+    "notes": "This inventory includes legacy prompt rows only when explicitly marked old_user_supplied."
+  }
+}

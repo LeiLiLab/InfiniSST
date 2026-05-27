@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "event_id": "20260518T1741__data_prepare__medicine_varctx_clean_nofallback",
+  "event_type": "data_prepare",
+  "family": "medicine_varctx_eval_data",
+  "variant": "lmlb2p88_3p84_4p80_5p76_clean_nofallback",
+  "status": "success",
+  "project": null,
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/data_pre/training_terms_for_retriever/launchers/2026/05/20260518__medicine_varctx_lmlb2p88_clean_nofallback.sh",
+  "notes_path": "documents/code/data_pre/training_terms_for_retriever/notes/2026/05/20260518__medicine_varctx_clean_nofallback.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "bash documents/code/data_pre/training_terms_for_retriever/launchers/2026/05/20260518__medicine_varctx_lmlb2p88_clean_nofallback.sh",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/data_pre/training_terms_for_retriever/launchers/2026/05/20260518__medicine_varctx_lmlb2p88_clean_nofallback.sh",
+      "metadata": {}
+    },
+    {
+      "role": "legacy_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/data_pre/training_terms_for_retriever/run_prepare_medicine_varctx_lmlb2p88_3p84_4p80_5p76.sh",
+      "metadata": {}
+    },
+    {
+      "role": "prepare_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/data_pre/training_terms_for_retriever/prepare_medicine_variable_context.py",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/data_pre/training_terms_for_retriever/notes/2026/05/20260518__medicine_varctx_clean_nofallback.md",
+      "metadata": {}
+    },
+    {
+      "role": "raw_input_dir",
+      "type": "dataset_dir",
+      "direction": "input",
+      "path": "/home/jiaxingxu/rag-sst/eso-dataset/outputs_v2/test",
+      "metadata": {}
+    },
+    {
+      "role": "mfa_textgrid_dir",
+      "type": "alignment_dir",
+      "direction": "input",
+      "path": "/home/jiaxingxu/rag-sst/eso-dataset/mfa_v1/textgrids",
+      "metadata": {}
+    },
+    {
+      "role": "filler_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/taurus/home/jiaxuanluo/InfiniSST/documents/code/data_pre/glossary_scale/wiki_glossary_medicine_enriched.json",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_dev_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_nofallback/medicine_dev_dataset.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "medicine_eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_nofallback/medicine_glossary_gt_plus_medicine_wiki_gs10000.json",
+      "metadata": {}
+    },
+    {
+      "role": "dropped_terms_report",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_nofallback/medicine_dev_dataset_dropped_terms.json",
+      "metadata": {}
+    },
+    {
+      "role": "stats",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_nofallback/medicine_dev_dataset_stats.json",
+      "metadata": {}
+    },
+    {
+      "role": "audio_chunks",
+      "type": "audio_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_nofallback/audio_chunks",
+      "metadata": {}
+    },
+    {
+      "role": "output_dir",
+      "type": "dataset_dir",
+      "direction": "output",
+      "path": "/mnt/gemini/home/jiaxuanluo/medicine_eval_varctx2p88_3p84_4p80_5p76_clean_nofallback",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "duration_secs": [
+      2.88,
+      3.84,
+      4.8,
+      5.76
+    ],
+    "filler_source": "medicine_wiki_filler",
+    "glossary_target_size": 10000,
+    "max_base_chunks_per_sample": 0,
+    "overwrite_audio": false,
+    "unmatched_term_policy": "drop",
+    "legacy_unmatched_term_policy": "center_fallback",
+    "written_total_rows": 11141,
+    "written_term_rows": 3094,
+    "written_empty_rows": 8047,
+    "unique_medicine_terms": 688,
+    "dropped_unmatched_terms": 204,
+    "term_row_locate_method_counts": {
+      "char_proportional": 701,
+      "mfa_exact": 2393
+    }
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "event_id": "20260526T042258__analysis__tagged_acl_zh_tau000_vs_main_rasst_compare",
+  "event_type": "analysis",
+  "family": "tagged_acl_new_v9_hn1024_tau000",
+  "variant": "zh_tau000_vs_main_rasst_lm1_lm2_lm3_lm4",
+  "status": "completed_verified",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260526T042258__tagged_acl_zh_tau000_vs_main_rasst_compare.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python inline csv comparison: read tau0 eval_results.tsv for lm=1,2,3,4 and compare against documents/code/simuleval/reports/20260524_main_result_data.tsv acl_tagged_raw/RASST/zh rows",
+  "parent_run_ids": [
+    "lh1b88kw",
+    "2g6kan5y"
+  ],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260526T042258__tagged_acl_zh_tau000_vs_main_rasst_compare.md"
+    },
+    {
+      "role": "main_result_tsv",
+      "type": "tsv",
+      "direction": "input",
+      "path": "documents/code/simuleval/reports/20260524_main_result_data.tsv"
+    },
+    {
+      "role": "tau0_lm1_eval_results",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/taurus/data2/jiaxuanluo/tagged_acl_new_v9_hn1024_tau000_raw_zh_lm1to4_20260526T0210_tagacl_newv9_hn1024_tau000_raw_zh_lm1to4_aries01_seq/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau000_readout/zh/dtagacl_new_v9_hn1024_tau000_lm1_k10_th0.0_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    {
+      "role": "tau0_lm2_eval_results",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/taurus/data2/jiaxuanluo/tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_20260526T033545_tagacl_newv9_hn1024_tau000_raw_zh_lm234_aries4567_parallel/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau000_readout_parallel/zh/dtagacl_new_v9_hn1024_tau000_lm2_k10_th0.0_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    {
+      "role": "tau0_lm3_eval_results",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/taurus/data2/jiaxuanluo/tagged_acl_new_v9_hn1024_tau000_raw_zh_lm234_20260526T033545_tagacl_newv9_hn1024_tau000_raw_zh_lm234_aries4567_parallel/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau000_readout_parallel/zh/dtagacl_new_v9_hn1024_tau000_lm3_k10_th0.0_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    {
+      "role": "tau0_lm4_eval_results",
+      "type": "tsv",
+      "direction": "input",
+      "path": "/mnt/taurus/data2/jiaxuanluo/tagged_acl_new_v9_hn1024_tau000_raw_zh_lm4_20260526T034148_tagacl_newv9_hn1024_tau000_raw_zh_lm4_aries23_parallel/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau000_readout_lm4_aries23/zh/dtagacl_new_v9_hn1024_tau000_lm4_k10_th0.0_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv"
+    },
+    {
+      "role": "comparison_report",
+      "type": "tsv",
+      "direction": "output",
+      "path": "documents/code/simuleval/reports/20260526_tagged_acl_zh_tau000_vs_main_rasst.tsv"
+    }
+  ],
+  "metadata": {
+    "dataset": "acl_tagged_raw",
+    "lang": "zh",
+    "tau": 0.0,
+    "baseline_method": "RASST",
+    "baseline_tsv": "documents/code/simuleval/reports/20260524_main_result_data.tsv",
+    "report_path": "documents/code/simuleval/reports/20260526_tagged_acl_zh_tau000_vs_main_rasst.tsv"
+  }
+}

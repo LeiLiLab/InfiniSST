@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T1250__simuleval__tagged_acl_v15_v16_newv4_quick_zh_lm2_raw",
+  "event_type": "simuleval",
+  "family": "tagged_acl_speech_llm_quick",
+  "variant": "v15_v16_newv4_zh_lm2_raw",
+  "status": "running",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260522__tagged_acl_speech_llm_quick_zh_lm2_raw_wait_hf.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260522__tagged_acl_quick_v15_v16_newv4_zh_lm2_raw.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "three detached aries wait-for-HF eval launches for v15, v16, and new_v4",
+  "parent_run_ids": [
+    "d8zg40gd",
+    "34u4nxec",
+    "n842mhkv"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260522__tagged_acl_speech_llm_quick_zh_lm2_raw_wait_hf.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260522__tagged_acl_quick_v15_v16_newv4_zh_lm2_raw.md"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_v15_quick_zh_lm2_raw"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_v16_quick_zh_lm2_raw"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_new_v4_quick_zh_lm2_raw"
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "lm": 2,
+    "glossary": "raw",
+    "wait_for_hf_secs": 28800,
+    "waiter_pids": {
+      "v15_marker": 3041027,
+      "v16_llmvariant": 3041089,
+      "new_v4_llmvariant_newv3": 3041151
+    }
+  }
+}

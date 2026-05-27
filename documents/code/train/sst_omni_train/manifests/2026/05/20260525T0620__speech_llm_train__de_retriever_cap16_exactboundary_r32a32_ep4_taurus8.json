@@ -1,0 +1,222 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T0620__speech_llm_train__de_retriever_cap16_exactboundary_r32a32_ep4_taurus8",
+  "event_type": "speech_llm_train",
+  "family": "speech_llm_tcm_termmap",
+  "variant": "de_retriever_cap16_exactboundary_r32a32_ep4_taurus8",
+  "status": "running_startup_verified",
+  "project": "sst_omni",
+  "wandb_run_id": "wtkgnf8k",
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260525__watch_train_de_retriever_cap16_exactboundary_taurus8.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260525__speech_llm_de_retriever_cap16_exactboundary_r32a32_ep4_taurus8.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "mkdir -p /mnt/gemini/data1/jiaxuanluo/logs/train_de_retriever_cap16_exactboundary_taurus8_20260525T0628_max3072 && setsid bash -lc 'cd /home/jiaxuanluo/InfiniSST && ROOT_DIR_OVERRIDE=/home/jiaxuanluo/InfiniSST HOST_GPU_DEVICES_OVERRIDE=0,1,2,3,4,5,6,7 TRAIN_LAUNCHER_OVERRIDE=/home/jiaxuanluo/InfiniSST/documents/code/train/sst_omni_train/launchers/2026/05/20260525__speech_llm_de_retriever_cap16_exactboundary_taurus8_r32a32_ep4.sh MASTER_PORT_OVERRIDE=29704 MAX_LENGTH_OVERRIDE=3072 bash /home/jiaxuanluo/InfiniSST/documents/code/train/sst_omni_train/launchers/2026/05/20260525__watch_train_de_retriever_cap16_exactboundary_taurus8.sh' > /mnt/gemini/data1/jiaxuanluo/logs/train_de_retriever_cap16_exactboundary_taurus8_20260525T0628_max3072/watch_train.out 2> /mnt/gemini/data1/jiaxuanluo/logs/train_de_retriever_cap16_exactboundary_taurus8_20260525T0628_max3072/watch_train.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/train_de_retriever_cap16_exactboundary_taurus8_20260525T0628_max3072/watch_train.pid",
+  "parent_run_ids": [],
+  "artifacts": [
+    {
+      "role": "watch_launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260525__watch_train_de_retriever_cap16_exactboundary_taurus8.sh",
+      "metadata": {}
+    },
+    {
+      "role": "train_launcher",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260525__speech_llm_de_retriever_cap16_exactboundary_taurus8_r32a32_ep4.sh",
+      "metadata": {}
+    },
+    {
+      "role": "train_wrapper",
+      "type": "shell",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/auto_train_sampling_docker.sh",
+      "metadata": {}
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260525__speech_llm_de_retriever_cap16_exactboundary_r32a32_ep4_taurus8.md",
+      "metadata": {}
+    },
+    {
+      "role": "parent_data_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/data_pre/hard_negative_jsonl_for_speech_llm/manifests/2026/05/20260525T0348__data_prepare__deja_termmap_ablation_cap16_exactboundary.json",
+      "metadata": {
+        "event_id": "20260525T0348__data_prepare__deja_termmap_ablation_cap16_exactboundary"
+      }
+    },
+    {
+      "role": "train_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_deja_termmap_ablation_cap16_exactboundary_20260525/de/retriever_hn1024_tau078_cap16_exactboundary/train_s_de_retriever_hn1024_tau078_cap16_gttermwrap_exactboundary.jsonl",
+      "metadata": {
+        "rows": 12500,
+        "chunks": 71730,
+        "termmap_chunk_rate": 0.932942980621776,
+        "max_termmap_entries": 16,
+        "tagged_rows": 11971
+      }
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "jsonl",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_deja_termmap_ablation_cap16_exactboundary_20260525/de/retriever_hn1024_tau078_cap16_exactboundary/dev_s_de_retriever_hn1024_tau078_cap16_gttermwrap_exactboundary_first355.jsonl",
+      "metadata": {
+        "rows": 355,
+        "chunks": 1946,
+        "termmap_chunk_rate": 0.9331963001027749,
+        "max_termmap_entries": 16,
+        "tagged_rows": 339
+      }
+    },
+    {
+      "role": "validation_report",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_deja_termmap_ablation_cap16_exactboundary_20260525/de/retriever_hn1024_tau078_cap16_exactboundary/validation_summary.json",
+      "metadata": {}
+    },
+    {
+      "role": "base_mcore_model",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data2/jiaxuanluo/Qwen3-Omni-30B-A3B-Instruct-v2/",
+      "metadata": {}
+    },
+    {
+      "role": "checkpoint_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_de_retriever_cap16_exactboundary_r32a32_ep4_taurus8",
+      "metadata": {}
+    },
+    {
+      "role": "run_dir",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_de_retriever_cap16_exactboundary_r32a32_ep4_taurus8/keep1.0_r32/v1-20260525-141908",
+      "metadata": {
+        "wandb_run_id": "wtkgnf8k"
+      }
+    },
+    {
+      "role": "train_log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_de_retriever_cap16_exactboundary_r32a32_ep4_taurus8",
+      "metadata": {}
+    },
+    {
+      "role": "train_log",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_de_retriever_cap16_exactboundary_r32a32_ep4_taurus8/train_keep1.0_r32_20260525_141855.log",
+      "metadata": {
+        "wandb_run_id": "wtkgnf8k"
+      }
+    },
+    {
+      "role": "wandb_local_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_de_retriever_cap16_exactboundary_r32a32_ep4_taurus8/keep1.0_r32/v1-20260525-141908/wandb/wandb/run-20260525_142004-wtkgnf8k",
+      "metadata": {
+        "wandb_run_id": "wtkgnf8k"
+      }
+    },
+    {
+      "role": "detached_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/train_de_retriever_cap16_exactboundary_taurus8_20260525T0628_max3072/watch_train.out",
+      "metadata": {}
+    },
+    {
+      "role": "detached_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/train_de_retriever_cap16_exactboundary_taurus8_20260525T0628_max3072/watch_train.err",
+      "metadata": {}
+    },
+    {
+      "role": "pid_file",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/train_de_retriever_cap16_exactboundary_taurus8_20260525T0628_max3072/watch_train.pid",
+      "metadata": {}
+    },
+    {
+      "role": "failed_startup_stdout",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/train_de_retriever_cap16_exactboundary_taurus8_20260525T0620/watch_train.out",
+      "metadata": {
+        "failure": "MaxLengthError row length 2385 > max_length 2048 before W&B init"
+      }
+    },
+    {
+      "role": "failed_startup_stderr",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/train_de_retriever_cap16_exactboundary_taurus8_20260525T0620/watch_train.err",
+      "metadata": {
+        "failure": "MaxLengthError row length 2385 > max_length 2048 before W&B init"
+      }
+    }
+  ],
+  "metadata": {
+    "language": "de",
+    "host": "taurus",
+    "gpu_count": 8,
+    "host_gpu_devices": "0,1,2,3,4,5,6,7",
+    "launch_mode": "detached_local_gpu_idle_watcher",
+    "gpu_wait_reason": "Taurus GPU 0/1 were occupied by a running JA tagged-ACL batch eval at submission time; do not steal them. Watcher waits for all 8 GPUs below 1000 MiB before starting training.",
+    "lora_rank": 32,
+    "lora_alpha": 32,
+    "expert_model_parallel_size": 4,
+    "tensor_model_parallel_size": 1,
+    "sequence_parallel": false,
+    "max_length": 3072,
+    "global_batch_size": 8,
+    "micro_batch_size": 1,
+    "iterations_per_epoch": 226,
+    "save_interval": 226,
+    "parent_data_event_id": "20260525T0348__data_prepare__deja_termmap_ablation_cap16_exactboundary",
+    "data_branch": "de/retriever_hn1024_tau078_cap16_exactboundary",
+    "expected_eval_gate": {
+      "dataset": "tagged_acl_raw",
+      "lang": "de",
+      "lm": 2,
+      "retriever": "HN1024",
+      "tau": 0.78,
+      "max_new_tokens": 80
+    },
+    "storage_check": {
+      "/mnt/gemini/data1": "365G available at prelaunch check",
+      "/mnt/gemini/data2": "full but base model path exists"
+    },
+    "failed_startup_attempts": [
+      {
+        "time_utc": "2026-05-25T06:16:34Z",
+        "max_length": 2048,
+        "wandb_initialized": false,
+        "reason": "Swift strict preprocessing raised MaxLengthError: Current length of row(2385) is larger than max_length(2048)."
+      }
+    ],
+    "retry_reason": "Increase MAX_LENGTH to 3072; do not use strict=False or silently drop long rows.",
+    "watcher_pid": 1143331,
+    "startup_verified_utc": "2026-05-25T06:20:04Z",
+    "wandb_url": "https://wandb.ai/luojiaxuan1215-johns-hopkins-university/sst_omni/runs/wtkgnf8k",
+    "current_run_dir": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_de_retriever_cap16_exactboundary_r32a32_ep4_taurus8/keep1.0_r32/v1-20260525-141908",
+    "current_train_log": "/mnt/gemini/data1/jiaxuanluo/logs/speech_llm_de_retriever_cap16_exactboundary_r32a32_ep4_taurus8/train_keep1.0_r32_20260525_141855.log",
+    "verdict": "pending"
+  }
+}

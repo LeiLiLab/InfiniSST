@@ -1,0 +1,250 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T0518__simuleval__tagged_acl_tmsft_gtwrap_de_lm1_omit_emptytm_hn1024_tau078_batch_aries01",
+  "event_type": "simuleval",
+  "family": "tagged_acl_tmsft_gtwrap_de_hn1024_tau078",
+  "variant": "de_lm1_omit_empty_term_map_hn1024_tau078_batch_aries01",
+  "status": "success_verified_artifacts",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_aries_lm1to4.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_tmsft_gttermwrap_exact_de_lm1_omit_emptytm_hn1024_tau078_batch.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "ssh aries \"mkdir -p /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_20260525T0518_de_lm1_omit_emptytm_hn1024_tau078_aries01 && cd /mnt/taurus/home/jiaxuanluo/InfiniSST && setsid bash -lc 'RUN_STAMP=20260525T0518_de_lm1_omit_emptytm_hn1024_tau078_aries01 LMS=\\\"1\\\" GPU_PAIRS_CSV=\\\"0,1\\\" EMPTY_TERM_MAP_POLICY=omit MODEL_LABEL=tmsft_gttermwrap_exact_de_r32a32_ep4_hn1024_tau078_omit_emptytm_batch_max80 DENSITY_TAG=tagacl_bv1_tmsft_gtwrap_hn1024_tau078_omit_emptytm WANDB_LOG_OVERRIDE=0 bash documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_aries_lm1to4.sh' > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_20260525T0518_de_lm1_omit_emptytm_hn1024_tau078_aries01/top.out 2> /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_20260525T0518_de_lm1_omit_emptytm_hn1024_tau078_aries01/top.err < /dev/null & echo $! > /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_20260525T0518_de_lm1_omit_emptytm_hn1024_tau078_aries01/top.pid && cat /mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_20260525T0518_de_lm1_omit_emptytm_hn1024_tau078_aries01/top.pid\"",
+  "parent_run_ids": [
+    "sf6nw09x"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260525__tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_aries_lm1to4.sh",
+      "metadata": {}
+    },
+    {
+      "role": "delegate_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260524__batched_vllm_rag_eval.sh",
+      "metadata": {}
+    },
+    {
+      "role": "eval_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/simuleval/src/batched_vllm_rag_eval.py",
+      "metadata": {
+        "change": "adds explicit empty-term-map policy switch; this run uses omit"
+      }
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260525__tagged_acl_tmsft_gttermwrap_exact_de_lm1_omit_emptytm_hn1024_tau078_batch.md",
+      "metadata": {}
+    },
+    {
+      "role": "parent_eval_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/simuleval/manifests/2026/05/20260525T0413__simuleval__tagged_acl_tmsft_gttermwrap_exact_de_lm1to4_hn1024_tau078_batch_aries8.json",
+      "metadata": {
+        "baseline_lm1_policy": "term_map_NONE"
+      }
+    },
+    {
+      "role": "parent_train_manifest",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/code/train/sst_omni_train/manifests/2026/05/20260525T0055__speech_llm_train__tmsft_gttermwrap_exact_de_r32a32_ep4_aries8.json",
+      "metadata": {
+        "event_id": "20260525T0055__speech_llm_train__tmsft_gttermwrap_exact_de_r32a32_ep4_aries8",
+        "wandb_run_id": "sf6nw09x"
+      }
+    },
+    {
+      "role": "speech_llm_model",
+      "type": "hf_model_dir",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/slm/speech_llm_tmsft_gttermwrap_exact_de_r32a32_ep4_aries8/keep1.0_r32/v0-20260525-083705-hf",
+      "metadata": {}
+    },
+    {
+      "role": "eval_input_dir",
+      "type": "directory",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_new_v9_hn1024_tau078_raw_de_lm1to4_20260524T075533_tagacl_newv9_hn1024_tau078_raw_de_retry1/__inputs__/new_v9_termtag_delay_oldnewv3_r32a64_hn1024_tau078/full_all/de/all",
+      "metadata": {
+        "source_list_rewritten_to_taurus_paths": true
+      }
+    },
+    {
+      "role": "eval_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json",
+      "metadata": {
+        "glossary_tag": "acl6060_tagged_gt_raw_min_norm2"
+      }
+    },
+    {
+      "role": "retriever_checkpoint",
+      "type": "checkpoint",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "retriever_id": "HN1024"
+      }
+    },
+    {
+      "role": "log_dir",
+      "type": "directory",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_20260525T0518_de_lm1_omit_emptytm_hn1024_tau078_aries01",
+      "metadata": {}
+    },
+    {
+      "role": "pid_file",
+      "type": "text",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_20260525T0518_de_lm1_omit_emptytm_hn1024_tau078_aries01/top.pid",
+      "metadata": {}
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_20260525T0518_de_lm1_omit_emptytm_hn1024_tau078_aries01",
+      "metadata": {}
+    },
+    {
+      "role": "eval_results_lm1",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_20260525T0518_de_lm1_omit_emptytm_hn1024_tau078_aries01/tmsft_gttermwrap_exact_de_r32a32_ep4_hn1024_tau078_omit_emptytm_batch_max80/de/dtagacl_bv1_tmsft_gtwrap_hn1024_tau078_omit_emptytm_lm1_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/eval_results.tsv",
+      "metadata": {
+        "lm": 1,
+        "lang": "de"
+      }
+    },
+    {
+      "role": "instances_log_lm1",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_20260525T0518_de_lm1_omit_emptytm_hn1024_tau078_aries01/tmsft_gttermwrap_exact_de_r32a32_ep4_hn1024_tau078_omit_emptytm_batch_max80/de/dtagacl_bv1_tmsft_gtwrap_hn1024_tau078_omit_emptytm_lm1_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.log",
+      "metadata": {
+        "lm": 1,
+        "rows": 5
+      }
+    },
+    {
+      "role": "instances_strip_term_log_lm1",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_20260525T0518_de_lm1_omit_emptytm_hn1024_tau078_aries01/tmsft_gttermwrap_exact_de_r32a32_ep4_hn1024_tau078_omit_emptytm_batch_max80/de/dtagacl_bv1_tmsft_gtwrap_hn1024_tau078_omit_emptytm_lm1_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/instances.strip_term.log",
+      "metadata": {
+        "lm": 1,
+        "rows": 5
+      }
+    },
+    {
+      "role": "runtime_log_lm1",
+      "type": "jsonl",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_20260525T0518_de_lm1_omit_emptytm_hn1024_tau078_aries01/tmsft_gttermwrap_exact_de_r32a32_ep4_hn1024_tau078_omit_emptytm_batch_max80/de/dtagacl_bv1_tmsft_gtwrap_hn1024_tau078_omit_emptytm_lm1_k10_th0.78_gacl6060_tagged_gt_raw_min_norm2/runtime_omni_vllm_maxsim_rag_batched_lm1.jsonl",
+      "metadata": {
+        "lm": 1,
+        "empty_term_map_policy": "omit"
+      }
+    },
+    {
+      "role": "summary_metrics",
+      "type": "tsv",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/tagged_acl_tmsft_gttermwrap_exact_de_hn1024_tau078_batch_20260525T0518_de_lm1_omit_emptytm_hn1024_tau078_aries01/tmsft_gttermwrap_exact_de_r32a32_ep4_hn1024_tau078_omit_emptytm_batch_max80/__summary__/summary_de_lm1.tsv",
+      "metadata": {
+        "manual_merge_reason": "original SSH parent was interrupted after detached child startup; eval artifacts completed and summary was generated from eval_results.tsv"
+      }
+    }
+  ],
+  "metadata": {
+    "host": "aries",
+    "gpu_pairs": [
+      "0,1"
+    ],
+    "language": "de",
+    "latency_multipliers": [
+      1
+    ],
+    "same_lm_batch": true,
+    "talks_per_lm": 5,
+    "max_new_tokens": 80,
+    "vllm_limit_audio": 128,
+    "vllm_max_model_len": 12288,
+    "rag_tau": 0.78,
+    "rag_top_k": 10,
+    "rag_timeline_lookback_sec": 1.92,
+    "runtime_glossary": "acl6060_tagged_gt_raw_min_norm2",
+    "empty_term_map_policy": "omit",
+    "baseline_empty_term_map_policy": "none_block",
+    "wandb_logging": "disabled_for_fast_artifact_readout",
+    "submitted_utc": "2026-05-25T05:18:55Z",
+    "launcher_pid": 3662532,
+    "startup_evidence": {
+      "gpu_memory_mib": {
+        "0": 36641,
+        "1": 34400
+      },
+      "log_markers": [
+        "[RUN] term_map_format=plain empty_term_map_policy=omit",
+        "[LOAD] vLLM model=",
+        "[DECODE] max_new_tokens_policy=fixed {1: 80}",
+        "[STEP] 0 ready=5 active=5"
+      ]
+    },
+    "completed_utc": "2026-05-25T05:42:25Z",
+    "status_note": "Completed lm=1 diagnostic rerun; omitting empty term_map blocks fixes the severe 2022.acl-long.367 loop but only partially recovers aggregate BLEU.",
+    "metrics": {
+      "1": {
+        "BLEU": 24.05796523084727,
+        "StreamLAAL": 899.4127181375219,
+        "StreamLAAL_CA": 1515.8969670887732,
+        "TERM_ACC": 0.8171,
+        "TERM_CORRECT": 764,
+        "TERM_TOTAL": 935,
+        "instances_log_rows": 5,
+        "instances_strip_term_log_rows": 5
+      }
+    },
+    "comparison_to_none_block_lm1": {
+      "old_BLEU": 20.6877,
+      "new_BLEU": 24.058,
+      "old_TERM_ACC": 0.7872,
+      "new_TERM_ACC": 0.8171,
+      "old_TERM_CORRECT": 736,
+      "new_TERM_CORRECT": 764,
+      "TERM_TOTAL": 935
+    },
+    "pathological_talk_comparison": {
+      "source_id": "2022.acl-long.367",
+      "old_pred_words": 2707,
+      "new_pred_words": 1386,
+      "ref_words": 1327,
+      "old_length_ratio": 2.04,
+      "new_length_ratio": 1.04,
+      "old_repeated_8gram_rate": 0.539,
+      "new_repeated_8gram_rate": 0.0,
+      "old_mixed_tail_present": true,
+      "new_mixed_tail_present": false
+    },
+    "runtime_policy_validation": {
+      "llm_inputs": 3588,
+      "empty_refs": 1726,
+      "term_map_NONE_prompts": 0,
+      "avg_refs_per_call": 0.9342251950947603
+    }
+  }
+}

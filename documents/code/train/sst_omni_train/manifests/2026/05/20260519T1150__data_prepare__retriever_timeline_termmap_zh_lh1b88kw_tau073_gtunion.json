@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "event_id": "20260519T1150__data_prepare__retriever_timeline_termmap_zh_lh1b88kw_tau073_gtunion",
+  "event_type": "data_prepare",
+  "family": "speech_llm_termmap_retriever",
+  "variant": "zh_lh1b88kw_tau073_timeline_v1b_gtunion",
+  "status": "success",
+  "project": null,
+  "wandb_run_id": null,
+  "slurm_job_id": "45269",
+  "launcher_path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__build_retriever_timeline_termmap_zh_lh1b88kw_tau073_gtunion.sh",
+  "notes_path": "documents/code/train/sst_omni_train/notes/2026/05/20260519__retriever_timeline_termmap_zh_lh1b88kw_tau073_gtunion_data.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "tmux new-session -d -s rettm_v1b_gtunion_data \"srun --jobid=45269 --overlap --ntasks=1 --cpus-per-task=8 bash -lc 'cd /mnt/taurus/home/jiaxuanluo/InfiniSST && bash documents/code/train/sst_omni_train/launchers/2026/05/20260519__build_retriever_timeline_termmap_zh_lh1b88kw_tau073_gtunion.sh' > /mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v1b_gtunion_data_20260519T1150.out 2> /mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v1b_gtunion_data_20260519T1150.err\"",
+  "parent_run_ids": [
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__build_retriever_timeline_termmap_zh_lh1b88kw_tau073_gtunion.sh"
+    },
+    {
+      "role": "common_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/launchers/2026/05/20260519__build_retriever_timeline_termmap_zh_lh1b88kw_tau073.sh"
+    },
+    {
+      "role": "prepare_script",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_retriever_timeline_termmap_sft.py"
+    },
+    {
+      "role": "glossary_builder",
+      "type": "python",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/src/build_gt_union_glossary.py"
+    },
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/sst_omni_train/notes/2026/05/20260519__retriever_timeline_termmap_zh_lh1b88kw_tau073_gtunion_data.md"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data/jiaxuanluo/train_s_zh_v4_ner_baseline_aligned_rate1.0_k20_final.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/dev_s_zh_v4_ner_baseline_aligned_freq_k20.jsonl"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/p31_untrained_dev/wiki_p31_untrained_rank1000000_sample100000_zh100k_train_gt.json"
+    },
+    {
+      "role": "checkpoint",
+      "type": "model",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/train_outputs/q3rag_scale_lora-r128-tr128_bs8k_t=0.07_3var_gsv2full_gsdedup_varctx576_bs8k_gc128_wr1000k_m0.0_maxsim_mfa_variantE_hn1024_tcmoff_ep6_v3_smallest_dense_normAGGR_8gpu_aries_best_eval_acl6060_recallat10.pt",
+      "metadata": {
+        "wandb_run_id": "lh1b88kw",
+        "tau": 0.73
+      }
+    },
+    {
+      "role": "slurm_logs",
+      "type": "log_dir",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs"
+    },
+    {
+      "role": "direct_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v1b_gtunion_data_20260519T1150.out",
+      "metadata": {
+        "stream": "stdout"
+      }
+    },
+    {
+      "role": "direct_logs",
+      "type": "log",
+      "direction": "log",
+      "path": "/mnt/gemini/data1/jiaxuanluo/logs/direct_speech_llm_rettm_v1b_gtunion_data_20260519T1150.err",
+      "metadata": {
+        "stream": "stderr"
+      }
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "glossary",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_gtunion_20260519/gt_union_plus_zh100k_glossary.json"
+    },
+    {
+      "role": "stats",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_gtunion_20260519/gt_union_plus_zh100k_glossary_audit.json"
+    },
+    {
+      "role": "text_index",
+      "type": "pt",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_gtunion_20260519/lh1b88kw_tau073_gtunion_text_index.pt"
+    },
+    {
+      "role": "train_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_gtunion_20260519/train_s_zh_retriever_timeline_lh1b88kw_tau073_gtunion_k10_lb1p92.jsonl"
+    },
+    {
+      "role": "dev_jsonl",
+      "type": "dataset",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_gtunion_20260519/dev_s_zh_retriever_timeline_lh1b88kw_tau073_gtunion_k10_lb1p92.jsonl"
+    },
+    {
+      "role": "stats",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_gtunion_20260519/train_retriever_timeline_gtunion_stats.json"
+    },
+    {
+      "role": "stats",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_gtunion_20260519/dev_retriever_timeline_gtunion_stats.json"
+    },
+    {
+      "role": "stats",
+      "type": "json",
+      "direction": "output",
+      "path": "/mnt/gemini/data1/jiaxuanluo/speech_llm_retriever_timeline_termmap_zh_lh1b88kw_tau073_gtunion_20260519/retriever_timeline_termmap_gtunion_manifest.json"
+    }
+  ],
+  "metadata": {
+    "compute": "taurus_hold45269",
+    "tmux_session": "rettm_v1b_gtunion_data",
+    "lang_code": "zh",
+    "top_k": 10,
+    "score_threshold": 0.73,
+    "lookback_sec": 1.92,
+    "num_shards": 4,
+    "audio_batch_size": 4,
+    "policy": "timeline MaxSim retriever term_map V1b; GT-union glossary; no GT backfill; GT zh override only on retrieved term match",
+    "expected_followup_train": "Launch r8/a32 Speech LLM SFT as high-noise retriever-termmap V1b.",
+    "train_rows": 12500,
+    "train_audio_user_chunks": 68705,
+    "train_gt_term_recall_exact_all": 0.7425646612144854,
+    "train_gt_term_recall_term_like": 0.8268,
+    "train_nonempty_term_map_rate": 0.9826504621206608,
+    "train_no_gt_nonempty_term_map_rate": 0.9334504979496192,
+    "train_avg_term_map_entries_per_chunk": 9.734808238119497,
+    "dev_rows": 355,
+    "dev_audio_user_chunks": 891,
+    "dev_gt_term_recall_exact_all": 0.8029513888888888,
+    "dev_gt_term_recall_term_like": 0.8261,
+    "dev_nonempty_term_map_rate": 0.9809203142536476,
+    "dev_no_gt_nonempty_term_map_rate": 0.9485530546623794,
+    "dev_avg_term_map_entries_per_chunk": 9.664421997755332
+  }
+}

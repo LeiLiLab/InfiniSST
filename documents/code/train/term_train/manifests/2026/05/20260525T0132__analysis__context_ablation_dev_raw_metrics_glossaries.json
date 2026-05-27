@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "event_id": "20260525T0132__analysis__context_ablation_dev_raw_metrics_glossaries",
+  "event_type": "analysis",
+  "family": "sst_ood_context_ablation",
+  "variant": "dev_raw_metrics_glossaries_for_context_ablation",
+  "status": "success",
+  "project": "qwen3_rag",
+  "wandb_run_id": null,
+  "slurm_job_id": null,
+  "launcher_path": null,
+  "notes_path": "documents/code/train/term_train/notes/2026/05/20260525__context_ablation_devraw_fixeddenom_100k_eval.md",
+  "cwd": "/home/jiaxuanluo/InfiniSST",
+  "command": "python - <<PY generate context-specific dev raw metrics glossary json files from term dev JSONL files PY",
+  "parent_run_ids": [
+    "7xu2b4so",
+    "dxwrgbln",
+    "jyb2u787",
+    "lh1b88kw"
+  ],
+  "artifacts": [
+    {
+      "role": "notes",
+      "type": "notes",
+      "direction": "control",
+      "path": "documents/code/train/term_train/notes/2026/05/20260525__context_ablation_devraw_fixeddenom_100k_eval.md",
+      "metadata": {}
+    },
+    {
+      "role": "ctx192_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/term_dev_with_wiki_synth_normalized.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "ctx384_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/data1/jiaxuanluo/term_dev_dataset_m4.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "ctx5p76_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_ctx5p76_new_version.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "varctx_dev_jsonl",
+      "type": "dataset",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/term_dev_dataset_varctx2p88_3p84_4p80_5p76_new_version.jsonl",
+      "metadata": {}
+    },
+    {
+      "role": "ctx192_raw_metrics_glossary",
+      "type": "glossary",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260525_dev_raw_glossary_ctx192.json",
+      "metadata": {
+        "term_count": 1852
+      }
+    },
+    {
+      "role": "ctx384_raw_metrics_glossary",
+      "type": "glossary",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260525_dev_raw_glossary_ctx384.json",
+      "metadata": {
+        "term_count": 955
+      }
+    },
+    {
+      "role": "ctx5p76_raw_metrics_glossary",
+      "type": "glossary",
+      "direction": "output",
+      "path": "documents/code/train/term_train/reports/figures/20260525_dev_raw_glossary_ctx5p76.json",
+      "metadata": {
+        "term_count": 867
+      }
+    },
+    {
+      "role": "varctx_raw_metrics_glossary",
+      "type": "glossary",
+      "direction": "input",
+      "path": "documents/code/train/term_train/reports/figures/20260524_dev_raw_glossary_from_term_dev_varctx576.json",
+      "metadata": {
+        "already_existing": true,
+        "term_count": 974
+      }
+    }
+  ],
+  "metadata": {
+    "purpose": "make fixed_raw denominator explicit per context dev file",
+    "known_failed_run": "s8o0es7g used varctx 974-term glossary on ctx192 old dev and is diagnostic only",
+    "term_counts": {
+      "ctx192": 1852,
+      "ctx384": 955,
+      "ctx5p76": 867,
+      "varctx": 974
+    },
+    "completed_at_utc": "2026-05-25T01:34:00+00:00"
+  }
+}

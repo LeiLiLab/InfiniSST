@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "event_id": "20260522T1835__simuleval__tagged_acl_v16_fixeddenom_raw10k_extracted10k",
+  "event_type": "simuleval",
+  "family": "tagged_acl_speech_llm_quick",
+  "variant": "v16_v16nogt_fixeddenom_raw10k_extracted110",
+  "status": "success",
+  "project": "simuleval_eval",
+  "wandb_run_id": null,
+  "slurm_job_id": "direct_aries67_v16_fixeddenom_eval",
+  "launcher_path": "documents/code/simuleval/launchers/2026/05/20260522__tagged_acl_v16_fixeddenom_raw10k_extracted10k_aries67.sh",
+  "notes_path": "documents/code/simuleval/notes/2026/05/20260522__tagged_acl_v16_fixeddenom_raw10k_extracted10k.md",
+  "cwd": "/mnt/taurus/home/jiaxuanluo/InfiniSST",
+  "command": "GPU_PAIR=6,7 RUN_STAMP=20260522T1835 bash documents/code/simuleval/launchers/2026/05/20260522__tagged_acl_v16_fixeddenom_raw10k_extracted10k_aries67.sh",
+  "parent_run_ids": [
+    "34u4nxec",
+    "qhg33f2t"
+  ],
+  "artifacts": [
+    {
+      "role": "launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260522__tagged_acl_v16_fixeddenom_raw10k_extracted10k_aries67.sh"
+    },
+    {
+      "role": "quick_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260522__tagged_acl_speech_llm_quick_zh_lm2_raw_wait_hf.sh"
+    },
+    {
+      "role": "base_launcher",
+      "type": "script",
+      "direction": "control",
+      "path": "documents/code/simuleval/launchers/2026/05/20260520__tagged_acl_origin_bsz4_tau073_sweep_taurus45269.sh"
+    },
+    {
+      "role": "notes",
+      "type": "markdown",
+      "direction": "control",
+      "path": "documents/code/simuleval/notes/2026/05/20260522__tagged_acl_v16_fixeddenom_raw10k_extracted10k.md"
+    },
+    {
+      "role": "model_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/speech_llm_v16_llm_variant_aug_retriever_timeline_zh_lh1b88kw_tau073_r8a32_aries2/keep1.0_r8"
+    },
+    {
+      "role": "model_dir",
+      "type": "model_dir",
+      "direction": "input",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/speech_llm_v16_no_gt_zero_llm_variant_aug_retriever_timeline_zh_lh1b88kw_tau073_r8a32_aries2/keep1.0_r8"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_raw_min_norm2.json"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "/mnt/gemini/home/jiaxuanluo/eval_glossaries/acl6060_tagged_gt_union_gs10000_min_norm2_backfill.json"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/data/data_pre/extracted_glossaries_by_paper/extracted_glossary__2022.acl-long.110.json"
+    },
+    {
+      "role": "eval_wiki_glossary",
+      "type": "json",
+      "direction": "input",
+      "path": "documents/data/data_pre/expanded_glossaries_by_paper/expanded_glossary__2022.acl-long.110_gs10000.json"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_v16_llmvariant_rawfixed_raw_gs10k_20260522T1835"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_v16_llmvariant_extracted110_fixed_extracted_gs10k_20260522T1835"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_v16_no_gt_zero_rawfixed_raw_gs10k_20260522T1835"
+    },
+    {
+      "role": "eval_output",
+      "type": "directory",
+      "direction": "output",
+      "path": "/mnt/aries/data7/jiaxuanluo/slm/tagged_acl_v16_no_gt_zero_extracted110_fixed_extracted_gs10k_20260522T1835"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260522_v16_fixeddenom_raw10k_extracted10k_aries67.out"
+    },
+    {
+      "role": "logs",
+      "type": "log",
+      "direction": "log",
+      "path": "documents/logs/simuleval/20260522_v16_fixeddenom_raw10k_extracted10k_aries67.err"
+    }
+  ],
+  "metadata": {
+    "lang": "zh",
+    "lm": 2,
+    "runtime_glossaries": [
+      "raw",
+      "gs10k",
+      "extracted",
+      "extracted_gs10k"
+    ],
+    "raw_panel_denominator": "raw",
+    "extracted_panel_denominator": "extracted110",
+    "gpu_devices": "6,7",
+    "pid": 3115988,
+    "completed_at_utc": "2026-05-22T23:20:00Z",
+    "wandb_run_ids": [
+      "v1yewfzj",
+      "3gs258w1",
+      "egfdjy7u",
+      "v2ow12o4",
+      "dyut7blu",
+      "jplpg8ow",
+      "hwjz6oah",
+      "j7ib6h7y"
+    ],
+    "verdict": "Completed fixed-denominator zh lm2 raw/gs10k and paper110 extracted/extracted_gs10k evals for v16_llmvariant and v16_no_gt_zero."
+  }
+}
