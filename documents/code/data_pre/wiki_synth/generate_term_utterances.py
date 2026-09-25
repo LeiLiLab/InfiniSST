@@ -8,6 +8,7 @@ Each utterance must:
   2. Be short enough for ~1.92s speech (target 5-15 words)
   3. Sound natural, like a snippet from a lecture, tutorial, or discussion
 
+Requires GEMINI_API_KEY in the process environment.
 Uses async concurrency to parallelize API calls for speed.
 Supports resume: if the output file already exists, completed terms are skipped.
 
@@ -35,7 +36,6 @@ from google import genai
 from google.genai import types
 
 # ======Configuration=====
-GEMINI_API_KEY = "***REMOVED***"
 GEMINI_MODEL = "gemini-2.0-flash"
 DEFAULT_VARIANTS_PER_TERM = 6
 BATCH_SIZE = 40
@@ -156,7 +156,7 @@ async def run_generation(
         print("Nothing to do — all terms already processed.", flush=True)
         return
 
-    client = genai.Client(api_key=GEMINI_API_KEY)
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
     semaphore = asyncio.Semaphore(concurrency)
 
     batches: List[Tuple[int, List[Dict[str, str]]]] = []
