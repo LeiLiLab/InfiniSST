@@ -4,7 +4,7 @@ This repository contains a demo and the implementation of our paper "InfiniSST: 
 
 ## Online Demo
 
-The link to the online demo is [here](https://huggingface.co/spaces/owaski/Open-LiveTranslate).
+The link to the online demo is [here](https://huggingface.co/spaces/Open-LiveTranslate/Demo-InfiniSST).
 
 ## Checkpoints
 
